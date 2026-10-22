@@ -641,7 +641,7 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 | 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                             | Chưa làm — nay là Đợt 5 (5B) của kế hoạch tổng             |
 | Đ1  | Đợt 1 Kinh doanh (kế hoạch tổng): 1A–1H + bổ sung 18/10 (AI thật, đính kèm, in, phiếu riêng)                               | **Xong trên máy** — chờ anh Dũng chạy thử                  |
 | Đ2  | Đợt 2 Thi công (NVO trước): 2A mốc thi công                                                                                | **Đang làm** — 2A xong; tạm dừng để sửa lỗi chạy thử Đợt 1 |
-| HĐ  | Soạn hợp đồng bằng máy + bộ mẫu ba pháp nhân + ký không cần sếp vào app (0185–0187)                                        | **Xong trên máy** — anh Dũng chạy thử tới bước ký «AB»     |
+| HĐ  | Soạn hợp đồng bằng máy + bộ mẫu ba pháp nhân + ký không cần sếp vào app + bộ quét bản đã ký (0185–0189)                    | **Xong trên máy** — anh Dũng đã chạy thử trọn tới bản quét |
 | 0b  | Bộ nhận diện theo logo NVG                                                                                                 | **Xong vòng đầu** — chờ duyệt ảnh                          |
 | PH  | Phát hành bản demo mới                                                                                                     | **Chuẩn bị xong, CỐ Ý CHƯA deploy** (xem 9.3)              |
 
@@ -854,19 +854,24 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     `approvals` vào publication `supabase_realtime`; `hooks/use-live-updates.ts` (gắn ở chuông thông báo) nghe
     sự kiện rồi `invalidateQueries()` — không cần F5 khi được giao việc / được duyệt. Realtime kiểm RLS SELECT
     của người nhận. Bảng mới cần đẩy tức thời thì thêm vào publication bằng migration, ĐỪNG đọc nội dung sự kiện.
-  - **Bộ quét dùng chung + 0189 (22/10/2026):** `components/scan/document-scanner.tsx` — chụp / chọn ảnh từng
-    trang (kèm PDF có sẵn), máy TỰ TÌM MÉP giấy (`lib/scan/detect.ts`: Otsu + vùng sáng lớn nhất + điểm cực hai đường
-    chéo; không chắc thì trả `null`, ví dụ giấy trắng trên bàn trắng — người dùng kéo tay), kéo 4 góc, xoay, tô trắng mặt bàn khi giấy tràn khung, tự xoay thẳng theo dòng chữ
-    (`deskew.ts`, nắn + xoay trong MỘT lần lấy mẫu), trang 3.000 px, báo «Ảnh mờ — chụp lại» (`quality.ts`), ba chế độ (Màu gốc / Tài liệu = xoá bóng GIỮ MÀU dấu đỏ / Đen trắng =
-    ngưỡng Bradley), ghép một PDF A4 (`lib/scan/` — toán thuần có phép thử; pdf-lib 1.17.1 nạp khi cần). Trả
-    `File`, nơi gọi tự tải lên. Đang gắn ở: «Ghi nhận đã ký» (`sign-contract-dialog.tsx`), khối «Bản hợp đồng đã
-    ký» trên Tổng quan (`signed-scan-panel.tsx`), «Quét phiếu giấy» của khảo sát. **0189:** trigger
-    `contracts_signed_scan_guard` (cột bản đã ký chỉ đổi lúc ký hoặc qua `attach_signed_scan` — bổ sung khi chưa
-    có; thay bản đã có = người chịu trách nhiệm hoặc BGĐ, bắt buộc lý do + `audit_logs`, BGĐ được báo); `contract_scan_shares` + `contract_scan_share_views` (link
-    khách có hạn ≤ 1 năm, thu hồi được; mẫu 0179) → Worker `GET /public/signed/:token` (`contract_scan_public`,
-    chỉ service_role, không giá trị / điều khoản) → trang `/xem-ban-ky/:token` (vẽ trang PDF bằng pdf.js để xem
-    trên điện thoại). «Chia sẻ»: máy cảm ứng mở bảng chia sẻ (Zalo…), máy tính tải tệp về (`lib/share-file.ts`).
-    Gắn tiếp: biên bản nghiệm thu, đề nghị thanh toán — chỉ cần gọi `DocumentScanner`.
+  - **Bộ quét dùng chung + 0189 (22/10/2026)** — `components/scan/document-scanner.tsx`, trả một `File` PDF A4, nơi
+    gọi tự tải lên (không biết hồ sơ nào). Toán thuần ở `lib/scan/` (có phép thử, `scan.test.ts`):
+    `detect.ts` tự tìm mép giấy (Otsu → vùng sáng lớn nhất → 4 điểm cực theo hai đường chéo; không chắc thì `null`) +
+    vùng MẶT BÀN để tô trắng (tối / ít màu / xanh trội, thông ra mép ảnh — chữ lọt trong giấy và dấu đỏ chạm mép giữ);
+    `perspective.ts` nắn + xoay trong MỘT lần lấy mẫu, trang 3.000 px (~250 dpi); `deskew.ts` đo góc dòng chữ ±10°;
+    `enhance.ts` ba chế độ: Màu gốc / Tài liệu (nền giấy ước theo từng kênh màu → khử bóng + ánh đèn, kéo mức, làm sắc,
+    giữ màu dấu) / Đen trắng (Bradley), cả hai chế độ sau dọn vệt tối trong dải 2 % sát mép; `quality.ts` báo «Mờ»
+    (phương sai Laplace, ngưỡng 250 hiệu chỉnh trên ảnh thật); `build-pdf.ts` (pdf-lib 1.17.1, nạp khi cần). Nhiều ảnh một
+    lần thì xếp theo thời điểm chụp (`sortByCapture`) + nút «Đảo thứ tự trang». Đang gắn ở «Ghi nhận đã ký», khối «Bản
+    hợp đồng đã ký» (`signed-scan-panel.tsx`) và «Quét phiếu giấy» khảo sát.
+    **0189:** `contracts_signed_scan_guard` (cột bản đã ký chỉ đổi lúc ký hoặc qua `attach_signed_scan`: bổ sung khi
+    chưa có; THAY = người chịu trách nhiệm hoặc BGĐ, bắt buộc lý do, `audit_logs`, BGĐ được báo); kho: riêng tệp
+    `da-ky-*` theo `rls_contract_scan_uploader` (BGĐ chỉ có quyền phê duyệt vẫn tải được; hợp đồng đã duyệt / ký /
+    quyết toán); lịch sử `contract_signed_scans` (trigger ghi mỗi lần đổi tệp, lý do qua cờ `nvg.signed_scan_reason`,
+    xem theo quyền hợp đồng) → mục «Các lần quét»; link khách `contract_scan_shares` + `_views` (≤ 1 năm, thu hồi được) →
+    Worker `GET /public/signed/:token` (`contract_scan_public`, chỉ service_role, không giá trị / điều khoản) → trang
+    `/xem-ban-ky/:token` (vẽ trang PDF bằng pdf.js — điện thoại không hiện PDF trong khung). «Chia sẻ»
+    (`lib/share-file.ts`): máy cảm ứng mở bảng chia sẻ, máy tính tải tệp về.
 - Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
@@ -878,6 +883,8 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Mã Đợt 1                              | Xong; phép thử CSDL có đột biến; `tsc`, `lint` (trừ `backup/`) sạch                                                                                                                                                              |
 | Hợp đồng (0185–0187)                  | Xong trên máy: 21 mẫu NVC / NVO / NVS nạp bằng seed, mọi chỗ trống điền được và lưu theo hợp đồng, Kinh doanh ghi nhận ký kèm bản đã ký, ký xong tự mở công trình. Cả bộ phép thử `db` xanh trừ hai nhóm đỏ sẵn (9.6)            |
+| Cập nhật tức thời (0188)              | Xong: thông báo + phê duyệt đẩy về trình duyệt ~1 giây (đo bằng Playwright), không cần F5                                                                                                                                        |
+| Bộ quét + bản đã ký (0189)            | Xong trên máy, anh Dũng chạy thử bằng ảnh thật tới bản đạt (lần quét «sss» trên AB). `scan.test.ts` + `hd-template.test.ts` (22) xanh, đột biến chính sách kho đã đo đỏ. Chưa thử trên điện thoại thật                           |
 | Bộ mẫu hợp đồng                       | Bản DỰ THẢO (anh Dũng gửi, dùng như chính thức) — chờ pháp chế NVG rà; bảng hỏi mục 6 trong tệp «00_Huong_dan» từng bộ chờ NVG trả lời. Tài khoản ngân hàng ba công ty là số DEMO                                                |
 | AI trên máy                           | **Chạy THẬT**: Whisper (Workers AI) + Gemini 2.5 Flash trả phí — `workers/.dev.vars` `AI_FAKE=` rỗng, công tắc `ai.transcribe_enabled` / `ai.survey_summary_enabled` = 1 ở CSDL máy. Muốn quay về giả lập: `AI_FAKE=1`           |
 | Bản demo cũ `nvg.tests99.workers.dev` | Vẫn chạy bản trước GĐ1, CSDL `awaiwegmuykhctnysvou` — ở tài khoản khác, máy này KHÔNG vào được                                                                                                                                   |
@@ -886,13 +893,12 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 
 #### Bước tiếp theo
 
-1. **Anh Dũng đang chạy thử Đợt 1 trên máy** — đã đi trọn: đầu mối → phân loại → khảo sát → duyệt khảo sát → báo giá
-   → duyệt → gửi khách → Đàm phán → soạn hợp đồng (bộ mẫu NVC-HĐ-01) → gửi duyệt → TGĐ duyệt → TGĐ ghi nhận ký. Hợp đồng
-   «AB» `NVC-HD-2026-0501` (`ce44609b-3977-474c-887d-a747255bbd3a`) đã ký TRƯỚC 0187 nên chưa có công trình — `tgd@…` bấm
-   «Mở công trình» một lần. Còn thử: luồng ký mới (Kinh doanh «Ghi nhận đã ký» + chụp bản đã ký → công trình tự mở) trên
-   một hợp đồng thi công mới; hợp đồng NVO `NVO-HD-2026-THU1` (`26581784-c23e-4a4a-aabc-0e19f2589e34`, em tạo để thử, có 9
-   đợt thanh toán của mẫu NVO-HĐ-02); khảo sát mới trên «Ok» `NVC-CH-2026-1648`; việc hôm nay, khách cũ, thư viện mẫu,
-   trang Trợ lý AI. Lỗi anh gặp → sửa ngay, chụp ảnh kiểm bằng đúng vai (`backup/*.cjs` có sẵn kịch bản Playwright).
+1. **Anh Dũng đang chạy thử trên máy** — đã đi trọn: đầu mối → phân loại → khảo sát → duyệt → báo giá → gửi khách →
+   Đàm phán → soạn hợp đồng (bộ mẫu NVC-HĐ-01) → duyệt → ký → công trình đã mở → quét bản đã ký. Hợp đồng «AB»
+   `NVC-HD-2026-0501` (`ce44609b-3977-474c-887d-a747255bbd3a`) có công trình `NVC-CT-2026-0105`, bản đã ký đang dùng là lần
+   quét «sss» (6 lần quét trong lịch sử, các link khách đều đã thu hồi). Còn thử: hợp đồng NVO `NVO-HD-2026-THU1`
+   (`26581784-c23e-4a4a-aabc-0e19f2589e34`, 9 đợt thanh toán mẫu NVO-HĐ-02); khảo sát mới trên «Ok» `NVC-CH-2026-1648`;
+   việc hôm nay, khách cũ, thư viện mẫu, Trợ lý AI. Lỗi anh gặp → sửa ngay, kiểm bằng đúng vai (`backup/*.cjs`).
    Tài khoản (`http://localhost:5173`, mật khẩu `NhaViet2026`): `kinhdoanh.nvc@…`, `kinhdoanh.nvo@…`, `tgd@…`,
    `congtruong.nvc@…`, `thietke.nvo@…`. Sau khi khởi động lại máy: Docker → `npm run db:start` → `npm run dev:workers` →
    `npm run dev`. Cổng 8788 có nhiều tiến trình `workerd` cũ thì tắt hết rồi chạy lại một bản.
@@ -900,6 +906,11 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    phụ lục / biên bản nghiệm thu / thanh lý / hợp đồng lao động / bộ biểu mẫu dự thầu trong bộ gửi CHƯA nạp (thuộc
    phân hệ khác — nạp khi làm phần đó, dùng lại `convert.py`); chưa có chỗ tạo hợp đồng mua vật tư / thuê máy / giao
    khoán với nhà cung cấp, tổ đội (thuộc Mua hàng, Thi công).
+   Việc treo của bộ quét: (a) **giấy cong** — đề xuất thêm điểm giữa mỗi cạnh để uốn theo mép (máy tự đặt khi thấy mép),
+   chờ anh Dũng quyết; tờ giấy tràn khung thì chỉ nắn được theo dòng chữ (khó hơn nhiều); (b) thử trên **điện thoại thật**
+   (cần cho Vite / Worker nghe mạng nhà và tạm đổi `.env` sang IP máy `192.168.1.12` — chưa làm, anh Dũng chưa yêu cầu);
+   (c) gắn `DocumentScanner` vào biên bản nghiệm thu, đề nghị thanh toán khi làm Đợt 2 / Đợt 3; (d) ảnh đã qua Zalo /
+   chỉnh sửa có thể mang thời điểm gửi chứ không phải lúc chụp → thứ tự lệch, dùng «Đảo thứ tự trang».
 2. **Đợt 2 — Thi công** (2A xong; làm tiếp 2B nhật ký giọng nói → 2E màn hình Trưởng phòng → 2D → 2F → 2G): 7 mốc NVO + nghiệm thu trước khi che khuất, nhật ký giọng nói
    (dùng lại `VoiceRecorder` + Whisper), biên bản tự sinh, màn hình Trưởng phòng Thi công, phiếu bảo hành. Điểm danh tổ
    (2C) và mốc NVC chờ câu hỏi 6, 15. Rồi Đợt 3 Tài chính; Đợt 4 Mua hàng – Kho và Đợt 5 song song.
@@ -996,6 +1007,15 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Cập nhật tức thời bằng Supabase Realtime trên `notifications` + `approvals`; sự kiện chỉ là tín hiệu, tải lại mọi truy vấn đang hiện (0188)                                            | Anh Dũng: nhận việc / được duyệt phải tải lại trang. Hai bảng này phủ gần hết việc đến tay một người; tải lại qua đường thường nên vẫn qua RLS. `refetchInterval` 60 giây giữ làm dự phòng             |
 | Bộ quét tài liệu: kéo 4 góc bằng tay, xử lý ảnh trên máy người dùng, không OCR / AI                                                                                                    | Anh Dũng chọn (22/10/2026): thư viện tự nhận mép ~8 MB chậm trên máy yếu; ảnh hợp đồng đã ký là dữ liệu khách hạng 1 — không rời máy cho tới khi vào kho của hợp đồng                                  |
 | Link xem bản đã ký cho khách = bảng riêng theo mẫu link thư viện mẫu, trang công khai chỉ qua hàm service_role                                                                         | Bản đã ký là của chính khách nên được gửi; nhưng link phải có hạn, thu hồi được, đếm lượt xem và không lộ giá trị / điều khoản trên hệ thống                                                           |
+| Hợp đồng đã ký: khối «Sau khi ký — việc còn lại» theo vai; Kinh doanh KHÔNG đánh dấu «khách đã trả»                                                                                    | Anh Dũng: ký xong Kinh doanh không biết làm gì (dải tiến trình chỉ nói việc của Thi công / BGĐ). Số đã thu chỉ đổi qua chứng từ Kế toán — một nguồn dữ liệu                                            |
+| Bộ quét TỰ TÌM MÉP bằng mã tự viết (Otsu + vùng sáng), vẫn không tải thư viện nhận mép; không chắc thì không đoán                                                                      | Kéo 4 góc tay để sót mặt bàn → viền loang; thư viện ~8 MB anh Dũng đã loại. Giấy trắng trên bàn trắng trả `null` để người dùng kéo                                                                     |
+| Giấy tràn khung: tô trắng vùng mặt bàn thay vì cố cắt bằng 4 góc; xoay thẳng theo dòng chữ                                                                                             | Ảnh thật của anh Dũng chụp gần, mép giấy ra ngoài ảnh — 4 góc không cắt được vải / bàn, chữ vẫn nghiêng 2° («giống ảnh chụp»)                                                                          |
+| «Tài liệu» chia nền theo TỪNG KÊNH màu + làm sắc; trang 3.000 px, nắn và xoay trong một lần lấy mẫu                                                                                    | Chia theo độ sáng chung còn ám xanh; nắn rồi xoay = lấy mẫu hai lần → «nhòe và mờ»; 2.000 px chỉ ~170 dpi                                                                                              |
+| Ảnh rung: BÁO «Mờ — chụp lại» ngay khi thêm ảnh, không cố khôi phục                                                                                                                    | Không phần mềm nào phục hồi hết chữ của ảnh rung; chụp lại tại chỗ khi giấy còn trên bàn là cách chắc chắn                                                                                             |
+| Người chịu trách nhiệm tự thay bản quét (bắt buộc lý do, nhật ký, BGĐ được báo); lịch sử các lần quét ở bảng riêng                                                                     | Chỉ BGĐ thay thì Kinh doanh quét lại cho rõ bị kẹt, xem mãi bản cũ; `audit_logs` chỉ lãnh đạo đọc nên Kinh doanh không thấy đã thay được chưa                                                          |
+| Quyền kho cho tệp bản đã ký tách riêng (`da-ky-*`, `rls_contract_scan_uploader`), không nới quyền sửa hợp đồng                                                                         | BGĐ chỉ có quyền phê duyệt nên bị chặn tải bản quét; nới `rls_contract_writable` sẽ mở cả văn bản hợp đồng đã khoá                                                                                     |
+| «Chia sẻ» chỉ mở bảng chia sẻ của hệ điều hành trên máy cảm ứng; máy tính tải tệp về                                                                                                   | Chrome trên Windows cũng có Web Share — người dùng máy tính chờ một tệp để đính kèm, không phải bảng chia sẻ Windows                                                                                   |
+| Nhiều ảnh một lần xếp theo thời điểm chụp (trùng thì theo tên, số tự nhiên)                                                                                                            | Hộp chọn tệp trả theo thứ tự riêng của máy — ảnh chụp đầu bị xếp xuống cuối                                                                                                                            |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)
@@ -1077,6 +1097,11 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   (gốc ở thư mục `Bo_hop_dong_*`, không commit) rồi `npm run db:seed` — tệp đổi thì seed ngừng bản cũ, nạp bản mới; phép
   thử `web/src/lib/__tests__/contract-template-assets.test.ts` canh cả 21 mẫu. Python in tiếng Việt ra cửa sổ Windows
   cần `sys.stdout.reconfigure(encoding="utf-8")` (cờ `-I` bỏ qua `PYTHONIOENCODING`).
+- Playwright headless trên máy này: thêm `args: ['--disable-gpu']` — không có thì `requestAnimationFrame` gần như đứng,
+  mọi cú bấm treo ở bước «chờ ổn định» (trang vẫn chạy JS bình thường).
+- Không xoá được tệp trong kho bằng SQL (`storage.protect_delete`) — dùng Storage API với khoá service đọc từ `.env`
+  (đừng in khoá). Thử bộ quét: dùng ảnh thật của anh Dũng trong scratchpad (dữ liệu khách — KHÔNG commit), chạy thẳng
+  mã `lib/scan/*.ts` trên trình duyệt bằng `page.evaluate(() => import('/src/lib/scan/…'))` qua Vite dev.
 - Thử nhanh trên máy: «AB» `bd36f4d6-857f-49ff-a94d-f69c3cbf499c`, «Ok» `ad60f61f-6b09-47d4-9823-a92366659fb2`,
   công trình NVO `NVO-CT-2026-0901` (`a705ba2b-885f-4b9f-a971-b12364e7e4fd`). Khách thử «Dũng đen» trùng số với đầu mối
   NVC-DM-2026-0043 — để lại có chủ đích (chưa xoá).
