@@ -862,7 +862,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     `File`, nơi gọi tự tải lên. Đang gắn ở: «Ghi nhận đã ký» (`sign-contract-dialog.tsx`), khối «Bản hợp đồng đã
     ký» trên Tổng quan (`signed-scan-panel.tsx`), «Quét phiếu giấy» của khảo sát. **0189:** trigger
     `contracts_signed_scan_guard` (cột bản đã ký chỉ đổi lúc ký hoặc qua `attach_signed_scan` — bổ sung khi chưa
-    có; thay bản đã có chỉ BGĐ + lý do + `audit_logs`); `contract_scan_shares` + `contract_scan_share_views` (link
+    có; thay bản đã có = người chịu trách nhiệm hoặc BGĐ, bắt buộc lý do + `audit_logs`, BGĐ được báo); `contract_scan_shares` + `contract_scan_share_views` (link
     khách có hạn ≤ 1 năm, thu hồi được; mẫu 0179) → Worker `GET /public/signed/:token` (`contract_scan_public`,
     chỉ service_role, không giá trị / điều khoản) → trang `/xem-ban-ky/:token` (vẽ trang PDF bằng pdf.js để xem
     trên điện thoại). «Chia sẻ»: máy cảm ứng mở bảng chia sẻ (Zalo…), máy tính tải tệp về (`lib/share-file.ts`).

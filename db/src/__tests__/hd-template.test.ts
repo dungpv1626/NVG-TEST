@@ -616,23 +616,28 @@ describeDb('Bản đã ký: bổ sung sau khi ký, link xem có hạn cho khách
           AND n.related_entity_id = ${contractId}`;
       expect(note!.n).toBe(1);
 
-      // Đã có bản: Kinh doanh không thay được; Ban Giám đốc thay phải kèm lý do, có nhật ký.
-      const again = await kd.rpc('attach_signed_scan', { p_contract_id: contractId, p_path: path });
-      expect(again.error?.message).toContain('Ban Giám đốc');
-      const noReason = await tgd.rpc('attach_signed_scan', {
+      // Đã có bản: thay (quét lại cho rõ) phải ghi lý do; người chịu trách nhiệm tự thay được,
+      // Ban Giám đốc được báo, có nhật ký.
+      const noReason = await kd.rpc('attach_signed_scan', {
         p_contract_id: contractId,
         p_path: path,
       });
       expect(noReason.error?.message).toContain('lý do');
       expect(
         (
-          await tgd.rpc('attach_signed_scan', {
+          await kd.rpc('attach_signed_scan', {
             p_contract_id: contractId,
             p_path: path,
             p_reason: 'Bản quét rõ hơn',
           })
         ).error,
       ).toBeNull();
+      const [replaced] = await sql<{ n: number }[]>`
+        SELECT count(*)::int AS n FROM notifications n JOIN users u ON u.id = n.user_id
+        WHERE u.email = ${ACCOUNTS.tgd} AND n.type = 'contract_signed_recorded'
+          AND n.related_entity_id = ${contractId} AND n.message LIKE '%đã thay%'`;
+      expect(replaced!.n).toBe(1);
+      void tgd;
       const [log] = await sql<{ n: number }[]>`
         SELECT count(*)::int AS n FROM audit_logs
         WHERE entity_id = ${contractId} AND action = 'replace_signed_scan'`;

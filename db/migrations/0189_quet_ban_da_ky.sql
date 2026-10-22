@@ -8,8 +8,9 @@
 --     `contracts_update` (chỉ bước Nháp) đã chặn ghi thẳng; trigger này chặn thêm ở bước Nháp —
 --     bản đã ký là căn cứ thay chữ ký trên hệ thống, không được có đường dẫn tự gõ.
 --  2. `attach_signed_scan`: hợp đồng ký mà chưa có bản (Ban Giám đốc ghi nhận không kèm bản chụp,
---     như «AB») thì người chịu trách nhiệm / Ban Giám đốc bổ sung. Thay bản ĐÃ CÓ chỉ Ban Giám đốc,
---     phải ghi lý do, ghi nhật ký kiểm toán.
+--     như «AB») thì người chịu trách nhiệm / Ban Giám đốc bổ sung. Thay bản ĐÃ CÓ (quét lại cho rõ)
+--     thì phải ghi lý do, ghi nhật ký kiểm toán, Ban Giám đốc được báo — người chịu trách nhiệm tự
+--     thay được (anh Dũng 22/10/2026: chỉ BGĐ thay thì Kinh doanh quét lại cho rõ cũng bị kẹt).
 --  3. `contract_scan_shares`: link xem bản đã ký gửi khách — theo mẫu link thư viện mẫu (0179):
 --     có thời hạn (tối đa một năm), thu hồi được, mỗi lượt xem ghi lại. Trang công khai chỉ đọc
 --     qua `contract_scan_public` (khoá service, Worker), chỉ trả tên / số / ngày ký và tệp — không
@@ -81,9 +82,6 @@ BEGIN
   END IF;
 
   IF c.signed_scan_path IS NOT NULL THEN
-    IF NOT v_approver THEN
-      RAISE EXCEPTION 'Hợp đồng đã có bản đã ký. Cần thay bản khác thì nhờ Ban Giám đốc thay, kèm lý do.';
-    END IF;
     IF p_reason IS NULL OR btrim(p_reason) = '' THEN
       RAISE EXCEPTION 'Ghi lý do thay bản đã ký.';
     END IF;
@@ -114,8 +112,13 @@ BEGIN
   IF NOT v_approver THEN
     PERFORM public.create_notification(
       u.id, c.company_id, 'contract_signed_recorded',
-      format('Hợp đồng %s: %s đã thêm bản hợp đồng đã ký.',
-             COALESCE(c.contract_number, c.code), (SELECT full_name FROM public.users WHERE id = v_user)),
+      CASE WHEN c.signed_scan_path IS NULL
+        THEN format('Hợp đồng %s: %s đã thêm bản hợp đồng đã ký.',
+                    COALESCE(c.contract_number, c.code), (SELECT full_name FROM public.users WHERE id = v_user))
+        ELSE format('Hợp đồng %s: %s đã thay bản hợp đồng đã ký (lý do: %s).',
+                    COALESCE(c.contract_number, c.code), (SELECT full_name FROM public.users WHERE id = v_user),
+                    btrim(p_reason))
+      END,
       'contracts', c.id,
       format('/hd/hop-dong/%s', c.id)
     )

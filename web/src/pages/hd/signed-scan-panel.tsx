@@ -3,7 +3,7 @@
  * dấu; xem; chia sẻ từ điện thoại; tạo link xem có hạn cho khách và theo dõi khách đã mở chưa.
  *
  * Ai làm gì do CSDL quyết (`attach_signed_scan`, `rls_contract_scan_sharer`); nút chỉ hiện cho
- * người làm được (CLAUDE.md 5.4). Thay bản đã có chỉ Ban Giám đốc, kèm lý do.
+ * người làm được (CLAUDE.md 5.4). Thay bản đã có phải ghi lý do; Ban Giám đốc được báo.
  */
 
 import { useState } from 'react';
@@ -37,7 +37,6 @@ function addDays(days: number): string {
 export function SignedScanPanel({
   contract,
   canManage,
-  isApprover,
 }: {
   contract: {
     id: string;
@@ -49,7 +48,6 @@ export function SignedScanPanel({
   };
   /** Người chịu trách nhiệm hoặc Ban Giám đốc. */
   canManage: boolean;
-  isApprover: boolean;
 }) {
   const prompt = usePromptDialog();
   const attach = useAttachSignedScan();
@@ -99,7 +97,8 @@ export function SignedScanPanel({
     }
   }
 
-  const canReplace = hasScan && isApprover;
+  // Người chịu trách nhiệm hoặc Ban Giám đốc thay được, phải ghi lý do; BGĐ được báo (0189).
+  const canReplace = hasScan && canManage;
   const now = Date.now();
 
   return (
@@ -154,15 +153,10 @@ export function SignedScanPanel({
         )}
         {canReplace && (
           <Button variant="subtle" onClick={() => setScanning(true)} disabled={attach.isPending}>
-            Thay bản khác
+            Quét lại / thay bản khác
           </Button>
         )}
       </div>
-      {hasScan && canManage && !isApprover && (
-        <p className="mt-2 text-sm text-fg-subtle">
-          Cần thay bằng bản quét khác thì nhờ Ban Giám đốc bấm «Thay bản khác» trên hợp đồng này.
-        </p>
-      )}
 
       {message && (
         <p role="status" className="mt-2 text-sm text-status-completed">

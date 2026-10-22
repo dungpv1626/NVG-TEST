@@ -418,7 +418,6 @@ export function ContractDetailPage() {
                   <SignedScanPanel
                     contract={contract}
                     canManage={canApprove || (canEdit && isResponsible)}
-                    isApprover={canApprove}
                   />
                 )}
                 <DetailFields
