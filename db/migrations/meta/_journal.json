@@ -1380,6 +1380,13 @@
       "when": 1791510000000,
       "tag": "0206_hanh_chinh_giay_to_tai_san_ky_nhan",
       "breakpoints": true
+    },
+    {
+      "idx": 207,
+      "version": "7",
+      "when": 1791520000000,
+      "tag": "0207_ns_nhac_hop_dong_lao_dong",
+      "breakpoints": true
     }
   ]
 }

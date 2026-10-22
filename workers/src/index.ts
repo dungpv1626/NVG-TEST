@@ -118,6 +118,8 @@ const SCAN_FUNCTIONS = [
   'scan_crm_followup_reminders',
   // Đợt 5 — giấy tờ pháp nhân / hồ sơ năng lực hết hạn (5F, 5C — 0206).
   'scan_company_document_reminders',
+  // Hợp đồng lao động hết hạn (5E — 0207).
+  'scan_employment_contract_reminders',
 ] as const;
 
 export async function runScheduledScans(env: Env): Promise<Record<string, number | string>> {

@@ -7,6 +7,8 @@
  *  - Giấy tờ sắp hết hạn và đã hết hạn (NS-10) — việc đi đòi giấy.
  *  - Kỳ chấm công đang chờ thao tác (NS-04) — việc gửi xác nhận hoặc chốt.
  *  - Nhân sự sắp hết hạn thử việc (NS-03) — việc nhắc đánh giá TRƯỚC thời hạn.
+ *  - Hợp đồng lao động đã / sắp hết hạn (Đợt 5 — 5E): đã hết hạn luôn hiện; «sắp hết» chỉ khi
+ *    NVG đã đặt `ns.contract_remind_days` (trống thì nói rõ, không tự đặt số). Không có lương.
  *
  * Mỗi thẻ bấm được và dẫn thẳng tới màn hình xử lý (Webapp Flow 4.1) — thẻ không có lối đi
  * tiếp là thẻ vô dụng, đúng tinh thần Content Guidelines 3.4 về thông báo.
@@ -14,6 +16,7 @@
 
 import { Link } from 'react-router-dom';
 import {
+  EMPLOYMENT_CONTRACT_TYPE_LABELS,
   TIMESHEET_PERIOD_STATUS_META,
   WORK_BLOCK_LABELS,
   documentReminderStage,
@@ -24,6 +27,8 @@ import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states
 import { StatusWithLabel } from '@/components/ui/status-lozenge';
 import { useEmployees, useHrDocuments, useTimesheetPeriods } from '@/hooks/use-hr';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { useParameterNumber } from '@/hooks/use-company-documents';
+import { useExpiringContracts } from '@/hooks/use-ns-contracts';
 import { cn } from '@/lib/utils';
 import { ReminderTag } from './document-page';
 import { NsNav } from './ns-nav';
@@ -64,6 +69,12 @@ export function HrDashboardPage() {
     .map((e) => ({ employee: e, days: daysLeft(e.probation_end_date!) }))
     .filter((x) => x.days <= 30)
     .sort((a, b) => a.days - b.days);
+
+  const { data: contracts } = useExpiringContracts();
+  const { data: contractRemindDays } = useParameterNumber('ns.contract_remind_days');
+  const dueContracts = (contracts ?? []).filter(
+    (c) => c.days_left < 0 || (contractRemindDays != null && c.days_left <= contractRemindDays),
+  );
 
   const isLoading = loadingDocs || loadingPeriods || loadingEmployees;
 
@@ -180,6 +191,48 @@ export function HrDashboardPage() {
                     </div>
                     <div className="text-fg-subtle">
                       Hết hạn thử việc {formatDate(employee.probation_end_date)}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="rounded border border-border p-4">
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="font-semibold">Hợp đồng lao động tới hạn</h2>
+              <Link to="/ns/nhan-su" className="text-brand">
+                Mở hồ sơ nhân sự
+              </Link>
+            </div>
+            <p className="mt-1 text-sm text-fg-subtle">
+              {contractRemindDays == null
+                ? 'Số ngày nhắc trước chưa cấu hình — chỉ hiện hợp đồng đã hết hạn.'
+                : `Hiện hợp đồng đã hết hạn và còn dưới ${contractRemindDays} ngày.`}
+            </p>
+            {dueContracts.length === 0 ? (
+              <EmptyState message="Không có hợp đồng lao động nào cần ký lại." />
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {dueContracts.map((c) => (
+                  <li key={c.contract_id} className="border-b border-border pb-2 last:border-b-0">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Link to={`/ns/nhan-su/${c.employee_id}`} className="font-medium text-brand">
+                        {c.employee_name}
+                      </Link>
+                      <span
+                        className={cn(
+                          'font-medium',
+                          c.days_left < 0 ? 'text-status-overdue' : 'text-status-pending',
+                        )}
+                      >
+                        {c.days_left < 0 ? 'Đã hết hạn' : `Còn ${c.days_left} ngày`}
+                      </span>
+                    </div>
+                    <div className="text-fg-subtle">
+                      {c.contract_code ? `${c.contract_code} · ` : ''}
+                      {EMPLOYMENT_CONTRACT_TYPE_LABELS[c.contract_type]} · kết thúc{' '}
+                      {formatDate(c.end_date)}
                     </div>
                   </li>
                 ))}

@@ -229,7 +229,7 @@ BEGIN
     SELECT * FROM public.company_documents
     WHERE deleted_at IS NULL AND expiry_date IS NOT NULL
   LOOP
-    v_days := d.expiry_date - current_date;
+    v_days := d.expiry_date - (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
     v_stage := CASE
       WHEN v_days < 0 THEN 0
       WHEN v_lead IS NOT NULL AND v_days <= v_lead THEN 1
