@@ -1387,6 +1387,13 @@
       "when": 1791420000000,
       "tag": "0197_dong_tien_theo_tuan",
       "breakpoints": true
+    },
+    {
+      "idx": 198,
+      "version": "7",
+      "when": 1791430000000,
+      "tag": "0198_lai_lo_cong_trinh",
+      "breakpoints": true
     }
   ]
 }

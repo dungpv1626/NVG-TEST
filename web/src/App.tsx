@@ -261,6 +261,9 @@ const RentalSettlementPage = lazy(() =>
 const CashForecastPage = lazy(() =>
   import('@/pages/kt/cash-forecast-page').then((m) => ({ default: m.CashForecastPage })),
 );
+const SiteProfitPage = lazy(() =>
+  import('@/pages/bc/site-profit-page').then((m) => ({ default: m.SiteProfitPage })),
+);
 const CashFlowPage = lazy(() =>
   import('@/pages/kt/cash-flow-page').then((m) => ({ default: m.CashFlowPage })),
 );
@@ -378,6 +381,7 @@ const router = createBrowserRouter(
                     trang và trong hàm `finance_daily` (0140). */}
           <Route path="bc/tong-quan" element={<FinanceOverviewPage />} />
           <Route path="bc/lai-lo" element={<ProfitLossReportPage />} />
+          <Route path="bc/lai-lo-quan-tri" element={<SiteProfitPage />} />
           {/* BC-03 — hiệu quả kinh doanh. KHÔNG phải Mẫu D: nguồn khách/giai đoạn
                     pipeline/kết quả đấu thầu không phải giá vốn/lương/lợi nhuận. */}
           <Route path="bc/hieu-qua-kinh-doanh" element={<SalesEffectivenessPage />} />

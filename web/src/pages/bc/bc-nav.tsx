@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 const FINANCE_ITEM = { to: '/bc/tong-quan', label: 'Tổng quan tài chính' };
 
 const PROFIT_ITEM = { to: '/bc/lai-lo', label: 'Lãi/lỗ theo công trình' };
+const SITE_PROFIT_ITEM = { to: '/bc/lai-lo-quan-tri', label: 'Lãi/lỗ quản trị' };
 const SALES_ITEM = { to: '/bc/hieu-qua-kinh-doanh', label: 'Hiệu quả kinh doanh' };
 
 export function BcNav() {
@@ -20,7 +21,7 @@ export function BcNav() {
   const access = useSensitiveAccess();
   const items = [
     ...(access.data?.finance ? [FINANCE_ITEM] : []),
-    ...(access.data?.profit ? [PROFIT_ITEM] : []),
+    ...(access.data?.profit ? [PROFIT_ITEM, SITE_PROFIT_ITEM] : []),
     SALES_ITEM,
   ];
   return (
