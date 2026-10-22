@@ -297,9 +297,27 @@ export function ContractDetailPage() {
     </>
   );
 
+  // Đã duyệt mà chưa ký: nói rõ việc tiếp theo và ai làm — nút «Ghi nhận đã ký» chỉ Ban Giám đốc
+  // thấy, nên Kinh doanh trước đây chỉ thấy dải tiến trình báo «Đã ký» mà không thấy nút đâu
+  // (anh Dũng 22/10/2026).
+  const signNotice =
+    contract.stage === 'da_duyet'
+      ? canApprove
+        ? 'Hợp đồng đã được phê duyệt. Hai bên ký văn bản đã duyệt xong thì bấm «Ghi nhận đã ký» ở đầu trang, ghi số hợp đồng và ngày ký.'
+        : 'Hợp đồng đã được phê duyệt. Việc tiếp theo: tải văn bản đã duyệt (mục «Các phiên bản đã lưu»), in và trình hai bên ký; ký xong Ban Giám đốc ghi nhận đã ký trên hệ thống (số hợp đồng, ngày ký) — tài khoản Kinh doanh không ghi nhận được.'
+      : null;
+
   return (
     <>
       {promptDialog.dialog}
+      {signNotice && (
+        <p
+          role="status"
+          className="mb-3 rounded-sm border border-status-progress bg-status-progress-bg px-3 py-2"
+        >
+          {signNotice}
+        </p>
+      )}
       {actionError && (
         <p
           role="alert"

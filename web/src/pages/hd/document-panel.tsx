@@ -119,9 +119,11 @@ export function DocumentPanel({
           {locked ? (
             <p className="flex items-center gap-2 rounded-md border border-border bg-surface-sunken px-3 py-2">
               <Lock className="size-4 text-fg-subtle" aria-hidden />
-              {contract.stage === 'cho_duyet' || contract.stage === 'da_duyet'
-                ? 'Hợp đồng đang chờ duyệt hoặc đã duyệt — văn bản giữ đúng bản đã gửi. Bị trả về thì lập bản mới.'
-                : 'Hợp đồng đã ký — văn bản đã khoá, không lập thêm bản điền mới. Thay đổi sau ký đi qua tab Phát sinh.'}
+              {contract.stage === 'cho_duyet'
+                ? 'Hợp đồng đang chờ phê duyệt — văn bản giữ đúng bản đã gửi. Bị trả về thì lập bản mới.'
+                : contract.stage === 'da_duyet'
+                  ? 'Hợp đồng đã được phê duyệt theo văn bản «Bản đã duyệt» bên dưới — tải về để in và ký. Không lập thêm bản mới.'
+                  : 'Hợp đồng đã ký — văn bản đã khoá, không lập thêm bản điền mới. Thay đổi sau ký đi qua tab Phát sinh.'}
             </p>
           ) : (
             <FillSection

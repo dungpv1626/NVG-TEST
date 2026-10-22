@@ -8,7 +8,7 @@
  * khi nào (PRD Mục 7, tiêu chí nghiệm thu Giai đoạn 1).
  */
 
-import { toMoney } from './format';
+import { toMoney, toNvgDateInput } from './format';
 import type { StatusGroup } from './status';
 
 /**
@@ -289,9 +289,12 @@ export function contractDisplayStatus(
 ): StatusGroup {
   const meta = CONTRACT_STAGE_META[stage];
 
+  // So theo NGÀY (giờ Việt Nam), không theo thời điểm: `new Date('2026-10-22')` là 07:00 sáng
+  // giờ Việt Nam nên trước đây tới 7 giờ sáng ngày hạn đã «Quá hạn», cạnh dòng «Đến hạn hôm nay»
+  // (anh Dũng 22/10/2026). Quá hạn = hạn đã qua, không tính chính ngày hạn.
   if (!meta.isTerminal && nextDueDate) {
-    const due = new Date(nextDueDate);
-    if (!Number.isNaN(due.getTime()) && due.getTime() < Date.now()) return 'overdue';
+    const due = nextDueDate.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(due) && due < toNvgDateInput(new Date())) return 'overdue';
   }
 
   return meta.statusGroup;
