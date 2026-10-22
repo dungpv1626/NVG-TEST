@@ -19,8 +19,8 @@ export type Quad = [Point, Point, Point, Point];
 /** Tỉ lệ khổ A4 (cạnh dài / cạnh ngắn). */
 export const A4_RATIO = Math.SQRT2;
 
-/** Cạnh dài tối đa của trang đã nắn — đủ đọc chữ ký, dấu; PDF ~300–500 KB mỗi trang. */
-export const MAX_PAGE_SIDE = 2000;
+/** Cạnh dài tối đa của trang đã nắn — ~250 dpi trên khổ A4, gần máy scan (300 dpi). */
+export const MAX_PAGE_SIDE = 3000;
 
 /** Tứ giác mặc định: cả ảnh, thụt vào một chút để người dùng thấy rõ 4 góc mà kéo. */
 export function defaultQuad(width: number, height: number, inset = 0.04): Quad {
@@ -107,7 +107,9 @@ export function createImageData(width: number, height: number): ImageData {
 
 /**
  * Nắn tứ giác `quad` của ảnh nguồn thành trang `width × height` (lấy mẫu song tuyến). `keep` (theo
- * toạ độ nguồn) trả `false` cho điểm ngoài tờ giấy — điểm đó thành trắng.
+ * toạ độ nguồn) trả `false` cho điểm ngoài tờ giấy — điểm đó thành trắng. `rotateDeg` xoay trang
+ * quanh tâm (cùng quy ước `rotateImage`) NGAY trong lần lấy mẫu này: nắn rồi mới xoay là lấy mẫu
+ * hai lần, chữ nhòe thêm một lần (bản quét thật anh Dũng 22/10/2026).
  */
 export function warpQuad(
   src: ImageData,
@@ -115,6 +117,7 @@ export function warpQuad(
   width: number,
   height: number,
   keep?: (x: number, y: number) => boolean,
+  rotateDeg = 0,
 ): ImageData {
   const target: Quad = [
     { x: 0, y: 0 },
@@ -128,11 +131,27 @@ export function warpQuad(
   const d = out.data;
   const sw = src.width;
   const sh = src.height;
+  const rad = (rotateDeg * Math.PI) / 180;
+  const sin = Math.sin(rad);
+  const cos = Math.cos(rad);
+  const cx = width / 2;
+  const cy = height / 2;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      // Lấy mẫu ở tâm điểm ảnh đích.
-      const p = applyHomography(h, { x: x + 0.5, y: y + 0.5 });
-      if (keep && !keep(p.x, p.y)) {
+      // Lấy mẫu ở tâm điểm ảnh đích; có xoay thì đổi về toạ độ trang chưa xoay trước.
+      let tx = x + 0.5;
+      let ty = y + 0.5;
+      if (rotateDeg) {
+        const dx = tx - cx;
+        const dy = ty - cy;
+        tx = dx * cos + dy * sin + cx;
+        ty = -dx * sin + dy * cos + cy;
+      }
+      const p = applyHomography(h, { x: tx, y: ty });
+      if (
+        (rotateDeg && (tx < 0 || ty < 0 || tx > width || ty > height)) ||
+        (keep && !keep(p.x, p.y))
+      ) {
         const o = (y * width + x) * 4;
         d[o] = d[o + 1] = d[o + 2] = d[o + 3] = 255;
         continue;

@@ -166,7 +166,7 @@ function paperBackground(img: ImageData) {
 /** Nền tối hơn mức này không phải giấy (mặt bàn sót trong khung): không kéo sáng quá mức. */
 const BG_FLOOR = 70;
 /** Sau khi chia nền: dưới LO thành đen hẳn, trên HI thành trắng hẳn — chữ đậm, giấy trắng như máy scan. */
-const LO = 55;
+const LO = 70;
 const HI = 215;
 /** Sau khi kéo mức: cả ba kênh trên mức này thì coi là giấy. */
 const PAPER_WHITE = 185;
@@ -194,7 +194,7 @@ function whitenBackground(img: ImageData) {
  * Làm sắc nét (unsharp mask 3×3): nét chữ đậm, rõ mép như bản scan thay vì mềm như ảnh chụp.
  * Giấy trắng (255 cả ba kênh) giữ nguyên — không sinh hạt lấm tấm trên nền.
  */
-function sharpen(img: ImageData, amount = 0.8) {
+function sharpen(img: ImageData, amount = 1) {
   const { width: w, height: h, data: d } = img;
   const src = d.slice();
   for (let y = 1; y < h - 1; y++) {
@@ -212,14 +212,64 @@ function sharpen(img: ImageData, amount = 0.8) {
   }
 }
 
+/**
+ * Dọn mép trang sau khi làm rõ: vệt tối (mặt bàn, vải, bóng mép giấy) nối liền ra mép trang thì
+ * tô trắng — máy scan không có các vệt này. Chữ không chạm mép trang (luôn có lề) nên không mất;
+ * dấu đỏ chạm mép có màu đỏ trội nên giữ.
+ */
+function cleanBorder(img: ImageData) {
+  const { width: w, height: h, data: d } = img;
+  const n = w * h;
+  const dirt = (i: number) => {
+    const p = i * 4;
+    const r = d[p]!;
+    const g = d[p + 1]!;
+    const b = d[p + 2]!;
+    if (r === 255 && g === 255 && b === 255) return false;
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    const redish = r > g + 40 && r > b + 20;
+    return lum < 200 && !redish;
+  };
+  const mark = new Uint8Array(n);
+  const stack = new Int32Array(n);
+  let top = 0;
+  const seed = (i: number) => {
+    if (!mark[i] && dirt(i)) {
+      mark[i] = 1;
+      stack[top++] = i;
+    }
+  };
+  for (let x = 0; x < w; x++) {
+    seed(x);
+    seed((h - 1) * w + x);
+  }
+  for (let y = 0; y < h; y++) {
+    seed(y * w);
+    seed(y * w + w - 1);
+  }
+  while (top > 0) {
+    const i = stack[--top]!;
+    const x = i % w;
+    if (x > 0) seed(i - 1);
+    if (x < w - 1) seed(i + 1);
+    if (i >= w) seed(i - w);
+    if (i < n - w) seed(i + w);
+  }
+  for (let i = 0; i < n; i++) {
+    if (mark[i]) d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = 255;
+  }
+}
+
 /** Áp chế độ lên trang (sửa tại chỗ) và trả lại chính nó. */
 export function enhance(img: ImageData, mode: ScanMode): ImageData {
   if (mode === 'color') return img;
   if (mode === 'document') {
     whitenBackground(img);
     sharpen(img);
+    cleanBorder(img);
     return img;
   }
   writeGray(img, adaptiveThreshold(toGray(img), img.width, img.height));
+  cleanBorder(img);
   return img;
 }

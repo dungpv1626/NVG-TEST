@@ -50,8 +50,8 @@ describe('nắn thẳng trang giấy', () => {
   });
 
   it('cỡ trang theo khổ A4, đứng hay ngang theo tứ giác, không vượt cạnh tối đa', () => {
-    const portrait = pageSize(defaultQuad(3000, 4000, 0));
-    expect(portrait.height).toBe(2000);
+    const portrait = pageSize(defaultQuad(4000, 5000, 0));
+    expect(portrait.height).toBe(3000);
     expect(Math.abs(portrait.height / portrait.width - Math.SQRT2)).toBeLessThan(0.01);
     const landscape = pageSize(defaultQuad(800, 500, 0));
     expect(landscape.width).toBe(800);
@@ -95,7 +95,9 @@ describe('làm rõ chữ', () => {
     for (let y = 0; y < h; y++)
       for (let x = 0; x < w; x++) {
         const paper = x < 100 ? 230 : 120; // nửa phải bị bóng
-        const ink = (x % 50 >= 20 && x % 50 < 24) || (y >= 48 && y < 52);
+        // Chữ có lề — không chạm mép trang (bước dọn mép xoá vệt tối nối ra mép).
+        const inMargin = x >= 10 && x < w - 10 && y >= 5 && y < h - 5;
+        const ink = inMargin && ((x % 50 >= 20 && x % 50 < 24) || (y >= 48 && y < 52 && x < 90));
         const v = ink ? paper - 90 : paper;
         const i = (y * w + x) * 4;
         img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
@@ -117,7 +119,7 @@ describe('làm rõ chữ', () => {
       for (let x = 0; x < w; x++) {
         const k = x < 100 ? 1 : 0.55; // nửa phải bị bóng
         const i = (y * w + x) * 4;
-        const ink = x % 50 >= 20 && x % 50 < 24;
+        const ink = x % 50 >= 20 && x % 50 < 24 && y >= 5 && y < h - 5;
         const stamp = x >= 60 && x < 64 && y >= 60 && y < 64;
         const [r, g, b] = stamp ? [200, 40, 40] : ink ? [50, 50, 50] : [225, 220, 210];
         img.data[i] = r * k;

@@ -26,12 +26,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { buildPdf, type ScanPage } from '@/lib/scan/build-pdf';
-import { deskewAngle, rotateImage } from '@/lib/scan/deskew';
+import { deskewAngle } from '@/lib/scan/deskew';
 import { detectPaper } from '@/lib/scan/detect';
 import { enhance, SCAN_MODE_LABELS, type ScanMode } from '@/lib/scan/enhance';
 import {
-  createImageData,
   defaultQuad,
+  MAX_PAGE_SIDE,
   pageSize,
   rotateQuadClockwise,
   warpQuad,
@@ -40,8 +40,10 @@ import {
 import { cn } from '@/lib/utils';
 
 /** Ảnh nguồn thu về cạnh dài này trước khi kéo góc — đủ cho trang 2.000 px, nhẹ cho điện thoại. */
-const SOURCE_MAX_SIDE = 2600;
+const SOURCE_MAX_SIDE = 4000;
 const THUMB_SIDE = 320;
+/** Cỡ bản nhỏ dùng đo góc dòng chữ. */
+const DESKEW_SIDE = 900;
 /** Tìm mép trên ảnh thu nhỏ — đủ chính xác cho gợi ý góc, nhanh trên điện thoại. */
 const DETECT_SIDE = 480;
 
@@ -134,7 +136,10 @@ async function loadImage(file: File): Promise<HTMLCanvasElement> {
   }
   const k = Math.min(1, SOURCE_MAX_SIDE / Math.max(bitmap.width, bitmap.height));
   const c = canvasOf(Math.round(bitmap.width * k), Math.round(bitmap.height * k));
-  c.getContext('2d')!.drawImage(bitmap, 0, 0, c.width, c.height);
+  const ctx = c.getContext('2d')!;
+  // Mặc định trình duyệt thu nhỏ ở chất lượng thấp — chữ nhòe ngay từ đầu.
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bitmap, 0, 0, c.width, c.height);
   if ('close' in bitmap) bitmap.close();
   return c;
 }
@@ -153,10 +158,15 @@ function renderPage(page: Extract<Page, { kind: 'image' }>, maxSide: number): HT
         return !o.mask[my * o.width + mx];
       }
     : undefined;
-  const enhanced = enhance(warpQuad(src, page.quad, width, height, keep), page.mode);
-  // Tờ giấy tràn khung thì 4 góc không nắn được hết độ nghiêng — xoay thẳng theo dòng chữ.
-  const angle = deskewAngle(enhanced);
-  const out = angle ? rotateImage(enhanced, -angle, createImageData) : enhanced;
+  // Tờ giấy tràn khung thì 4 góc không nắn được hết độ nghiêng — đo góc dòng chữ trên bản nhỏ,
+  // rồi nắn + xoay trong MỘT lần lấy mẫu ở cỡ thật (lấy mẫu hai lần làm chữ nhòe).
+  const probeSize = pageSize(page.quad, Math.min(maxSide, DESKEW_SIDE));
+  const probe = enhance(
+    warpQuad(src, page.quad, probeSize.width, probeSize.height, keep),
+    page.mode,
+  );
+  const angle = deskewAngle(probe);
+  const out = enhance(warpQuad(src, page.quad, width, height, keep, -angle), page.mode);
   const c = canvasOf(width, height);
   c.getContext('2d')!.putImageData(out, 0, 0);
   return c;
@@ -315,7 +325,7 @@ export function DocumentScanner({
         if (p.kind === 'pdf') {
           out.push({ kind: 'pdf', bytes: p.bytes });
         } else {
-          const c = renderPage(p, 2000);
+          const c = renderPage(p, MAX_PAGE_SIDE);
           out.push({ kind: 'image', jpeg: await toJpeg(c), width: c.width, height: c.height });
         }
       }
