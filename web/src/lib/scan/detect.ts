@@ -8,6 +8,8 @@
  * giác) thì trả `null` — nơi gọi quay về 4 góc mặc định và nói người dùng tự kéo. Chữ và dấu
  * trên giấy là lỗ tối bên trong vùng, không làm vỡ vùng; bóng tay làm tối một nửa trang vẫn
  * sáng hơn mặt bàn tối, nhưng giấy đặt trên bàn trắng thì không tách được — khi đó trả `null`.
+ * Tờ giấy chụp gần, tràn ra ngoài khung thì 4 góc là chỗ giấy chạm mép ảnh — phần ngoài khung
+ * vốn đã không có trong ảnh.
  */
 
 import type { Quad } from './perspective';
@@ -67,11 +69,28 @@ function isConvex(q: Quad): boolean {
   return true;
 }
 
+/** Kết quả tìm giấy, theo toạ độ của chính ảnh đầu vào. */
+export interface PaperDetection {
+  quad: Quad;
+  /**
+   * 1 = điểm NGOÀI tờ giấy (mặt bàn): vùng tối, ít màu, thông ra mép ảnh. Tờ giấy tràn khung thì
+   * 4 góc không cắt hết được mặt bàn — bộ quét tô trắng các điểm này. Chữ (lọt trong giấy) và dấu
+   * đỏ / chữ ký xanh (có màu) không bao giờ thuộc vùng này.
+   */
+  outside: Uint8Array;
+  width: number;
+  height: number;
+}
+
 /**
  * Tìm 4 góc tờ giấy trong ảnh (nên là ảnh đã thu nhỏ, cạnh dài ~400–600 px). Trả toạ độ theo
  * chính ảnh đầu vào, hoặc `null` khi không chắc.
  */
 export function detectPaperQuad(img: ImageData): Quad | null {
+  return detectPaper(img)?.quad ?? null;
+}
+
+export function detectPaper(img: ImageData): PaperDetection | null {
   const { width: w, height: h, data: d } = img;
   const n = w * h;
   const g = new Uint8ClampedArray(n);
@@ -116,20 +135,26 @@ export function detectPaperQuad(img: ImageData): Quad | null {
       bestLabel = next;
     }
   }
-  if (bestSize < 0.15 * n || bestSize > 0.97 * n) return null;
+  if (bestSize < 0.15 * n || bestSize > 0.985 * n) return null;
 
-  // Tờ giấy nằm TRONG khung thì vùng sáng chỉ chạm mép ảnh ở vài chỗ. Chạm quá một phần tư chu vi
-  // là vùng sáng của cả ảnh (bàn trắng, nửa ảnh được chiếu sáng) — không đoán.
-  let onBorder = 0;
-  for (let x = 0; x < w; x++) {
-    if (label[x] === bestLabel) onBorder++;
-    if (label[(h - 1) * w + x] === bestLabel) onBorder++;
+  // Giấy phải sáng HƠN HẲN phần còn lại (mặt bàn). Chỉ chênh nhẹ — giấy trắng trên bàn trắng, hay
+  // nửa ảnh được chiếu sáng — thì vùng sáng không phải tờ giấy: không đoán. (Không loại vùng chạm
+  // mép ảnh: chụp gần, tờ giấy tràn khung là chuyện thường — anh Dũng 22/10/2026.)
+  let darkSum = 0;
+  let darkN = 0;
+  let lightSum = 0;
+  for (let i = 0; i < n; i++) {
+    if (label[i] === bestLabel) lightSum += g[i]!;
+    else if (g[i]! <= t) {
+      darkSum += g[i]!;
+      darkN++;
+    }
   }
-  for (let y = 1; y < h - 1; y++) {
-    if (label[y * w] === bestLabel) onBorder++;
-    if (label[y * w + w - 1] === bestLabel) onBorder++;
-  }
-  if (onBorder > 0.25 * 2 * (w + h)) return null;
+  const light = lightSum / bestSize;
+  const dark = darkN ? darkSum / darkN : light;
+  // Phần tối chỉ chênh vừa mà lại chiếm nhiều chỗ (nửa ảnh trong bóng) thì không phải mặt bàn.
+  // Mặt bàn thật hoặc rất tối, hoặc chỉ là dải hẹp quanh tờ giấy chụp gần.
+  if (light - dark < 60 || (dark > 0.6 * light && darkN > 0.25 * n)) return null;
 
   // Điểm cực theo hai đường chéo.
   let tl = { x: 0, y: 0, v: Infinity };
@@ -154,5 +179,66 @@ export function detectPaperQuad(img: ImageData): Quad | null {
   // Lùi vào trong ~1 % để không dính viền mặt bàn ở mép giấy.
   const cx = quad.reduce((s, p) => s + p.x, 0) / 4;
   const cy = quad.reduce((s, p) => s + p.y, 0) / 4;
-  return quad.map((p) => ({ x: p.x + (cx - p.x) * 0.01, y: p.y + (cy - p.y) * 0.01 })) as Quad;
+  const inset = quad.map((p) => ({
+    x: p.x + (cx - p.x) * 0.01,
+    y: p.y + (cy - p.y) * 0.01,
+  })) as Quad;
+  return { quad: inset, outside: outsideMask(img, g, t), width: w, height: h };
+}
+
+/** Mặt bàn: điểm tối + ít màu, nối liền ra mép ảnh; nới thêm để mất viền tối ở mép giấy. */
+function outsideMask(img: ImageData, g: Uint8ClampedArray, t: number): Uint8Array {
+  const { width: w, height: h, data: d } = img;
+  const n = w * h;
+  const candidate = new Uint8Array(n);
+  for (let i = 0, p = 0; i < n; i++, p += 4) {
+    const max = Math.max(d[p]!, d[p + 1]!, d[p + 2]!);
+    const min = Math.min(d[p]!, d[p + 1]!, d[p + 2]!);
+    // Rất tối (vải, bàn sẫm màu) hoặc ít màu thì là mặt bàn. Có màu thì chỉ coi là mặt bàn khi
+    // xanh trội (vải jean, bàn xanh — ảnh thật 22/10/2026); dấu đỏ chạm mép ảnh vẫn giữ. Chữ ký
+    // mực xanh nằm lọt trong giấy, không thông ra mép ảnh nên không bị tô.
+    const blueish = d[p + 2]! >= d[p]! && d[p + 2]! >= d[p + 1]!;
+    candidate[i] =
+      g[i]! <= t && (max < 90 || blueish || (max - min) / Math.max(1, max) < 0.35) ? 1 : 0;
+  }
+  const out = new Uint8Array(n);
+  const stack = new Int32Array(n);
+  let top = 0;
+  const seed = (i: number) => {
+    if (candidate[i] && !out[i]) {
+      out[i] = 1;
+      stack[top++] = i;
+    }
+  };
+  for (let x = 0; x < w; x++) {
+    seed(x);
+    seed((h - 1) * w + x);
+  }
+  for (let y = 0; y < h; y++) {
+    seed(y * w);
+    seed(y * w + w - 1);
+  }
+  while (top > 0) {
+    const i = stack[--top]!;
+    const x = i % w;
+    if (x > 0) seed(i - 1);
+    if (x < w - 1) seed(i + 1);
+    if (i >= w) seed(i - w);
+    if (i < n - w) seed(i + w);
+  }
+  // Nới 2 lần một điểm (~8 điểm ảnh ở cỡ trang): bỏ viền tối mờ ở ranh giấy / mặt bàn.
+  let grown = out;
+  for (let pass = 0; pass < 2; pass++) {
+    const src = grown;
+    grown = src.slice();
+    for (let i = 0; i < n; i++) {
+      if (!src[i]) continue;
+      const x = i % w;
+      if (x > 0) grown[i - 1] = 1;
+      if (x < w - 1) grown[i + 1] = 1;
+      if (i >= w) grown[i - w] = 1;
+      if (i < n - w) grown[i + w] = 1;
+    }
+  }
+  return grown;
 }

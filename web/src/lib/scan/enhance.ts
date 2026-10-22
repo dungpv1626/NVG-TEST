@@ -2,8 +2,8 @@
  * Làm rõ trang đã nắn — ba chế độ của bộ quét.
  *
  *  · «Màu gốc»: giữ nguyên (dấu đỏ, chữ ký xanh vẫn đúng màu).
- *  · «Tài liệu»: chia mỗi điểm cho độ sáng nền giấy quanh nó — xoá bóng tay / bóng đèn, nền về
- *    trắng, GIỮ MÀU (dấu đỏ, chữ ký xanh vẫn đúng màu — căn cứ của bản đã ký).
+ *  · «Tài liệu»: chia mỗi kênh màu cho nền giấy quanh nó — xoá bóng tay / bóng đèn và ánh màu
+ *    của đèn, nền về trắng, chữ đậm lên, GIỮ MÀU dấu đỏ / chữ ký xanh (căn cứ của bản đã ký).
  *  · «Đen trắng»: ngưỡng thích nghi theo vùng (Bradley) — chữ rõ cả khi một nửa trang có bóng
  *    tay hay bóng đèn, điều mà một ngưỡng chung cho cả trang không làm được.
  */
@@ -82,27 +82,109 @@ function adaptiveThreshold(g: Uint8ClampedArray, w: number, h: number, t = 0.15)
 }
 
 /**
- * Xoá bóng, giữ màu: nền giấy ước bằng trung bình xám vùng rộng (mực thưa nên kéo nền xuống ít);
- * mỗi kênh màu nhân 255 / nền, rồi kéo nhẹ cho nền thật trắng và mực đậm lên.
+ * Nền giấy theo TỪNG KÊNH MÀU, ở lưới thô: trung bình từng ô → lấy ô sáng nhất trong vùng lân
+ * cận (bỏ chữ: giữa các dòng, lề luôn có ô gần như toàn giấy) → làm mượt. Theo từng kênh nên khử
+ * được cả ánh màu của đèn (giấy chụp dưới đèn trắng xanh ra xanh — ảnh thật anh Dũng 22/10/2026),
+ * không chỉ bóng.
  */
-/** Độ sáng nền thấp nhất còn coi là giấy (giấy trong bóng tay vẫn sáng hơn mức này). */
-const BG_FLOOR = 100;
-
-function whitenBackground(img: ImageData, g: Uint8ClampedArray) {
+function paperBackground(img: ImageData) {
   const { width: w, height: h, data: d } = img;
-  const integral = integralOf(g, w, h);
-  const half = Math.max(8, Math.round(Math.max(w, h) / 16));
-  const LO = 20;
-  const HI = 235;
+  const B = Math.max(6, Math.round(Math.max(w, h) / 100));
+  const gw = Math.ceil(w / B);
+  const gh = Math.ceil(h / B);
+  const mean = new Float32Array(gw * gh * 3);
+  for (let by = 0; by < gh; by++)
+    for (let bx = 0; bx < gw; bx++) {
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let k = 0;
+      for (let y = by * B; y < Math.min(h, (by + 1) * B); y += 2)
+        for (let x = bx * B; x < Math.min(w, (bx + 1) * B); x += 2) {
+          const p = (y * w + x) * 4;
+          r += d[p]!;
+          g += d[p + 1]!;
+          b += d[p + 2]!;
+          k++;
+        }
+      const o = (by * gw + bx) * 3;
+      mean[o] = r / k;
+      mean[o + 1] = g / k;
+      mean[o + 2] = b / k;
+    }
+  const pass = (src: Float32Array, radius: number, pick: 'max' | 'avg') => {
+    const out = new Float32Array(src.length);
+    for (let by = 0; by < gh; by++)
+      for (let bx = 0; bx < gw; bx++) {
+        let best = -1;
+        let acc = [0, 0, 0];
+        let k = 0;
+        for (let dy = -radius; dy <= radius; dy++)
+          for (let dx = -radius; dx <= radius; dx++) {
+            const x = bx + dx;
+            const y = by + dy;
+            if (x < 0 || y < 0 || x >= gw || y >= gh) continue;
+            const o = (y * gw + x) * 3;
+            if (pick === 'avg') {
+              acc = [acc[0]! + src[o]!, acc[1]! + src[o + 1]!, acc[2]! + src[o + 2]!];
+              k++;
+            } else {
+              const lum = src[o]! + src[o + 1]! + src[o + 2]!;
+              if (lum > best) {
+                best = lum;
+                acc = [src[o]!, src[o + 1]!, src[o + 2]!];
+              }
+            }
+          }
+        const o = (by * gw + bx) * 3;
+        const div = pick === 'avg' ? k : 1;
+        out[o] = acc[0]! / div;
+        out[o + 1] = acc[1]! / div;
+        out[o + 2] = acc[2]! / div;
+      }
+    return out;
+  };
+  const bg = pass(pass(mean, 1, 'max'), 1, 'avg');
+  /** Nền tại (x, y), nội suy song tuyến giữa tâm các ô. */
+  return (x: number, y: number, c: number) => {
+    const fx = Math.min(Math.max(x / B - 0.5, 0), gw - 1);
+    const fy = Math.min(Math.max(y / B - 0.5, 0), gh - 1);
+    const x0 = Math.floor(fx);
+    const y0 = Math.floor(fy);
+    const x1 = Math.min(x0 + 1, gw - 1);
+    const y1 = Math.min(y0 + 1, gh - 1);
+    const ax = fx - x0;
+    const ay = fy - y0;
+    const at = (xx: number, yy: number) => bg[(yy * gw + xx) * 3 + c]!;
+    return (
+      (at(x0, y0) * (1 - ax) + at(x1, y0) * ax) * (1 - ay) +
+      (at(x0, y1) * (1 - ax) + at(x1, y1) * ax) * ay
+    );
+  };
+}
+
+/** Nền tối hơn mức này không phải giấy (mặt bàn sót trong khung): không kéo sáng quá mức. */
+const BG_FLOOR = 70;
+/** Sau khi chia nền: dưới LO thành đen hẳn, trên HI thành trắng hẳn — chữ đậm, giấy trắng như máy scan. */
+const LO = 55;
+const HI = 215;
+/** Sau khi kéo mức: cả ba kênh trên mức này thì coi là giấy. */
+const PAPER_WHITE = 185;
+
+/** «Tài liệu»: chia cho nền giấy từng kênh → giấy trắng, mất bóng và ánh màu; giữ màu dấu, chữ ký. */
+function whitenBackground(img: ImageData) {
+  const { width: w, height: h, data: d } = img;
+  const bgAt = paperBackground(img);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      // Nền tối hơn BG_FLOOR không phải giấy (mặt bàn còn sót trong khung): không kéo sáng quá
-      // mức — trước đây chỗ đó bị nhân 3–5 lần thành vệt vàng loang ở viền trang.
-      const k = 255 / Math.max(BG_FLOOR, localMean(integral, w, h, x, y, half));
       const p = (y * w + x) * 4;
       for (let c = 0; c < 3; c++) {
-        d[p + c] = ((d[p + c]! * k - LO) * 255) / (HI - LO);
+        const v = (d[p + c]! * 255) / Math.max(BG_FLOOR, bgAt(x, y, c));
+        d[p + c] = ((v - LO) * 255) / (HI - LO);
       }
+      // Cả ba kênh đều sáng = giấy còn ám màu (chỗ gập, bóng sắc) → trắng hẳn. Dấu đỏ, mực xanh
+      // luôn có một kênh tối nên không bị xoá.
+      if (Math.min(d[p]!, d[p + 1]!, d[p + 2]!) > PAPER_WHITE) d[p] = d[p + 1] = d[p + 2] = 255;
       d[p + 3] = 255;
     }
   }
@@ -111,11 +193,10 @@ function whitenBackground(img: ImageData, g: Uint8ClampedArray) {
 /** Áp chế độ lên trang (sửa tại chỗ) và trả lại chính nó. */
 export function enhance(img: ImageData, mode: ScanMode): ImageData {
   if (mode === 'color') return img;
-  const g = toGray(img);
   if (mode === 'document') {
-    whitenBackground(img, g);
+    whitenBackground(img);
     return img;
   }
-  writeGray(img, adaptiveThreshold(g, img.width, img.height));
+  writeGray(img, adaptiveThreshold(toGray(img), img.width, img.height));
   return img;
 }

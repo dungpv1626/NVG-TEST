@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import { A4_POINTS, buildPdf } from '../build-pdf';
-import { detectPaperQuad } from '../detect';
+import { detectPaper, detectPaperQuad } from '../detect';
 import { enhance } from '../enhance';
 import {
   applyHomography,
@@ -211,5 +211,40 @@ describe('tự tìm mép giấy', () => {
       { x: 50, y: 380 },
     ];
     expect(detectPaperQuad(photo(400, 480, paper, 235, 235))).toBeNull();
+  });
+});
+
+describe('tờ giấy tràn khung (ảnh thật anh Dũng 22/10/2026)', () => {
+  it('vẫn tìm được; vải xanh / bàn tối ở mép thuộc vùng tô trắng, chữ và dấu đỏ chạm mép thì không', () => {
+    const w = 300;
+    const h = 400;
+    const img = createImageData(w, h);
+    const set = (x: number, y: number, [r, g, b]: number[]) => {
+      const i = (y * w + x) * 4;
+      img.data[i] = r!;
+      img.data[i + 1] = g!;
+      img.data[i + 2] = b!;
+      img.data[i + 3] = 255;
+    };
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        if (y < 20)
+          set(x, y, [40, 40, 45]); // dải bàn tối ở trên
+        else if (x < 25 && y > 150)
+          set(x, y, [60, 75, 130]); // vải jean bên trái
+        else if (x > 280 && y > 200 && y < 240)
+          set(x, y, [210, 60, 80]); // dấu đỏ chạm mép phải
+        else if (y % 25 < 4 && x > 50 && x < 260)
+          set(x, y, [40, 45, 60]); // dòng chữ
+        else set(x, y, [205, 220, 235]); // giấy ám xanh
+      }
+    const r = detectPaper(img);
+    expect(r).not.toBeNull();
+    const outside = (x: number, y: number) => r!.outside[y * w + x];
+    expect(outside(150, 5)).toBe(1); // bàn
+    expect(outside(10, 300)).toBe(1); // vải
+    expect(outside(295, 220)).toBe(0); // dấu đỏ giữ
+    expect(outside(150, 101)).toBe(0); // chữ giữ
+    expect(outside(150, 300)).toBe(0); // giấy
   });
 });

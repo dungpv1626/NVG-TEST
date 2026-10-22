@@ -26,7 +26,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { buildPdf, type ScanPage } from '@/lib/scan/build-pdf';
-import { detectPaperQuad } from '@/lib/scan/detect';
+import { detectPaper } from '@/lib/scan/detect';
 import { enhance, SCAN_MODE_LABELS, type ScanMode } from '@/lib/scan/enhance';
 import {
   defaultQuad,
@@ -45,14 +45,48 @@ const DETECT_SIDE = 480;
 
 type QuadSource = 'auto' | 'default' | 'manual';
 
-/** Gợi ý 4 góc tờ giấy theo toạ độ ảnh nguồn, hoặc `null` khi máy không chắc. */
-function autoQuad(source: HTMLCanvasElement): Quad | null {
+/** Vùng mặt bàn trên ảnh thu nhỏ (`k` = cỡ nhỏ / cỡ nguồn) — tô trắng khi nắn trang. */
+interface OutsideMask {
+  mask: Uint8Array;
+  width: number;
+  height: number;
+  k: number;
+}
+
+/** 4 góc gợi ý + vùng mặt bàn, theo toạ độ ảnh nguồn; `null` khi máy không chắc. */
+function autoDetect(source: HTMLCanvasElement): { quad: Quad; outside: OutsideMask } | null {
   const k = Math.min(1, DETECT_SIDE / Math.max(source.width, source.height));
   const c = canvasOf(Math.round(source.width * k), Math.round(source.height * k));
   const ctx = c.getContext('2d')!;
   ctx.drawImage(source, 0, 0, c.width, c.height);
-  const q = detectPaperQuad(ctx.getImageData(0, 0, c.width, c.height));
-  return q ? (q.map((p) => ({ x: p.x / k, y: p.y / k })) as Quad) : null;
+  const r = detectPaper(ctx.getImageData(0, 0, c.width, c.height));
+  if (!r) return null;
+  return {
+    quad: r.quad.map((p) => ({ x: p.x / k, y: p.y / k })) as Quad,
+    outside: { mask: r.outside, width: r.width, height: r.height, k },
+  };
+}
+
+/** Kết quả tìm giấy → các trường của trang (không tìm được thì góc mặc định, không tô). */
+function detectedFields(source: HTMLCanvasElement) {
+  const r = autoDetect(source);
+  return r
+    ? { quad: r.quad, outside: r.outside, quadSource: 'auto' as const }
+    : {
+        quad: defaultQuad(source.width, source.height),
+        outside: null,
+        quadSource: 'default' as const,
+      };
+}
+
+/** Xoay vùng mặt bàn 90° chiều kim đồng hồ cùng ảnh. */
+function rotateMask(m: OutsideMask): OutsideMask {
+  const { width: w, height: h } = m;
+  const mask = new Uint8Array(w * h);
+  // Ảnh mới rộng h, cao w: điểm mới (x', y') lấy từ điểm cũ (y', h − 1 − x').
+  for (let y = 0; y < w; y++)
+    for (let x = 0; x < h; x++) mask[y * h + x] = m.mask[(h - 1 - x) * w + y]!;
+  return { mask, width: h, height: w, k: m.k };
 }
 
 type Page =
@@ -66,6 +100,8 @@ type Page =
       thumbUrl: string | null;
       /** 4 góc từ đâu: máy tự tìm, mặc định (không tìm được), hay người dùng đã kéo. */
       quadSource: QuadSource;
+      /** Vùng mặt bàn máy tìm được — tô trắng khi nắn (tờ giấy tràn khung). */
+      outside: OutsideMask | null;
     }
   | { id: string; kind: 'pdf'; name: string; bytes: Uint8Array; pageCount: number };
 
@@ -107,7 +143,15 @@ function renderPage(page: Extract<Page, { kind: 'image' }>, maxSide: number): HT
   const src = page.source
     .getContext('2d')!
     .getImageData(0, 0, page.source.width, page.source.height);
-  const out = enhance(warpQuad(src, page.quad, width, height), page.mode);
+  const o = page.outside;
+  const keep = o
+    ? (x: number, y: number) => {
+        const mx = Math.min(o.width - 1, Math.max(0, Math.floor(x * o.k)));
+        const my = Math.min(o.height - 1, Math.max(0, Math.floor(y * o.k)));
+        return !o.mask[my * o.width + mx];
+      }
+    : undefined;
+  const out = enhance(warpQuad(src, page.quad, width, height, keep), page.mode);
   const c = canvasOf(width, height);
   c.getContext('2d')!.putImageData(out, 0, 0);
   return c;
@@ -195,15 +239,7 @@ export function DocumentScanner({
             kind: 'image',
             source,
             sourceUrl: source.toDataURL('image/jpeg', 0.8),
-            ...(() => {
-              const q = autoQuad(source);
-              return q
-                ? { quad: q, quadSource: 'auto' as const }
-                : {
-                    quad: defaultQuad(source.width, source.height),
-                    quadSource: 'default' as const,
-                  };
-            })(),
+            ...detectedFields(source),
             mode: 'document',
             thumbUrl: null,
           });
@@ -241,6 +277,7 @@ export function DocumentScanner({
         source: c,
         sourceUrl: c.toDataURL('image/jpeg', 0.8),
         quad: rotateQuadClockwise(p.quad, p.source.height),
+        outside: p.outside && rotateMask(p.outside),
       };
     });
   }
@@ -370,14 +407,7 @@ export function DocumentScanner({
           <PageEditor
             page={current}
             onQuad={(quad) => update(current.id, () => ({ quad, quadSource: 'manual' }))}
-            onDetect={() =>
-              update(current.id, (p) => {
-                const q = autoQuad(p.source);
-                return q
-                  ? { quad: q, quadSource: 'auto' }
-                  : { quad: defaultQuad(p.source.width, p.source.height), quadSource: 'default' };
-              })
-            }
+            onDetect={() => update(current.id, (p) => detectedFields(p.source))}
             onMode={(mode) => update(current.id, () => ({ mode }))}
             onRotate={() => rotate(current.id)}
           />

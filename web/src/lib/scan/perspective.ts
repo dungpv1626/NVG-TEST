@@ -105,8 +105,17 @@ export function createImageData(width: number, height: number): ImageData {
   } as ImageData;
 }
 
-/** Nắn tứ giác `quad` của ảnh nguồn thành trang `width × height` (lấy mẫu song tuyến). */
-export function warpQuad(src: ImageData, quad: Quad, width: number, height: number): ImageData {
+/**
+ * Nắn tứ giác `quad` của ảnh nguồn thành trang `width × height` (lấy mẫu song tuyến). `keep` (theo
+ * toạ độ nguồn) trả `false` cho điểm ngoài tờ giấy — điểm đó thành trắng.
+ */
+export function warpQuad(
+  src: ImageData,
+  quad: Quad,
+  width: number,
+  height: number,
+  keep?: (x: number, y: number) => boolean,
+): ImageData {
   const target: Quad = [
     { x: 0, y: 0 },
     { x: width, y: 0 },
@@ -123,6 +132,11 @@ export function warpQuad(src: ImageData, quad: Quad, width: number, height: numb
     for (let x = 0; x < width; x++) {
       // Lấy mẫu ở tâm điểm ảnh đích.
       const p = applyHomography(h, { x: x + 0.5, y: y + 0.5 });
+      if (keep && !keep(p.x, p.y)) {
+        const o = (y * width + x) * 4;
+        d[o] = d[o + 1] = d[o + 2] = d[o + 3] = 255;
+        continue;
+      }
       const fx = Math.min(Math.max(p.x - 0.5, 0), sw - 1);
       const fy = Math.min(Math.max(p.y - 0.5, 0), sh - 1);
       const x0 = Math.floor(fx);
