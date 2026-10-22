@@ -919,6 +919,30 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     Worker `GET /public/signed/:token` (`contract_scan_public`, chỉ service_role, không giá trị / điều khoản) → trang
     `/xem-ban-ky/:token` (vẽ trang PDF bằng pdf.js — điện thoại không hiện PDF trong khung). «Chia sẻ»
     (`lib/share-file.ts`): máy cảm ứng mở bảng chia sẻ, máy tính tải tệp về.
+- **Đợt 3 — Tài chính và kiểm soát, xong trên máy 23/10/2026 (0195–0199, mạch song song, phép thử `kt-dot3-*`):**
+  3A đợt thanh toán (`contract_terms`) gắn mốc thi công hoặc biên bản nghiệm thu → mốc đạt / biên bản ký hai bên thì «đến hạn
+  thu», báo Kế toán + Giám đốc Tài chính + người chịu trách nhiệm hợp đồng (`/kt/dot-thu`, ô «Căn cứ thu» ở khối Sau khi ký;
+  nhắc trước hạn = tham số TRỐNG `kt.collection_remind_days_before`, quét đêm `scan_collection_reminders`). 3B đề nghị thu
+  tiền bảng RIÊNG `collection_requests` (không dùng `payment_requests` — đó là đề nghị CHI): một bấm từ biên bản đã ký, số
+  tiền theo đợt thu, bằng chữ, in, quét bản giấy; công nợ chỉ sinh khi Kế toán bấm «Ghi công nợ» (`/kt/de-nghi-thu`). 3C
+  dòng tiền 4 / 8 tuần (`cash_flow_forecast_items` + `shared/src/kt-cash-forecast.ts`, `/kt/dong-tien-theo-tuan`): thiếu số
+  dư đầu kỳ nhập tay thì chỉ báo tuần «Chi vượt thu», không tự dựng số dư. 3D lãi / lỗ quản trị từng công trình (Mẫu D,
+  `/bc/lai-lo-quan-tri`, «số quản trị, không thay sổ kế toán»; chưa có ngân sách / chi phí thì «Chưa đủ dữ liệu»). 3E danh
+  sách bất thường `ksnb_anomalies` (`/tong-quan/bat-thuong`, sáu nhóm; ngưỡng `ksnb.near_limit_percent`,
+  `ksnb.acceptance_unsigned_days` TRỐNG → «Chưa cấu hình ngưỡng»). Dữ liệu thử hậu tố THU3 (`NVO-HD-2026-THU3`,
+  `NVO-CT-2026-THU3`). Còn: khoản phải thu Kế toán lập tay cho cùng đợt có thể đếm hai lần ở dòng tiền; kế hoạch thu – chi
+  nhập tay chưa vào dòng tiền tuần; QĐ-6.
+- **Đợt 4 — Mua hàng và Kho, xong trên máy 23/10/2026 (0200–0203, phép thử `mh-dot4-*`):** 4A `/mh/gom-de-nghi`
+  (`mh_purchase_pool` — gộp theo pháp nhân + mã vật tư + đơn vị; «Hỏi giá chung» / «Nhập giá chung» ghi trên TỪNG đề nghị
+  nguồn, đơn hàng vẫn một đề nghị một đơn vì ngân sách và nơi giao theo công trình); báo giá nhập được từ lúc Nháp
+  (`rls_quotation_writable`), không chọn được báo giá thiếu mặt hàng. 4B bảng so giá `quotation_board` (VAT, tệp báo giá
+  quét — kho `quotation-files`, giá lần mua trước; người chọn, máy không gợi ý) hiện trong hộp duyệt đề nghị mua;
+  `select_quotation` chép 0037, «thấp nhất» chỉ xét báo giá đủ hàng. 4C khối «Đơn hàng đến hạn giao» + quét đêm
+  `scan_purchase_order_due_reminders` (sắp tới hạn = tham số TRỐNG `mh.order_due_soon_days`; quá hẹn / hôm nay luôn báo).
+  4D tồn tối thiểu: trigger `inventory_items_low_stock_notify` báo ngay lúc tồn vượt xuống mức, mức trống = «Chưa đặt mức».
+  Dữ liệu thử hậu tố THU4. Lỗ có sẵn: chính sách đọc `purchase_orders` / `deliveries` chỉ Mẫu A (chỉ huy trưởng thấy đơn
+  công trình khác) — chưa sửa. Hàm danh sách nối nhiều bảng có RLS: viết điều kiện phạm vi tường minh trong SECURITY
+  DEFINER (`mh_purchase_pool`), để RLS tự áp trên năm bảng nối thì quá 8 giây.
 - **5B AI Design bốn bước (22/10/2026, T162, chỉ `web/src/pages/tk/ai/`):** dải Đầu vào → Mặt bằng → Mặt ngoài (mặt đứng +
   phối cảnh) → Bộ kết quả; `?buoc=` mở thẳng bước. Chi phí ước tính trên nút «Xếp mặt bằng» / «Sửa lại» = trung bình tiền
   THẬT các lượt trước cùng tuyến mô hình (`design_ai_run` + `design_ai_call`), chưa có lượt thì «Chưa đủ dữ liệu». So phương
@@ -1003,7 +1027,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: lịch sử bước chung `stage_transitions`; dải tiến trình gói thầu; QĐ-6 giao dịch nội bộ; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0195** (0195–0216 dành cho bốn mạch Đợt 3 / 4 / 5 / 5B đang làm song song trong worktree; 0217 câu 1 + 4, 0218 câu 2 + 8; sau khi gộp dùng **0219**).
+**Migration tiếp theo: 0195** (0195–0216 dành cho bốn mạch Đợt 3 / 4 / 5 / 5B đang làm song song trong worktree; 0195–0199 Đợt 3 và 0200–0203 Đợt 4 đã gộp; 0205–0214 còn của mạch Đợt 5; 0217 câu 1 + 4, 0218 câu 2 + 8; số mới dùng **0219**).
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -1100,6 +1124,8 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Công trình bàn giao tự lập mẫu NHÁP; Thiết kế chọn ảnh và xác nhận mới vào kho; mẫu nháp không ai ngoài Thiết kế / Giám đốc thấy                                                       | Kế hoạch 2G; ảnh công trường có thể lộ người, biển số, tên chủ nhà — máy không tự đưa ảnh nào ra ngoài. Thiết kế chỉ đọc ảnh công trình khi đang có mẫu nháp của chính công trình đó                   |
 | Trượt thầu tự chuyển cơ hội sang Mất cơ hội; bàn giao thiết kế cần hợp đồng đã ký (0217) | Anh Dũng trả lời câu 4 và câu 1 (22/10/2026). Cơ hội còn gói thầu khác đang chạy thì chưa mất |
 | Tổng Giám đốc được tự duyệt hồ sơ của chính mình; hợp đồng đã ký còn ≤ 90 ngày là «sắp hết hạn» (0218) | Anh Dũng trả lời câu 2 và câu 8 (22/10/2026). Ngoại lệ đặt ở một hàm `user_may_self_approve` mà hai trigger chặn tự duyệt, hộp thư và «đang chờ ai» cùng gọi |
+| Đề nghị thu tiền là bảng riêng; công nợ chỉ sinh khi Kế toán xác nhận; lãi / lỗ quản trị để trống khi chưa có ngân sách / chi phí | Máy không tự ghi sổ (PRD 2.3, KT-08); nghiệm thu trừ 0 đồng chi phí ra lãi đẹp giả (5.2) |
+| Gom đề nghị mua ở khâu HỎI GIÁ, không gộp đơn hàng; báo giá thiếu mặt hàng không chọn được và không tính là thấp nhất | Mỗi đề nghị một công trình, một dòng ngân sách, một nơi giao (KT-05, TC-05) |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)
