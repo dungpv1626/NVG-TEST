@@ -16,6 +16,7 @@ import {
   anonClient,
   hasCredentials,
   PG_INSUFFICIENT_PRIVILEGE,
+  signAcceptanceWithPaper,
   signInAs,
   TEST_PREFIX,
 } from './helpers';
@@ -448,6 +449,11 @@ describeDb('TC — nghiệm thu là căn cứ thu tiền, và chỉ với chủ 
     });
     expect(error).toBeNull();
     expect(data).toBeTruthy();
+
+    // 0192: lập xong chưa báo — Kế toán chỉ được báo khi hai bên đã ký.
+    expect(await billingNoticesFor(ketoan, data as string)).toBe(0);
+    const signed = await signAcceptanceWithPaper(chiHuy, fixture.nvcSiteId, data as string);
+    expect(signed.error).toBeNull();
 
     expect(await billingNoticesFor(ketoan, data as string)).toBe(1);
     // CFO chỉ được gán vào pháp nhân tổng hợp "NVG", không gán riêng vào NVC — trước

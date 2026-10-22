@@ -350,6 +350,9 @@ export interface AcceptanceRecordRow {
   outstanding_issues: string | null;
   cancel_reason: string | null;
   created_at: string;
+  /** Hai bên đã ký (0192); `null` = chưa ký. */
+  signed_at: string | null;
+  counterpart_signer_name: string | null;
 }
 
 export function useAcceptanceRecords(siteId: string | undefined) {
@@ -360,7 +363,8 @@ export function useAcceptanceRecords(siteId: string | undefined) {
         .from('acceptance_records')
         .select(
           'id, code, acceptance_type, status, stage_name, scope, value, subcontractor_id, ' +
-            'accepted_date, counterpart_signed_by, outstanding_issues, cancel_reason, created_at',
+            'accepted_date, counterpart_signed_by, outstanding_issues, cancel_reason, created_at, ' +
+            'signed_at, counterpart_signer_name',
         )
         .eq('construction_site_id', siteId!)
         .is('deleted_at', null)

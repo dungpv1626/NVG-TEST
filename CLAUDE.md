@@ -640,7 +640,7 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 | 4   | Mẫu hợp đồng `.docx` có chỗ trống, tự điền, xem trước, xuất (vấn đề 5)                                                     | **Xong vòng đầu** — chờ Haan kiểm                          |
 | 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                             | Chưa làm — nay là Đợt 5 (5B) của kế hoạch tổng             |
 | Đ1  | Đợt 1 Kinh doanh (kế hoạch tổng): 1A–1H + bổ sung 18/10 (AI thật, đính kèm, in, phiếu riêng)                               | **Xong trên máy** — chờ anh Dũng chạy thử                  |
-| Đ2  | Đợt 2 Thi công (NVO trước): 2A mốc, 2B nhật ký giọng nói, 2E bảng theo dõi (0182, 0190, 0191)                              | **Đang làm** — 2A, 2B, 2E xong; tiếp 2D                    |
+| Đ2  | Đợt 2 Thi công (NVO trước): 2A mốc, 2B nhật ký giọng nói, 2E bảng theo dõi, 2D biên bản ký hai bên (0182, 0190–0192)       | **Đang làm** — 2A, 2B, 2E, 2D xong; tiếp 2F                |
 | HĐ  | Soạn hợp đồng bằng máy + bộ mẫu ba pháp nhân + ký không cần sếp vào app + bộ quét bản đã ký (0185–0189)                    | **Xong trên máy** — anh Dũng đã chạy thử trọn tới bản quét |
 | 0b  | Bộ nhận diện theo logo NVG                                                                                                 | **Xong vòng đầu** — chờ duyệt ảnh                          |
 | PH  | Phát hành bản demo mới                                                                                                     | **Chuẩn bị xong, CỐ Ý CHƯA deploy** (xem 9.3)              |
@@ -816,7 +816,18 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     ngày cần) + mốc chờ kiểm; chưa ghi nhật ký KHÔNG tính là vấn đề (NVG chưa quyết ngưỡng). Dòng có vấn đề đứng trên,
     lọc «Chỉ công trình cần chú ý» (`?can-chu-y=1`). Phép thử `db/src/__tests__/tc-site-board.test.ts` (3, đột biến
     SECURITY DEFINER đã đo đỏ). Ảnh: `backup/dot2-2e/`, `backup/dot2-2e-cht/` (kịch bản `backup/dot2-2e-board.cjs`).
-  - Còn: 2D biên bản tự sinh + ký điện thoại, 2F phiếu bảo hành, 2G
+  - 2D xong (0192, 22/10/2026): biên bản nghiệm thu lập xong ở «Chưa ký»; «Ký hai bên» mở ngay sau khi lập hoặc để sau
+    (`pages/tc/acceptance-sign.tsx`): hai `SignaturePad` trên cùng điện thoại HOẶC bản giấy quét bằng `DocumentScanner`
+    → `sign_acceptance_record` (tên người ký bắt buộc, tệp phải ở `acceptance-docs/<công trình>/<biên bản>/`, ký một lần,
+    trigger `acceptance_records_signature_frozen`). «In biên bản» tự điền từ `acceptance_document` (công trình, hạng mục,
+    danh mục kiểm tra + kết quả, tồn tại, giá trị, chữ ký). Kế toán được báo lúc KÝ (trước: lúc lập — `record_acceptance`
+    chép nguyên văn 0136, bỏ thông báo), không phải lúc lập; trang `/kt/bien-ban-nghiem-thu` (KT không xem được Thi công
+    nên đi qua `kt_signed_acceptances` / `rls_acceptance_readable`): khách hàng = phải thu, tổ đội = phải trả, «Xem biên
+    bản», «Đã ghi nhận» (`mark_acceptance_billed`, chỉ KT sửa được, một lần). Hệ thống KHÔNG tự sinh công nợ. Biên bản lập
+    trước 0192 coi như đã ký + đã ghi nhận (chỉ gán lần đầu thêm cột). Phép thử `tc-acceptance-sign.test.ts` (6, đột biến
+    nới quyền đọc / bỏ phạm vi ký đã đo đỏ); `tc.test.ts`, `golden-path` đổi theo thứ tự lập → ký → báo
+    (`signAcceptanceWithPaper` trong `helpers.ts`). Ảnh: `backup/dot2-2d/` (kịch bản `backup/dot2-2d-sign.cjs`).
+  - Còn: 2F phiếu bảo hành, 2G
 - **Sửa sau khi anh Dũng chạy thử Đợt 1 (20–21/10/2026, commit fc2e118 → 23a14aa):**
   - Biểu mẫu Khách hàng (tạo / sửa) kiểm trùng số điện thoại với đầu mối + khách hàng (`contact-duplicates-notice.tsx`,
     cùng hàm `contact_duplicates`); trùng khách hàng có sẵn thì không tạo thêm hồ sơ. Trước chỉ biểu mẫu Đầu mối kiểm.
@@ -927,7 +938,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    (cần cho Vite / Worker nghe mạng nhà và tạm đổi `.env` sang IP máy `192.168.1.12` — chưa làm, anh Dũng chưa yêu cầu);
    (c) gắn `DocumentScanner` vào biên bản nghiệm thu, đề nghị thanh toán khi làm Đợt 2 / Đợt 3; (d) ảnh đã qua Zalo /
    chỉnh sửa có thể mang thời điểm gửi chứ không phải lúc chụp → thứ tự lệch, dùng «Đảo thứ tự trang».
-2. **Đợt 2 — Thi công** (2A, 2B, 2E xong; làm tiếp 2D → 2F → 2G; bật thật máy xếp mục nhật ký
+2. **Đợt 2 — Thi công** (2A, 2B, 2E, 2D xong; làm tiếp 2F → 2G; bật thật máy xếp mục nhật ký
    `ai.site_log_enabled` chờ anh Dũng duyệt chi phí): 7 mốc NVO + nghiệm thu trước khi che khuất, nhật ký giọng nói
    (dùng lại `VoiceRecorder` + Whisper), biên bản tự sinh, màn hình Trưởng phòng Thi công, phiếu bảo hành. Điểm danh tổ
    (2C) và mốc NVC chờ câu hỏi 6, 15. Rồi Đợt 3 Tài chính; Đợt 4 Mua hàng – Kho và Đợt 5 song song.
@@ -947,7 +958,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    đồng sắp hết hạn»; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0192.**
+**Migration tiếp theo: 0193.**
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -1038,6 +1049,8 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Lưu đoạn ghi âm + bản máy chép cạnh nội dung đã sửa; kho ghi âm không cho xoá                                                                                                          | Lời nói gốc là bằng chứng khi tranh chấp tiến độ / khối lượng — nội dung là của người ghi, bản chép là thứ máy nghe được                                                                               |
 | Máy xếp mục nhật ký có công tắc RIÊNG, tắt thì vẫn chép chữ và dán nguyên văn                                                                                                          | Chi phí Gemini duyệt theo từng chức năng (6.4); chép chữ đã được duyệt, xếp mục chưa — luồng không bị chặn                                                                                             |
 | Bảng theo dõi của Trưởng phòng: «cần chú ý» chỉ tính từ ngày đã khai + mốc chờ kiểm; nhật ký chỉ hiện «lần cuối», không tự đặt ngưỡng ngày                                             | Tiêu chí Đợt 2 «thấy công trình nào chậm không cần gọi»; số ngày không ghi nhật ký là có vấn đề NVG chưa quyết — không bịa ngưỡng (5.2)                                                                |
+| Biên bản nghiệm thu: «Ký hai bên» là bước riêng sau khi lập (hai chữ ký trên điện thoại hoặc bản giấy quét); Kế toán được báo lúc ký                                                   | Khách / tổ đội thường ký khi gặp tại công trường, không phải lúc chỉ huy trưởng lập; biên bản chưa ký chưa là căn cứ thu / trả tiền                                                                    |
+| Kế toán xem biên bản đã ký qua hàm riêng, không mở quyền xem phân hệ Thi công; chỉ đánh dấu «đã ghi nhận», không tự sinh công nợ                                                       | KT không có quyền TC (thông báo cũ trỏ vào trang KT không mở được); thuế, hạn, đợt theo hợp đồng là quyết định của Kế toán (PRD 2.3)                                                                   |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)

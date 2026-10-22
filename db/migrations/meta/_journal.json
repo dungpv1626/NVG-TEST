@@ -1345,6 +1345,13 @@
       "when": 1791360000000,
       "tag": "0191_bang_cong_trinh_truong_phong",
       "breakpoints": true
+    },
+    {
+      "idx": 192,
+      "version": "7",
+      "when": 1791370000000,
+      "tag": "0192_bien_ban_nghiem_thu_ky_hai_ben",
+      "breakpoints": true
     }
   ]
 }

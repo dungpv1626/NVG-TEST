@@ -9,6 +9,10 @@
  *
  * Biên bản đã nghiệm thu không sửa được: nó đã ký với bên ngoài. Sai thì hủy kèm nguyên
  * nhân và lập biên bản mới — dấu vết cũ vẫn còn (TC-08).
+ *
+ * 2D (0192): lập xong biên bản ở «Chưa ký»; «Ký hai bên» (hai khung ký trên điện thoại hoặc bản
+ * giấy quét) mở ngay sau khi lập, hoặc để sau khi gặp bên kia. Kế toán được báo lúc KÝ.
+ * «In biên bản» tự điền đủ nội dung từ hồ sơ.
  */
 
 import { useState, type FormEvent } from 'react';
@@ -51,6 +55,7 @@ import {
   type ChecklistAnswers,
 } from './acceptance-checklist-field';
 import { PhotoStrip } from './site-photo-picker';
+import { SignAcceptanceForm, printAcceptance } from './acceptance-sign';
 
 /** Kết quả từng mục của một biên bản đã ký — chỉ đọc. */
 export function ChecklistResults({ acceptanceId }: { acceptanceId: string }) {
@@ -97,6 +102,7 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
   const cancelAcceptance = useCancelAcceptance();
 
   const [adding, setAdding] = useState(false);
+  const [signingId, setSigningId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     acceptanceType: 'noi_bo' as AcceptanceType,
@@ -160,7 +166,7 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
             photo_paths: photoPaths,
           });
         }
-        await recordWithChecklist.mutateAsync({
+        const newId = await recordWithChecklist.mutateAsync({
           siteId,
           acceptanceType: form.acceptanceType,
           stageName: form.stageName.trim(),
@@ -174,9 +180,10 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
           outstandingIssues: form.outstandingIssues.trim() || null,
         });
         setAdding(false);
+        setSigningId(newId);
         return;
       }
-      await recordAcceptance.mutateAsync({
+      const newId = await recordAcceptance.mutateAsync({
         siteId,
         acceptanceType: form.acceptanceType,
         stageName: form.stageName.trim(),
@@ -188,6 +195,7 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
         outstandingIssues: form.outstandingIssues.trim() || null,
       });
       setAdding(false);
+      setSigningId(newId);
     } catch (e) {
       setError(toUserMessage(e, 'create'));
     } finally {
@@ -238,7 +246,7 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
               required
               hint={
                 needsBilling
-                  ? 'Kế toán sẽ nhận thông báo đủ căn cứ thu tiền theo hợp đồng.'
+                  ? 'Hai bên ký xong, Kế toán nhận thông báo đủ căn cứ thu tiền theo hợp đồng.'
                   : 'Không báo Kế toán thu tiền — chỉ nghiệm thu với chủ đầu tư mới là căn cứ đòi tiền.'
               }
             >
@@ -394,8 +402,25 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
               <p className="mt-1 text-fg-subtle">
                 {r.value != null && <span>{formatCurrency(r.value)} · </span>}
                 {r.accepted_date ? formatDate(r.accepted_date) : 'Chưa ghi ngày'}
-                {r.counterpart_signed_by && <span> · {r.counterpart_signed_by} ký</span>}
+                {(r.counterpart_signer_name ?? r.counterpart_signed_by) && (
+                  <span> · {r.counterpart_signer_name ?? r.counterpart_signed_by} ký</span>
+                )}
               </p>
+              {r.status === 'da_nghiem_thu' && (
+                <p
+                  className={
+                    r.signed_at
+                      ? 'mt-1 text-sm text-status-completed'
+                      : 'mt-1 text-sm font-semibold text-status-pending'
+                  }
+                >
+                  {r.signed_at
+                    ? `Đã ký hai bên ${formatDate(r.signed_at)}`
+                    : r.acceptance_type === 'noi_bo'
+                      ? 'Chưa ký'
+                      : 'Chưa ký — Kế toán chưa nhận được biên bản này'}
+                </p>
+              )}
 
               {r.outstanding_issues && (
                 <p className="mt-2 rounded-sm bg-status-pending-bg px-3 py-2 text-status-pending">
@@ -409,14 +434,42 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
                 <p className="mt-2 text-status-overdue">Đã hủy: {r.cancel_reason}</p>
               )}
 
-              {!readOnly && r.status === 'da_nghiem_thu' && (
-                <button
-                  type="button"
-                  className="mt-2 text-brand underline"
-                  onClick={() => void cancel(r.id)}
-                >
-                  Hủy biên bản
-                </button>
+              {r.status === 'da_nghiem_thu' && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {!readOnly && !r.signed_at && signingId !== r.id && (
+                    <Button size="sm" variant="primary" onClick={() => setSigningId(r.id)}>
+                      Ký hai bên
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                      void printAcceptance(r.id).catch((e: unknown) =>
+                        setError(toUserMessage(e, 'view')),
+                      )
+                    }
+                  >
+                    In biên bản
+                  </Button>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      className="text-brand underline"
+                      onClick={() => void cancel(r.id)}
+                    >
+                      Hủy biên bản
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {!readOnly && signingId === r.id && !r.signed_at && r.status === 'da_nghiem_thu' && (
+                <SignAcceptanceForm
+                  siteId={siteId}
+                  acceptance={r}
+                  onDone={() => setSigningId(null)}
+                />
               )}
             </li>
           ))}

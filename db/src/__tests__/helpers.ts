@@ -334,3 +334,27 @@ export async function cleanupTestData(): Promise<void> {
     await sql.end();
   }
 }
+
+/**
+ * Ký hai bên một biên bản nghiệm thu bằng BẢN GIẤY quét (0192) — tải một PDF nhỏ vào kho
+ * `acceptance-docs` rồi gọi `sign_acceptance_record`. Kế toán chỉ được báo sau bước này.
+ */
+export async function signAcceptanceWithPaper(
+  client: SupabaseClient,
+  siteId: string,
+  acceptanceId: string,
+  counterpart = 'Đại diện chủ đầu tư',
+) {
+  const path = `${siteId}/${acceptanceId}/ban-giay-${crypto.randomUUID()}.pdf`;
+  const up = await client.storage
+    .from('acceptance-docs')
+    .upload(path, new Blob(['%PDF-1.4\n%%EOF'], { type: 'application/pdf' }), {
+      contentType: 'application/pdf',
+    });
+  if (up.error) return { error: up.error };
+  return client.rpc('sign_acceptance_record', {
+    p_acceptance_id: acceptanceId,
+    p_counterpart_name: counterpart,
+    p_paper_scan_path: path,
+  });
+}

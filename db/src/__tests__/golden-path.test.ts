@@ -20,6 +20,7 @@ import {
   signInAs,
   TEST_PREFIX,
   markSurveyReportApproved,
+  signAcceptanceWithPaper,
 } from './helpers';
 
 const describeDb = hasCredentials ? describe : describe.skip;
@@ -494,6 +495,13 @@ describeDb(
         p_counterpart_signed_by: 'Đại diện chủ đầu tư',
       });
       check('lập biên bản nghiệm thu', acceptanceError);
+      // 0192: hai bên ký (ở đây bằng bản giấy quét) thì Kế toán mới được báo.
+      const { error: signError } = await signAcceptanceWithPaper(
+        chiHuy,
+        siteId as string,
+        acceptanceId as string,
+      );
+      check('ký hai bên biên bản nghiệm thu', signError);
 
       // Biên bản nghiệm thu chủ đầu tư là căn cứ thu tiền — Kế toán phải BIẾT mà không cần ai
       // nhắn Zalo (TC-04, PRD Mục 7 tiêu chí 4).
