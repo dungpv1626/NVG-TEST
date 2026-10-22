@@ -1317,6 +1317,13 @@
       "when": 1791320000000,
       "tag": "0187_kinh_doanh_ghi_nhan_ky",
       "breakpoints": true
+    },
+    {
+      "idx": 188,
+      "version": "7",
+      "when": 1791330000000,
+      "tag": "0188_cap_nhat_tuc_thoi",
+      "breakpoints": true
     }
   ]
 }

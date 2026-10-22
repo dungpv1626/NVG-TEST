@@ -1,0 +1,195 @@
+/**
+ * «Sau khi ký» — việc còn lại của hợp đồng đã ký, nói theo vai người đang xem.
+ *
+ * Ký xong, Kinh doanh chỉ thấy dải tiến trình báo «Tiếp theo: Đã quyết toán — cần mọi công trình
+ * đã bàn giao», tức việc của Thi công và Ban Giám đốc, nên không biết mình còn làm gì (anh Dũng
+ * 22/10/2026). Khối này liệt kê: công trình đã chuyển cho ai, các đợt thanh toán tới hạn lúc nào
+ * (để nhắc khách), khách muốn đổi thì lập phát sinh, và ai quyết toán.
+ *
+ * Không cho Kinh doanh đánh dấu «khách đã trả»: số đã thu chỉ đổi qua chứng từ Kế toán
+ * (`receivable_settlements`, 0043) — một nguồn dữ liệu (CLAUDE.md 5.2).
+ */
+
+import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  CONTRACT_TERM_TYPE_LABELS,
+  daysUntil,
+  formatCurrency,
+  formatDate,
+  formatDeadline,
+  type StatusGroup,
+} from '@nvg/shared';
+import { Button } from '@/components/ui/button';
+import { StatusLozenge } from '@/components/ui/status-lozenge';
+import { useContractTerms, type ContractTermRecord } from '@/hooks/use-contracts';
+
+/** Đợt sắp tới trong ngần này ngày thì nhắc «sắp đến hạn». */
+const SOON_DAYS = 7;
+
+/** `group` rỗng = chưa tới lúc phải để ý — chỉ ghi chữ, không gắn nhãn trạng thái («Nháp» đọc sai nghĩa). */
+function roundStatus(term: ContractTermRecord): { group: StatusGroup | null; text: string } {
+  if (term.completed_at)
+    return { group: 'completed', text: `Đã hoàn thành ${formatDate(term.completed_at)}` };
+  if (!term.due_date) return { group: null, text: 'Chưa ghi hạn' };
+  const days = daysUntil(term.due_date);
+  if (days !== null && days < 0) return { group: 'overdue', text: formatDeadline(term.due_date) };
+  if (days !== null && days <= SOON_DAYS)
+    return { group: 'in_progress', text: formatDeadline(term.due_date) };
+  return { group: null, text: `Hạn ${formatDate(term.due_date)}` };
+}
+
+export function AfterSignCard({
+  contractId,
+  customer,
+  collected,
+  currentValue,
+  hasSite,
+  opensSite,
+  isResponsible,
+  canApprove,
+  onOpenAmendments,
+}: {
+  contractId: string;
+  customer: { id: string; name: string } | null;
+  collected: bigint;
+  currentValue: bigint;
+  hasSite: boolean | null | undefined;
+  opensSite: boolean;
+  isResponsible: boolean;
+  canApprove: boolean;
+  onOpenAmendments: () => void;
+}) {
+  const { data: terms = [] } = useContractTerms(contractId);
+  const rounds = terms
+    .filter((t) => t.term_type === 'tam_ung' || t.term_type === 'tien_do_thanh_toan')
+    .sort((a, b) => (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999'));
+  const nextRound = rounds.find((t) => !t.completed_at);
+
+  const steps: { title: string; body: ReactNode; done?: boolean }[] = [];
+  if (opensSite) {
+    steps.push({
+      title: hasSite
+        ? 'Bàn giao cho Thi công — đã xong'
+        : 'Bàn giao cho Thi công — chờ mở công trình',
+      done: Boolean(hasSite),
+      body: hasSite
+        ? 'Công trình đã mở ở bước Chuẩn bị, Trưởng phòng Thi công đã được báo để phân công chỉ huy trưởng. Không cần làm gì thêm.'
+        : 'Ban Giám đốc hoặc Thi công bấm «Mở công trình» ở đầu trang.',
+    });
+  }
+  steps.push({
+    title: 'Theo dõi các đợt thanh toán',
+    body: (
+      <>
+        <p>
+          {nextRound
+            ? `Đợt tiếp theo: ${nextRound.description.trim().replace(/[.;:,]+$/, '')}${
+                nextRound.amount ? ` — ${formatCurrency(nextRound.amount)}` : ''
+              }${nextRound.due_date ? `, ${formatDeadline(nextRound.due_date).toLowerCase()}` : ''}. `
+            : rounds.length > 0
+              ? 'Mọi đợt đã hoàn thành. '
+              : 'Hợp đồng chưa ghi đợt thanh toán nào. '}
+          {isResponsible
+            ? 'Tới đợt thì nhắc khách và báo Kế toán lập đề nghị thanh toán; số đã thu do Kế toán ghi khi có chứng từ.'
+            : 'Số đã thu do Kế toán ghi khi có chứng từ.'}
+        </p>
+        <p className="mt-1">
+          Đã thu {formatCurrency(collected)} / {formatCurrency(currentValue)}.
+        </p>
+        {rounds.length > 0 && (
+          <ul className="mt-2 divide-y divide-border rounded-md border border-border bg-surface">
+            {rounds.map((t) => {
+              const s = roundStatus(t);
+              return (
+                <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="text-xs text-fg-subtle">
+                      {CONTRACT_TERM_TYPE_LABELS[t.term_type]}
+                    </span>
+                    <span className="block">{t.description}</span>
+                  </span>
+                  {t.amount !== null && (
+                    <span className="font-medium tabular-nums">{formatCurrency(t.amount)}</span>
+                  )}
+                  <span className="flex items-center gap-2">
+                    {s.group && <StatusLozenge status={s.group} />}
+                    <span className="text-sm text-fg-subtle">{s.text}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </>
+    ),
+  });
+  steps.push({
+    title: 'Khách muốn thêm, bớt hoặc đổi hạng mục',
+    body: (
+      <div className="flex flex-wrap items-center gap-2">
+        <span>Lập phát sinh để Ban Giám đốc duyệt; không sửa hợp đồng đã ký.</span>
+        {isResponsible && (
+          <Button size="sm" variant="secondary" onClick={onOpenAmendments}>
+            Mở tab Phát sinh
+          </Button>
+        )}
+      </div>
+    ),
+  });
+  if (isResponsible && customer) {
+    steps.push({
+      title: 'Giữ liên lạc với khách',
+      body: (
+        <span>
+          Ghi lại mỗi lần gọi, gặp khách ở{' '}
+          <Link
+            to={`/crm/khach-hang/${customer.id}`}
+            className="font-medium text-brand hover:underline"
+          >
+            hồ sơ {customer.name}
+          </Link>{' '}
+          — hệ thống nhắc ngày hẹn tiếp theo trong «Việc hôm nay».
+        </span>
+      ),
+    });
+  }
+  steps.push({
+    title: 'Quyết toán hợp đồng',
+    body: canApprove
+      ? 'Bấm «Quyết toán hợp đồng» ở đầu trang khi công trình đã sang Bảo hành hoặc Hoàn thành.'
+      : 'Ban Giám đốc quyết toán khi công trình đã sang Bảo hành hoặc Hoàn thành — Kinh doanh không phải làm gì ở bước này.',
+  });
+
+  return (
+    <section id="sau-khi-ky" className="mb-4 rounded-lg border border-border bg-surface p-4">
+      <p className="font-medium">Sau khi ký — việc còn lại</p>
+      {isResponsible && (
+        <p className="mt-1 text-sm text-fg-subtle">
+          Phần soạn và ký của Kinh doanh đã xong. Từ đây chỉ còn theo dõi thu tiền và phát sinh.
+        </p>
+      )}
+      <ol className="mt-3 space-y-3">
+        {steps.map((s, i) => (
+          <li key={s.title} className="flex gap-3">
+            <span
+              aria-hidden
+              className={
+                'flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ' +
+                (s.done
+                  ? 'bg-status-completed-bg text-status-completed'
+                  : 'bg-surface-sunken text-fg-subtle')
+              }
+            >
+              {s.done ? '✓' : i + 1}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">{s.title}</p>
+              <div className="mt-0.5 text-sm">{s.body}</div>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}

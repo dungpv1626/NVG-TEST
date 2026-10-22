@@ -848,6 +848,12 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     phòng Thi công; từ gói thầu / thiết kế giữ đường cũ (gói thầu lập ngân sách trước). Quyết toán hợp đồng thi
     công cần đã có công trình. Trang hợp đồng tự đổi tab khi bước đổi; dải báo việc tiếp theo theo vai.
     `contractDisplayStatus` so quá hạn theo NGÀY.
+  - **Sau ký + 0188 (22/10/2026):** tab Tổng quan của hợp đồng đã ký có khối «Sau khi ký — việc còn lại»
+    (`pages/hd/after-sign-card.tsx`): bàn giao Thi công, các đợt thanh toán + hạn (để nhắc khách; số đã thu chỉ
+    Kế toán ghi), phát sinh, giữ liên lạc khách, ai quyết toán. **0188 cập nhật tức thời:** `notifications` +
+    `approvals` vào publication `supabase_realtime`; `hooks/use-live-updates.ts` (gắn ở chuông thông báo) nghe
+    sự kiện rồi `invalidateQueries()` — không cần F5 khi được giao việc / được duyệt. Realtime kiểm RLS SELECT
+    của người nhận. Bảng mới cần đẩy tức thời thì thêm vào publication bằng migration, ĐỪNG đọc nội dung sự kiện.
 - Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
@@ -900,7 +906,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    đồng sắp hết hạn»; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0188.**
+**Migration tiếp theo: 0189.**
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -974,6 +980,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Bộ mẫu hợp đồng của NVG nạp như chính thức dù là bản dự thảo; chỗ trống bên NVG / đối tác theo `nvg_*` / `doi_tac_*`, không theo bên A / B                                             | Anh Dũng: «làm như chính thức». Bên A / B mỗi mẫu một khác (NVG là A khi đi mua / thuê / khoán) — gắn theo bên thì đổi loại hợp đồng là in sai bên                                                     |
 | Thêm loại hợp đồng `mua_vat_tu`, `thue_thiet_bi`, `cho_thue` thay vì dồn vào `mua_ban` / `khoan_thau_phu`                                                                              | Hướng tiền khác nhau (phải thu / phải trả ở KT); `mua_ban` cũ nghĩa là NVG bán                                                                                                                         |
 | Bảng các đợt thanh toán trong mẫu thành bảng lặp; các đợt mẫu đề xuất giữ làm gợi ý, không tự thêm                                                                                     | Văn bản phải in đúng các đợt đã ghi trên hệ thống; mốc / tỷ lệ mặc định là đề xuất của NVG, người soạn bấm mới dùng                                                                                    |
+| Cập nhật tức thời bằng Supabase Realtime trên `notifications` + `approvals`; sự kiện chỉ là tín hiệu, tải lại mọi truy vấn đang hiện (0188)                                            | Anh Dũng: nhận việc / được duyệt phải tải lại trang. Hai bảng này phủ gần hết việc đến tay một người; tải lại qua đường thường nên vẫn qua RLS. `refetchInterval` 60 giây giữ làm dự phòng             |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)

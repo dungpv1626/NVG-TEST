@@ -43,6 +43,7 @@ vi.mock('@/hooks/use-notifications', () => ({
   useMarkNotificationRead: () => ({ mutate: markReadMock }),
   useMarkAllNotificationsRead: () => ({ mutate: markAllReadMock }),
 }));
+vi.mock('@/hooks/use-live-updates', () => ({ useLiveUpdates: () => undefined }));
 
 async function typeQuery(text: string) {
   const input = screen.getByPlaceholderText('Tìm hồ sơ, khách hàng, vật tư…');

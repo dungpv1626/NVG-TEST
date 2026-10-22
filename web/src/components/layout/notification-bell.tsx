@@ -16,12 +16,15 @@ import {
   useNotifications,
   useUnreadNotificationCount,
 } from '@/hooks/use-notifications';
+import { useLiveUpdates } from '@/hooks/use-live-updates';
 import { cn } from '@/lib/utils';
 
 export function NotificationBell() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  // Chuông có mặt trên mọi trang sau đăng nhập — đặt luồng cập nhật tức thời ở đây (0188).
+  useLiveUpdates(true);
 
   const { data } = useNotifications();
   // Huy hiệu đếm TOÀN BỘ chưa đọc — có thể nhiều hơn 30 dòng đang hiện trong panel bên dưới,

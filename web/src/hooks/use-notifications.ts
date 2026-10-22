@@ -13,10 +13,8 @@
  * thật), đúng kiểu lỗi CLAUDE.md 3.5 đã cảnh báo: "đếm bằng một truy vấn riêng thì hai con số
  * sớm muộn lệch nhau". `count: 'exact', head: true` không tải dữ liệu, chỉ lấy số — rẻ.
  *
- * ⚠️ CHƯA dùng Supabase Realtime dù BUILD_PLAN 1.4 có nhắc — bảng `notifications` chưa được
- * thêm vào publication `supabase_realtime`, và đây sẽ là lần đầu dùng cơ chế đó trong dự án
- * (chưa có tiền lệ nào khác để soi). Dùng tạm `refetchInterval` — đủ cho quy mô demo, nâng
- * cấp lên Realtime sau nếu cần cập nhật tức thời hơn 60 giây.
+ * Cập nhật tức thời qua Supabase Realtime (0188, `use-live-updates.ts`): thông báo mới tới là
+ * tải lại ngay. `refetchInterval` 60 giây giữ lại làm lớp dự phòng khi mất kết nối Realtime.
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';

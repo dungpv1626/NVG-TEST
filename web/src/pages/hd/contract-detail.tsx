@@ -48,6 +48,7 @@ import { StepTrack } from '@/components/entity/step-track';
 import { WaitingOn } from '@/components/entity/waiting-on';
 import { useApprovalHistory } from '@/hooks/use-approvals';
 import { useStageReadiness } from '@/hooks/use-stage-readiness';
+import { AfterSignCard } from './after-sign-card';
 import { AmendmentPanel } from './amendment-panel';
 import { DocumentPanel } from './document-panel';
 import { TermsPanel } from './terms-panel';
@@ -319,12 +320,13 @@ export function ContractDetailPage() {
         ? `Hợp đồng đã được phê duyệt. Tải văn bản đã duyệt (mục «Các phiên bản đã lưu»), in và trình hai bên ký; ký xong bấm «Ghi nhận đã ký», ghi số hợp đồng, ngày ký${canApprove ? '' : ' và chụp bản đã ký tải lên — Ban Giám đốc không phải vào hệ thống'}.`
         : 'Hợp đồng đã được phê duyệt — chờ người chịu trách nhiệm hoặc Ban Giám đốc ghi nhận đã ký.'
       : contract.stage === 'da_ky'
-        ? hasSite
-          ? 'Hợp đồng đã ký, công trình đã mở — Thi công phân công chỉ huy trưởng và chuẩn bị khởi công. Việc còn lại của hợp đồng: theo dõi thu tiền theo các đợt; Ban Giám đốc quyết toán khi công trình đã bàn giao.'
-          : contractOpensSite(contract.type)
-            ? 'Hợp đồng đã ký. Việc tiếp theo: Ban Giám đốc hoặc Thi công bấm «Mở công trình».'
-            : 'Hợp đồng đã ký. Việc còn lại: theo dõi thanh toán theo các đợt; Ban Giám đốc quyết toán khi hoàn tất.'
+        ? !hasSite && contractOpensSite(contract.type)
+          ? 'Hợp đồng đã ký. Việc tiếp theo: Ban Giám đốc hoặc Thi công bấm «Mở công trình».'
+          : isResponsible
+            ? 'Hợp đồng đã ký — phần soạn và ký của Kinh doanh đã xong. Việc còn lại: nhắc khách theo các đợt thanh toán, lập phát sinh khi khách đổi hạng mục.'
+            : 'Hợp đồng đã ký. Việc còn lại: theo dõi thu tiền theo các đợt; Ban Giám đốc quyết toán khi công trình đã bàn giao.'
         : null;
+  const activeTab = searchParams.get('tab') ?? stageTab;
 
   return (
     <>
@@ -343,9 +345,18 @@ export function ContractDetailPage() {
       {signNotice && (
         <p
           role="status"
-          className="mb-3 rounded-sm border border-status-progress bg-status-progress-bg px-3 py-2"
+          className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-sm border border-status-progress bg-status-progress-bg px-3 py-2"
         >
-          {signNotice}
+          <span className="min-w-0 flex-1">{signNotice}</span>
+          {contract.stage === 'da_ky' && activeTab !== 'tong-quan' && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => openTab('tong-quan', 'sau-khi-ky')}
+            >
+              Xem việc còn lại
+            </Button>
+          )}
         </p>
       )}
       {actionError && (
@@ -388,6 +399,19 @@ export function ContractDetailPage() {
             label: 'Tổng quan',
             content: (
               <>
+                {contract.stage === 'da_ky' && (
+                  <AfterSignCard
+                    contractId={contract.id}
+                    customer={contract.customer}
+                    collected={money.collected}
+                    currentValue={money.currentValue}
+                    hasSite={hasSite}
+                    opensSite={contractOpensSite(contract.type)}
+                    isResponsible={isResponsible}
+                    canApprove={canApprove}
+                    onOpenAmendments={() => openTab('phat-sinh')}
+                  />
+                )}
                 <DetailFields
                   fields={[
                     { label: 'Trạng thái', value: CONTRACT_STAGE_META[contract.stage].label },
