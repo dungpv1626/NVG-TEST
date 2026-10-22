@@ -34,6 +34,7 @@ import {
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
 import { useCompanyScope } from '@/lib/company-scope';
+import { AssetSignLine } from './asset-sign';
 import { NsNav } from './ns-nav';
 
 export function AssetPage() {
@@ -252,6 +253,14 @@ export function AssetPage() {
                     {ev.to_employee?.full_name ?? 'Kho hành chính'}
                     {ev.condition ? ` · ${ASSET_CONDITION_LABELS[ev.condition]}` : ''}
                   </div>
+                  <AssetSignLine
+                    event={ev}
+                    companyId={(data ?? []).find((a) => a.id === selected)?.company_id ?? ''}
+                    canEdit={canEdit}
+                    defaultSigner={
+                      (ev.type === 'thu_hoi' ? ev.from_employee : ev.to_employee)?.full_name ?? ''
+                    }
+                  />
                 </li>
               ))
             )}

@@ -140,6 +140,9 @@ const BiddingCreatePage = lazy(() =>
 const BiddingDetailPage = lazy(() =>
   import('@/pages/da/bidding-detail').then((m) => ({ default: m.BiddingDetailPage })),
 );
+const CapabilityPage = lazy(() =>
+  import('@/pages/da/capability-page').then((m) => ({ default: m.CapabilityPage })),
+);
 const UnitPriceListPage = lazy(() =>
   import('@/pages/da/unit-price-list').then((m) => ({ default: m.UnitPriceListPage })),
 );
@@ -303,11 +306,17 @@ const AssetPage = lazy(() =>
 const HrDocumentPage = lazy(() =>
   import('@/pages/ns/document-page').then((m) => ({ default: m.HrDocumentPage })),
 );
+const CompanyDocumentPage = lazy(() =>
+  import('@/pages/ns/company-document-page').then((m) => ({ default: m.CompanyDocumentPage })),
+);
 const RecruitmentPage = lazy(() =>
   import('@/pages/ns/recruitment-page').then((m) => ({ default: m.RecruitmentPage })),
 );
 const RentalAgreementListPage = lazy(() =>
   import('@/pages/sx/rental-list').then((m) => ({ default: m.RentalAgreementListPage })),
+);
+const RentalQuotePage = lazy(() =>
+  import('@/pages/sx/rental-quote-page').then((m) => ({ default: m.RentalQuotePage })),
 );
 const RentalAgreementDetailPage = lazy(() =>
   import('@/pages/sx/rental-detail').then((m) => ({ default: m.RentalAgreementDetailPage })),
@@ -428,6 +437,7 @@ const router = createBrowserRouter(
           <Route path="da/goi-thau" element={<BiddingListPage />} />
           <Route path="da/goi-thau/tao-moi" element={<BiddingCreatePage />} />
           <Route path="da/goi-thau/:id" element={<BiddingDetailPage />} />
+          <Route path="da/ho-so-nang-luc" element={<CapabilityPage />} />
           <Route path="da/don-gia" element={<UnitPriceListPage />} />
         </Route>
 
@@ -520,6 +530,7 @@ const router = createBrowserRouter(
           <Route path="ns/nhan-su/tao-moi" element={<EmployeeCreatePage />} />
           <Route path="ns/nhan-su/:id" element={<EmployeeDetailPage />} />
           <Route path="ns/giay-to" element={<HrDocumentPage />} />
+          <Route path="ns/giay-to-phap-nhan" element={<CompanyDocumentPage />} />
           <Route path="ns/tai-san" element={<AssetPage />} />
           <Route path="ns/nghi-phep" element={<LeavePage />} />
           <Route path="ns/tuyen-dung" element={<RecruitmentPage />} />
@@ -532,6 +543,7 @@ const router = createBrowserRouter(
         <Route element={<ModuleGuard module="SX" />}>
           <Route path="sx/tai-san-cho-thue" element={<RentalAgreementListPage />} />
           <Route path="sx/tai-san-cho-thue/:id" element={<RentalAgreementDetailPage />} />
+          <Route path="sx/bao-gia-thue" element={<RentalQuotePage />} />
           <Route path="sx/lenh-san-xuat" element={<ProductionOrderListPage />} />
           <Route path="sx/lenh-san-xuat/:id" element={<ProductionOrderDetailPage />} />
         </Route>

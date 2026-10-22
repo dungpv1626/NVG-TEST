@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 
 const ITEMS = [
   { to: '/sx/tai-san-cho-thue', label: 'Cho thuê giàn giáo' },
+  { to: '/sx/bao-gia-thue', label: 'Báo giá thuê' },
   { to: '/sx/lenh-san-xuat', label: 'Lệnh sản xuất' },
 ];
 

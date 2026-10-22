@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 
 const ITEMS = [
   { to: '/da/goi-thau', label: 'Gói thầu' },
+  { to: '/da/ho-so-nang-luc', label: 'Hồ sơ năng lực' },
   { to: '/da/don-gia', label: 'Đơn giá & định mức' },
 ];
 

@@ -1431,6 +1431,41 @@
       "breakpoints": true
     },
     {
+      "idx": 205,
+      "version": "7",
+      "when": 1791500000000,
+      "tag": "0205_tk_khao_sat_ghi_am_vong_y_kien",
+      "breakpoints": true
+    },
+    {
+      "idx": 206,
+      "version": "7",
+      "when": 1791510000000,
+      "tag": "0206_hanh_chinh_giay_to_tai_san_ky_nhan",
+      "breakpoints": true
+    },
+    {
+      "idx": 207,
+      "version": "7",
+      "when": 1791520000000,
+      "tag": "0207_ns_nhac_hop_dong_lao_dong",
+      "breakpoints": true
+    },
+    {
+      "idx": 208,
+      "version": "7",
+      "when": 1791530000000,
+      "tag": "0208_dau_thau_ho_so_nang_luc_lam_ro_bao_lanh",
+      "breakpoints": true
+    },
+    {
+      "idx": 209,
+      "version": "7",
+      "when": 1791540000000,
+      "tag": "0209_nvs_cho_thue_nhac_han_phieu_giao_bao_gia",
+      "breakpoints": true
+    },
+    {
       "idx": 217,
       "version": "7",
       "when": 1791620000000,

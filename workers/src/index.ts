@@ -120,6 +120,14 @@ const SCAN_FUNCTIONS = [
   'scan_collection_reminders',
   // Đơn đặt hàng quá hẹn / đến hạn giao — báo Mua hàng + chỉ huy trưởng (Đợt 4 — 4C, 0202).
   'scan_purchase_order_due_reminders',
+  // Đợt 5 — giấy tờ pháp nhân / hồ sơ năng lực hết hạn (5F, 5C — 0206).
+  'scan_company_document_reminders',
+  // Hợp đồng lao động hết hạn (5E — 0207).
+  'scan_employment_contract_reminders',
+  // Hạn nộp thầu, hạn làm rõ, bảo lãnh hết hạn chưa thu hồi (5C — 0208).
+  'scan_bid_deadline_reminders',
+  // Đơn thuê giàn giáo quá / sắp tới ngày trả (5D — 0209).
+  'scan_rental_expiry_reminders',
 ] as const;
 
 export async function runScheduledScans(env: Env): Promise<Record<string, number | string>> {

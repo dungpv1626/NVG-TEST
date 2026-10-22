@@ -34,6 +34,7 @@ import {
 } from '@/hooks/use-sx';
 import { useRentalReturns } from '@/hooks/use-rental-returns';
 import { useCan } from '@/lib/auth';
+import { RentalDeliveryPanel } from './rental-delivery-panel';
 import { RentalReturnsPanel } from './rental-returns-panel';
 
 const EM_DASH = '—';
@@ -449,6 +450,11 @@ export function RentalAgreementDetailPage() {
               </Field>
             </div>
           ),
+        },
+        {
+          id: 'phieu-giao',
+          label: 'Phiếu giao',
+          content: <RentalDeliveryPanel agreement={agreement} canSign={canEdit} />,
         },
         {
           id: 'bien-ban',

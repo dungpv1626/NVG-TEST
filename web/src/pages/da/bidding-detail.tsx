@@ -33,6 +33,7 @@ import { EstimatePanel } from '@/components/estimate/estimate-panel';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { companyCodeOf, useAuth, useCan } from '@/lib/auth';
 import { BidDocumentsPanel } from './bid-documents-panel';
+import { BidCapabilityPanel, BidClarificationPanel, BidGuaranteePanel } from './bid-extras-panels';
 import { BudgetPanel } from './budget-panel';
 
 const EM_DASH = '—';
@@ -246,6 +247,43 @@ export function BiddingDetailPage() {
                 companyId={project.company_id}
                 readOnly={!canEdit}
                 submittedAt={project.submitted_at}
+              />
+            ),
+          },
+          {
+            id: 'nang-luc',
+            label: 'Hồ sơ năng lực',
+            content: (
+              <BidCapabilityPanel
+                bidId={project.id}
+                companyId={project.company_id}
+                readOnly={readOnly}
+              />
+            ),
+          },
+          {
+            id: 'lam-ro',
+            label: 'Làm rõ',
+            content: (
+              <BidClarificationPanel
+                bidId={project.id}
+                companyId={project.company_id}
+                canEdit={canEdit}
+                canExtend={!readOnly}
+                deadline={project.submission_deadline}
+                legacyNotes={project.clarification_notes}
+              />
+            ),
+          },
+          {
+            id: 'bao-lanh',
+            label: 'Bảo lãnh và kết quả',
+            content: (
+              <BidGuaranteePanel
+                bidId={project.id}
+                companyId={project.company_id}
+                canEdit={canEdit}
+                hasResult={project.stage === 'trung_thau' || project.stage === 'truot_thau'}
               />
             ),
           },

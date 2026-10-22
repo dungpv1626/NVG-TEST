@@ -11,6 +11,10 @@ import { supabase } from '@/lib/supabase';
 export interface DesignSurveyRecord {
   id: string;
   surveyed_at: string | null;
+  /** Máy ghi khi bấm «Bắt đầu / Kết thúc khảo sát» (5A, 0205); trống = biên bản lập tay. */
+  started_at: string | null;
+  finished_at: string | null;
+  surveyed_by: string | null;
   created_at: string;
   land_width: string | null;
   land_depth: string | null;
@@ -30,7 +34,7 @@ export function useDesignSurveys(projectId: string | undefined) {
       const { data, error } = await supabase
         .from('design_surveys')
         .select(
-          'id, surveyed_at, created_at, land_width, land_depth, land_area, orientation, ' +
+          'id, surveyed_at, started_at, finished_at, surveyed_by, created_at, land_width, land_depth, land_area, orientation, ' +
             'measurement_notes, surrounding_notes, usage_notes, notes, ' +
             'surveyor:users!design_surveys_surveyed_by_users_id_fk(full_name)',
         )
