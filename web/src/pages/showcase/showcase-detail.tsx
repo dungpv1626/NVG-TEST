@@ -2,11 +2,14 @@
  * Chi tiết mẫu công trình (Đợt 1 — 1H): ảnh, thông số, và — với Phòng Thiết kế / Giám đốc — thêm
  * ảnh, chọn ảnh bìa, gỡ ảnh, sửa, xoá. Xoá: Giám đốc xoá ngay; Thiết kế gửi đề nghị, chờ Giám đốc
  * đồng ý ở Hộp thư Phê duyệt (chủ dự án chốt).
+ *
+ * Mẫu NHÁP (2G, 0194 — máy lập khi công trình bàn giao): chỉ Thiết kế / Giám đốc thấy, chưa gửi
+ * khách được; khối «Ảnh từ công trình» để chọn ảnh, nút «Xác nhận đưa vào kho» khi đủ ảnh + bìa.
  */
 
 import { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ImagePlus, Pencil, Send, Star, Trash2 } from 'lucide-react';
+import { CheckCircle2, ImagePlus, Pencil, Send, Star, Trash2 } from 'lucide-react';
 import {
   SHOWCASE_MEDIA_KINDS,
   SHOWCASE_MEDIA_KIND_LABELS,
@@ -20,6 +23,7 @@ import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import { toUserMessage } from '@/hooks/use-error-message';
 import {
+  useConfirmShowcaseDraft,
   useDeleteShowcaseMedia,
   useRequestShowcaseDeletion,
   useSetShowcaseCover,
@@ -31,6 +35,7 @@ import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { CoverImage, placeLine, specLine } from './showcase-shared';
 import { useCanEditShowcase } from './showcase-library';
+import { DraftSitePhotos } from './draft-site-photos';
 
 export function ShowcaseDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -46,6 +51,7 @@ export function ShowcaseDetailPage() {
   const removeMedia = useDeleteShowcaseMedia();
   const setCover = useSetShowcaseCover();
   const requestDelete = useRequestShowcaseDeletion();
+  const confirmDraft = useConfirmShowcaseDraft();
   const prompt = usePromptDialog();
   const fileRef = useRef<HTMLInputElement>(null);
   const [mediaKind, setMediaKind] = useState<ShowcaseMediaKind>('anh_thuc_te');
@@ -107,12 +113,30 @@ export function ShowcaseDetailPage() {
         breadcrumbs={[{ label: 'Mẫu công trình', to: '/mau-cong-trinh' }, { label: item.title }]}
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button variant="primary" asChild>
-              <Link to={`/mau-cong-trinh?chon=${item.id}`}>
-                <Send />
-                Gửi khách
-              </Link>
-            </Button>
+            {item.status === 'nhap' ? (
+              canEdit && (
+                <Button
+                  variant="primary"
+                  disabled={confirmDraft.isPending}
+                  onClick={() =>
+                    void run(
+                      () => confirmDraft.mutateAsync(item.id),
+                      'Đã đưa mẫu vào kho — cả công ty xem được, Kinh doanh gửi khách được.',
+                    )
+                  }
+                >
+                  <CheckCircle2 />
+                  Xác nhận đưa vào kho
+                </Button>
+              )
+            ) : (
+              <Button variant="primary" asChild>
+                <Link to={`/mau-cong-trinh?chon=${item.id}`}>
+                  <Send />
+                  Gửi khách
+                </Link>
+              </Button>
+            )}
             {canEdit && (
               <>
                 <Button variant="secondary" asChild>
@@ -132,6 +156,14 @@ export function ShowcaseDetailPage() {
           </div>
         }
       />
+
+      {item.status === 'nhap' && (
+        <p className="mb-3 rounded-sm bg-status-pending-bg px-3 py-2 text-status-pending">
+          Mẫu nháp — máy lập khi công trình bàn giao. Chỉ Phòng Thiết kế và Giám đốc thấy, chưa gửi
+          khách được. Chọn ảnh từ công trình, sửa tên / mô tả / khu vực (không ghi tên chủ nhà),
+          chọn ảnh bìa rồi «Xác nhận đưa vào kho».
+        </p>
+      )}
 
       {item.deletion_requested_at && (
         <p className="mb-3 rounded-sm bg-status-pending-bg px-3 py-2 text-status-pending">
@@ -257,6 +289,12 @@ export function ShowcaseDetailPage() {
             </div>
           )}
         </div>
+
+        {item.status === 'nhap' && canEdit && (
+          <div className="lg:col-span-2">
+            <DraftSitePhotos itemId={item.id} mediaCount={item.media.length} />
+          </div>
+        )}
 
         <aside className="space-y-3 rounded-lg border border-border bg-surface p-4">
           <dl className="space-y-2">

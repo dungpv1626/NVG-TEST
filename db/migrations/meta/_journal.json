@@ -1359,6 +1359,13 @@
       "when": 1791380000000,
       "tag": "0193_phieu_bao_hanh",
       "breakpoints": true
+    },
+    {
+      "idx": 194,
+      "version": "7",
+      "when": 1791390000000,
+      "tag": "0194_cong_trinh_xong_thanh_mau_nhap",
+      "breakpoints": true
     }
   ]
 }

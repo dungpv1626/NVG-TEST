@@ -630,20 +630,20 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 
 ### 9.2 Trạng thái từng giai đoạn
 
-| GĐ  | Nội dung                                                                                                                                | Trạng thái                                                 |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| 0   | Lưu mốc                                                                                                                                 | **Xong**                                                   |
-| 1   | Quyền + thứ tự bước, đồng bộ liên module, dải tiến trình + chuỗi hồ sơ, gỡ chế độ tối, sửa lớp đè / token màu (vấn đề 2–4)              | **Xong phần chính** — chờ Haan kiểm                        |
-| 2   | «Tổng quan điều hành» + Dashboard lãnh đạo theo khung từng công ty + vai trò Kiểm soát nội bộ (vấn đề 1)                                | **Xong phần chính** — chờ Haan kiểm                        |
-| 3   | Khảo sát chốt bằng máy (CRM + TK), đính kèm dùng chung, ghi âm → Whisper → Gemini tóm tắt (vấn đề 6, 8)                                 | **Phần CRM xong trong Đợt 1**; phần TK ở Đợt 5             |
-| 3b  | Điểm danh theo tổ, kiểm bán kính GPS (chỉ cảnh báo), báo cáo có mặt, đề xuất chấm công                                                  | Chưa làm — nay là Đợt 2 (2C) của kế hoạch tổng             |
-| 4   | Mẫu hợp đồng `.docx` có chỗ trống, tự điền, xem trước, xuất (vấn đề 5)                                                                  | **Xong vòng đầu** — chờ Haan kiểm                          |
-| 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                                          | Chưa làm — nay là Đợt 5 (5B) của kế hoạch tổng             |
-| Đ1  | Đợt 1 Kinh doanh (kế hoạch tổng): 1A–1H + bổ sung 18/10 (AI thật, đính kèm, in, phiếu riêng)                                            | **Xong trên máy** — chờ anh Dũng chạy thử                  |
-| Đ2  | Đợt 2 Thi công (NVO trước): 2A mốc, 2B nhật ký giọng nói, 2E bảng theo dõi, 2D biên bản ký hai bên, 2F phiếu bảo hành (0182, 0190–0193) | **Đang làm** — 2A, 2B, 2E, 2D, 2F xong; còn 2G             |
-| HĐ  | Soạn hợp đồng bằng máy + bộ mẫu ba pháp nhân + ký không cần sếp vào app + bộ quét bản đã ký (0185–0189)                                 | **Xong trên máy** — anh Dũng đã chạy thử trọn tới bản quét |
-| 0b  | Bộ nhận diện theo logo NVG                                                                                                              | **Xong vòng đầu** — chờ duyệt ảnh                          |
-| PH  | Phát hành bản demo mới                                                                                                                  | **Chuẩn bị xong, CỐ Ý CHƯA deploy** (xem 9.3)              |
+| GĐ  | Nội dung                                                                                                                                             | Trạng thái                                                   |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| 0   | Lưu mốc                                                                                                                                              | **Xong**                                                     |
+| 1   | Quyền + thứ tự bước, đồng bộ liên module, dải tiến trình + chuỗi hồ sơ, gỡ chế độ tối, sửa lớp đè / token màu (vấn đề 2–4)                           | **Xong phần chính** — chờ Haan kiểm                          |
+| 2   | «Tổng quan điều hành» + Dashboard lãnh đạo theo khung từng công ty + vai trò Kiểm soát nội bộ (vấn đề 1)                                             | **Xong phần chính** — chờ Haan kiểm                          |
+| 3   | Khảo sát chốt bằng máy (CRM + TK), đính kèm dùng chung, ghi âm → Whisper → Gemini tóm tắt (vấn đề 6, 8)                                              | **Phần CRM xong trong Đợt 1**; phần TK ở Đợt 5               |
+| 3b  | Điểm danh theo tổ, kiểm bán kính GPS (chỉ cảnh báo), báo cáo có mặt, đề xuất chấm công                                                               | Chưa làm — nay là Đợt 2 (2C) của kế hoạch tổng               |
+| 4   | Mẫu hợp đồng `.docx` có chỗ trống, tự điền, xem trước, xuất (vấn đề 5)                                                                               | **Xong vòng đầu** — chờ Haan kiểm                            |
+| 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                                                       | Chưa làm — nay là Đợt 5 (5B) của kế hoạch tổng               |
+| Đ1  | Đợt 1 Kinh doanh (kế hoạch tổng): 1A–1H + bổ sung 18/10 (AI thật, đính kèm, in, phiếu riêng)                                                         | **Xong trên máy** — chờ anh Dũng chạy thử                    |
+| Đ2  | Đợt 2 Thi công (NVO trước): 2A mốc, 2B nhật ký giọng nói, 2D biên bản ký hai bên, 2E bảng theo dõi, 2F phiếu bảo hành, 2G mẫu nháp (0182, 0190–0194) | **Xong trên máy** trừ 2C (chờ câu 6) và mốc NVC (chờ câu 15) |
+| HĐ  | Soạn hợp đồng bằng máy + bộ mẫu ba pháp nhân + ký không cần sếp vào app + bộ quét bản đã ký (0185–0189)                                              | **Xong trên máy** — anh Dũng đã chạy thử trọn tới bản quét   |
+| 0b  | Bộ nhận diện theo logo NVG                                                                                                                           | **Xong vòng đầu** — chờ duyệt ảnh                            |
+| PH  | Phát hành bản demo mới                                                                                                                               | **Chuẩn bị xong, CỐ Ý CHƯA deploy** (xem 9.3)                |
 
 **GĐ1 đã có trong mã** (migration 0155–0166; 0160–0166 là vòng rà chuỗi bước bằng đúng vai sau phản hồi chủ dự án):
 
@@ -790,7 +790,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     đính kèm khảo sát (kho `survey-files`); in biên bản + in phiếu khảo sát trống (`pages/crm/survey-print.ts`); 0181 phiếu
     khảo sát RIÊNG từng pháp nhân (`shared/src/survey-forms.ts`, cột `site_surveys.site_details`); bộ ghi âm có thanh mức
     âm, chọn micro, nhắc khi micro không nghe thấy; Worker lọc câu Whisper tự bịa (`whisper-hallucination.ts`).
-- **Đợt 2 — Thi công, đang làm** (bắt đầu 18/10/2026, phần NVO trước):
+- **Đợt 2 — Thi công, xong trên máy 22/10/2026** (phần NVO; 2C điểm danh tổ chờ câu 6, mốc NVC chờ câu 15):
   - 2A xong (0182): `milestone_templates` (bộ mốc của pháp nhân, dữ liệu) → `site_milestones` (chụp lại khi áp; công
     trình mới của pháp nhân có bộ mặc định tự có mốc) + lịch sử `site_milestone_events`. Bộ 7 mốc NVO + 7 danh mục kiểm
     tra rút từ Quy chuẩn Nhà Việt One nằm ở `shared/src/tc-milestones.ts`, `db:seed` nạp — ĐỀ XUẤT, chờ Trưởng phòng
@@ -836,7 +836,16 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     nhận thông báo `warranty_claim_assigned`. `tc_site_board` thêm phiếu mở / quá hạn và hiện cả công trình đang bảo
     hành còn phiếu mở. Phép thử `tc-warranty.test.ts` (6, đột biến bỏ ảnh / bỏ kiểm người phụ trách đã đo đỏ). Ảnh:
     `backup/dot2-2f/` (kịch bản `backup/dot2-2f-warranty.cjs`, Worker chạy với `AI_FAKE=transcribe`).
-  - Còn: 2G
+  - 2G xong (0194, 22/10/2026): công trình sang «Bảo hành» (bàn giao) → trigger `construction_sites_showcase_draft` lập
+    MỘT mẫu NHÁP trong thư viện mẫu (`showcase_items.status = 'nhap'`, mỗi công trình một mẫu): loại nhà, số tầng, diện
+    tích / kích thước lô đất từ đầu bài thiết kế đã xác nhận, năm hoàn thành, mô tả liệt kê bản thiết kế khách đã duyệt;
+    tên KHÔNG lấy tên công trình (hay mang tên chủ nhà). Thiết kế được báo (`showcase_draft`). Mẫu nháp chỉ Thiết kế /
+    Giám đốc thấy (chính sách đọc mẫu, ảnh mẫu, kho `showcase`), không gửi khách được (trigger trên `showcase_shares`).
+    Trang mẫu: khối «Ảnh từ công trình» (`showcase_draft_photo_candidates`: ảnh nghiệm thu + ảnh nhật ký; chính sách kho
+    `construction-photos` thêm nhánh `rls_showcase_draft_site` — chỉ khi đang có mẫu nháp) → chép ảnh sang kho thư viện →
+    «Xác nhận đưa vào kho» (`confirm_showcase_draft`: cần ảnh + ảnh bìa). `showcase_items_guard` chép nguyên văn 0179, thêm
+    khoá trạng thái / công trình. Phép thử `showcase-draft.test.ts` (6, đột biến mở mẫu nháp + gỡ chặn gửi khách đã đo
+    đỏ). Ảnh: `backup/dot2-2g/` (kịch bản `backup/dot2-2g-showcase.cjs`).
 - **Sửa sau khi anh Dũng chạy thử Đợt 1 (20–21/10/2026, commit fc2e118 → 23a14aa):**
   - Biểu mẫu Khách hàng (tạo / sửa) kiểm trùng số điện thoại với đầu mối + khách hàng (`contact-duplicates-notice.tsx`,
     cùng hàm `contact_duplicates`); trùng khách hàng có sẵn thì không tạo thêm hồ sơ. Trước chỉ biểu mẫu Đầu mối kiểm.
@@ -914,18 +923,19 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 
 #### Trạng thái từng phần
 
-| Phần                                  | Trạng thái                                                                                                                                                                                                                       |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mã Đợt 1                              | Xong; phép thử CSDL có đột biến; `tsc`, `lint` (trừ `backup/`) sạch                                                                                                                                                              |
-| Hợp đồng (0185–0187)                  | Xong trên máy: 21 mẫu NVC / NVO / NVS nạp bằng seed, mọi chỗ trống điền được và lưu theo hợp đồng, Kinh doanh ghi nhận ký kèm bản đã ký, ký xong tự mở công trình. Cả bộ phép thử `db` xanh trừ hai nhóm đỏ sẵn (9.6)            |
-| Cập nhật tức thời (0188)              | Xong: thông báo + phê duyệt đẩy về trình duyệt ~1 giây (đo bằng Playwright), không cần F5                                                                                                                                        |
-| Bộ quét + bản đã ký (0189)            | Xong trên máy, anh Dũng chạy thử bằng ảnh thật tới bản đạt (lần quét «sss» trên AB). `scan.test.ts` + `hd-template.test.ts` (22) xanh, đột biến chính sách kho đã đo đỏ. Chưa thử trên điện thoại thật                           |
-| Nhật ký giọng nói (0190)              | Xong trên máy, chạy thử bằng `chihuytruong.nvo@…` ở khung điện thoại với AI giả lập. Máy xếp mục (`ai.site_log_enabled`) để TẮT — chưa duyệt chi phí; tắt thì vẫn chép chữ thật và đưa nguyên lời vào ô Nội dung                 |
-| Bộ mẫu hợp đồng                       | Bản DỰ THẢO (anh Dũng gửi, dùng như chính thức) — chờ pháp chế NVG rà; bảng hỏi mục 6 trong tệp «00_Huong_dan» từng bộ chờ NVG trả lời. Tài khoản ngân hàng ba công ty là số DEMO                                                |
-| AI trên máy                           | **Chạy THẬT**: Whisper (Workers AI) + Gemini 2.5 Flash trả phí — `workers/.dev.vars` `AI_FAKE=` rỗng, công tắc `ai.transcribe_enabled` / `ai.survey_summary_enabled` = 1 ở CSDL máy. Muốn quay về giả lập: `AI_FAKE=1`           |
-| Bản demo cũ `nvg.tests99.workers.dev` | Vẫn chạy bản trước GĐ1, CSDL `awaiwegmuykhctnysvou` — ở tài khoản khác, máy này KHÔNG vào được                                                                                                                                   |
-| Bản demo mới                          | Supabase `fvfmtbdcvcniakigfpdm` đã migrate 0001→0181 + seed + 5/6 kịch bản demo (thiếu NVO). Cloudflare tài khoản wewear (`automkt.workers.dev`) — **chưa deploy**; lần thử đầu bị từ chối vì gói Free không cho `limits.cpu_ms` |
-| Repo                                  | Chỉ đẩy lên `dungpv1626/NVG-TEST` (remote `dungpv`); remote `origin` (anhoangha) đã khoá đẩy                                                                                                                                     |
+| Phần                                  | Trạng thái                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mã Đợt 1                              | Xong; phép thử CSDL có đột biến; `tsc`, `lint` (trừ `backup/`) sạch                                                                                                                                                                                                                                           |
+| Hợp đồng (0185–0187)                  | Xong trên máy: 21 mẫu NVC / NVO / NVS nạp bằng seed, mọi chỗ trống điền được và lưu theo hợp đồng, Kinh doanh ghi nhận ký kèm bản đã ký, ký xong tự mở công trình. Cả bộ phép thử `db` xanh trừ hai nhóm đỏ sẵn (9.6)                                                                                         |
+| Cập nhật tức thời (0188)              | Xong: thông báo + phê duyệt đẩy về trình duyệt ~1 giây (đo bằng Playwright), không cần F5                                                                                                                                                                                                                     |
+| Bộ quét + bản đã ký (0189)            | Xong trên máy, anh Dũng chạy thử bằng ảnh thật tới bản đạt (lần quét «sss» trên AB). `scan.test.ts` + `hd-template.test.ts` (22) xanh, đột biến chính sách kho đã đo đỏ. Chưa thử trên điện thoại thật                                                                                                        |
+| Nhật ký giọng nói (0190)              | Xong trên máy, chạy thử bằng `chihuytruong.nvo@…` ở khung điện thoại với AI giả lập. Máy xếp mục (`ai.site_log_enabled`) để TẮT — chưa duyệt chi phí; tắt thì vẫn chép chữ thật và đưa nguyên lời vào ô Nội dung                                                                                              |
+| Đợt 2 Thi công (0190–0194)            | Xong trên máy: nhật ký giọng nói, bảng theo dõi Trưởng phòng, biên bản ký hai bên → Kế toán, phiếu bảo hành, mẫu nháp khi bàn giao. Mỗi phần có phép thử CSDL + đột biến đã đo đỏ và chạy thử bằng đúng vai trên trình duyệt. Cả bộ `db` 644/649 (5 đỏ sẵn: `env-guard`, `kb-room-area-stats` khi chạy chung) |
+| Bộ mẫu hợp đồng                       | Bản DỰ THẢO (anh Dũng gửi, dùng như chính thức) — chờ pháp chế NVG rà; bảng hỏi mục 6 trong tệp «00_Huong_dan» từng bộ chờ NVG trả lời. Tài khoản ngân hàng ba công ty là số DEMO                                                                                                                             |
+| AI trên máy                           | **Chạy THẬT**: Whisper (Workers AI) + Gemini 2.5 Flash trả phí — `workers/.dev.vars` `AI_FAKE=` rỗng, công tắc `ai.transcribe_enabled` / `ai.survey_summary_enabled` = 1 ở CSDL máy. Muốn quay về giả lập: `AI_FAKE=1`                                                                                        |
+| Bản demo cũ `nvg.tests99.workers.dev` | Vẫn chạy bản trước GĐ1, CSDL `awaiwegmuykhctnysvou` — ở tài khoản khác, máy này KHÔNG vào được                                                                                                                                                                                                                |
+| Bản demo mới                          | Supabase `fvfmtbdcvcniakigfpdm` đã migrate 0001→0181 + seed + 5/6 kịch bản demo (thiếu NVO). Cloudflare tài khoản wewear (`automkt.workers.dev`) — **chưa deploy**; lần thử đầu bị từ chối vì gói Free không cho `limits.cpu_ms`                                                                              |
+| Repo                                  | Chỉ đẩy lên `dungpv1626/NVG-TEST` (remote `dungpv`); remote `origin` (anhoangha) đã khoá đẩy                                                                                                                                                                                                                  |
 
 #### Bước tiếp theo
 
@@ -947,8 +957,10 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    (cần cho Vite / Worker nghe mạng nhà và tạm đổi `.env` sang IP máy `192.168.1.12` — chưa làm, anh Dũng chưa yêu cầu);
    (c) gắn `DocumentScanner` vào biên bản nghiệm thu, đề nghị thanh toán khi làm Đợt 2 / Đợt 3; (d) ảnh đã qua Zalo /
    chỉnh sửa có thể mang thời điểm gửi chứ không phải lúc chụp → thứ tự lệch, dùng «Đảo thứ tự trang».
-2. **Đợt 2 — Thi công** (2A, 2B, 2E, 2D, 2F xong; làm tiếp 2G; bật thật máy xếp mục nhật ký
-   `ai.site_log_enabled` chờ anh Dũng duyệt chi phí): 7 mốc NVO + nghiệm thu trước khi che khuất, nhật ký giọng nói
+2. **Đợt 2 — Thi công: xong trên máy** (2A, 2B, 2D, 2E, 2F, 2G). Còn: 2C điểm danh tổ (chờ câu 6), mốc nhà xưởng NVC
+   (chờ câu 15); bật thật máy xếp mục nhật ký `ai.site_log_enabled` và đặt `tc.warranty_response_days` — chờ anh Dũng.
+   Anh Dũng nên chạy thử trọn Đợt 2 bằng `congtruong.nvo@…`, `chihuytruong.nvo@…`, `ketoan@…`, `thietke.nvo@…` trên
+   `NVO-CT-2026-0901`. Tiếp theo: **Đợt 3 Tài chính** (đọc `doc/KE_HOACH_LAM_HO.md` trước). Phần gốc của mục này:: 7 mốc NVO + nghiệm thu trước khi che khuất, nhật ký giọng nói
    (dùng lại `VoiceRecorder` + Whisper), biên bản tự sinh, màn hình Trưởng phòng Thi công, phiếu bảo hành. Điểm danh tổ
    (2C) và mốc NVC chờ câu hỏi 6, 15. Rồi Đợt 3 Tài chính; Đợt 4 Mua hàng – Kho và Đợt 5 song song.
 3. **Phát hành — CHỈ sau khi xong mọi tính năng** (anh Dũng quyết 18/10/2026). Trình tự đã chuẩn bị:
@@ -967,7 +979,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    đồng sắp hết hạn»; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0194.**
+**Migration tiếp theo: 0195.**
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -1061,6 +1073,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Biên bản nghiệm thu: «Ký hai bên» là bước riêng sau khi lập (hai chữ ký trên điện thoại hoặc bản giấy quét); Kế toán được báo lúc ký                                                   | Khách / tổ đội thường ký khi gặp tại công trường, không phải lúc chỉ huy trưởng lập; biên bản chưa ký chưa là căn cứ thu / trả tiền                                                                    |
 | Kế toán xem biên bản đã ký qua hàm riêng, không mở quyền xem phân hệ Thi công; chỉ đánh dấu «đã ghi nhận», không tự sinh công nợ                                                       | KT không có quyền TC (thông báo cũ trỏ vào trang KT không mở được); thuế, hạn, đợt theo hợp đồng là quyết định của Kế toán (PRD 2.3)                                                                   |
 | Phiếu bảo hành tự giao chỉ huy trưởng công trình; hạn xử lý mặc định là tham số để TRỐNG; đóng phiếu bắt buộc ảnh sau sửa                                                              | Kế hoạch 2F: «tự giao người phụ trách, có hạn xử lý, ảnh xác nhận»; số ngày hạn NVG chưa quyết (5.2) — trước đây đổi trạng thái tự do, «đã xử lý» không cần bằng chứng                                 |
+| Công trình bàn giao tự lập mẫu NHÁP; Thiết kế chọn ảnh và xác nhận mới vào kho; mẫu nháp không ai ngoài Thiết kế / Giám đốc thấy                                                       | Kế hoạch 2G; ảnh công trường có thể lộ người, biển số, tên chủ nhà — máy không tự đưa ảnh nào ra ngoài. Thiết kế chỉ đọc ảnh công trình khi đang có mẫu nháp của chính công trình đó                   |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)

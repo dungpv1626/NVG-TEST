@@ -80,16 +80,21 @@ export function ShowcaseLibraryPage() {
     const fMax = num(frontMax);
     const fl = num(floors);
     const q = query.trim().toLocaleLowerCase('vi');
-    return (items.data ?? []).filter(
-      (i) =>
-        (!kind || i.kind === kind) &&
-        (fl === null || i.floors === fl) &&
-        (fMin === null || (i.frontage ?? 0) >= fMin) &&
-        (fMax === null || (i.frontage !== null && i.frontage <= fMax)) &&
-        (!q ||
-          `${i.title} ${i.sample_code ?? ''} ${i.style ?? ''} ${i.location_area ?? ''}`
-            .toLocaleLowerCase('vi')
-            .includes(q)),
+    return (
+      (items.data ?? [])
+        .filter(
+          (i) =>
+            (!kind || i.kind === kind) &&
+            (fl === null || i.floors === fl) &&
+            (fMin === null || (i.frontage ?? 0) >= fMin) &&
+            (fMax === null || (i.frontage !== null && i.frontage <= fMax)) &&
+            (!q ||
+              `${i.title} ${i.sample_code ?? ''} ${i.style ?? ''} ${i.location_area ?? ''}`
+                .toLocaleLowerCase('vi')
+                .includes(q)),
+        )
+        // Mẫu nháp chờ Thiết kế xác nhận đứng đầu (chỉ Thiết kế / Giám đốc thấy mẫu nháp).
+        .sort((a, b) => Number(b.status === 'nhap') - Number(a.status === 'nhap'))
     );
   }, [items.data, kind, floors, frontMin, frontMax, query]);
 
@@ -261,16 +266,25 @@ export function ShowcaseLibraryPage() {
                       {item.deletion_requested_at && (
                         <p className="text-xs text-status-pending">Đang chờ Giám đốc đồng ý xoá</p>
                       )}
-                      <Button
-                        size="sm"
-                        variant={on ? 'primary' : 'secondary'}
-                        onClick={() => toggle(item.id)}
-                        className="mt-1 w-full"
-                        aria-pressed={on}
-                      >
-                        {on ? <Check /> : null}
-                        {on ? 'Đã chọn' : 'Chọn để gửi khách'}
-                      </Button>
+                      {item.status === 'nhap' ? (
+                        // 2G: mẫu nháp (máy lập khi công trình bàn giao) chưa gửi khách được.
+                        <Button size="sm" variant="secondary" asChild className="mt-1 w-full">
+                          <Link to={`/mau-cong-trinh/${item.id}`}>
+                            Mẫu nháp — chọn ảnh và xác nhận
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant={on ? 'primary' : 'secondary'}
+                          onClick={() => toggle(item.id)}
+                          className="mt-1 w-full"
+                          aria-pressed={on}
+                        >
+                          {on ? <Check /> : null}
+                          {on ? 'Đã chọn' : 'Chọn để gửi khách'}
+                        </Button>
+                      )}
                     </div>
                   </li>
                 );

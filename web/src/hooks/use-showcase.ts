@@ -41,6 +41,9 @@ export interface ShowcaseItem {
   cover_media_id: string | null;
   deletion_requested_at: string | null;
   deletion_reason: string | null;
+  /** `nhap` = mẫu máy lập khi công trình bàn giao, chờ Thiết kế xác nhận (2G, 0194). */
+  status: 'nhap' | 'da_xac_nhan';
+  construction_site_id: string | null;
   created_at: string;
   updated_at: string;
   company: { code: string; short_name: string } | null;
@@ -50,7 +53,7 @@ export interface ShowcaseItem {
 const ITEM_SELECT =
   'id, company_id, sample_code, title, kind, style, floors, bedrooms, land_area, frontage, depth, ' +
   'building_area, span, location_area, completed_year, description, cover_media_id, ' +
-  'deletion_requested_at, deletion_reason, created_at, updated_at, ' +
+  'deletion_requested_at, deletion_reason, status, construction_site_id, created_at, updated_at, ' +
   'company:companies(code, short_name), ' +
   // Hai khoá ngoại nối hai bảng (ảnh → mẫu, ảnh bìa ← mẫu): phải gọi đích danh, không thì
   // PostgREST báo «more than one relationship» và cả trang hỏng.
@@ -130,6 +133,8 @@ export type ShowcaseInput = Omit<
   | 'updated_at'
   | 'company'
   | 'media'
+  | 'status'
+  | 'construction_site_id'
 >;
 
 export function useSaveShowcaseItem() {
@@ -326,4 +331,90 @@ export function useRevokeShare() {
 /** Địa chỉ trang khách xem — cùng tên miền với ứng dụng, không cần đăng nhập. */
 export function shareUrl(token: string): string {
   return `${window.location.origin}/xem-mau/${token}`;
+}
+
+// ---------------------------------------------------------------------------
+// Mẫu nháp từ công trình đã bàn giao (Đợt 2 — 2G, 0194)
+// ---------------------------------------------------------------------------
+
+export interface DraftPhotoCandidate {
+  path: string;
+  source: string;
+  taken_on: string | null;
+}
+
+/** Ảnh nghiệm thu / nhật ký của công trình — Thiết kế chọn đưa vào mẫu nháp. */
+export function useDraftPhotoCandidates(itemId: string | undefined, enabled: boolean) {
+  return useQuery<{ candidates: DraftPhotoCandidate[]; urls: Record<string, string> }, Error>({
+    queryKey: ['showcase', 'draft-candidates', itemId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('showcase_draft_photo_candidates', {
+        p_item_id: itemId!,
+      });
+      if (error) throw new Error(error.message);
+      const candidates = (data ?? []) as DraftPhotoCandidate[];
+      const urls: Record<string, string> = {};
+      if (candidates.length > 0) {
+        const { data: signed } = await supabase.storage
+          .from('construction-photos')
+          .createSignedUrls(
+            candidates.map((c) => c.path),
+            3600,
+          );
+        for (const s of signed ?? []) if (s.path && s.signedUrl) urls[s.path] = s.signedUrl;
+      }
+      return { candidates, urls };
+    },
+    enabled: Boolean(itemId) && enabled,
+  });
+}
+
+/**
+ * Chép ảnh công trình đã chọn sang kho thư viện (tải về trình duyệt rồi tải lên `showcase`):
+ * mẫu không trỏ vào kho công trình — xác nhận xong Thiết kế thôi đọc được kho đó (0194).
+ */
+export function useImportSitePhotos() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    number,
+    Error,
+    { itemId: string; picks: { url: string; source: string }[]; start: number }
+  >({
+    mutationFn: async ({ itemId, picks, start }) => {
+      let order = start;
+      for (const pick of picks) {
+        const res = await fetch(pick.url);
+        if (!res.ok) throw new Error('Không tải được ảnh từ công trình. Thử lại.');
+        const blob = await res.blob();
+        const type = blob.type || 'image/jpeg';
+        const ext = type === 'image/png' ? 'png' : type === 'image/webp' ? 'webp' : 'jpg';
+        const path = `${itemId}/${crypto.randomUUID()}.${ext}`;
+        const up = await supabase.storage
+          .from(SHOWCASE_BUCKET)
+          .upload(path, blob, { contentType: type });
+        if (up.error) throw up.error;
+        const { error } = await supabase.from('showcase_media').insert({
+          item_id: itemId,
+          storage_path: path,
+          kind: 'anh_thuc_te',
+          caption: pick.source,
+          sort_order: order++,
+        });
+        if (error) throw error;
+      }
+      return picks.length;
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['showcase'] }),
+  });
+}
+
+export function useConfirmShowcaseDraft() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: async (itemId) => {
+      const { error } = await supabase.rpc('confirm_showcase_draft', { p_item_id: itemId });
+      if (error) throw error;
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['showcase'] }),
+  });
 }
