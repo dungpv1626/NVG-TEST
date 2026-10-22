@@ -10,6 +10,7 @@
  */
 
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 import {
   STOCK_ALERT_LABELS,
@@ -34,7 +35,9 @@ export function InventoryListPage() {
   const canEdit = useCan('KHO', 'edit');
   const [warehouseId, setWarehouseId] = useState('');
   const [query, setQuery] = useState('');
-  const [onlyAlerts, setOnlyAlerts] = useState(false);
+  // Thông báo «xuống mức tối thiểu» (4D, 0203) mở thẳng danh sách đã lọc cảnh báo.
+  const [searchParams] = useSearchParams();
+  const [onlyAlerts, setOnlyAlerts] = useState(searchParams.get('canh-bao') === '1');
   const [rowError, setRowError] = useState<string | null>(null);
 
   const { data: warehouses } = useWarehouses();
@@ -79,13 +82,21 @@ export function InventoryListPage() {
       .map((r) => ({ quantityOnHand: r.quantity_on_hand, averageCost: r.average_cost })),
   );
   const alertCount = rows.filter((r) => r.alerts.length > 0).length;
+  // Vật tư chưa đặt mức KHÔNG có cảnh báo «sắp hết» — nói ra để người đặt mức thấy còn bao nhiêu.
+  const unsetCount = (data ?? []).filter((r) => r.min_quantity == null).length;
 
-  async function saveMin(id: string, value: string) {
+  async function saveMin(id: string, value: string, previous: string | null) {
+    const normalized = value.trim().replace(',', '.');
+    if ((normalized || null) === (previous == null ? null : String(Number(previous)))) return;
+    if (normalized && !(Number(normalized) >= 0)) {
+      setRowError('Mức tồn tối thiểu phải là số không âm. Để trống nếu chưa đặt mức.');
+      return;
+    }
     setRowError(null);
     try {
       await updateSettings.mutateAsync({
         id,
-        changes: { min_quantity: value.trim() === '' ? null : value.trim() },
+        changes: { min_quantity: normalized === '' ? null : normalized },
       });
     } catch (e) {
       setRowError(toUserMessage(e, 'edit'));
@@ -153,6 +164,7 @@ export function InventoryListPage() {
         <>
           <p className="mb-2 text-fg-subtle">
             {rows.length} dòng tồn
+            {unsetCount > 0 && ` · ${unsetCount} dòng chưa đặt mức tối thiểu`}
             {seesInventoryValue && ` · Giá trị ước tính ${formatCurrency(totalValue)}`}
             <span className="block text-xs text-fg-subtle">
               {seesInventoryValue
@@ -161,7 +173,36 @@ export function InventoryListPage() {
             </span>
           </p>
 
-          <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+          {/* Điện thoại (Kho đứng ở kho): mỗi dòng tồn một thẻ, ô đặt mức ngay trong thẻ. */}
+          <ul className="space-y-2 sm:hidden">
+            {rows.map(({ row, alerts }) => (
+              <li key={row.id} className="rounded-lg border border-border bg-surface px-3 py-2">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="min-w-0">
+                    <span className="block font-medium">{row.material?.name ?? EM_DASH}</span>
+                    <span className="block text-xs text-fg-subtle">
+                      {row.material?.code ?? EM_DASH} · {row.warehouse?.name ?? EM_DASH}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-right font-semibold tabular-nums">
+                    {formatNumber(Number(row.quantity_on_hand))} {row.material?.unit}
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <MinQuantityCell
+                    canEdit={canEdit}
+                    value={row.min_quantity}
+                    unit={row.material?.unit}
+                    label={row.material?.name}
+                    onSave={(v) => void saveMin(row.id, v, row.min_quantity)}
+                  />
+                  <AlertList alerts={alerts} />
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface sm:block">
             <table className="w-full min-w-[52rem] text-left">
               <thead className="border-b border-border text-fg-subtle">
                 <tr>
@@ -205,39 +246,19 @@ export function InventoryListPage() {
                       {formatNumber(Number(row.quantity_on_hand))} {row.material?.unit}
                     </td>
                     <td className="px-4 py-2 text-right">
-                      {canEdit ? (
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.001"
-                          defaultValue={row.min_quantity ?? ''}
-                          aria-label={`Tồn tối thiểu của ${row.material?.name ?? 'vật tư'}`}
-                          className="h-8 w-24 rounded-sm border border-border-strong bg-surface px-2 text-right"
-                          onBlur={(e) => void saveMin(row.id, e.target.value)}
-                        />
-                      ) : (
-                        <span className="tabular-nums">
-                          {row.min_quantity ? formatNumber(Number(row.min_quantity)) : EM_DASH}
-                        </span>
-                      )}
+                      <MinQuantityCell
+                        canEdit={canEdit}
+                        value={row.min_quantity}
+                        unit={row.material?.unit}
+                        label={row.material?.name}
+                        onSave={(v) => void saveMin(row.id, v, row.min_quantity)}
+                      />
                     </td>
                     <td className="px-4 py-2 text-xs text-fg-subtle">
                       {row.last_movement_at ? formatDate(row.last_movement_at) : 'Chưa có'}
                     </td>
                     <td className="px-4 py-2">
-                      {alerts.length === 0 ? (
-                        <span className="text-fg-subtle">{EM_DASH}</span>
-                      ) : (
-                        alerts.map((alert) => (
-                          <span
-                            key={alert}
-                            className="flex items-center gap-1 whitespace-nowrap text-status-overdue"
-                          >
-                            <AlertTriangle className="size-4 shrink-0" aria-hidden />
-                            {STOCK_ALERT_LABELS[alert]}
-                          </span>
-                        ))
-                      )}
+                      <AlertList alerts={alerts} />
                     </td>
                   </tr>
                 ))}
@@ -247,5 +268,57 @@ export function InventoryListPage() {
         </>
       )}
     </>
+  );
+}
+
+/** Mức tồn tối thiểu: ô sửa cho người có quyền sửa KHO, chữ «Chưa đặt mức» khi trống. */
+function MinQuantityCell({
+  canEdit,
+  value,
+  unit,
+  label,
+  onSave,
+}: {
+  canEdit: boolean;
+  value: string | null;
+  unit: string | undefined;
+  label: string | undefined;
+  onSave: (value: string) => void;
+}) {
+  if (!canEdit) {
+    return value == null ? (
+      <span className="text-fg-subtle">Chưa đặt mức</span>
+    ) : (
+      <span className="tabular-nums">
+        Tối thiểu {formatNumber(Number(value))} {unit}
+      </span>
+    );
+  }
+  return (
+    <label className="inline-flex items-center gap-2 text-xs text-fg-subtle">
+      <span className="sm:sr-only">Tối thiểu</span>
+      <input
+        inputMode="decimal"
+        defaultValue={value == null ? '' : String(Number(value))}
+        placeholder="Chưa đặt mức"
+        aria-label={`Tồn tối thiểu của ${label ?? 'vật tư'}`}
+        className="h-10 w-28 rounded-sm border border-border-strong bg-surface px-2 text-right text-sm text-fg sm:h-8"
+        onBlur={(e) => onSave(e.target.value)}
+      />
+    </label>
+  );
+}
+
+function AlertList({ alerts }: { alerts: ReturnType<typeof stockAlerts> }) {
+  if (alerts.length === 0) return <span className="text-fg-subtle">{EM_DASH}</span>;
+  return (
+    <span className="flex flex-col items-end gap-0.5 sm:items-start">
+      {alerts.map((alert) => (
+        <span key={alert} className="flex items-center gap-1 whitespace-nowrap text-status-overdue">
+          <AlertTriangle className="size-4 shrink-0" aria-hidden />
+          {STOCK_ALERT_LABELS[alert]}
+        </span>
+      ))}
+    </span>
   );
 }
