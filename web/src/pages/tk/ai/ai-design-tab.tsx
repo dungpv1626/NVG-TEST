@@ -1,5 +1,11 @@
 /**
- * Tab «AI Design» — dải ba bước nối nhau của nhánh AI (T17, 09/09/2026; bộ giải nội bộ gỡ ở T58).
+ * Tab «AI Design» — dải BỐN bước (Đợt 5B, 22/10/2026, vấn đề 7 của chủ dự án «AI Design chưa công thái
+ * học»): **Đầu vào** (đầu bài + khảo sát, chỉ xem) → **Mặt bằng** (giá ước tính trên nút, so phương án,
+ * ba lý do trừ điểm, sửa bằng ô yêu cầu) → **Mặt ngoài** (mặt đứng + phối cảnh) → **Bộ kết quả** (tải cả
+ * gói `.zip` theo mã hồ sơ). Đường dẫn có `?buoc=<bước>` (và `&phan=phoi-canh`) thì mở thẳng bước ấy — trang
+ * ngoài đọc địa chỉ rồi đưa vào `initialStep` (thư mục `tk/ai/` không nhập router, `ai-independence.test.ts`); bấm đổi bước là trạng thái trong trang, không điều hướng (không thêm lịch sử trình duyệt).
+ *
+ * Lịch sử: dải ba bước nối nhau của nhánh AI (T17, 09/09/2026; bộ giải nội bộ gỡ ở T58).
  *
  * Bước «Chương trình không gian» đã gỡ khỏi dải (19/09/2026): mặt bằng đọc đầu bài + khảo sát,
  * không đọc chương trình không gian (T45), nên bước ấy không còn là đầu vào của bước nào.
@@ -12,6 +18,7 @@
 import { useState } from 'react';
 import { ArrowRight, Check, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { EmptyState, Skeleton } from '@/components/ui/states';
 import { useAiDesignState, useUploadedDrawings, type AiDesignState } from '@/hooks/use-ai-design';
 import { toUserMessage } from '@/hooks/use-error-message';
@@ -20,9 +27,12 @@ import { cn } from '@/lib/utils';
 import { AiFacadeStep, facadeIsStale, STALE_FACADE } from './ai-facade-step';
 import { AiPerspectiveStep } from './ai-perspective-step';
 import { AiPlanStep } from './ai-plan-step';
+import { AiResultBundle } from './ai-result-bundle';
 import { AiUploadPanel } from './ai-upload-panel';
 
-type StepId = 'dau-bai' | 'mat-bang' | 'mat-dung' | 'phoi-canh';
+type StepId = 'dau-vao' | 'mat-bang' | 'mat-ngoai' | 'ket-qua';
+/** Hai phần của bước «Mặt ngoài». */
+type OuterPart = 'mat-dung' | 'phoi-canh';
 
 interface StepMeta {
   id: StepId;
@@ -32,85 +42,81 @@ interface StepMeta {
 }
 
 /**
- * Bước «Đầu bài và khảo sát» — chỉ có khi nơi dựng tab đưa vào vùng chèn `inputs` (trang AI Design
- * riêng, T114). Trong trang hồ sơ, đầu bài có tab riêng nên dải giữ ba bước.
+ * Bước «Đầu vào» — chỉ có khi nơi dựng tab đưa vào vùng chèn `inputs` (trang AI Design riêng, T114).
+ * Đầu bài và khảo sát là của HỒ SƠ, ở đây chỉ xem (T118).
  */
 const INPUT_STEP: StepMeta = {
-  id: 'dau-bai',
-  label: 'Đầu bài và khảo sát',
-  hint: 'Đầu bài ba phần (chung · mặt bằng · mặt đứng) và khảo sát hiện trạng của hồ sơ — đầu vào duy nhất của các bước AI.',
+  id: 'dau-vao',
+  label: 'Đầu vào',
+  hint: 'Đầu bài đã xác nhận và khảo sát hiện trạng của hồ sơ — chỉ xem; sửa ở hồ sơ thiết kế.',
 };
 
 const STEPS: StepMeta[] = [
   {
     id: 'mat-bang',
-    label: 'Mặt bằng từng tầng',
-    hint: 'AI khai nội dung bản vẽ; chương trình dựng tờ mặt bằng theo đúng dữ liệu đó.',
+    label: 'Mặt bằng',
+    hint: 'AI khai nội dung bản vẽ; chương trình dựng tờ mặt bằng. So phương án, sửa bằng ô yêu cầu.',
   },
   {
-    id: 'mat-dung',
-    label: 'Mặt đứng',
-    hint: 'Ý tưởng mái, vật liệu, màu, cổng và ban công — sửa được trước khi dựng ảnh.',
+    id: 'mat-ngoai',
+    label: 'Mặt ngoài',
+    hint: 'Mặt đứng mặt tiền và ảnh phối cảnh dựng trên phương án đã chọn.',
   },
   {
-    id: 'phoi-canh',
-    label: 'Phối cảnh',
-    hint: 'Năm ảnh cùng một ngôi nhà, dựng từ tờ mặt đứng và tờ mặt bằng mái.',
+    id: 'ket-qua',
+    label: 'Bộ kết quả',
+    hint: 'Tải cả gói một phương án: tờ vẽ SVG, DXF và ảnh, tên theo mã hồ sơ.',
   },
 ];
+
+const STEP_IDS: readonly StepId[] = ['dau-vao', 'mat-bang', 'mat-ngoai', 'ket-qua'];
 
 /** Bước có kết quả chưa, đang chạy không, và nếu chưa mở được thì vì sao. */
 function statusOf(
   step: StepId,
   state: AiDesignState,
-  /** Số bản vẽ mặt đứng kỹ sư đã tải lên — đủ để dựng phối cảnh dù chưa có ý tưởng AI (T114 Đợt 4b). */
-  facadeUploads = 0,
 ): { done: boolean; running: boolean; blocked: string | null; count: number } {
-  const run = (stage: 'plan' | 'facade' | 'images') =>
-    state.runs[stage]?.status === 'running' || state.runs[stage]?.status === 'queued';
-
   switch (step) {
-    case 'dau-bai':
-      return {
-        done: Boolean(state.briefArtifactId),
-        running: false,
-        blocked: null,
-        count: 0,
-      };
+    case 'dau-vao':
+      return { done: Boolean(state.briefArtifactId), running: false, blocked: null, count: 0 };
     case 'mat-bang':
       return {
         done: state.plans.length > 0,
-        running: run('plan'),
+        running: isRunning(state, 'plan'),
         // Mặt bằng đọc đầu bài + khảo sát, không đọc chương trình không gian (T45, 15/09/2026).
         blocked: state.briefArtifactId ? null : 'Cần xác nhận đầu bài trước.',
         count: state.plans.length,
       };
-    case 'mat-dung':
+    case 'mat-ngoai':
       return {
         // Mặt đứng dựng theo phương án cũ (T59) chưa tính là xong: cửa trên tờ ấy của nhà khác.
         done: Boolean(state.facadeArtifactId) && !facadeIsStale(state),
-        running: run('facade'),
-        // Chỉ chặn khi chưa có phương án nào. Chọn phương án làm nền là việc NGAY TRONG bước này (ô
-        // «Dựng trên mặt bằng», 10/10/2026) — vẫn là người chọn (PRD 2.3), nút dựng chờ ô chọn.
+        running: isRunning(state, 'facade') || isRunning(state, 'images'),
+        // Chỉ chặn khi chưa có phương án nào. Chọn phương án làm nền là việc NGAY TRONG bước này.
         blocked: state.plans.length > 0 ? null : 'Cần xếp mặt bằng trước.',
         count: 0,
       };
-    case 'phoi-canh':
+    case 'ket-qua':
       return {
-        done: Boolean(state.imageSetArtifactId),
-        running: run('images'),
-        // Bản vẽ mặt đứng tải lên cũng mở được bước này: trước 07/10/2026 dải bước vẫn báo «Chưa
-        // đủ điều kiện» dù đã có bản tải lên, ngược với chính câu nhắc của nó.
-        blocked: state.facadeArtifactId
-          ? facadeIsStale(state) && facadeUploads === 0
-            ? STALE_FACADE
-            : null
-          : facadeUploads > 0
-            ? null
-            : 'Cần ý tưởng mặt đứng (hoặc bản vẽ mặt đứng tải lên) trước.',
+        done: false,
+        running: false,
+        blocked: state.plans.length > 0 ? null : 'Cần ít nhất một phương án mặt bằng.',
         count: 0,
       };
   }
+}
+
+function isRunning(state: AiDesignState, stage: 'plan' | 'facade' | 'images'): boolean {
+  return state.runs[stage]?.status === 'running' || state.runs[stage]?.status === 'queued';
+}
+
+/** Phối cảnh mở được chưa, và nếu chưa thì vì sao. */
+function perspectiveBlocked(state: AiDesignState, facadeUploads: number): string | null {
+  // Bản vẽ mặt đứng tải lên cũng mở được phần này (T114 Đợt 4b).
+  if (state.facadeArtifactId) {
+    return facadeIsStale(state) && facadeUploads === 0 ? STALE_FACADE : null;
+  }
+  return facadeUploads > 0 ? null : 'Cần ý tưởng mặt đứng (hoặc bản vẽ mặt đứng tải lên) trước.';
 }
 
 export function AiDesignTab({
@@ -118,9 +124,20 @@ export function AiDesignTab({
   readOnly,
   inputs,
   briefLink,
+  projectCode,
+  projectName,
+  initialStep,
+  initialPart,
 }: {
+  /** Bước mở lúc vào (từ `?buoc=` của địa chỉ); giá trị lạ thì bỏ qua. */
+  initialStep?: string | null;
+  /** Phần mở của bước «Mặt ngoài» (`?phan=`). */
+  initialPart?: string | null;
   projectId: string;
   readOnly: boolean;
+  /** Mã hồ sơ thiết kế — tên gói tải về ở bước «Bộ kết quả». */
+  projectCode?: string | null;
+  projectName?: string | null;
   /** Màn hình đầu bài + khảo sát, do nơi dựng tab đưa vào. Có thì dải thêm bước đầu tiên. */
   inputs?: React.ReactNode;
   /** Lối sang đầu bài của hồ sơ (để sửa) — chèn cạnh phiếu mặt đứng chỉ xem. */
@@ -129,10 +146,20 @@ export function AiDesignTab({
   const state = useAiDesignState(projectId);
   const facadeUploads = useUploadedDrawings(projectId, 'facade').data?.items.length ?? 0;
   const steps = inputs ? [INPUT_STEP, ...STEPS] : STEPS;
-  // Chưa có đầu bài đã xác nhận thì mở ngay bước đầu bài — mọi bước sau đều đang chờ nó.
-  const [chosen, setOpen] = useState<StepId | null>(null);
+  const fromUrl = initialStep ?? null;
+  const [chosen, setOpen] = useState<StepId | null>(() =>
+    fromUrl &&
+    (STEP_IDS as readonly string[]).includes(fromUrl) &&
+    (inputs || fromUrl !== 'dau-vao')
+      ? (fromUrl as StepId)
+      : null,
+  );
+  const [part, setPart] = useState<OuterPart>(() =>
+    initialPart === 'phoi-canh' ? 'phoi-canh' : 'mat-dung',
+  );
+  // Chưa có đầu bài đã xác nhận thì mở ngay bước đầu vào — mọi bước sau đều đang chờ nó.
   const open: StepId =
-    chosen ?? (inputs && state.data && !state.data.briefArtifactId ? 'dau-bai' : 'mat-bang');
+    chosen ?? (inputs && state.data && !state.data.briefArtifactId ? 'dau-vao' : 'mat-bang');
 
   if (state.isLoading) {
     return (
@@ -162,11 +189,7 @@ export function AiDesignTab({
   const nextIndex = steps.findIndex((s) => s.id === open) + 1;
   const next = steps[nextIndex];
   const nextStep =
-    next &&
-    statusOf(open, data, facadeUploads).done &&
-    !statusOf(next.id, data, facadeUploads).blocked
-      ? next
-      : null;
+    next && statusOf(open, data).done && !statusOf(next.id, data).blocked ? next : null;
 
   // Dải bước gọn một hàng (Haan, 07/10/2026): số tròn — dấu tích khi xong — nhãn, trạng thái
   // bằng chữ ngay dưới. Câu «Bản phác tham khảo — không đi vào hồ sơ phát hành» chuyển xuống dưới
@@ -177,13 +200,13 @@ export function AiDesignTab({
         <ol
           className={cn(
             'grid gap-1.5 rounded-lg border border-tk-line bg-tk-panel p-1.5',
-            inputs ? 'sm:grid-cols-4' : 'sm:grid-cols-3',
+            inputs ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3',
           )}
         >
           {steps.map((step, index) => {
-            const s = statusOf(step.id, data, facadeUploads);
+            const s = statusOf(step.id, data);
             const isOpen = step.id === open;
-            const done = step.id === 'dau-bai' ? s.done : s.done && !s.running;
+            const done = step.id === 'dau-vao' ? s.done : s.done && !s.running;
             return (
               <li key={step.id}>
                 <button
@@ -219,9 +242,15 @@ export function AiDesignTab({
                       {/* Trạng thái luôn kèm CHỮ, không chỉ màu (CGD 6.8). */}
                       {s.running ? (
                         <Chip tone="bl">Đang chạy</Chip>
-                      ) : step.id === 'mat-dung' && facadeIsStale(data) ? (
+                      ) : step.id === 'mat-ngoai' && facadeIsStale(data) ? (
                         <Chip tone="am">Theo phương án cũ</Chip>
-                      ) : step.id === 'dau-bai' ? (
+                      ) : step.id === 'ket-qua' ? (
+                        s.blocked ? (
+                          <Chip tone="mute">Chưa đủ điều kiện</Chip>
+                        ) : (
+                          <Chip tone="gr">Sẵn sàng tải</Chip>
+                        )
+                      ) : step.id === 'dau-vao' ? (
                         s.done ? (
                           <Chip tone="gr">Đã xác nhận</Chip>
                         ) : (
@@ -247,27 +276,51 @@ export function AiDesignTab({
       </nav>
 
       <div>
-        {open === 'dau-bai' && inputs}
+        {open === 'dau-vao' && inputs}
         {/* Ảnh từ bản vẽ của kỹ sư (T114 Đợt 4) không phụ thuộc bản AI: kỹ sư có thể sửa bản AI
             trên AutoCAD, hoặc tự vẽ từ đầu. Ở bước mặt bằng nó là một thẻ ở cuối cột thiết lập. */}
         {open === 'mat-bang' && (
           <AiPlanStep projectId={projectId} readOnly={readOnly} state={data} />
         )}
-        {open === 'mat-dung' && (
-          <div className="space-y-6">
-            <AiFacadeStep
-              projectId={projectId}
-              readOnly={readOnly}
-              state={data}
-              briefLink={briefLink}
-            />
-            <AiUploadPanel projectId={projectId} drawing="facade" readOnly={readOnly} />
+        {open === 'mat-ngoai' && (
+          <div className="space-y-4">
+            {/* Hai phần của mặt ngoài: phối cảnh dựng từ tờ mặt đứng, nên mặt đứng đứng trước. */}
+            <div className="flex flex-wrap items-center gap-3">
+              <SegmentedControl
+                options={['mat-dung', 'phoi-canh'] as const}
+                value={part}
+                onChange={setPart}
+                getLabel={(value) => (value === 'mat-dung' ? 'Mặt đứng' : 'Phối cảnh')}
+              />
+              {part === 'phoi-canh' && perspectiveBlocked(data, facadeUploads) && (
+                <span className="text-fg-subtle">{perspectiveBlocked(data, facadeUploads)}</span>
+              )}
+            </div>
+            {part === 'mat-dung' ? (
+              <div className="space-y-6">
+                <AiFacadeStep
+                  projectId={projectId}
+                  readOnly={readOnly}
+                  state={data}
+                  briefLink={briefLink}
+                />
+                <AiUploadPanel projectId={projectId} drawing="facade" readOnly={readOnly} />
+              </div>
+            ) : (
+              <AiPerspectiveStep projectId={projectId} readOnly={readOnly} state={data} />
+            )}
           </div>
         )}
-        {open === 'phoi-canh' && (
-          <AiPerspectiveStep projectId={projectId} readOnly={readOnly} state={data} />
+        {open === 'ket-qua' && (
+          <AiResultBundle
+            projectId={projectId}
+            projectCode={projectCode}
+            projectName={projectName}
+            state={data}
+            onGoTo={(step) => setOpen(step)}
+          />
         )}
-        {open !== 'dau-bai' && nextStep && (
+        {open !== 'dau-vao' && nextStep && (
           <div className="mt-5 flex justify-end">
             <Button variant="secondary" onClick={() => setOpen(nextStep.id)}>
               Tiếp: {nextStep.label}

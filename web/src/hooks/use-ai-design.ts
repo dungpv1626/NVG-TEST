@@ -133,6 +133,59 @@ export function useAiCallLog(projectId: string, options: { live?: boolean; limit
 }
 
 /**
+ * Lịch sử lượt chạy + lượt gọi của MỘT giai đoạn trên MỌI hồ sơ người dùng xem được (RLS quyết) — đầu
+ * vào của chi phí ước tính trên nút (`ai/run-cost-estimate.ts`). Chỉ đọc hai bảng nhật ký, không gọi
+ * mô hình nào. Lấy 40 lượt chạy gần nhất là đủ cho một con số trung bình.
+ */
+export interface AiCostHistory {
+  runs: Array<{
+    id: string;
+    project_id: string;
+    status: AiRunStatus;
+    result: unknown;
+    created_at: string;
+    updated_at: string;
+  }>;
+  calls: Array<
+    Pick<
+      AiCallLogRow,
+      'created_at' | 'route' | 'purpose' | 'status' | 'input_tokens' | 'output_tokens' | 'cost_usd'
+    > & { project_id: string }
+  >;
+}
+
+export function useAiCostHistory(stage: Exclude<AiStage, 'program'>, purposes: readonly string[]) {
+  return useQuery<AiCostHistory, Error>({
+    queryKey: ['design_ai_cost_history', stage, [...purposes].sort().join(',')],
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const runs = await supabase
+        .from('design_ai_run')
+        .select('id, project_id, status, result, created_at, updated_at')
+        .eq('stage', stage)
+        .in('status', ['done', 'failed'])
+        .order('created_at', { ascending: false })
+        .limit(40);
+      if (runs.error) throw new Error(runs.error.message);
+      const rows = (runs.data ?? []) as AiCostHistory['runs'];
+      if (rows.length === 0) return { runs: [], calls: [] };
+      const oldest = rows[rows.length - 1]!.created_at;
+      const calls = await supabase
+        .from('design_ai_call')
+        .select(
+          'project_id, created_at, route, purpose, status, input_tokens, output_tokens, cost_usd',
+        )
+        .in('purpose', [...purposes])
+        .gte('created_at', oldest)
+        .order('created_at', { ascending: false })
+        .limit(2000);
+      if (calls.error) throw new Error(calls.error.message);
+      return { runs: rows, calls: (calls.data ?? []) as AiCostHistory['calls'] };
+    },
+  });
+}
+
+/**
  * Mã các lượt gọi CÓ bản ghi nguyên văn lời gọi (13/09/2026). Lượt chạy trước ngày ấy không có —
  * màn hình không hiện nút cho chúng, thay vì hiện rồi báo lỗi khi bấm (AFD 6.5).
  */
