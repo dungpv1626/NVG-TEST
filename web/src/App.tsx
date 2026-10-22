@@ -288,6 +288,9 @@ const RecruitmentPage = lazy(() =>
 const RentalAgreementListPage = lazy(() =>
   import('@/pages/sx/rental-list').then((m) => ({ default: m.RentalAgreementListPage })),
 );
+const RentalQuotePage = lazy(() =>
+  import('@/pages/sx/rental-quote-page').then((m) => ({ default: m.RentalQuotePage })),
+);
 const RentalAgreementDetailPage = lazy(() =>
   import('@/pages/sx/rental-detail').then((m) => ({ default: m.RentalAgreementDetailPage })),
 );
@@ -505,6 +508,7 @@ const router = createBrowserRouter(
         <Route element={<ModuleGuard module="SX" />}>
           <Route path="sx/tai-san-cho-thue" element={<RentalAgreementListPage />} />
           <Route path="sx/tai-san-cho-thue/:id" element={<RentalAgreementDetailPage />} />
+          <Route path="sx/bao-gia-thue" element={<RentalQuotePage />} />
           <Route path="sx/lenh-san-xuat" element={<ProductionOrderListPage />} />
           <Route path="sx/lenh-san-xuat/:id" element={<ProductionOrderDetailPage />} />
         </Route>

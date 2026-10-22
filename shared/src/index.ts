@@ -26,6 +26,7 @@ export * from './bc';
 export * from './tc';
 export * from './tc-milestones';
 export * from './site-log-voice';
+export * from './rental-quote';
 export * from './mh';
 export * from './kho';
 export * from './kt';
