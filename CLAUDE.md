@@ -943,6 +943,18 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   Dữ liệu thử hậu tố THU4. Lỗ có sẵn: chính sách đọc `purchase_orders` / `deliveries` chỉ Mẫu A (chỉ huy trưởng thấy đơn
   công trình khác) — chưa sửa. Hàm danh sách nối nhiều bảng có RLS: viết điều kiện phạm vi tường minh trong SECURITY
   DEFINER (`mh_purchase_pool`), để RLS tự áp trên năm bảng nối thì quá 8 giây.
+- **Đợt 5 (trừ 5B), xong trên máy 23/10/2026 (0205–0209, phép thử `dot5-*`, `rental-quote`):** 5A khảo sát thiết kế máy ghi
+  giờ (`start_design_survey` / `finish_design_survey`) + ghi âm lời chủ nhà (kho `design-audio`, Worker `/ai/design-transcribe`
+  chỉ chép chữ) + vòng ý kiến khách tự đánh số theo dự án + bộ môn (`design_reviews.round_no`, `record_design_feedback`
+  bọc `record_design_review`). 5F giấy tờ pháp nhân có hạn (`company_documents`, `/ns/giay-to-phap-nhan`) + tài sản cấp phát
+  ký nhận (`sign_asset_event`). 5E nhắc hợp đồng lao động hết hạn (`ns_expiring_contracts`, thẻ ở `/ns/viec-can-xu-ly`, không
+  lộ lương). 5C-1/5/9 kho hồ sơ năng lực (`/da/ho-so-nang-luc`, dùng chung `company_documents`; tệp báo cáo tài chính chỉ mở
+  qua `open_financial_statement` — Mẫu D, ghi nhật ký), gắn giấy tờ vào gói + báo đỏ hết hạn trước ngày nộp, vòng làm rõ +
+  lịch sử gia hạn, bảo lãnh + kết quả trúng / trượt. 5D nhắc hết hạn thuê, phiếu giao ký nhận (`sign_rental_delivery`), báo
+  giá thuê `/sx/bao-gia-thue` kiểm tồn + tự tính khi đơn giá `sx.rental_daily_rate` (theo sản phẩm, TRỐNG) đã đặt. Bốn hàm quét
+  đêm mới. Số ngày nhắc `hc.document_remind_days`, `ns.contract_remind_days`, `da.document_remind_days`,
+  `da.deadline_remind_days`, `sx.rental_remind_days` TRỐNG (quá hạn vẫn báo). Chưa làm: văn bản hành chính mẫu tự điền,
+  bảng công (câu 6), 5C-2/3/4/6/7/8/10 (câu 14, 19), bảng giá bồi thường (câu 17). Dữ liệu thử hậu tố THU5.
 - **5B AI Design bốn bước (22/10/2026, T162, chỉ `web/src/pages/tk/ai/`):** dải Đầu vào → Mặt bằng → Mặt ngoài (mặt đứng +
   phối cảnh) → Bộ kết quả; `?buoc=` mở thẳng bước. Chi phí ước tính trên nút «Xếp mặt bằng» / «Sửa lại» = trung bình tiền
   THẬT các lượt trước cùng tuyến mô hình (`design_ai_run` + `design_ai_call`), chưa có lượt thì «Chưa đủ dữ liệu». So phương
@@ -1027,7 +1039,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: lịch sử bước chung `stage_transitions`; dải tiến trình gói thầu; QĐ-6 giao dịch nội bộ; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0195** (0195–0216 dành cho bốn mạch Đợt 3 / 4 / 5 / 5B đang làm song song trong worktree; 0195–0199 Đợt 3 và 0200–0203 Đợt 4 đã gộp; 0205–0214 còn của mạch Đợt 5; 0217 câu 1 + 4, 0218 câu 2 + 8; số mới dùng **0219**).
+**Migration tiếp theo: 0195** (0195–0216 dành cho bốn mạch Đợt 3 / 4 / 5 / 5B đang làm song song trong worktree; bốn mạch song song đã gộp: 0195–0199 Đợt 3, 0200–0203 Đợt 4, 0205–0209 Đợt 5; 0217 câu 1 + 4, 0218 câu 2 + 8; số trống 0204, 0210–0216 bỏ qua; số mới dùng **0219**).
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -1126,6 +1138,8 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Tổng Giám đốc được tự duyệt hồ sơ của chính mình; hợp đồng đã ký còn ≤ 90 ngày là «sắp hết hạn» (0218) | Anh Dũng trả lời câu 2 và câu 8 (22/10/2026). Ngoại lệ đặt ở một hàm `user_may_self_approve` mà hai trigger chặn tự duyệt, hộp thư và «đang chờ ai» cùng gọi |
 | Đề nghị thu tiền là bảng riêng; công nợ chỉ sinh khi Kế toán xác nhận; lãi / lỗ quản trị để trống khi chưa có ngân sách / chi phí | Máy không tự ghi sổ (PRD 2.3, KT-08); nghiệm thu trừ 0 đồng chi phí ra lãi đẹp giả (5.2) |
 | Gom đề nghị mua ở khâu HỎI GIÁ, không gộp đơn hàng; báo giá thiếu mặt hàng không chọn được và không tính là thấp nhất | Mỗi đề nghị một công trình, một dòng ngân sách, một nơi giao (KT-05, TC-05) |
+| Giấy tờ pháp nhân và hồ sơ năng lực dùng chung `company_documents`; báo cáo tài chính hạn chế ở mức TỆP (Đấu thầu gắn được vào gói, không mở được) | Một giấy tờ không hai bản; Mẫu D cho báo cáo tài chính mà vẫn ráp được hồ sơ thầu |
+| Mọi nhắc hạn mới: quá hạn luôn báo một lần, báo trước chỉ khi tham số có số, đổi ngày hạn thì nhắc lại | Số ngày nhắc NVG chưa quyết (5.2) — không im lặng khi đã quá hạn |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)

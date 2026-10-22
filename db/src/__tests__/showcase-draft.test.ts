@@ -51,10 +51,18 @@ async function seed(): Promise<Fixture> {
          AND db.deleted_at IS NULL AND db.structured ? 'floors'
        LIMIT 1`;
     const code = 'NVO-CT-MAU-' + stamp;
+    // 0217: công trình gắn hồ sơ thiết kế phải có hợp đồng đã ký («không thi công trước hợp
+    // đồng»). Gắn thẳng một hợp đồng thử đã ký — không đi qua hồ sơ thiết kế thật của seed.
+    const [contract] = await sql<{ id: string }[]>`
+      INSERT INTO contracts (company_id, code, title, type, stage, signed_date)
+      VALUES (${nvo!.id}, ${'HDTEST-MAU-' + stamp}, ${TEST_PREFIX + ' Hợp đồng mẫu nháp ' + stamp},
+              'thi_cong', 'da_ky', current_date)
+      RETURNING id`;
     const [site] = await sql<{ id: string }[]>`
-      INSERT INTO construction_sites (company_id, code, name, stage, planned_end_date, design_project_id)
+      INSERT INTO construction_sites
+        (company_id, code, name, stage, planned_end_date, design_project_id, contract_id)
       VALUES (${nvo!.id}, ${code}, ${TEST_PREFIX + ' Nhà anh Chủ Nhà ' + stamp}, 'nghiem_thu',
-              current_date + 10, ${dp?.id ?? null})
+              current_date + 10, ${dp?.id ?? null}, ${contract!.id})
       RETURNING id`;
     return { siteId: site!.id, siteCode: code, designProjectId: dp?.id ?? null };
   });

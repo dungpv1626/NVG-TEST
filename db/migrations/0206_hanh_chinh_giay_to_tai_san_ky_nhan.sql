@@ -46,10 +46,17 @@ CREATE TABLE IF NOT EXISTS public.company_documents (
   )
 );
 
--- Danh mục loại giấy tờ — mở rộng ở migration sau (5C) bằng cách thay ràng buộc này.
-ALTER TABLE public.company_documents DROP CONSTRAINT IF EXISTS company_documents_category;
-ALTER TABLE public.company_documents ADD CONSTRAINT company_documents_category
-  CHECK (category IN ('giay_phep', 'bao_hiem', 'dang_kiem', 'hanh_chinh_khac'));
+-- Danh mục loại giấy tờ — mở rộng ở migration sau (5C, 0208) bằng cách thay ràng buộc này. Chỉ đặt
+-- khi chưa có: chạy lại tệp này sau 0208 không được thu hẹp danh mục về bốn loại (dòng loại 5C vi phạm).
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint
+                  WHERE conname = 'company_documents_category'
+                    AND conrelid = 'public.company_documents'::regclass) THEN
+    ALTER TABLE public.company_documents ADD CONSTRAINT company_documents_category
+      CHECK (category IN ('giay_phep', 'bao_hiem', 'dang_kiem', 'hanh_chinh_khac'));
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS company_documents_company_idx
   ON public.company_documents (company_id, expiry_date) WHERE deleted_at IS NULL;
