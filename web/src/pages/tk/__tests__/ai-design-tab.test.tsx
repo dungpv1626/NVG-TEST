@@ -32,6 +32,7 @@ vi.mock('@/hooks/use-ai-design', () => ({
     refetch: vi.fn(),
   }),
   useInvalidateAiDesign: () => vi.fn(),
+  useAiCostHistory: () => ({ data: { runs: [], calls: [] }, isLoading: false }),
   useUploadedDrawings: (_projectId: string, drawing: string) => ({
     data: {
       items:
@@ -78,6 +79,19 @@ vi.mock('@/hooks/use-ai-design', () => ({
 // bài»); ở đây chỉ canh DẢI BƯỚC, nên thay bằng một khối rỗng.
 vi.mock('../ai/ai-plan-step', () => ({ AiPlanStep: () => <div>Bước mặt bằng</div> }));
 vi.mock('../ai/ai-upload-panel', () => ({ AiUploadPanel: () => null }));
+// Mặt đứng / phối cảnh / bộ kết quả có bộ kiểm riêng; ở đây chỉ canh dải bước và phần «Mặt ngoài».
+vi.mock('../ai/ai-facade-step', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../ai/ai-facade-step')>()),
+  AiFacadeStep: () => <div>Phần mặt đứng</div>,
+}));
+vi.mock('../ai/ai-perspective-step', () => ({
+  AiPerspectiveStep: () => <div>Phần phối cảnh</div>,
+}));
+vi.mock('../ai/ai-result-bundle', () => ({
+  AiResultBundle: ({ projectCode }: { projectCode?: string | null }) => (
+    <div>Gói tải về của {projectCode}</div>
+  ),
+}));
 
 const { AiDesignTab } = await import('../ai/ai-design-tab');
 
@@ -102,7 +116,7 @@ describe('Dải bước của tab AI Design', () => {
     state.design = designState();
     renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
 
-    expect(await screen.findByRole('button', { name: /^Mặt bằng từng tầng/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^Mặt bằng/ })).toBeInTheDocument();
     // Mặt bằng đọc đầu bài + khảo sát, không chờ chương trình không gian (T45, 15/09/2026).
     expect(screen.queryByText('Cần chương trình không gian trước.')).toBeNull();
     // Chọn phương án làm nền nay ở NGAY bước Mặt đứng — chỉ chặn khi chưa xếp phương án nào.
@@ -113,7 +127,7 @@ describe('Dải bước của tab AI Design', () => {
     state.design = designState({ briefArtifactId: null });
     renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
 
-    expect(await screen.findByRole('button', { name: /^Mặt bằng từng tầng/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^Mặt bằng/ })).toBeInTheDocument();
     expect(screen.getAllByText('Cần xác nhận đầu bài trước.').length).toBeGreaterThan(0);
   });
 
@@ -121,8 +135,46 @@ describe('Dải bước của tab AI Design', () => {
     state.design = designState();
     renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
 
-    expect(await screen.findByRole('button', { name: /^Phối cảnh/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^Mặt ngoài/ })).toBeInTheDocument();
     expect(screen.queryByText(/Chương trình không gian/)).toBeNull();
+  });
+
+  it('có đầu vào thì đủ BỐN bước theo thứ tự (Đợt 5B)', async () => {
+    state.design = designState();
+    renderWithApp(<AiDesignTab projectId="p1" readOnly={false} inputs={<div>Khối đầu bài</div>} />);
+    const nav = await screen.findByRole('navigation', { name: 'Các bước AI Design' });
+    const labels = Array.from(nav.querySelectorAll('li button')).map(
+      (b) => b.textContent?.match(/^\d?(Đầu vào|Mặt bằng|Mặt ngoài|Bộ kết quả)/)?.[1],
+    );
+    expect(labels).toEqual(['Đầu vào', 'Mặt bằng', 'Mặt ngoài', 'Bộ kết quả']);
+    // Chưa có phương án: bộ kết quả chưa đủ điều kiện, kèm lý do.
+    expect(screen.getByText('Cần ít nhất một phương án mặt bằng.')).toBeInTheDocument();
+  });
+
+  it('bước mở lúc vào là ket-qua (từ ?buoc=) thì mở thẳng bộ kết quả, gói mang mã hồ sơ', async () => {
+    state.design = designState({ plans: [{ artifactId: REF, createdAt: '' }] });
+    renderWithApp(
+      <AiDesignTab
+        projectId="p1"
+        projectCode="NVO-TK-2026-0001"
+        readOnly
+        initialStep="ket-qua"
+        inputs={<div>Khối đầu bài</div>}
+      />,
+    );
+    expect(await screen.findByText('Gói tải về của NVO-TK-2026-0001')).toBeInTheDocument();
+    expect(screen.getByText('Sẵn sàng tải')).toBeInTheDocument();
+  });
+
+  it('bước «Mặt ngoài» gồm cả mặt đứng lẫn phối cảnh', async () => {
+    state.design = designState({ plans: [{ artifactId: REF, createdAt: '' }] });
+    renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
+    await userEvent.click(await screen.findByRole('button', { name: /^Mặt ngoài/ }));
+    expect(screen.getByText('Phần mặt đứng')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Phối cảnh' }));
+    expect(screen.getByText('Phần phối cảnh')).toBeInTheDocument();
+    // Chưa có mặt đứng, chưa tải bản vẽ lên: phối cảnh nói vì sao chưa dựng được.
+    expect(screen.getByText(/Cần ý tưởng mặt đứng/)).toBeInTheDocument();
   });
 
   it('trạng thái từng bước luôn kèm chữ, không chỉ màu', async () => {
@@ -164,12 +216,14 @@ describe('Mặt đứng dựng theo phương án cũ (T59)', () => {
     renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
 
     expect(await screen.findByText('Theo phương án cũ')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /^Mặt ngoài/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Phối cảnh' }));
     expect(screen.getByText('Mặt đứng đang dựng theo phương án mặt bằng cũ.')).toBeInTheDocument();
   });
 });
 
 describe('Phối cảnh mở được từ bản vẽ mặt đứng tải lên (T114 Đợt 4b)', () => {
-  it('chưa có ý tưởng mặt đứng AI nhưng đã tải bản vẽ lên: dải bước không báo «Chưa đủ điều kiện»', async () => {
+  it('chưa có ý tưởng mặt đứng AI nhưng đã tải bản vẽ lên: phần phối cảnh không báo thiếu mặt đứng', async () => {
     state.design = designState({
       plans: [{ artifactId: REF, createdAt: '' }],
       planHeadArtifactId: REF,
@@ -177,8 +231,9 @@ describe('Phối cảnh mở được từ bản vẽ mặt đứng tải lên (
     state.facadeUploads = 1;
     renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
 
-    const step = await screen.findByRole('button', { name: /^Phối cảnh/ });
-    expect(step).not.toHaveTextContent('Chưa đủ điều kiện');
+    await userEvent.click(await screen.findByRole('button', { name: /^Mặt ngoài/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Phối cảnh' }));
+    expect(screen.getByText('Phần phối cảnh')).toBeInTheDocument();
     expect(screen.queryByText(/Cần ý tưởng mặt đứng/)).toBeNull();
     state.facadeUploads = 0;
   });

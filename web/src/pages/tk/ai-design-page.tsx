@@ -2,7 +2,7 @@
  * Trang «AI Design» riêng của một hồ sơ (T114, 03/10/2026) — Haan: «AI Design là công cụ hỗ trợ
  * phòng thiết kế, làm độc lập, có tính module».
  *
- * Mọi bước của công cụ ở MỘT chỗ: đầu bài và khảo sát hiện trạng → mặt bằng → mặt đứng → phối cảnh.
+ * Mọi bước của công cụ ở MỘT chỗ, bốn bước (Đợt 5B): Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả.
  * Vẫn gắn hồ sơ thiết kế (`design_projects`): quyền (RLS) và artifact đi theo hồ sơ.
  *
  * Đầu trang KHÔNG mang trạng thái, bước quy trình hay hạn bàn giao của hồ sơ (Haan, 07/10/2026): AI
@@ -14,7 +14,7 @@
  * vào `AiDesignTab` qua vùng chèn `inputs` — phần AI không biết đầu bài được sửa bằng gì.
  */
 
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { RecordNotFound } from '@/components/entity/entity-detail';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
@@ -28,6 +28,7 @@ import { SurveyPanel } from './survey-panel';
 
 export function AiDesignPage() {
   const { id } = useParams<{ id: string }>();
+  const [params] = useSearchParams();
   const canEdit = useCan('TK', 'edit');
   const { data: project, isLoading, error } = useDesignProject(id);
 
@@ -114,6 +115,10 @@ export function AiDesignPage() {
             <AiDesignTab
               projectId={project.id}
               readOnly={readOnly}
+              projectCode={project.code}
+              projectName={project.name}
+              initialStep={params.get('buoc')}
+              initialPart={params.get('phan')}
               inputs={inputs}
               briefLink={
                 <Link className="underline" to={`${editPath}?tab=dau-bai`}>

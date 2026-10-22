@@ -24,6 +24,7 @@ const state = vi.hoisted(() => ({
   dxf: vi.fn((_input: unknown) => Promise.resolve()),
   edit: vi.fn((_input: unknown) => Promise.resolve({ runId: 'r-edit' })),
   hide: vi.fn((_input: unknown, _options?: unknown) => undefined),
+  costHistory: { runs: [], calls: [] } as unknown,
   drawSheetImage: vi.fn((_input: unknown) =>
     Promise.resolve({
       imageArtifactId: 'sha256:img',
@@ -49,6 +50,8 @@ vi.mock('@/hooks/use-ai-design', () => ({
   useChooseAiPlan: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false, error: null }),
   useHideAiPlan: () => ({ mutate: state.hide, isPending: false, isError: false, error: null }),
   useInvalidateAiDesign: () => vi.fn(),
+  // Lịch sử chi phí cho dòng «Chi phí ước tính» (Đợt 5B) — chỉ đọc nhật ký, không gọi mô hình.
+  useAiCostHistory: () => ({ data: state.costHistory, isLoading: false }),
   // Nhật ký chi phí: rỗng — phép thử ở đây không nói về tiền (xem `ai-usage.test.tsx`).
   useAiCallLog: () => ({ data: [], isLoading: false, isError: false, error: null }),
   useAiCallPrompts: () => ({ data: new Set() }),
@@ -677,12 +680,28 @@ describe('Điểm, ngưỡng và bản sửa — sau khi gỡ ô yêu cầu sử
     expect(screen.getByText(/Dưới ngưỡng 65/)).toBeInTheDocument();
   });
 
-  it('không còn ô yêu cầu sửa trên giao diện (Haan, 07/10/2026)', () => {
+  it('ô yêu cầu sửa đặt lại (Đợt 5B): gửi đúng phương án, tuyến và câu yêu cầu', async () => {
     state.run = null;
+    state.edit.mockClear();
     state.review = review({ editable: true });
     show();
+    await userEvent.type(screen.getByLabelText(/Nội dung cần sửa/), 'bỏ vách gara');
+    await userEvent.click(screen.getByRole('button', { name: /^Sửa lại/ }));
+    expect(state.edit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: 'p1',
+        artifactId: REF,
+        instruction: 'bỏ vách gara',
+        route: 'ai_text_openai',
+      }),
+    );
+  });
+
+  it('hồ sơ chỉ xem thì không có ô yêu cầu sửa', () => {
+    state.run = null;
+    state.review = review({ editable: true });
+    renderWithApp(<AiPlanStep projectId="p1" readOnly state={designState as never} />);
     expect(screen.queryByLabelText(/Nội dung cần sửa/)).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Sửa lại' })).toBeNull();
   });
 
   it('bản sửa cũ: vẫn hiện nguyên văn yêu cầu đã dùng để đúc nó', () => {
@@ -804,5 +823,142 @@ describe('xoá phương án khỏi danh sách', () => {
     state.review = review();
     renderWithApp(<AiPlanStep projectId="p1" readOnly state={designState as never} />);
     expect(screen.queryByLabelText(/khỏi danh sách$/)).toBeNull();
+  });
+});
+
+describe('Chi phí ước tính trên nút (Đợt 5B)', () => {
+  it('chưa có lượt nào bằng mô hình này: «Chưa đủ dữ liệu», nút không mang con số', () => {
+    state.run = null;
+    state.review = null;
+    state.costHistory = { runs: [], calls: [] };
+    show();
+    expect(screen.getAllByTestId('cost-estimate')[0]).toHaveTextContent(/Chưa đủ dữ liệu/);
+    expect(screen.getByRole('button', { name: 'Xếp mặt bằng' })).toBeInTheDocument();
+  });
+
+  it('có lượt trước: trung bình tiền thật mỗi phương án, nhân số phương án đang chọn', async () => {
+    state.run = null;
+    state.review = null;
+    state.costHistory = {
+      runs: [
+        {
+          id: 'r0',
+          project_id: 'p9',
+          status: 'done',
+          result: { plans: [{}], failed: [] },
+          created_at: '2026-10-01T10:00:00Z',
+          updated_at: '2026-10-01T10:05:00Z',
+        },
+      ],
+      calls: [
+        {
+          project_id: 'p9',
+          created_at: '2026-10-01T10:01:00Z',
+          route: 'ai_text_openai',
+          purpose: 'plan_house',
+          status: 'ok',
+          input_tokens: 1000,
+          output_tokens: 500,
+          cost_usd: '0.1',
+        },
+        {
+          project_id: 'p9',
+          created_at: '2026-10-01T10:03:00Z',
+          route: 'ai_text_cheap',
+          purpose: 'plan_house_revise',
+          status: 'ok',
+          input_tokens: 1000,
+          output_tokens: 500,
+          cost_usd: 0.05,
+        },
+      ],
+    };
+    show();
+    expect(
+      await screen.findByRole('button', { name: /Xếp mặt bằng · ≈ 0,15 USD/ }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '2' }));
+    expect(screen.getByRole('button', { name: /Xếp mặt bằng · ≈ 0,3 USD/ })).toBeInTheDocument();
+    state.costHistory = { runs: [], calls: [] };
+  });
+});
+
+describe('Ba lý do trừ điểm lớn nhất (Đợt 5B)', () => {
+  it('nêu ba tiêu chí mất nhiều điểm nhất, lớn trước; tiêu chí không chấm được không tính', () => {
+    state.run = null;
+    const crit = (
+      code: string,
+      vi: string,
+      score: number | null,
+      weight: number,
+      notScored: string | null = null,
+    ) => ({
+      code,
+      group: 'C',
+      vi,
+      giaiThich: null,
+      value: score === null ? null : 1,
+      score,
+      weight,
+      n: 3,
+      label: 'ĐO',
+      notScored,
+      why: null,
+      refs: code === 'C2' ? ['living_1'] : [],
+    });
+    state.review = review({
+      roomLabels: { living: 'Phòng khách' },
+      score: {
+        ...scoreOf(),
+        points: 70,
+        criteria: [
+          crit('C1', 'Tiêu chí mất ít', 0.9, 10),
+          crit('C2', 'Tiêu chí mất nhiều nhất', 0.2, 10),
+          crit('C3', 'Tiêu chí mất vừa', 0.5, 10),
+          crit('C4', 'Tiêu chí mất nhì', 0.3, 10),
+          crit('C5', 'Tiêu chí thiếu dữ liệu', null, 20, 'thieu_du_lieu'),
+          crit('C6', 'Tiêu chí đạt trọn', 1, 10),
+        ],
+      },
+    });
+    show();
+    const panel = screen
+      .getByRole('heading', { name: 'Ba lý do trừ điểm lớn nhất' })
+      .closest('section')!;
+    const items = within(panel).getAllByRole('listitem');
+    expect(items.map((li) => li.textContent)).toEqual([
+      expect.stringContaining('Tiêu chí mất nhiều nhất'),
+      expect.stringContaining('Tiêu chí mất nhì'),
+      expect.stringContaining('Tiêu chí mất vừa'),
+    ]);
+    expect(items[0]).toHaveTextContent('−8 điểm');
+    expect(items[0]).toHaveTextContent('Phòng khách (living_1)');
+    expect(within(panel).queryByText(/thiếu dữ liệu/)).toBeNull();
+  });
+});
+
+describe('So sánh phương án cạnh nhau (Đợt 5B)', () => {
+  it('hai phương án trở lên: chuyển sang «So sánh» thì mỗi phương án một cột', async () => {
+    state.run = null;
+    state.review = review();
+    const two = {
+      ...designState,
+      plans: [
+        { artifactId: REF, createdAt: '2026-09-10T00:00:00Z' },
+        { artifactId: `sha256:${'b'.repeat(64)}`, createdAt: '2026-09-11T00:00:00Z' },
+      ],
+    };
+    renderWithApp(<AiPlanStep projectId="p1" readOnly={false} state={two as never} />);
+    await userEvent.click(screen.getByRole('button', { name: 'So sánh 2 phương án' }));
+    const compare = screen.getByRole('region', { name: 'So sánh phương án' });
+    expect(within(compare).getAllByRole('article')).toHaveLength(2);
+    expect(within(compare).getAllByText('Ba lý do trừ điểm lớn nhất')).toHaveLength(2);
+  });
+
+  it('một phương án thì không có nút so sánh', () => {
+    state.run = null;
+    state.review = review();
+    show();
+    expect(screen.queryByRole('button', { name: /So sánh/ })).toBeNull();
   });
 });

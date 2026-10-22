@@ -56,6 +56,7 @@ import {
   useAiRun,
   useChooseAiPlan,
   useDownloadAiPlanDxf,
+  useEditAiPlan,
   useHideAiPlan,
   useInvalidateAiDesign,
   useStartAiRun,
@@ -77,6 +78,9 @@ import { SheetSizeControl, sheetWidthStyle, useSheetSize } from './sheet-size';
 import { fileSlug, numberedNames } from './variant-name';
 import { SheetViewer } from './sheet-zoom';
 import { cn } from '@/lib/utils';
+import { CostEstimateLine, costOnButton, useCostEstimate } from './ai-cost-estimate';
+import { AiPlanCompare, DeductionList, ScoreChip } from './ai-plan-compare';
+import { PlanEditPanel } from './ai-plan-edit';
 
 /** Kết quả một lượt chạy giai đoạn mặt bằng, đúng hình dạng Workflow ghi vào `design_ai_run`. */
 interface PlanRunResult {
@@ -138,6 +142,12 @@ export function AiPlanStep({
   // Hỏi mỗi 2 giây để bảng theo dõi trực tiếp (token, thời gian, nút Dừng) chạy theo lượt gọi.
   const run = useAiRun(runId, 2000);
   const choose = useChooseAiPlan();
+  const editPlan = useEditAiPlan();
+  // Lượt sửa vừa gửi — để ghi chú của nó (đã áp / chưa làm được) gắn đúng phương án nó đúc ra.
+  const [editRunId, setEditRunId] = useState<string | null>(null);
+  // «Một phương án» (tờ vẽ đầy đủ) hay «So sánh» (các phương án đặt cạnh nhau) — Đợt 5B.
+  const [view, setView] = useState<'mot' | 'so-sanh'>('mot');
+  const cost = useCostEstimate('plan', ai.choice.route ?? null);
   const hidePlan = useHideAiPlan();
   /** Phương án đang chờ xác nhận xoá khỏi danh sách — `null` = không hỏi gì. */
   const [askHide, setAskHide] = useState<{ artifactId: string; name: string } | null>(null);
@@ -184,6 +194,23 @@ export function AiPlanStep({
     : (levels[0]?.level ?? 1);
   const sheet = useAiPlanSheet(projectId, selected, currentLevel);
   const dxf = useDownloadAiPlanDxf();
+
+  const onEdit = (artifactId: string, instruction: string) => {
+    if (!ai.choice.route) return;
+    void editPlan
+      .mutateAsync({
+        projectId,
+        artifactId,
+        instruction,
+        route: ai.choice.route,
+        reasoningEffort: ai.selected?.supportsEffort === false ? null : effort,
+      })
+      .then((out) => {
+        setEditRunId(out.runId);
+        setRunId(out.runId);
+      })
+      .catch(() => undefined);
+  };
 
   const onRun = () => {
     if (!ai.choice.route) return;
@@ -264,8 +291,21 @@ export function AiPlanStep({
                 onClick={onRun}
                 disabled={running || start.isPending || !ai.choice.route}
               >
-                {start.isPending ? 'Đang gửi…' : running ? 'Đang xếp…' : 'Xếp mặt bằng'}
+                {start.isPending
+                  ? 'Đang gửi…'
+                  : running
+                    ? 'Đang xếp…'
+                    : `Xếp mặt bằng${costOnButton(cost.estimate, Number(count))}`}
               </Button>
+              {/* Chi phí ước tính NGAY dưới nút tốn tiền (Đợt 5B): trung bình tiền thật các lượt trước
+                  bằng cùng mô hình; chưa có lượt nào thì «Chưa đủ dữ liệu», không bịa số. */}
+              <CostEstimateLine
+                estimate={cost.estimate}
+                loading={cost.loading}
+                units={Number(count)}
+                unitLabel="phương án"
+                option={ai.selected}
+              />
             </div>
           )}
           {start.isError && (
@@ -294,7 +334,38 @@ export function AiPlanStep({
       </div>
 
       <div className="min-w-0 space-y-4">
-        {entries.length > 0 && (
+        {entries.length > 1 && (
+          <SegmentedControl
+            options={['mot', 'so-sanh'] as const}
+            value={view}
+            onChange={setView}
+            getLabel={(value) =>
+              value === 'mot' ? 'Xem một phương án' : `So sánh ${entries.length} phương án`
+            }
+          />
+        )}
+
+        {view === 'so-sanh' && entries.length > 1 && (
+          <AiPlanCompare
+            projectId={projectId}
+            entries={entries}
+            names={names}
+            packs={packs}
+            levelCount={levels.filter((item) => !item.roof).length}
+            planHeadArtifactId={state.planHeadArtifactId}
+            readOnly={readOnly}
+            choosing={choose.isPending}
+            onOpen={(artifactId) => {
+              setSelected(artifactId);
+              setView('mot');
+            }}
+            onChoose={(artifactId) =>
+              void choose.mutateAsync({ projectId, artifactId }).catch(() => undefined)
+            }
+          />
+        )}
+
+        {(view === 'mot' || entries.length < 2) && entries.length > 0 && (
           <div
             role="group"
             aria-label="Phương án"
@@ -376,14 +447,16 @@ export function AiPlanStep({
           />
         )}
 
-        {review.isLoading && <Skeleton className="h-96 w-full" />}
-        {review.isError && (
+        {(view === 'mot' || entries.length < 2) && review.isLoading && (
+          <Skeleton className="h-96 w-full" />
+        )}
+        {(view === 'mot' || entries.length < 2) && review.isError && (
           <Panel title="Phương án">
             <p className="text-status-overdue">{toUserMessage(review.error)}</p>
           </Panel>
         )}
 
-        {review.data && (
+        {(view === 'mot' || entries.length < 2) && review.data && (
           <PlanDetail
             review={review.data}
             name={names.get(review.data.artifactId) ?? 'Phương án'}
@@ -413,6 +486,25 @@ export function AiPlanStep({
                 level={currentLevel}
                 readOnly={readOnly}
                 disabled={running}
+              />
+            }
+            editPanel={
+              <PlanEditPanel
+                review={review.data}
+                level={currentLevel}
+                readOnly={readOnly}
+                disabled={running || !ai.choice.route}
+                pending={editPlan.isPending}
+                error={editPlan.isError ? toUserMessage(editPlan.error) : null}
+                notes={
+                  editRunId !== null && editRunId === runId
+                    ? (runResult?.plans.find((plan) => plan.artifactId === review.data!.artifactId)
+                        ?.notes ?? [])
+                    : []
+                }
+                onSubmit={(instruction) => onEdit(review.data!.artifactId, instruction)}
+                route={ai.choice.route ?? null}
+                option={ai.selected}
               />
             }
           />
@@ -520,6 +612,7 @@ function PlanDetail({
   onDownloadDxf,
   dxfError,
   sheetImagePanel,
+  editPanel,
 }: {
   review: AiPlanReview;
   /** Tên hiển thị «Phương án N». */
@@ -537,6 +630,8 @@ function PlanDetail({
   dxfError: string | null;
   /** Panel ảnh nội thất (T57) — mục gấp ngay dưới tờ vector. */
   sheetImagePanel: React.ReactNode;
+  /** Ô «Yêu cầu sửa» (T53, đặt lại ở Đợt 5B). */
+  editPanel: React.ReactNode;
 }): React.ReactElement {
   const current = review.levels.find((item) => item.level === level) ?? review.levels[0];
   const levelOptions = review.levels.map((item) => String(item.level));
@@ -544,13 +639,6 @@ function PlanDetail({
   const [viewing, setViewing] = useState(false);
   const closeViewer = useCallback(() => setViewing(false), []);
   const slug = fileSlug(name);
-  // Điểm và ngưỡng nhận ở đầu tờ vẽ — trước đây nằm trong khung «Yêu cầu sửa» đã gỡ (07/10/2026).
-  const percent =
-    review.score && review.score.scoredWeight > 0
-      ? (review.score.points / review.score.scoredWeight) * 100
-      : null;
-  const threshold = review.acceptPercent ?? null;
-  const passed = percent !== null && threshold !== null ? percent >= threshold : null;
 
   // Tờ vẽ đứng ĐẦU (Haan, 07/10/2026): người dùng đến bước này để xem bản vẽ. Phần giải thích,
   // ý định, lỗi và đối chiếu là các mục gấp bên dưới; lỗi chặn tự mở, và panel điểm vẫn đứng SAU
@@ -562,15 +650,8 @@ function PlanDetail({
           <div className="mr-auto flex min-w-0 flex-wrap items-center gap-2">
             <h2 className="font-semibold">{name}</h2>
             {isHead && <Chip tone="gr">Dùng cho mặt đứng</Chip>}
-            {percent !== null && (
-              <Chip tone={passed === false ? 'am' : passed ? 'gr' : 'mute'}>
-                Điểm {formatNumber(percent, 1)}%
-                {threshold !== null &&
-                  (passed
-                    ? ` · Đạt ngưỡng ${formatNumber(threshold)}`
-                    : ` · Dưới ngưỡng ${formatNumber(threshold)}`)}
-              </Chip>
-            )}
+            {/* Điểm và ngưỡng nhận ở đầu tờ vẽ (07/10/2026). */}
+            {review.score && <ScoreChip review={review} />}
             {sheet.scale && (
               <Chip tone="mute">
                 Tỷ lệ 1:{sheet.scale} · {sheet.orientation === 'portrait' ? 'tờ dọc' : 'tờ ngang'}
@@ -677,6 +758,14 @@ function PlanDetail({
           )}
         </div>
       </section>
+
+      {/* Ba lý do trừ điểm lớn nhất, đọc từ thước chấm ĐÃ LƯU trong phương án (Đợt 5B) — nói ngay
+          vì sao điểm thấp và nên sửa chỗ nào bằng ô «Yêu cầu sửa» bên dưới. */}
+      <Panel title="Ba lý do trừ điểm lớn nhất">
+        <DeductionList review={review} />
+      </Panel>
+
+      {editPanel}
 
       {/* Một khung, hai nguồn: tờ vector ở trên hoặc bản vẽ kỹ sư tải lên (07/10/2026). */}
       {sheetImagePanel}
