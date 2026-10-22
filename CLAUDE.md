@@ -998,7 +998,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    đồng sắp hết hạn»; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0195.**
+**Migration tiếp theo: 0195** (0195–0216 dành cho bốn mạch Đợt 3 / 4 / 5 / 5B đang làm song song trong worktree; 0217 đã dùng cho câu 1 + 4; sau khi gộp dùng **0218**).
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -1093,23 +1093,24 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Kế toán xem biên bản đã ký qua hàm riêng, không mở quyền xem phân hệ Thi công; chỉ đánh dấu «đã ghi nhận», không tự sinh công nợ                                                       | KT không có quyền TC (thông báo cũ trỏ vào trang KT không mở được); thuế, hạn, đợt theo hợp đồng là quyết định của Kế toán (PRD 2.3)                                                                   |
 | Phiếu bảo hành tự giao chỉ huy trưởng công trình; hạn xử lý mặc định là tham số để TRỐNG; đóng phiếu bắt buộc ảnh sau sửa                                                              | Kế hoạch 2F: «tự giao người phụ trách, có hạn xử lý, ảnh xác nhận»; số ngày hạn NVG chưa quyết (5.2) — trước đây đổi trạng thái tự do, «đã xử lý» không cần bằng chứng                                 |
 | Công trình bàn giao tự lập mẫu NHÁP; Thiết kế chọn ảnh và xác nhận mới vào kho; mẫu nháp không ai ngoài Thiết kế / Giám đốc thấy                                                       | Kế hoạch 2G; ảnh công trường có thể lộ người, biển số, tên chủ nhà — máy không tự đưa ảnh nào ra ngoài. Thiết kế chỉ đọc ảnh công trình khi đang có mẫu nháp của chính công trình đó                   |
+| Trượt thầu tự chuyển cơ hội sang Mất cơ hội; bàn giao thiết kế cần hợp đồng đã ký (0217) | Anh Dũng trả lời câu 4 và câu 1 (22/10/2026). Cơ hội còn gói thầu khác đang chạy thì chưa mất |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)
 
-1. NVO có được thi công trước khi ký hợp đồng? (cảnh báo; đặt `tk.handover_requires_signed_contract = true` để chặn)
-2. TGĐ gửi hồ sơ thì ai duyệt? (người khác có hạn mức; chưa có ngoại lệ)
-3. Tuyển dụng do Nhân sự lập rồi Nhân sự duyệt có được không? (cho phép)
-4. Trượt thầu có tự đánh dấu Mất cơ hội? (chỉ báo người phụ trách)
+1. ĐÃ CHỐT (anh Dũng 22/10/2026): **không thi công trước hợp đồng** — `tk.handover_requires_signed_contract` = true (0217), bàn giao thiết kế chưa có hợp đồng đã ký bị chặn.
+2. TGĐ gửi hồ sơ thì ai duyệt? (người khác có hạn mức; chưa có ngoại lệ) — anh Dũng hỏi lại: cần làm rõ «gửi hồ sơ cho ai».
+3. ĐÃ CHỐT: Nhân sự tự lập rồi tự duyệt tuyển dụng — được.
+4. ĐÃ CHỐT: trượt thầu → cơ hội tự sang «Mất cơ hội» kèm lý do trượt, trừ khi còn gói thầu khác của cơ hội đang chạy (0217).
 5. Ai mở công trình từ hợp đồng? (Ban Giám đốc hoặc Trưởng phòng Thi công / Chỉ huy trưởng)
 6. Cho GĐ3b: cách tính công từ điểm danh, công lao động thời vụ ghi vào đâu, bán kính GPS bao nhiêu mét.
-7. KSNB có được xem lương / hồ sơ cá nhân? (không)
+7. ĐÃ CHỐT: KSNB không xem lương / hồ sơ cá nhân.
 8. Hợp đồng còn bao nhiêu ngày thì tính «sắp hết hạn»? (chưa có ô này)
-9. Mốc «phê duyệt chờ lâu» 3 ngày (giả định cũ của Dashboard) — giữ, hay đặt SLA theo loại hồ sơ? (3 ngày)
+9. ĐÃ CHỐT: «phê duyệt chờ lâu» = 3 ngày.
 10. Khảo sát có bắt buộc với cả ba pháp nhân? (bắt buộc, bỏ qua phải ghi lý do — lý do hiện trên trang điều hành)
 11. Mẫu hợp đồng: ai tải lên, mẫu riêng từng pháp nhân hay dùng chung? (Ban Giám đốc / Quản trị; riêng từng pháp nhân)
     Gửi 1–2 mẫu Word thật (thi công NVC, thiết kế NVO) để thay mẫu ví dụ.
-12. Có lưu CCCD của khách cá nhân (NVO) để in lên hợp đồng? (không — mẫu để dải chấm điền tay)
+12. ĐÃ CHỐT: không lưu CCCD — mẫu để dải chấm điền tay.
 13. Tách «thi công» thành thi công / thiết kế + thi công / EPC theo Luật Xây dựng 2025? (chưa tách; hình thức giá đã có)
 14. NVC có tự thiết kế công trình không? Bảng tổ chức của Ban Giám đốc ghi Phòng Dự án – Đấu thầu NVC làm «thiết kế»,
     nhưng phiếu khảo sát của chính phòng chỉ ghi «phương án kỹ thuật sơ bộ, biện pháp thi công» và làm theo bản vẽ / BOQ
@@ -1120,8 +1121,8 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 17. Ngưỡng cảnh báo cho Kiểm soát nội bộ (duyệt sát hạn mức bao nhiêu %), mức tồn tối thiểu từng vật tư, bảng giá bồi
     thường giàn giáo chính thức? (để trống)
 18. Thư viện mẫu: tư liệu ban đầu (hồ sơ năng lực, brochure, ảnh công trình, Catalogue NVS mới) — chủ dự án gửi sau.
-    ĐÃ CHỐT: mẫu NVC / NVS cũng do Phòng Thiết kế đưa vào; Kinh doanh tự đặt thời hạn thu hồi link. Còn mở: hạn tối đa
-    của link (không giới hạn).
+    ĐÃ CHỐT: mẫu NVC / NVS cũng do Phòng Thiết kế đưa vào; Kinh doanh tự đặt thời hạn thu hồi link. ĐÃ CHỐT: link không giới
+    hạn thời hạn tối đa.
 19. Đấu thầu (5C): 1–2 bộ hồ sơ dự thầu NVC đã nộp + hồ sơ mời thầu; mẫu đơn dự thầu / thư chào giá; loại gói và giấy tờ
     từng loại; ai theo dõi bảo lãnh dự thầu; có ghi đối thủ không. (chưa có — chặn 5C-3, 5C-6, 5C-9)
 20. Bộ nhận diện: ĐÃ QUYẾT (chủ dự án giao Claude Code, 17/10/2026) — dùng logo PNG + mã đo trên ảnh, giữ Be Vietnam Pro, nền

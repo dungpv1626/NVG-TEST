@@ -67,6 +67,11 @@ async function seedFixture(): Promise<Fixture> {
       VALUES (${nvc!.id}, ${'NVC-TK-RFI-' + stamp}, ${TEST_PREFIX + ' Hồ sơ RFI ' + stamp},
               'ho_so_ky_thuat', ${tk!.id})
       RETURNING id`;
+    // 0217: bàn giao thiết kế → thi công cần hợp đồng đã ký (trigger gắn hợp đồng vào công trình).
+    await sql`
+      INSERT INTO contracts (company_id, code, title, type, stage, source_type, source_id, signed_date)
+      VALUES (${nvc!.id}, ${'HDTEST-RFI-' + stamp}, ${TEST_PREFIX + ' Hợp đồng RFI ' + stamp},
+              'thiet_ke', 'da_ky', 'design_projects', ${design!.id}, current_date)`;
     const sites = await sql<{ id: string }[]>`
       INSERT INTO construction_sites (company_id, code, name, planned_end_date, design_project_id)
       VALUES

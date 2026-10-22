@@ -15,6 +15,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   attachContractDocument,
+  createSignedDesignContract,
   ACCOUNTS,
   anonClient,
   hasCredentials,
@@ -2259,6 +2260,7 @@ describeDb('TK — dự án thiết kế, phiên bản bản vẽ và bàn giao'
         progress_percent: 100,
       });
     }
+    await createSignedDesignContract(project.companyId, project.id);
   }
 
   it('CSDL cấp số phiên bản theo TỪNG bộ môn, không đánh số chung cả dự án (TK-05)', async () => {

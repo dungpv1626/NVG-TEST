@@ -153,6 +153,29 @@ export async function attachContractDocument(
   if (error) throw new Error(`Không lưu được văn bản hợp đồng: ${error.message}`);
 }
 
+/**
+ * Hợp đồng thiết kế ĐÃ KÝ cho một hồ sơ thiết kế, dựng thẳng bằng SQL. Từ 0217 (anh Dũng: «không
+ * thi công trước hợp đồng») bàn giao thiết kế sang thi công bị chặn khi chưa có hợp đồng đã ký.
+ */
+export async function createSignedDesignContract(
+  companyId: string,
+  designProjectId: string,
+): Promise<string> {
+  const { createConnection } = await import('../client');
+  const { sql } = createConnection();
+  try {
+    const [row] = await sql<{ id: string }[]>`
+      INSERT INTO contracts (company_id, code, title, type, stage, source_type, source_id, signed_date)
+      VALUES (${companyId}, ${'HDTEST-' + crypto.randomUUID().slice(0, 8)},
+              ${TEST_PREFIX + ' Hợp đồng thiết kế đã ký'}, 'thiet_ke', 'da_ky', 'design_projects',
+              ${designProjectId}, current_date)
+      RETURNING id`;
+    return row!.id;
+  } finally {
+    await sql.end();
+  }
+}
+
 /** Tiền tố đặt cho mọi bản ghi do test tạo ra, để dọn sạch được sau khi chạy. */
 export const TEST_PREFIX = '[TEST]';
 
