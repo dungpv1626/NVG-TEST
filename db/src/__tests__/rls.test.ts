@@ -3471,6 +3471,17 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
       p_contract_number: 'HD-02/2026',
       p_signed_date: '2026-09-01',
     });
+    // Ký xong công trình tự mở (0187); phép thử này chỉ xét phát sinh — đưa công trình sang Hoàn
+    // thành (tác vụ hệ thống) cho khỏi vướng điều kiện «mọi công trình đã bàn giao».
+    {
+      const { createConnection } = await import('../client');
+      const { sql } = createConnection();
+      try {
+        await sql`UPDATE construction_sites SET stage = 'hoan_thanh' WHERE contract_id = ${contract.id}`;
+      } finally {
+        await sql.end();
+      }
+    }
 
     const amendmentId = await createAmendment(kd, contract);
 

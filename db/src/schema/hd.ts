@@ -110,6 +110,9 @@ export const contracts = pgTable(
     endDate: date('end_date'),
 
     signedAt: timestamp('signed_at', { withTimezone: true }),
+    /** Bản đã ký (ảnh / PDF) + người ghi nhận ký (0187). */
+    signedScanPath: text('signed_scan_path'),
+    signedRecordedBy: uuid('signed_recorded_by'),
     approvedAt: timestamp('approved_at', { withTimezone: true }),
     settledAt: timestamp('settled_at', { withTimezone: true }),
 

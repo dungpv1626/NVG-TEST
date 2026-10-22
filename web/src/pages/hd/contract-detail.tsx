@@ -9,7 +9,7 @@
  * Nháp → Trình ký · Đã duyệt → Ghi nhận đã ký · Đã ký → Quyết toán.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   CONTRACT_FLOW,
@@ -24,7 +24,6 @@ import {
   formatDate,
   formatDateTime,
   summarizeContractValue,
-  toNvgDateInput,
 } from '@nvg/shared';
 import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
@@ -34,7 +33,6 @@ import {
   useCloseContract,
   useContract,
   useContractAmendments,
-  useSignContract,
   useSubmitContractApproval,
   useUpdateContract,
 } from '@/hooks/use-contracts';
@@ -53,6 +51,8 @@ import { useStageReadiness } from '@/hooks/use-stage-readiness';
 import { AmendmentPanel } from './amendment-panel';
 import { DocumentPanel } from './document-panel';
 import { TermsPanel } from './terms-panel';
+import { SignContractDialog } from './sign-contract-dialog';
+import { SignedScanLink } from './signed-scan-link';
 
 const EM_DASH = '—';
 
@@ -74,12 +74,30 @@ export function ContractDetailPage() {
   const openSite = useOpenSiteFromContract();
   const updateContract = useUpdateContract();
   const submitApproval = useSubmitContractApproval();
-  const signContract = useSignContract();
   const closeContract = useCloseContract();
   const [actionError, setActionError] = useState<string | null>(null);
   const { data: readiness = [] } = useStageReadiness('contract', id);
   const approvals = useApprovalHistory('contracts', id ? [id] : []);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [signing, setSigning] = useState(false);
+  // Bước đổi (ký xong, được duyệt…) thì mở luôn tab nơi làm việc của bước mới — trước đây ghi
+  // nhận ký xong vẫn đứng ở tab Soạn hợp đồng đã khoá (anh Dũng 22/10/2026).
+  const currentStage = data?.stage ?? null;
+  const seenStage = useRef<string | null>(null);
+  useEffect(() => {
+    if (!currentStage) return;
+    const previous = seenStage.current;
+    seenStage.current = currentStage;
+    if (previous === null || previous === currentStage) return;
+    setSearchParams(
+      (params) => {
+        const next = new URLSearchParams(params);
+        next.set('tab', currentStage === 'nhap' ? 'soan-thao' : 'tong-quan');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [currentStage, setSearchParams]);
   // Điều khoản + Văn bản gộp thành «Soạn hợp đồng» (21/10/2026) — đường dẫn cũ vẫn mở đúng chỗ.
   const legacyTab = searchParams.get('tab');
   useEffect(() => {
@@ -158,8 +176,23 @@ export function ContractDetailPage() {
   // «được» khi CSDL nói «không».
   const nextStage =
     contract.stage === 'nhap' ? 'cho_duyet' : contract.stage === 'da_ky' ? 'hoan_thanh' : null;
-  const missing = readiness.filter((r) => r.for_stage === nextStage && !r.met);
-  const nextRequirements = readiness
+  // Hợp đồng thi công đã ký mà chưa có công trình: «mọi công trình đã bàn giao» đúng một cách rỗng
+  // — thêm điều kiện mở công trình (CSDL chặn cùng điều kiện, 0187).
+  const siteRow =
+    contract.stage === 'da_ky' && contract.type === 'thi_cong' && hasSite === false
+      ? [
+          {
+            for_stage: 'hoan_thanh',
+            requirement: 'site_opened',
+            met: false,
+            label: 'Đã mở công trình (Ban Giám đốc / Thi công bấm «Mở công trình»)',
+            waivable: false,
+          },
+        ]
+      : [];
+  const readinessAll = [...siteRow, ...readiness];
+  const missing = readinessAll.filter((r) => r.for_stage === nextStage && !r.met);
+  const nextRequirements = readinessAll
     .filter((r) => r.for_stage === nextStage)
     .map((r) => ({
       // Câu của CSDL (0176) còn gọi «tab Văn bản» — tab đã gộp vào «Soạn hợp đồng».
@@ -198,28 +231,8 @@ export function ContractDetailPage() {
     }
   }
 
-  async function sign() {
-    const number = await promptDialog.ask({
-      title: 'Ghi nhận hợp đồng đã ký',
-      label: 'Số hợp đồng theo văn bản đã ký',
-      confirmLabel: 'Tiếp tục',
-    });
-    if (number === null) return;
-    const signedDate = await promptDialog.ask({
-      title: 'Ghi nhận hợp đồng đã ký',
-      label: 'Ngày ký',
-      type: 'date',
-      defaultValue: toNvgDateInput(new Date()),
-      confirmLabel: 'Ghi nhận đã ký',
-    });
-    if (signedDate === null) return;
-    void run(() =>
-      signContract.mutateAsync({
-        contractId: contract.id,
-        contractNumber: number,
-        signedDate,
-      }),
-    );
+  function sign() {
+    setSigning(true);
   }
 
   async function cancel() {
@@ -235,7 +248,7 @@ export function ContractDetailPage() {
 
   const hasAnyAction =
     (isDraft && canDraft) ||
-    (contract.stage === 'da_duyet' && canApprove) ||
+    (contract.stage === 'da_duyet' && (canApprove || canDraft)) ||
     canOpenSite ||
     (contract.stage === 'da_ky' && canApprove) ||
     canCancel;
@@ -252,7 +265,7 @@ export function ContractDetailPage() {
           Gửi phê duyệt
         </Button>
       )}
-      {contract.stage === 'da_duyet' && canApprove && (
+      {contract.stage === 'da_duyet' && (canApprove || canDraft) && (
         <Button variant="primary" onClick={sign}>
           Ghi nhận đã ký
         </Button>
@@ -302,14 +315,31 @@ export function ContractDetailPage() {
   // (anh Dũng 22/10/2026).
   const signNotice =
     contract.stage === 'da_duyet'
-      ? canApprove
-        ? 'Hợp đồng đã được phê duyệt. Hai bên ký văn bản đã duyệt xong thì bấm «Ghi nhận đã ký» ở đầu trang, ghi số hợp đồng và ngày ký.'
-        : 'Hợp đồng đã được phê duyệt. Việc tiếp theo: tải văn bản đã duyệt (mục «Các phiên bản đã lưu»), in và trình hai bên ký; ký xong Ban Giám đốc ghi nhận đã ký trên hệ thống (số hợp đồng, ngày ký) — tài khoản Kinh doanh không ghi nhận được.'
-      : null;
+      ? canApprove || canDraft
+        ? `Hợp đồng đã được phê duyệt. Tải văn bản đã duyệt (mục «Các phiên bản đã lưu»), in và trình hai bên ký; ký xong bấm «Ghi nhận đã ký», ghi số hợp đồng, ngày ký${canApprove ? '' : ' và chụp bản đã ký tải lên — Ban Giám đốc không phải vào hệ thống'}.`
+        : 'Hợp đồng đã được phê duyệt — chờ người chịu trách nhiệm hoặc Ban Giám đốc ghi nhận đã ký.'
+      : contract.stage === 'da_ky'
+        ? hasSite
+          ? 'Hợp đồng đã ký, công trình đã mở — Thi công phân công chỉ huy trưởng và chuẩn bị khởi công. Việc còn lại của hợp đồng: theo dõi thu tiền theo các đợt; Ban Giám đốc quyết toán khi công trình đã bàn giao.'
+          : contractOpensSite(contract.type)
+            ? 'Hợp đồng đã ký. Việc tiếp theo: Ban Giám đốc hoặc Thi công bấm «Mở công trình».'
+            : 'Hợp đồng đã ký. Việc còn lại: theo dõi thanh toán theo các đợt; Ban Giám đốc quyết toán khi hoàn tất.'
+        : null;
 
   return (
     <>
       {promptDialog.dialog}
+      {signing && (
+        <SignContractDialog
+          contractId={contract.id}
+          isApprover={canApprove}
+          opensSite={
+            contract.type === 'thi_cong' &&
+            (contract.source_type ?? 'opportunities') === 'opportunities'
+          }
+          onClose={() => setSigning(false)}
+        />
+      )}
       {signNotice && (
         <p
           role="status"
@@ -384,6 +414,14 @@ export function ContractDetailPage() {
                       label: 'Ngày ký',
                       value: contract.signed_date ? formatDate(contract.signed_date) : EM_DASH,
                     },
+                    ...(contract.signed_scan_path
+                      ? [
+                          {
+                            label: 'Bản đã ký',
+                            value: <SignedScanLink path={contract.signed_scan_path} />,
+                          },
+                        ]
+                      : []),
                     {
                       label: 'Thời gian thực hiện',
                       value:

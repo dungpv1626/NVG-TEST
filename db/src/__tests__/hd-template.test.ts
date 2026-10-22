@@ -460,3 +460,95 @@ describeDb('Nội dung riêng của văn bản hợp đồng (0186)', () => {
     expect(error).not.toBeNull();
   });
 });
+
+describeDb('Kinh doanh ghi nhận đã ký kèm bản đã ký; ký xong tự mở công trình (0187)', () => {
+  it('thiếu bản đã ký thì không ghi nhận được; có bản thì được, Ban Giám đốc được báo, công trình tự mở', async () => {
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    const stamp = String(Date.now());
+    let contractId = '';
+    try {
+      const [nvc] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVC'`;
+      const [kdUser] = await sql<{ id: string }[]>`
+        SELECT id FROM users WHERE email = ${ACCOUNTS.kinhDoanhNvc}`;
+      const [c] = await sql<{ id: string }[]>`
+        INSERT INTO contracts (company_id, code, title, type, stage, value, responsible_user_id)
+        VALUES (${nvc!.id}, ${'NVC-HD-KY-' + stamp}, ${TEST_PREFIX + ' Ký bởi Kinh doanh ' + stamp},
+                'thi_cong', 'da_duyet', 500000000, ${kdUser!.id})
+        RETURNING id`;
+      contractId = c!.id;
+      const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
+      const args = {
+        p_contract_id: contractId,
+        p_contract_number: `KY-${stamp}`,
+        p_signed_date: '2026-10-22',
+      };
+
+      const noScan = await kd.rpc('sign_contract', args);
+      expect(noScan.error?.message).toMatch(/bản hợp đồng đã ký|Ban Giám đốc/);
+
+      // Đường dẫn không có tệp thật thì cũng không lọt.
+      const fake = await kd.rpc('sign_contract', {
+        ...args,
+        p_signed_scan_path: `${contractId}/khong-co.pdf`,
+      });
+      expect(fake.error?.message).toContain('Không thấy bản hợp đồng đã ký');
+
+      const path = `${contractId}/da-ky-${crypto.randomUUID()}.pdf`;
+      const up = await kd.storage
+        .from('contract-documents')
+        .upload(path, new Blob([new Uint8Array([37, 80, 68, 70])], { type: 'application/pdf' }), {
+          contentType: 'application/pdf',
+        });
+      expect(up.error).toBeNull();
+      expect(
+        (await kd.rpc('sign_contract', { ...args, p_signed_scan_path: path })).error,
+      ).toBeNull();
+
+      const [after] = await sql<{ stage: string; signed_scan_path: string }[]>`
+        SELECT stage, signed_scan_path FROM contracts WHERE id = ${contractId}`;
+      expect(after).toEqual({ stage: 'da_ky', signed_scan_path: path });
+      const sites = await sql<{ stage: string }[]>`
+        SELECT stage FROM construction_sites WHERE contract_id = ${contractId} AND deleted_at IS NULL`;
+      expect(sites.map((s) => s.stage)).toEqual(['chuan_bi']);
+      const [tgdNote] = await sql<{ n: number }[]>`
+        SELECT count(*)::int AS n FROM notifications n JOIN users u ON u.id = n.user_id
+        WHERE u.email = ${ACCOUNTS.tgd} AND n.type = 'contract_signed_recorded'
+          AND n.related_entity_id = ${contractId}`;
+      expect(tgdNote!.n).toBe(1);
+    } finally {
+      if (contractId) {
+        await sql`DELETE FROM construction_sites WHERE contract_id = ${contractId}`;
+        await sql`DELETE FROM contracts WHERE id = ${contractId}`;
+      }
+      await sql.end();
+    }
+  });
+});
+
+describeDb('Quyết toán hợp đồng thi công cần đã có công trình (0187)', () => {
+  it('chưa mở công trình thì Ban Giám đốc không quyết toán được', async () => {
+    const { createConnection } = await import('../client');
+    const { sql } = createConnection();
+    const stamp = String(Date.now());
+    let contractId = '';
+    try {
+      const [nvc] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVC'`;
+      const [c] = await sql<{ id: string }[]>`
+        INSERT INTO contracts (company_id, code, title, type, stage, value)
+        VALUES (${nvc!.id}, ${'NVC-HD-QT-' + stamp}, ${TEST_PREFIX + ' Quyết toán rỗng ' + stamp},
+                'thi_cong', 'da_ky', 100000000)
+        RETURNING id`;
+      contractId = c!.id;
+      const tgd = await signInAs(ACCOUNTS.tgd);
+      const { error } = await tgd.rpc('close_contract', {
+        p_contract_id: contractId,
+        p_stage: 'hoan_thanh',
+      });
+      expect(error?.message).toContain('chưa mở công trình');
+    } finally {
+      if (contractId) await sql`DELETE FROM contracts WHERE id = ${contractId}`;
+      await sql.end();
+    }
+  });
+});

@@ -1310,6 +1310,13 @@
       "when": 1791310000000,
       "tag": "0186_cho_trong_tu_do_mau_hop_dong",
       "breakpoints": true
+    },
+    {
+      "idx": 187,
+      "version": "7",
+      "when": 1791320000000,
+      "tag": "0187_kinh_doanh_ghi_nhan_ky",
+      "breakpoints": true
     }
   ]
 }

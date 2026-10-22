@@ -643,11 +643,19 @@ describeDb(
           })
         ).error,
       ).toBeNull();
-      // Ban Giám đốc mở được công trình (trước 0164 hàm đòi quyền SỬA nên TGĐ bị từ chối).
-      const { data: siteId, error: openError } = await tgd.rpc('open_site_from_contract', {
+      // 0187: hợp đồng thi công từ cơ hội ký xong thì công trình TỰ mở ở bước Chuẩn bị — không
+      // còn ai phải nhớ bấm «Mở công trình»; mở thêm lần nữa bị chặn (một hợp đồng một công trình).
+      const { data: autoSite } = await tgd
+        .from('construction_sites')
+        .select('id, stage')
+        .eq('contract_id', contractId)
+        .single();
+      expect(autoSite!.stage).toBe('chuan_bi');
+      const siteId = autoSite!.id as string;
+      const { error: openAgain } = await tgd.rpc('open_site_from_contract', {
         p_contract_id: contractId,
       });
-      expect(openError).toBeNull();
+      expect(openAgain?.message).toContain('đã có công trình');
 
       // Không tự lấy người Kinh doanh phụ trách hợp đồng làm chỉ huy công trình.
       const thiCong = await signInAs(ACCOUNTS.congTruongNvc);

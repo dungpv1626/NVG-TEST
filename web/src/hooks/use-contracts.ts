@@ -84,6 +84,8 @@ export interface ContractDetailRecord extends ContractRecord {
   approved_document_id: string | null;
   approved_at: string | null;
   signed_at: string | null;
+  /** Bản hợp đồng đã ký (ảnh / PDF) trong kho văn bản hợp đồng (0187). */
+  signed_scan_path: string | null;
   settled_at: string | null;
   cancel_reason: string | null;
   notes: string | null;
@@ -101,7 +103,7 @@ export function useContract(id: string | undefined) {
           `${CONTRACT_SELECT}, source_type, source_id, estimate_id, partner_name, customer_id, ` +
             'start_date, price_form, vat_rate, project_location, ' +
             'submitted_document_id, approved_document_id, ' +
-            'approved_at, signed_at, settled_at, cancel_reason, notes, updated_at, ' +
+            'approved_at, signed_at, signed_scan_path, settled_at, cancel_reason, notes, updated_at, ' +
             'estimate:estimates!contracts_estimate_id_estimates_id_fk(id, code, version)',
         )
         .eq('id', id!)
@@ -218,18 +220,28 @@ export function useSignContract() {
   return useMutation<
     void,
     Error,
-    { contractId: string; contractNumber: string; signedDate: string }
+    {
+      contractId: string;
+      contractNumber: string;
+      signedDate: string;
+      /** Bản đã ký trong kho văn bản hợp đồng — bắt buộc khi không phải Ban Giám đốc (0187). */
+      signedScanPath?: string | null;
+    }
   >({
-    mutationFn: async ({ contractId, contractNumber, signedDate }) => {
+    mutationFn: async ({ contractId, contractNumber, signedDate, signedScanPath }) => {
       const { error } = await supabase.rpc('sign_contract', {
         p_contract_id: contractId,
         p_contract_number: contractNumber,
         p_signed_date: signedDate || null,
+        p_signed_scan_path: signedScanPath ?? null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      // Ký xong có thể tự mở công trình (0187) — chuỗi hồ sơ / panel liên quan phải tải lại.
+      void queryClient.invalidateQueries({ queryKey: ['record-chain'] });
+      void queryClient.invalidateQueries({ queryKey: ['construction-sites'] });
     },
   });
 }
