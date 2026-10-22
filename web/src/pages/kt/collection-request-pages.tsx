@@ -74,7 +74,7 @@ export function useOpenCollectionRequest() {
     isPending: create.isPending,
     open: async (input: { acceptanceId?: string; termId?: string }) => {
       const id = await create.mutateAsync(input);
-      navigate(`/kt/de-nghi-thu/${id}`);
+      void navigate(`/kt/de-nghi-thu/${id}`);
     },
   };
 }
