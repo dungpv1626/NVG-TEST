@@ -158,6 +158,11 @@ export function SignedScanPanel({
           </Button>
         )}
       </div>
+      {hasScan && canManage && !isApprover && (
+        <p className="mt-2 text-sm text-fg-subtle">
+          Cần thay bằng bản quét khác thì nhờ Ban Giám đốc bấm «Thay bản khác» trên hợp đồng này.
+        </p>
+      )}
 
       {message && (
         <p role="status" className="mt-2 text-sm text-status-completed">
