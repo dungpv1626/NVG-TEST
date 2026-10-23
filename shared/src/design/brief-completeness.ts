@@ -191,6 +191,25 @@ export function checkBriefConsistency(
     }
   }
 
+  // --- Mật độ gõ theo kiểu tỉ lệ vào ô phần trăm --------------------------
+  // Ô hỏi PHẦN TRĂM, hợp đồng lưu TỈ LỆ (`value_scale` 0,01 trong `brief-form.json`). Gõ «0,9» với ý
+  // 90 % thì lưu 0,009 — mật độ 0,9 %, gần như cấm xây (lượt chạy thật 23/10/2026, hồ sơ THU5). Số
+  // gõ dưới 1 vào ô phần trăm gần như chắc là nhầm cách ghi, nên NÓI RA; không tự đổi số của người khai.
+  const density = site?.max_density;
+  if (typeof density === 'number' && density > 0 && density < 0.01) {
+    const typed = density * 100;
+    found.push({
+      code: 'mat_do_nghi_ghi_ti_le',
+      severity: 'canh_bao',
+      message: `Mật độ xây dựng tối đa đang là ${formatNumber(typed)}% — có phải ${formatNumber(
+        typed * 100,
+      )}%? Ô này ghi theo phần trăm: ${formatNumber(typed * 100)}% thì ghi ${formatNumber(
+        typed * 100,
+      )}, không ghi ${formatNumber(typed)}. Để trống nếu không giới hạn mật độ.`,
+      paths: ['site.max_density'],
+    });
+  }
+
   // --- Hình thửa đất khai một đằng, số đo một nẻo ---------------------------
   // Ba phép kiểm dưới đây đều thuần số học, và cả ba đều bắt loại nhầm mà không lỗi nào lộ
   // ra: đầu bài vẫn hợp lệ theo hợp đồng, engine vẫn chạy, chỉ là chạy trên một mảnh đất
@@ -566,7 +585,7 @@ function checkSurveyDetail(draft: DesignBriefDraft): BriefIssue[] {
       out.push({
         code: 'ban_cong_dua_chua_ro_khoang_lui',
         severity: 'canh_bao',
-        message: `Ban công ${sideName[side]} đua ${m} m khỏi mặt nhà, nhưng đầu bài chưa khai khoảng lùi ${sideName[side]} — chưa biết ban công có vượt ranh đất không. Bổ sung khoảng lùi mặt này.`,
+        message: `Ban công ${sideName[side]} đua ${formatNumber(m)} m khỏi mặt nhà, nhưng đầu bài chưa khai khoảng lùi ${sideName[side]} — chưa biết ban công có vượt ranh đất không. Bổ sung khoảng lùi mặt này.`,
         paths: [path, 'site.setback_required_m'],
       });
       continue;
@@ -577,7 +596,7 @@ function checkSurveyDetail(draft: DesignBriefDraft): BriefIssue[] {
       out.push({
         code: 'ban_cong_dua_sang_dat_khac',
         severity: 'nghiem_trong',
-        message: `Ban công ${sideName[side]} đua ${m} m khỏi mặt nhà, vượt khoảng lùi ${setback} m nên lấn ${beyond} m sang đất của người khác — không được. Giảm độ đua mặt này xuống không quá ${setback} m, hoặc bỏ ban công ở mặt này.`,
+        message: `Ban công ${sideName[side]} đua ${formatNumber(m)} m khỏi mặt nhà, vượt khoảng lùi ${formatNumber(setback)} m nên lấn ${formatNumber(beyond)} m sang đất của người khác — không được. Giảm độ đua mặt này xuống không quá ${formatNumber(setback)} m, hoặc bỏ ban công ở mặt này.`,
         paths: [path, `site.adjacent.${side}`],
       });
     } else if (over === 'public') {
@@ -585,7 +604,7 @@ function checkSurveyDetail(draft: DesignBriefDraft): BriefIssue[] {
       out.push({
         code: 'ban_cong_dua_ra_duong',
         severity: 'canh_bao',
-        message: `Ban công ${sideName[side]} đua ${m} m khỏi mặt nhà, vượt khoảng lùi ${setback} m nên nhô ${beyond} m ra phía trên đường, hẻm hoặc mặt nước — kiểm quy định địa phương về độ vươn ban công trước khi chốt.`,
+        message: `Ban công ${sideName[side]} đua ${formatNumber(m)} m khỏi mặt nhà, vượt khoảng lùi ${formatNumber(setback)} m nên nhô ${formatNumber(beyond)} m ra phía trên đường, hẻm hoặc mặt nước — kiểm quy định địa phương về độ vươn ban công trước khi chốt.`,
         paths: [path, `site.adjacent.${side}`],
       });
     }

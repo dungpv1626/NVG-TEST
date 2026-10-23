@@ -87,7 +87,9 @@ describe('soát đầu bài: ban công đua vượt ranh đất (T91, sửa 27/0
     expect(found.map((i) => [i.code, i.severity])).toEqual([
       ['ban_cong_dua_sang_dat_khac', 'nghiem_trong'],
     ]);
-    expect(found[0]!.message).toMatch(/vượt khoảng lùi 1.5 m nên lấn 0.5 m/);
+    // Số thập phân DẤU PHẨY (CGD 4.3) — lượt chạy thật 23/10/2026 còn in «đua 0.9 m».
+    expect(found[0]!.message).toContain('vượt khoảng lùi 1,5 m nên lấn 0,5 m');
+    expect(found[0]!.message).not.toMatch(/\d\.\d/);
   });
 
   it('đua vượt khoảng lùi ra đường → chỉ cảnh báo', () => {

@@ -36,7 +36,7 @@ export function ProgressTrack({
   return (
     <Panel
       title="Tiến trình thiết kế"
-      aside={<span className="text-xs text-tk-t3">bước {position}</span>}
+      aside={<span className="text-xs text-tk-t3">Bước {position}</span>}
     >
       <ol
         aria-label="Các bước của quy trình thiết kế"

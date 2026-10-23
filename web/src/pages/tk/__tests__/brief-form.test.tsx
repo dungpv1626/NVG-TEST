@@ -1069,6 +1069,9 @@ describe('Đơn vị và thứ hạng — hai chỗ màn hình nói khác dữ l
       brief({ structured: { building_type: 'biet_thu', site: { width_m: 20, depth_m: 25 } } }),
     ];
     await openForm('Công trình và khu đất');
+    // Câu tùy chọn chưa trả lời nằm sau nút «Hiện thêm» (lượt chạy thật 23/10/2026).
+    expect(screen.queryByLabelText('Mật độ xây dựng tối đa')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: /^Hiện thêm \d+ câu chi tiết/ }));
 
     const input = screen.getByLabelText('Mật độ xây dựng tối đa');
     await userEvent.type(input, '60');
@@ -1281,7 +1284,7 @@ describe('Tự lưu và báo trạng thái', () => {
   it('xác nhận đầu bài hỏng thì NÓI RA — không im lặng', async () => {
     // Câu lỗi vốn vẫn được đặt vào state, nhưng chỉ chế độ NHẬP vẽ nó ra. «Xác nhận đầu bài»
     // chạy ở chế độ XEM, nên mọi câu nó trả về đều rơi thẳng xuống đất.
-    state.briefs = [brief()];
+    state.briefs = [brief({ completeness_score: '0.900' })];
     state.surveys = [];
     state.confirmBrief.mockRejectedValue(
       new Error('Chưa đủ thông tin bắt buộc để chốt đầu bài. Còn thiếu: Mật độ xây dựng tối đa.'),
@@ -1298,6 +1301,9 @@ describe('Tự lưu và báo trạng thái', () => {
     );
 
     await userEvent.click(await screen.findByRole('button', { name: 'Xác nhận đầu bài' }));
+    // Hộp hỏi lại trước khi xác nhận — xác nhận xong muốn đổi phải lập phiên bản mới.
+    const dialog = await screen.findByRole('dialog', { name: /Xác nhận đầu bài phiên bản 1/ });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Xác nhận đầu bài' }));
 
     // Nguyên văn cả hai vế: VIỆC GÌ không làm được và CẦN LÀM GÌ (CGD 5.5). Vế đầu từng bị
     // `toUserMessage` xén mất vì nó cắt mọi thứ tới dấu hai chấm đầu tiên.
@@ -1420,5 +1426,158 @@ describe('Ô số không được nhận rồi vứt đi', () => {
 
     expect(depth).not.toHaveAttribute('aria-invalid');
     expect(screen.queryByText('Chỉ nhận một số. Ví dụ 28.')).toBeNull();
+  });
+});
+
+/**
+ * Lượt chạy thật 23/10/2026 (hồ sơ NVO-TK-2026-THU5): «Còn thiếu (32)» đếm cả câu tùy chọn, «Lưu
+ * nháp» đẩy người dùng ra khỏi biểu mẫu, «Xác nhận đầu bài» sáng ở 61 % và không hỏi lại, mục 1
+ * dài 26 câu.
+ */
+describe('Đầu bài dễ dùng hơn (23/10/2026)', () => {
+  it('«Còn thiếu» chỉ đếm câu bắt buộc; câu tùy chọn gấp riêng', async () => {
+    const { splitMissing } = await import('../brief-panel');
+    const { scoreBrief, BRIEF_FORM } = await import('@nvg/shared/design');
+    const score = scoreBrief({ building_type: 'nha_pho' }, BRIEF_FORM);
+    const { required, optional } = splitMissing(score.missing);
+    expect(required.length + optional.length).toBe(score.missing.length);
+    expect(required.every((item) => !item.optional)).toBe(true);
+    expect(optional.length).toBeGreaterThan(0);
+
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm();
+    const heading = screen.getByText(/^Còn thiếu \(\d+\)$/);
+    const count = Number(/\((\d+)\)/.exec(heading.textContent ?? '')![1]);
+    expect(within(heading.parentElement!).queryByText(/tùy chọn/)).toBeNull();
+    expect(screen.getByText(/^Câu tùy chọn chưa trả lời \(\d+\)$/)).toBeTruthy();
+    // Số trong «Còn thiếu» khớp tổng «thiếu N» trên thanh bước — cả hai chỉ đếm câu bắt buộc.
+    const bar = screen.getByRole('navigation', { name: 'Các bước của đầu bài' });
+    const perStep = within(bar)
+      .queryAllByText(/^thiếu \d+$/)
+      .reduce((sum, el) => sum + Number(/\d+/.exec(el.textContent ?? '')![0]), 0);
+    expect(count).toBe(perStep);
+  });
+
+  it('«Lưu nháp» ở bước giữa lưu mà KHÔNG đóng biểu mẫu', async () => {
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm('Công trình và khu đất');
+    const width = screen.getByLabelText(/^Chiều rộng mặt tiền/);
+    await userEvent.clear(width);
+    await userEvent.type(width, '6');
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await waitFor(() => expect(state.saveDraft).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(/^Đã lưu lúc \d\d:\d\d$/)).toBeTruthy();
+    // Vẫn ở nguyên bước đang sửa.
+    expect(screen.getByLabelText(/^Chiều rộng mặt tiền/)).toBeTruthy();
+    expect(screen.getByRole('navigation', { name: 'Các bước của đầu bài' })).toBeTruthy();
+  });
+
+  it('bước cuối «Lưu và đóng» thì về chế độ xem', async () => {
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm('Phong cách');
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu và đóng' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('navigation', { name: 'Các bước của đầu bài' })).toBeNull(),
+    );
+    expect(screen.getByText(/Đầu bài đang hiệu lực/)).toBeTruthy();
+  });
+
+  it('dưới ngưỡng thì «Xác nhận đầu bài» khoá, lý do nằm ngay dưới', async () => {
+    state.briefs = [brief()]; // 40 %, ngưỡng 70 %
+    state.surveys = [];
+    const { BriefPanel } = await import('../brief-panel');
+    renderWithApp(
+      <BriefPanel
+        projectId="p1"
+        companyId="c1"
+        projectName="X"
+        projectCode="NVO-TK"
+        readOnly={false}
+      />,
+    );
+    const button = await screen.findByRole('button', { name: 'Xác nhận đầu bài' });
+    expect(button).toBeDisabled();
+    expect(screen.getByText(/Chưa xác nhận được: mức độ đầy đủ 40%, cần từ 70%/)).toBeTruthy();
+  });
+
+  it('đủ ngưỡng thì hỏi lại; «Xem lại» không xác nhận gì', async () => {
+    state.briefs = [brief({ completeness_score: '0.900' })];
+    state.surveys = [];
+    const { BriefPanel } = await import('../brief-panel');
+    renderWithApp(
+      <BriefPanel
+        projectId="p1"
+        companyId="c1"
+        projectName="X"
+        projectCode="NVO-TK"
+        readOnly={false}
+      />,
+    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Xác nhận đầu bài' }));
+    const dialog = screen.getByRole('dialog', { name: /Xác nhận đầu bài phiên bản 1\?/ });
+    expect(within(dialog).getByText(/lập phiên bản mới kèm nguyên/)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Xem lại' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(state.confirmBrief).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Xác nhận đầu bài' }));
+    await userEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Xác nhận đầu bài' }),
+    );
+    await waitFor(() => expect(state.confirmBrief).toHaveBeenCalledWith({ briefId: 'b1' }));
+  });
+
+  it('confirmBlockedReason: dưới ngưỡng, mâu thuẫn nghiêm trọng, chưa cấu hình ngưỡng', async () => {
+    const { confirmBlockedReason } = await import('../brief-panel');
+    expect(confirmBlockedReason(0.61, 0.7, [])).toMatch(/61%, cần từ 70%/);
+    expect(confirmBlockedReason(0.8, 0.7, [{ severity: 'canh_bao' }])).toBeNull();
+    expect(confirmBlockedReason(0.8, 0.7, [{ severity: 'nghiem_trong' }])).toMatch(
+      /1 chỗ chưa nhất quán nghiêm trọng/,
+    );
+    expect(confirmBlockedReason(0.1, null, [])).toBeNull();
+  });
+
+  it('câu tùy chọn chưa trả lời gấp lại; đã trả lời hoặc đang bị soát thì luôn hiện', async () => {
+    const { hiddenOptionalPaths } = await import('../brief-panel');
+    const fields = [
+      { path: 'a', optional: true },
+      { path: 'b', optional: true },
+      { path: 'c', optional: true },
+      { path: 'd' },
+    ];
+    const hidden = hiddenOptionalPaths(fields, (p) => p === 'b', new Set(['c']));
+    expect([...hidden]).toEqual(['a']);
+  });
+
+  it('mục 1 gấp câu tùy chọn sau «Hiện thêm»; bấm mục tùy chọn ở khung phải thì tự mở ra', async () => {
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm('Công trình và khu đất');
+    const toggle = screen.getByRole('button', {
+      name: /^Hiện thêm \d+ câu chi tiết \(tùy chọn\)$/,
+    });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByLabelText('Mật độ xây dựng tối đa')).toBeNull();
+    // Câu bắt buộc vẫn ở ngoài.
+    expect(screen.getByLabelText(/^Chiều rộng mặt tiền/)).toBeTruthy();
+
+    // Từ khung «Câu tùy chọn chưa trả lời» bấm thẳng vào mật độ → mục mở ra.
+    await userEvent.click(screen.getByRole('link', { name: /Mật độ xây dựng tối đa/ }));
+    expect(await screen.findByLabelText('Mật độ xây dựng tối đa')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Gấp \d+ câu tùy chọn/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+  });
+
+  it('số bước ghi cùng một kiểu «Bước X trên Y» ở đầu mục và trên thanh', async () => {
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm();
+    expect(screen.getAllByText(/Bước 1 trên \d+/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText(/Bước 1\/\d/)).toBeNull();
   });
 });

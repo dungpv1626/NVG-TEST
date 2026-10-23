@@ -249,8 +249,10 @@ function DuePanel({ project }: { project: DesignProjectDetailRecord }) {
         </p>
       ) : (
         <ul className="mt-1.5 grid gap-1.5 text-xs leading-relaxed text-tk-am-fg2">
-          {blocking.map((f) => (
-            <li key={f.code}>{f.message}</li>
+          {/* Cùng một mã lặp theo từng bộ môn (`thieu_ban_ve` cho kiến trúc, kết cấu…) — khoá phải
+              kèm bộ môn, không thì React gộp nhầm hai dòng (lượt chạy thật 23/10/2026). */}
+          {blocking.map((f, index) => (
+            <li key={`${f.code}:${f.discipline ?? ''}:${index}`}>{f.message}</li>
           ))}
         </ul>
       )}

@@ -1161,3 +1161,46 @@ describe('withoutHiddenAnswers — bỏ câu trả lời của ô đang ẩn (29
     expect(withoutHiddenAnswers(draft, BRIEF_FORM, ['site.width_m', 'site.depth_m'])).toBe(draft);
   });
 });
+
+describe('Mật độ gõ theo kiểu tỉ lệ vào ô phần trăm (23/10/2026)', () => {
+  // Ô hỏi phần trăm, hợp đồng lưu tỉ lệ (`value_scale` 0,01). Lượt chạy thật hồ sơ THU5: gõ «0,9» với ý
+  // 90 % thì lưu 0,009 — mật độ 0,9 %.
+  const withDensity = (max_density: number): DesignBriefDraft =>
+    ({
+      building_type: 'nha_pho',
+      site: { width_m: 5, depth_m: 18, max_density },
+    }) as DesignBriefDraft;
+  const densityIssues = (value: number) =>
+    checkBriefConsistency(withDensity(value), BRIEF_FORM).filter(
+      (issue) => issue.code === 'mat_do_nghi_ghi_ti_le',
+    );
+
+  it('ô mật độ hỏi PHẦN TRĂM và lưu TỈ LỆ — một nghĩa duy nhất', () => {
+    const field = allFields.find((f) => f.path === 'site.max_density')!;
+    expect(field.unit).toBe('%');
+    expect(field.value_scale).toBe(0.01);
+  });
+
+  it('gõ 0,9 (lưu 0,009) thì cảnh báo, gợi ý 90 %, số thập phân dấu phẩy', () => {
+    const found = densityIssues(0.009);
+    expect(found).toHaveLength(1);
+    expect(found[0]!.severity).toBe('canh_bao');
+    expect(found[0]!.paths).toEqual(['site.max_density']);
+    expect(found[0]!.message).toContain('0,9%');
+    expect(found[0]!.message).toContain('có phải 90%');
+    expect(found[0]!.message).not.toMatch(/\d\.\d/);
+  });
+
+  it('mật độ hợp lý thì không báo gì', () => {
+    expect(densityIssues(0.6)).toEqual([]);
+    expect(densityIssues(0.9)).toEqual([]);
+    expect(densityIssues(0.01)).toEqual([]);
+  });
+
+  it('cảnh báo không chặn — không phải lỗi nghiêm trọng', () => {
+    const all = checkBriefConsistency(withDensity(0.009), BRIEF_FORM);
+    expect(all.filter((i) => i.severity === 'nghiem_trong').map((i) => i.code)).not.toContain(
+      'mat_do_nghi_ghi_ti_le',
+    );
+  });
+});

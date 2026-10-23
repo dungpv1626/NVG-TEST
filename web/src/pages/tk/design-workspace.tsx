@@ -409,7 +409,7 @@ function VersionSkewNotice(): React.ReactElement | null {
  * Thanh điều hướng của màn hình con (Haan, 07/10/2026: «hiện đại và mang tính công nghệ»).
  *
  * Trái: «Tổng quan» — nút trong suốt, mũi tên nằm trong một ô vuông bo góc, trượt sang trái khi
- * rê chuột. Phải: MỘT khối điều khiển gộp ba phần — bước trước · bộ đếm «Bước n/m» kèm vạch tiến
+ * rê chuột. Phải: MỘT khối điều khiển gộp ba phần — bước trước · bộ đếm «Bước n trên m» kèm vạch tiến
  * trình · bước tiếp theo. Bước tiếp theo tô màu nhấn nhạt (không phải nút chính tô đặc: màn hình
  * con đã có hành động chính riêng, mỗi màn hình chỉ MỘT nút chính — CGD 6.3).
  *
@@ -478,7 +478,7 @@ function StepNav({
       {total > 1 && (
         <span className="hidden flex-col items-center justify-center gap-1.5 border-x border-tk-line px-3 md:flex">
           <span className="font-mono text-xs text-tk-t3 tabular-nums">
-            Bước <span className="font-semibold text-tk-tx">{index + 1}</span>/{total}
+            Bước <span className="font-semibold text-tk-tx">{index + 1}</span> trên {total}
           </span>
           <span className="flex items-center gap-1" aria-hidden>
             {Array.from({ length: total }, (_, i) => (

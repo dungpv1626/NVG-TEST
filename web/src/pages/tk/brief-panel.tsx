@@ -22,8 +22,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Check,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   FileDown,
   History,
   Ruler,
@@ -43,6 +45,7 @@ import {
   type DesignBriefDraft,
 } from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/states';
 import {
   useConfirmBriefArtifact,
@@ -143,6 +146,13 @@ export function BriefPanel({
    * bước ở giữa — sẽ đẩy người dùng sang một bước khác hẳn cái họ đang xem.
    */
   const [stepId, setStepId] = useState<string | null>(null);
+  /** Mục đang mở hết câu tùy chọn (`hiddenOptional`). Mặc định gấp: mục 1 có 26 câu. */
+  const [showOptional, setShowOptional] = useState<Record<string, boolean>>({});
+  /**
+   * Câu tùy chọn đang gấp của bước đang mở — CHỤP lúc vào bước / bấm mở-gấp, không tính lại mỗi
+   * lần gõ: tính lại thì xoá chữ trong một ô tùy chọn đã trả lời làm ô ấy biến mất giữa lúc gõ.
+   */
+  const hiddenSnapshot = useRef<{ key: string; paths: ReadonlySet<string> } | null>(null);
   const [error, setError] = useState<string | null>(null);
   /**
    * Có gì chưa ghi xuống CSDL không.
@@ -163,6 +173,8 @@ export function BriefPanel({
   const edits = useRef(0);
   /** Đang hỏi «Bỏ các thay đổi chưa lưu?» sau khi bấm Hủy lúc còn thay đổi. */
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  /** Đang hỏi lại trước khi xác nhận đầu bài — xác nhận xong thì sửa phải lập phiên bản mới. */
+  const [askConfirm, setAskConfirm] = useState(false);
   /**
    * Mã bản ghi mà chính phiên nhập này vừa tạo ra ở lần lưu đầu.
    *
@@ -360,11 +372,16 @@ export function BriefPanel({
     }
   }
 
-  async function save() {
+  /**
+   * `close` — đóng biểu mẫu sau khi ghi. «Lưu nháp» giữa chừng KHÔNG đóng (lượt chạy thật 23/10/2026:
+   * bấm «Lưu nháp» ở bước 1 bị đẩy về chế độ xem, phải bấm «Sửa đầu bài» rồi đi lại tới đúng bước);
+   * chỉ nút lưu ở bước cuối mới đóng.
+   */
+  async function save(close: boolean) {
     // Có sửa trong lúc chờ thì ghi thêm một lượt nữa thay vì đóng biểu mẫu với bản cũ.
     let result = await persist();
     if (result === 'stale') result = await persist();
-    if (result === 'ok') setEditing(false);
+    if (result === 'ok' && close) setEditing(false);
   }
 
   function cancelEditing() {
@@ -391,6 +408,8 @@ export function BriefPanel({
     const saving = saveNewVersion.isPending || saveDraft.isPending;
     // Bản đã xác nhận thì KHÔNG có khái niệm "lưu nháp" — mọi lần ghi đều lập phiên bản mới.
     const saveLabel = needsNewVersion ? 'Lưu đầu bài' : 'Lưu nháp';
+    // Bước cuối: lưu rồi về chế độ xem (nơi có «Xác nhận đầu bài»).
+    const finishLabel = needsNewVersion ? 'Lưu đầu bài' : 'Lưu và đóng';
 
     const issuesFor = (path: string) => issues.filter((i) => i.paths.includes(path));
 
@@ -451,6 +470,11 @@ export function BriefPanel({
       if (dirty && !needsNewVersion && !saving) void persist();
       setStepId(sectionId);
       if (!path) return;
+      // Ô cần tới là câu tùy chọn đang gấp thì mở mục ra trước, không thì không có gì để cuộn tới.
+      const target = form.sections
+        .find((section) => section.id === sectionId)
+        ?.fields.find((field) => field.path === path);
+      if (target?.optional) setShowOptional((prev) => ({ ...prev, [sectionId]: true }));
       // Đợi bước mới vẽ xong rồi mới cuộn — ô cần tới chưa tồn tại trong DOM ở lượt này.
       requestAnimationFrame(() => flashTo(`brief-${path.replace(/\./g, '-')}`));
     };
@@ -475,13 +499,38 @@ export function BriefPanel({
           />
         </div>
       ));
-    const answered = step.fields.filter(({ field }) =>
+    const answeredField = (path: string) =>
       isAnswered(
-        field.path.startsWith('legacy.')
-          ? legacy[LEGACY_COLUMNS[field.path]!]
-          : valueAtPath(draft, field.path),
-      ),
-    ).length;
+        path.startsWith('legacy.') ? legacy[LEGACY_COLUMNS[path]!] : valueAtPath(draft, path),
+      );
+    const answered = step.fields.filter(({ field }) => answeredField(field.path)).length;
+
+    // Câu tùy chọn chưa trả lời gấp lại sau nút «Hiện thêm» (lượt chạy thật 23/10/2026: mục 1 = 26
+    // câu, ~6 màn hình). Không bỏ câu nào khỏi biểu mẫu hay hợp đồng; chỉ gấp, và điểm đầy đủ vẫn
+    // chấm như cũ ở cả hai bên (`scoreBrief`).
+    const expanded = showOptional[step.section.id] === true;
+    const snapshotKey = `${step.section.id}:${expanded ? 1 : 0}`;
+    if (hiddenSnapshot.current?.key !== snapshotKey) {
+      hiddenSnapshot.current = {
+        key: snapshotKey,
+        paths: expanded
+          ? new Set()
+          : hiddenOptionalPaths(
+              step.fields.map(({ field }) => field),
+              answeredField,
+              new Set(issues.flatMap((issue) => issue.paths)),
+            ),
+      };
+    }
+    const hidden = hiddenSnapshot.current.paths;
+    const shownFields = step.fields.filter(({ field }) => !hidden.has(field.path));
+    const collapsible = expanded
+      ? hiddenOptionalPaths(
+          step.fields.map(({ field }) => field),
+          answeredField,
+          new Set(issues.flatMap((issue) => issue.paths)),
+        ).size
+      : hidden.size;
 
     const last = index === steps.length - 1;
 
@@ -504,8 +553,8 @@ export function BriefPanel({
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-3">
               <div className="min-w-0">
                 <p className="text-xs font-medium text-brand">
-                  {form.parts.find((p) => p.id === step.section.part)?.title} · Bước {index + 1}/
-                  {steps.length}
+                  {form.parts.find((p) => p.id === step.section.part)?.title} · Bước {index + 1}{' '}
+                  trên {steps.length}
                 </p>
                 <h3 className="mt-0.5 text-lg font-semibold">{step.section.title}</h3>
                 {step.section.hint && <p className="mt-0.5 text-fg-subtle">{step.section.hint}</p>}
@@ -523,7 +572,7 @@ export function BriefPanel({
             {step.fields.some((v) => v.field.path === 'site.width_m') ? (
               <div className="mt-4 grid gap-6 md:grid-cols-[minmax(0,1fr)_16rem]">
                 <div className="grid content-start gap-x-6 gap-y-5 lg:grid-cols-2">
-                  {fieldsOf(step.fields)}
+                  {fieldsOf(shownFields)}
                 </div>
                 <div className="md:sticky md:top-4 md:self-start">
                   <SitePlanPreview site={draft.site} />
@@ -531,8 +580,24 @@ export function BriefPanel({
               </div>
             ) : (
               <div className="mt-4 grid gap-x-6 gap-y-5 md:grid-cols-2">
-                {fieldsOf(step.fields)}
+                {fieldsOf(shownFields)}
               </div>
+            )}
+
+            {collapsible > 0 && (
+              <Button
+                variant="subtle"
+                className="mt-4"
+                aria-expanded={expanded}
+                onClick={() =>
+                  setShowOptional((prev) => ({ ...prev, [step.section.id]: !expanded }))
+                }
+              >
+                {expanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                {expanded
+                  ? `Gấp ${collapsible} câu tùy chọn chưa trả lời`
+                  : `Hiện thêm ${collapsible} câu chi tiết (tùy chọn)`}
+              </Button>
             )}
 
             {step.fields.some((v) => v.field.path === 'site.width_m') && survey && (
@@ -579,8 +644,8 @@ export function BriefPanel({
               </Button>
             )}
             {last ? (
-              <Button variant="primary" onClick={() => void save()} disabled={saving}>
-                {saving ? 'Đang lưu…' : saveLabel}
+              <Button variant="primary" onClick={() => void save(true)} disabled={saving}>
+                {saving ? 'Đang lưu…' : finishLabel}
               </Button>
             ) : (
               <>
@@ -588,7 +653,7 @@ export function BriefPanel({
                   Tiếp
                   <ChevronRight className="size-4" />
                 </Button>
-                <Button variant="secondary" onClick={() => void save()} disabled={saving}>
+                <Button variant="secondary" onClick={() => void save(false)} disabled={saving}>
                   {saving ? 'Đang lưu…' : saveLabel}
                 </Button>
               </>
@@ -681,6 +746,10 @@ export function BriefPanel({
   // ---------------------------------------------------------------------------
   const savedScore =
     current.completeness_score !== null ? Number(current.completeness_score) : null;
+  // Cùng con số khung «Mức độ đầy đủ» đang hiện — nút và khung không được nói khác nhau.
+  const shownScore = savedScore ?? score.score;
+  const confirmBlocked = confirmBlockedReason(shownScore, threshold, issues);
+  const optionalLeft = splitMissing(score.missing).optional.length;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -709,8 +778,9 @@ export function BriefPanel({
               {!readOnly && !current.confirmed_at && (
                 <Button
                   variant="secondary"
-                  onClick={() => void confirm()}
-                  disabled={confirmArtifact.isPending}
+                  onClick={() => setAskConfirm(true)}
+                  disabled={confirmArtifact.isPending || confirmBlocked !== null}
+                  aria-describedby={confirmBlocked ? 'brief-confirm-blocked' : undefined}
                 >
                   {confirmArtifact.isPending ? 'Đang xác nhận…' : 'Xác nhận đầu bài'}
                 </Button>
@@ -728,10 +798,40 @@ export function BriefPanel({
               buộc, không đủ quyền, dịch vụ thiết kế không phản hồi — đều được đặt vào state
               rồi rơi thẳng xuống đất. Người dùng bấm nút và KHÔNG có gì xảy ra: không kết
               quả, không lỗi, không dấu hiệu đang chạy. */}
+          {/* Nút khoá thì lý do nằm NGAY dưới nút (không chỉ chú thích khi rê chuột). */}
+          {!readOnly && !current.confirmed_at && confirmBlocked && (
+            <p id="brief-confirm-blocked" className="mb-3 text-fg-subtle">
+              {confirmBlocked}
+            </p>
+          )}
           {error && (
             <p role="alert" className="mb-3 text-status-overdue">
               {error}
             </p>
+          )}
+
+          {askConfirm && (
+            <ConfirmDialog
+              title={`Xác nhận đầu bài phiên bản ${current.version}?`}
+              confirmLabel={confirmArtifact.isPending ? 'Đang xác nhận…' : 'Xác nhận đầu bài'}
+              cancelLabel="Xem lại"
+              pending={confirmArtifact.isPending}
+              onCancel={() => setAskConfirm(false)}
+              onConfirm={() => {
+                void confirm().finally(() => setAskConfirm(false));
+              }}
+            >
+              <p>
+                Mức độ đầy đủ {Math.round(shownScore * 100)}%. Sau khi xác nhận, đầu bài thành đầu
+                vào cố định của AI Design và các bước sau; muốn đổi phải lập phiên bản mới kèm
+                nguyên nhân điều chỉnh.
+              </p>
+              {optionalLeft > 0 && (
+                <p className="mt-1">
+                  Còn {optionalLeft} câu tùy chọn chưa trả lời — bỏ trống vẫn dựng được phương án.
+                </p>
+              )}
+            </ConfirmDialog>
           )}
 
           <SurveyMismatch brief={current} survey={survey} />
@@ -930,6 +1030,92 @@ function StepBar({
   );
 }
 
+type MissingItem = ReturnType<typeof scoreBrief>['missing'][number];
+
+/**
+ * Câu được gấp sau nút «Hiện thêm»: câu «(tùy chọn)» CHƯA trả lời và không dính câu soát nào. Câu
+ * đã trả lời luôn hiện (người khai phải thấy mình đã ghi gì); câu đang bị soát luôn hiện (khung
+ * bên phải chỉ vào nó).
+ */
+export function hiddenOptionalPaths(
+  fields: readonly { path: string; optional?: boolean }[],
+  answered: (path: string) => boolean,
+  flagged: ReadonlySet<string>,
+): Set<string> {
+  return new Set(
+    fields
+      .filter(
+        (field) => field.optional === true && !answered(field.path) && !flagged.has(field.path),
+      )
+      .map((field) => field.path),
+  );
+}
+
+/**
+ * Vì sao CHƯA xác nhận được đầu bài — `null` khi xác nhận được. Worker vẫn kiểm lại lúc xác nhận
+ * (`brief/gate.ts`); ở đây chỉ để không mời bấm một nút chắc chắn bị từ chối (lượt chạy thật
+ * 23/10/2026: nút sáng ở 61 % cạnh câu «cần từ 70 %»).
+ */
+export function confirmBlockedReason(
+  score: number,
+  threshold: number | null,
+  issues: readonly { severity: string }[],
+): string | null {
+  const blocking = issues.filter((issue) => issue.severity === 'nghiem_trong').length;
+  if (threshold !== null && score < threshold) {
+    return `Chưa xác nhận được: mức độ đầy đủ ${Math.round(score * 100)}%, cần từ ${Math.round(
+      threshold * 100,
+    )}%. Bấm «Sửa đầu bài» và trả lời các câu trong «Còn thiếu».`;
+  }
+  if (blocking > 0) {
+    return `Chưa xác nhận được: còn ${blocking} chỗ chưa nhất quán nghiêm trọng ở khung bên phải.`;
+  }
+  return null;
+}
+
+/** Tách câu bắt buộc khỏi câu «(tùy chọn)» — chỉ câu bắt buộc mới là «Còn thiếu». */
+export function splitMissing(missing: readonly MissingItem[]): {
+  required: MissingItem[];
+  optional: MissingItem[];
+} {
+  return {
+    required: missing.filter((item) => !item.optional),
+    optional: missing.filter((item) => item.optional),
+  };
+}
+
+function MissingList({
+  items,
+  onJump,
+}: {
+  items: MissingItem[];
+  onJump?: (sectionId: string, path: string) => void;
+}) {
+  return (
+    <ul className="mt-2 space-y-1">
+      {items.map((item) => (
+        <li key={item.path}>
+          <a
+            href={`#brief-${item.path.replace(/\./g, '-')}`}
+            onClick={
+              onJump
+                ? (event) => {
+                    event.preventDefault();
+                    onJump(item.sectionId, item.path);
+                  }
+                : undefined
+            }
+            className="flex min-h-10 flex-wrap items-center gap-x-1 text-brand hover:underline"
+          >
+            {item.label}
+            <span className="text-fg-subtle">— {item.sectionTitle}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
  * Thước độ đầy đủ + danh sách còn thiếu + danh sách mâu thuẫn.
  *
@@ -964,6 +1150,7 @@ function CompletenessPanel({
   const blocking = issues.filter((issue) => issue.severity === 'nghiem_trong').length;
   const enough = threshold !== null && score.score >= threshold && blocking === 0;
   const tone = score.score === 0 ? 'draft' : enough ? 'completed' : 'pending';
+  const { required: requiredMissing, optional: optionalMissing } = splitMissing(score.missing);
 
   return (
     <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
@@ -994,32 +1181,25 @@ function CompletenessPanel({
         )}
       </div>
 
-      {score.missing.length > 0 && (
+      {/* «Còn thiếu» chỉ đếm câu BẮT BUỘC (lượt chạy thật 23/10/2026: «Còn thiếu (32)» trong đó
+          phần lớn là câu «(tùy chọn)» — danh sách đòi điền thứ ô nhập nói được bỏ trống). Câu tùy
+          chọn chưa trả lời gấp riêng bên dưới: chúng vẫn kéo điểm xuống, nên vẫn phải thấy được. */}
+      {requiredMissing.length > 0 && (
         <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
-          <p className="font-medium">Còn thiếu ({score.missing.length})</p>
-          <ul className="mt-2 space-y-1">
-            {score.missing.map((item) => (
-              <li key={item.path}>
-                <a
-                  href={`#brief-${item.path.replace(/\./g, '-')}`}
-                  onClick={
-                    onJump
-                      ? (event) => {
-                          event.preventDefault();
-                          onJump(item.sectionId, item.path);
-                        }
-                      : undefined
-                  }
-                  className="flex min-h-10 flex-wrap items-center gap-x-1 text-brand hover:underline"
-                >
-                  {item.label}
-                  {item.optional && <span className="text-fg-subtle">(tùy chọn)</span>}
-                  <span className="text-fg-subtle">— {item.sectionTitle}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
+          <p className="font-medium">Còn thiếu ({requiredMissing.length})</p>
+          <MissingList items={requiredMissing} onJump={onJump} />
         </div>
+      )}
+      {optionalMissing.length > 0 && (
+        <details className="rounded-lg border border-border bg-surface p-4 shadow-card">
+          <summary className="cursor-pointer font-medium select-none">
+            Câu tùy chọn chưa trả lời ({optionalMissing.length})
+          </summary>
+          <p className="mt-1 text-fg-subtle">
+            Bỏ trống vẫn dựng được phương án; trả lời thêm thì mức độ đầy đủ tăng.
+          </p>
+          <MissingList items={optionalMissing} onJump={onJump} />
+        </details>
       )}
 
       {issues.length > 0 && (
