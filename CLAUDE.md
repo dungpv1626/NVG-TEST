@@ -641,6 +641,9 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 | 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                                                       | **Xong trên máy (5B, T162)** — chờ anh Dũng chạy thử         |
 | Đ1  | Đợt 1 Kinh doanh (kế hoạch tổng): 1A–1H + bổ sung 18/10 (AI thật, đính kèm, in, phiếu riêng)                                                         | **Xong trên máy** — chờ anh Dũng chạy thử                    |
 | Đ2  | Đợt 2 Thi công (NVO trước): 2A mốc, 2B nhật ký giọng nói, 2D biên bản ký hai bên, 2E bảng theo dõi, 2F phiếu bảo hành, 2G mẫu nháp (0182, 0190–0194) | **Xong trên máy** trừ 2C (chờ câu 6) và mốc NVC (chờ câu 15) |
+| Đ3  | Đợt 3 Tài chính: 3A đợt thu gắn mốc, 3B đề nghị thu tiền, 3C dòng tiền tuần, 3D lãi / lỗ quản trị, 3E bất thường KSNB (0195–0199)                  | **Xong trên máy** — anh Dũng chưa chạy thử                   |
+| Đ4  | Đợt 4 Mua hàng – Kho: 4A gom đề nghị, 4B so giá, 4C đơn sắp trễ, 4D tồn tối thiểu (0200–0203)                                                    | **Xong trên máy** — anh Dũng chưa chạy thử                   |
+| Đ5  | Đợt 5: 5A TK ghi âm + vòng ý kiến, 5B AI Design 4 bước, 5C-1/5/9 đấu thầu, 5D NVS, 5E nhắc HĐLĐ, 5F hành chính (0205–0209)                         | **Xong phần không bị chặn**; còn 5C khác (câu 14, 19), bảng công (câu 6) |
 | HĐ  | Soạn hợp đồng bằng máy + bộ mẫu ba pháp nhân + ký không cần sếp vào app + bộ quét bản đã ký (0185–0189)                                              | **Xong trên máy** — anh Dũng đã chạy thử trọn tới bản quét   |
 | 0b  | Bộ nhận diện theo logo NVG                                                                                                                           | **Xong vòng đầu** — chờ duyệt ảnh                            |
 | PH  | Phát hành bản demo mới                                                                                                                               | **Chuẩn bị xong, CỐ Ý CHƯA deploy** (xem 9.3)                |
@@ -960,7 +963,24 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   THẬT các lượt trước cùng tuyến mô hình (`design_ai_run` + `design_ai_call`), chưa có lượt thì «Chưa đủ dữ liệu». So phương
   án cạnh nhau; ba lý do trừ điểm lớn nhất từ thước chấm đã lưu; ô «Yêu cầu sửa» đặt lại (đảo một phần T117 — chờ quyết);
   Bộ kết quả `.zip` dựng trên trình duyệt bằng pizzip, tên theo mã hồ sơ. Chưa chụp được ba bước sau bằng artifact thật
-  (CSDL máy không có lượt AI nào). Ảnh: `.claude/worktrees/agent-a899d8044512cd3c6/backup/dot5b-shots/`.
+  (CSDL máy không có lượt AI nào). Ảnh: `backup/dot5b-shots/`.
+- **Câu hỏi 1, 2, 4, 8 đã làm (22/10/2026):** 0217 — không thi công trước hợp đồng (`tk.handover_requires_signed_contract`
+  = true), trượt thầu tự chuyển cơ hội sang Mất cơ hội; 0218 — Tổng Giám đốc tự duyệt hồ sơ của mình
+  (`user_may_self_approve`), hợp đồng đã ký còn ≤ 90 ngày là «sắp hết hạn» (`contracts_expiring_soon`, cột «Hết hạn» ở danh
+  sách hợp đồng + khối trên Tổng quan điều hành). Phép thử `co-hoi-truot-thau`, `hd-sap-het-han`, ca TGĐ trong `flow-guard`.
+- **Bốn mạch song song đã gộp (23/10/2026):** Đợt 3, 4, 5, 5B chạy trong worktree riêng, dải migration riêng, phép thử CSDL
+  qua khoá chung; gộp xong chạy lại `npm run db:migrate` chuẩn (0195→0218 chạy lại đúng thứ tự) + `db:seed` + cả bộ `db`
+  (718/727; đỏ còn lại là `env-guard` và các tệp lúc đỏ lúc xanh khi chạy chung, chạy riêng xanh). Worktree đã gỡ; ảnh của
+  các mạch gom về `backup/dot3-*`, `dot4-*`, `dot5-*`, `dot5b-shots/`.
+- **Tham số DEMO (23/10/2026, anh Dũng: «dữ kiện nào chưa có thì tự lấy demo mặc định»):** kịch bản `mac-dinh` của bộ nạp
+  demo (`db/src/demo/scenario-defaults.ts`, `npm run db:demo-data -- --only=mac-dinh`) điền mọi số NVG chưa quyết: số ngày nhắc
+  (đợt thu 7, hẹn giao 3, giấy tờ / HĐLĐ / hồ sơ năng lực 30, hạn thầu 7, trả giàn giáo 3), hạn bảo hành 7, KSNB 90 % / 7 ngày,
+  đơn giá thuê + giá thuê nội bộ (70 %) + bồi thường cho 3 mã giàn giáo, 8 thời hạn xử lý phê duyệt (SLA), mức tồn tối thiểu
+  còn trống (15 % tồn). Chỉ điền ô trống, mô tả ghi «Giá trị DEMO — NVG thay»; KHÔNG bật công tắc AI. Đã chạy trên máy.
+- **Chạy AI Design THẬT lần đầu (23/10/2026, anh Dũng cho phép):** hồ sơ thử `NVO-TK-2026-THU5`, đầu bài nhà phố 5 × 18 m 4 tầng
+  (mục 1 điền tay trên giao diện, 6 mục còn lại từ `db/src/demo/nvo-dau-bai.json`, xác nhận trên giao diện). Hai lượt «Xếp mặt
+  bằng» (GPT-5.6 Terra, 1 phương án) đều HỎNG — 10 lần gọi mô hình, ≈ 0,74 USD, ~9 phút, 0 phương án. Ảnh + báo cáo lượt 1:
+  `backup/ai-that/` (kịch bản `backup/ai-that/*.cjs`). Danh sách chỗ khó dùng ở «Bước tiếp theo» 2b.
 - Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
@@ -976,6 +996,8 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Bộ quét + bản đã ký (0189)            | Xong trên máy, anh Dũng chạy thử bằng ảnh thật tới bản đạt (lần quét «sss» trên AB). `scan.test.ts` + `hd-template.test.ts` (22) xanh, đột biến chính sách kho đã đo đỏ. Chưa thử trên điện thoại thật                                                                                                                                                                          |
 | Nhật ký giọng nói (0190)              | Xong trên máy, chạy thử bằng `chihuytruong.nvo@…` ở khung điện thoại với AI giả lập. Máy xếp mục (`ai.site_log_enabled`) để TẮT — chưa duyệt chi phí; tắt thì vẫn chép chữ thật và đưa nguyên lời vào ô Nội dung                                                                                                                                                                |
 | Đợt 2 Thi công (0190–0194)            | Xong trên máy, anh Dũng CHƯA chạy thử (dữ liệu thử `NVO-CT-2026-0901`, `-0902`): nhật ký giọng nói, bảng theo dõi Trưởng phòng, biên bản ký hai bên → Kế toán, phiếu bảo hành, mẫu nháp khi bàn giao. Mỗi phần có phép thử CSDL + đột biến đã đo đỏ và chạy thử bằng đúng vai trên trình duyệt. Cả bộ `db` 644/649 (5 đỏ sẵn: `env-guard`, `kb-room-area-stats` khi chạy chung) |
+| Đợt 3 / 4 / 5 (0195–0209)             | Xong trên máy (mỗi phần có phép thử CSDL + đột biến đo đỏ, chạy thử bằng đúng vai); anh Dũng CHƯA chạy thử. Dữ liệu thử hậu tố THU3 / THU4 / THU5. Số chờ NVG đã có giá trị DEMO (kịch bản `mac-dinh`) |
+| AI Design 4 bước (5B)                 | Giao diện xong; chạy THẬT trên nhà phố 5 × 18 m: bộ xếp KHÔNG ra mặt bằng sau 2 lượt (≈ 0,74 USD). Mặt ngoài / Bộ kết quả / so phương án chưa kiểm được trên dữ liệu thật |
 | Bộ mẫu hợp đồng                       | Bản DỰ THẢO (anh Dũng gửi, dùng như chính thức) — chờ pháp chế NVG rà; bảng hỏi mục 6 trong tệp «00_Huong_dan» từng bộ chờ NVG trả lời. Tài khoản ngân hàng ba công ty là số DEMO                                                                                                                                                                                               |
 | AI trên máy                           | **Chạy THẬT**: Whisper (Workers AI) + Gemini 2.5 Flash trả phí — `workers/.dev.vars` `AI_FAKE=` rỗng, công tắc `ai.transcribe_enabled` / `ai.survey_summary_enabled` = 1 ở CSDL máy. Muốn quay về giả lập: `AI_FAKE=1`                                                                                                                                                          |
 | Bản demo cũ `nvg.tests99.workers.dev` | Vẫn chạy bản trước GĐ1, CSDL `awaiwegmuykhctnysvou` — ở tài khoản khác, máy này KHÔNG vào được                                                                                                                                                                                                                                                                                  |
@@ -1014,16 +1036,24 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    đã xác nhận, 4 ảnh nhật ký, 3 hạng mục bảo hành — chỉ thiếu biên bản nghiệm thu chủ đầu tư đã ký để sang «Bảo hành»).
    Còn của Đợt 2: 2C điểm danh tổ (câu 6), mốc nhà xưởng NVC (câu 15); chờ anh Dũng: bật `ai.site_log_enabled` (Gemini
    ~0,001 USD / lượt nói), đặt `tc.warranty_response_days`.
-   **Các đợt còn lại** (`doc/KE_HOACH_LAM_HO.md` mục 3 — đọc trước khi bắt đầu):
-   - **Đợt 3 Tài chính và kiểm soát — làm tiếp theo** (dùng mốc + biên bản của Đợt 2): 3A đợt thu gắn mốc / biên bản,
-     nhắc thu; 3B đề nghị thu tiền tự điền từ biên bản đã ký (gắn bộ quét); 3C dòng tiền 4–8 tuần; 3D lãi / lỗ từng
-     công trình; 3E danh sách bất thường cho KSNB (ngưỡng — câu 17). Xong khi: một bấm từ biên bản ra đề nghị thu
-     đúng số; CFO thấy tuần thiếu tiền trước khi tới.
-   - **Đợt 4 Mua hàng – Kho**: 4A gom đề nghị mua, 4B bảng so giá nhà cung cấp, 4C nhắc đơn sắp trễ, 4D tồn tối
-     thiểu (mức — câu 17).
-   - **Đợt 5 các bộ phận còn lại**: 5A Thiết kế khảo sát ghi âm + vòng ý kiến, 5B AI Design 4 bước, 5C hồ sơ dự thầu
-     NVC (câu 14, 19), 5D NVS cho thuê (giá bồi thường — câu 17), 5E Nhân sự bảng công (câu 6), 5F Hành chính.
-   - Đợt 4, 5 không phụ thuộc Đợt 3 — đổi thứ tự được nếu anh Dũng cần bộ phận nào trước.
+   **Đợt 3, 4, 5 đã xong trên máy (23/10/2026)** — anh Dũng chạy thử bằng đúng vai: Kế toán `/kt/dot-thu`,
+   `/kt/de-nghi-thu`, `/kt/dong-tien-theo-tuan`; TGĐ / KSNB `/tong-quan/bat-thuong`, `/bc/lai-lo-quan-tri`; Mua hàng
+   `/mh/gom-de-nghi`, `/mh/don-hang`; Kho `/kho/ton-kho`; Thiết kế khảo sát ghi âm + vòng ý kiến; `/ns/giay-to-phap-nhan`;
+   `/da/ho-so-nang-luc`; `/sx/bao-gia-thue`. Còn chặn: bảng công (câu 6), 5C-2/3/4/6/7/8/10 (câu 14, 19), mốc NVC (câu 15).
+   Lỗ có sẵn chưa sửa: chỉ huy trưởng thấy đơn đặt hàng công trình khác (chính sách `purchase_orders` / `deliveries` chỉ Mẫu
+   A) — hỏi anh Dũng có sửa không.
+2b. **AI Design — sửa theo lượt chạy thật 23/10 (chờ anh Dũng chọn thứ tự A / B / C):**
+   - (A) giao diện, không tốn AI: hỏng thì hiện LÝ DO tiếng Việt của lượt có lỗi chính (không phải lượt cuối) + gợi ý sửa
+     đầu bài; báo cáo `.md` lưu cả câu trả lời của mô hình; trần chi phí / hỏi trước khi gọi lại nhiều lượt, ước tính lần đầu từ
+     bảng giá; ô mật độ xây dựng < 1 thì cảnh báo («0,9 là 0,9 % — có phải 90 %?»; gõ 0.9 đang lưu 0,009); câu «(tùy chọn)»
+     không nằm trong «Còn thiếu»; «Xác nhận đầu bài» có hộp hỏi lại và ẩn khi < 70 %; «Lưu nháp» không đẩy ra khỏi biểu mẫu;
+     thống nhất bộ đếm bước (đang có «bước 1 trên 6», «Bước 1/5», «Bước 1 trên 7»); tên mô hình dễ hiểu + gợi ý chọn; khối ảnh
+     nội thất rời khỏi bước Mặt bằng khi chưa có mặt bằng; nhãn bước «Đang chạy» / «Hỏng»; số thập phân dấu phẩy trong câu
+     cảnh báo; lỗi trùng key React trên trang hồ sơ thiết kế; đầu bài 7 mục quá dài (mục 1 = 26 câu, ~6 màn hình, 42 thao tác).
+   - (B) vì sao bộ xếp không ra nhà ống 5 m 4 tầng (lỗi: phòng không có lối vào, phòng làm việc thiếu 1 m², thang không chạm
+     hành lang, cửa phòng khách chỉ đặt được ở cạnh giáp hàng xóm) — phát lại không tốn tiền từ ý định đã ghi; cần lưu câu
+     trả lời mô hình trước.
+   - (C) sau (B): một lượt thật nữa (≈ 0,3–0,5 USD, phải xin anh Dũng) để kiểm Mặt ngoài, Bộ kết quả, so phương án, ô yêu cầu sửa.
 3. **Phát hành — CHỈ sau khi xong mọi tính năng** (anh Dũng quyết 18/10/2026). Trình tự đã chuẩn bị:
    (a) chọn gói Cloudflare: Workers Paid 5 USD/tháng (đủ AI Design + Whisper), hoặc Free và tách `limits.cpu_ms` khỏi
    `workers/wrangler.jsonc` (AI Design hỏng, Whisper đoạn dài dễ hỏng); (b) khôi phục Supabase nếu đã tạm dừng; tạo lại mật
@@ -1031,7 +1061,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 --workspace=db` (Windows: không dùng `npm run db:migrate:demo` — cmd không hiểu cú pháp đặt biến) rồi seed cùng cách;
    (d) `npm run deploy:workers`; đặt secret `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_PAID_API_KEY` và các khoá AI Design
    (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `POLLINATIONS_API_KEY` — anh Dũng đã cho chép từ
-   `.dev.vars`); (e) `NVG_DB_TARGET=demo npx tsx db/src/demo/index.ts --confirm=fvfmtbdcvcniakigfpdm --only=nvo`;
+   `.dev.vars`); (e) `NVG_DB_TARGET=demo npx tsx db/src/demo/index.ts --confirm=fvfmtbdcvcniakigfpdm --only=nvo` và `--only=mac-dinh` (tham số DEMO); migrate demo bây giờ phải tới 0218;
    (f) `npm run deploy:web`; kiểm `curl https://nvg-api.automkt.workers.dev/design/health`; (g) bật hai công tắc AI ở trang
    Trợ lý AI của bản demo; chạy thử bằng đúng vai.
 4. Việc nhỏ treo của Đợt 1: AI điền luôn các ô «Thông tin hiện trường» riêng từng công ty; nút «Gửi mẫu» trên đầu mối /
@@ -1039,7 +1069,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: lịch sử bước chung `stage_transitions`; dải tiến trình gói thầu; QĐ-6 giao dịch nội bộ; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0195** (0195–0216 dành cho bốn mạch Đợt 3 / 4 / 5 / 5B đang làm song song trong worktree; bốn mạch song song đã gộp: 0195–0199 Đợt 3, 0200–0203 Đợt 4, 0205–0209 Đợt 5; 0217 câu 1 + 4, 0218 câu 2 + 8; số trống 0204, 0210–0216 bỏ qua; số mới dùng **0219**).
+**Migration tiếp theo: 0219.** (Đã dùng tới 0218; 0204, 0210–0216 bỏ trống — các mạch song song không dùng tới.)
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -1140,6 +1170,9 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Gom đề nghị mua ở khâu HỎI GIÁ, không gộp đơn hàng; báo giá thiếu mặt hàng không chọn được và không tính là thấp nhất | Mỗi đề nghị một công trình, một dòng ngân sách, một nơi giao (KT-05, TC-05) |
 | Giấy tờ pháp nhân và hồ sơ năng lực dùng chung `company_documents`; báo cáo tài chính hạn chế ở mức TỆP (Đấu thầu gắn được vào gói, không mở được) | Một giấy tờ không hai bản; Mẫu D cho báo cáo tài chính mà vẫn ráp được hồ sơ thầu |
 | Mọi nhắc hạn mới: quá hạn luôn báo một lần, báo trước chỉ khi tham số có số, đổi ngày hạn thì nhắc lại | Số ngày nhắc NVG chưa quyết (5.2) — không im lặng khi đã quá hạn |
+| Làm song song nhiều đợt bằng worktree riêng: mỗi mạch một dải số migration, áp tay bằng psql, phép thử CSDL qua khoá chung; gộp xong chạy lại `db:migrate` chuẩn | Anh Dũng yêu cầu làm song song Đợt 3 / 4 / 5. CSDL máy dùng chung: drizzle bỏ qua migration số nhỏ khi số lớn đã áp, và `global-teardown` xoá dữ liệu thử của mạch khác |
+| Số DEMO cho tham số NVG chưa quyết nằm ở bộ nạp dữ liệu demo (`mac-dinh`), KHÔNG ở migration / seed | Anh Dũng: «tự lấy demo mặc định»; bản vận hành vẫn phải dùng số NVG tự đặt (5.2) — migration giữ trống, demo nạp khi chủ động |
+| Chạy AI Design thật: dừng sau 2 lượt hỏng, báo cáo thay vì thử tiếp | Mỗi lượt hỏng vẫn tốn 0,28–0,46 USD; lỗi lặp lại ở bộ xếp, chạy thêm không cho thêm thông tin |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)
@@ -1165,7 +1198,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 16. CRM: số ngày nhắc gọi lại / chưa phản hồi / liên hệ lại khách M1 / chăm sóc khách cũ? Ai nhập data Marketing, có tự
     chia đầu mối cho Kinh doanh không? (để trống = chưa nhắc; người nhập là người phụ trách)
 17. Ngưỡng cảnh báo cho Kiểm soát nội bộ (duyệt sát hạn mức bao nhiêu %), mức tồn tối thiểu từng vật tư, bảng giá bồi
-    thường giàn giáo chính thức? (để trống)
+    thường giàn giáo chính thức? (migration để trống; dữ liệu demo đang dùng số DEMO của kịch bản `mac-dinh`)
 18. Thư viện mẫu: tư liệu ban đầu (hồ sơ năng lực, brochure, ảnh công trình, Catalogue NVS mới) — chủ dự án gửi sau.
     ĐÃ CHỐT: mẫu NVC / NVS cũng do Phòng Thiết kế đưa vào; Kinh doanh tự đặt thời hạn thu hồi link. ĐÃ CHỐT: link không giới
     hạn thời hạn tối đa.
@@ -1231,6 +1264,12 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   `Set-Content` của PowerShell 5.1 — nó thêm BOM và CRLF; dùng `sed -i`.
 - Dữ liệu thử Đợt 2 (công trình, biên bản, phiếu, mẫu) dọn bằng xoá mềm `deleted_at` (biên bản: `status = 'huy'`) +
   xoá thông báo theo `related_entity_id`. Mã công trình thử `NVO-CT-2026-09xx` đặt tay — dãy số NVO CT đang ở 78.
+- Chạy nhiều phiên / mạch cùng lúc trên một CSDL máy: phép thử `db/` phải đi qua khoá chung (thư mục
+  `C:/Users/wewea/.nvg-dbtest-lock`, kịch bản `dbtest-lock.cjs` ở scratchpad phiên 23/10) — `global-teardown` xoá mọi dữ liệu
+  thử sau mỗi lượt. Lượt hỏng giữa chừng có thể để sót quyền tạm (vd vai TKE của `thietke.nvo@` ở NVC do `tk-tc-lam-ro`) —
+  xoá rồi chạy lại.
+- Thử AI Design thật: Playwright bấm nút trên `/tk/ai-design/<hồ sơ>` (nút «Xếp mặt bằng» phải `exact: true`, vì nhãn bước
+  cũng chứa chữ ấy); một lượt 3–6 phút; chi phí xem ở `design_ai_call`, báo cáo tải bằng nút «Tải báo cáo (.md)».
 - Thử nhanh trên máy: «AB» `bd36f4d6-857f-49ff-a94d-f69c3cbf499c`, «Ok» `ad60f61f-6b09-47d4-9823-a92366659fb2`,
   công trình NVO `NVO-CT-2026-0901` (`a705ba2b-885f-4b9f-a971-b12364e7e4fd`). Khách thử «Dũng đen» trùng số với đầu mối
   NVC-DM-2026-0043 — để lại có chủ đích (chưa xoá).
