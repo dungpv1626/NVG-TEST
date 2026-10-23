@@ -883,7 +883,11 @@ function arrangeLevelCore(input: ArrangeInput): ArrangeResult {
     sketch && !weak && !failure.some((issue) => issue.code === 'door_from_stair')
       ? sketchNoAccess(input, intent, sketch, 'touch', true)
       : null;
+  // Hàng bản phác không dựng nổi theo bề ngang (T163): nguyên nhân của mọi lỗi phía sau (bộ xếp đã phải chia lại
+  // tầng), nên đứng đầu — câu nhắc của cách chia lại tả một bố cục mô hình không vẽ.
+  const rowTooNarrow = sketch ? sketchRowTooNarrow(input, intent, sketch) : null;
   const found = [
+    ...(rowTooNarrow ? [rowTooNarrow] : []),
     ...intent.issues,
     ...sketchIssues,
     ...failure,
@@ -1190,6 +1194,98 @@ function sketchBelowBrief(
     );
   }
   return null;
+}
+
+/**
+ * Hàng bản phác đặt CẠNH NHAU theo bề ngang những phòng mà cộng cạnh tối thiểu của chúng (`sketchMinExtent`: cạnh dùng
+ * được, cửa, số bậc thang) vượt bề ngang tầng — không cách căn vách nào dựng được hàng ấy, `null` khi không có.
+ *
+ * Lượt thật THU5 (23/10/2026, nhà phố 5 × 18 m, T163): mô hình vẽ gara 3 ô cạnh phòng khách 2 ô ở hàng đường. Gara cần
+ * 3,1 m, phòng khách 3,3 m, tầng rộng 5 m — bộ xếp chia lại tầng, đẩy phòng khách ra sau gara, rồi câu nhắc chỉ nói
+ * «phòng khách chỉ chạm cạnh nhà hàng xóm, vẽ nó chạm hàng đường» trong khi bản phác của mô hình ĐANG chạm hàng đường.
+ * Ba lượt sửa nộp lại y nguyên; lượt thứ năm của lượt kia mô hình tự viết ra mâu thuẫn và trả danh mục rỗng. Chỉ gọi
+ * khi tầng đã hỏng: tự nó không bác tầng nào (bộ xếp còn chia lại được), chỉ nói đúng chỗ bản phác không dựng nổi.
+ */
+function sketchRowTooNarrow(
+  input: ArrangeInput,
+  intent: LevelIntent,
+  sketch: PreparedSketch,
+): PlanIssue | null {
+  if (!input.construction.sketch) return null;
+  const { cells, cols, rows } = sketch.grid;
+  const f = sketch.footprint;
+  const cellW = (f.x1 - f.x0) / cols;
+  const cellH = (f.y1 - f.y0) / rows;
+  const leafOf = (id: string | null | undefined) => (id ? (intent.hostOf.get(id) ?? id) : null);
+  const box = new Map<string, { c0: number; c1: number; r0: number; r1: number }>();
+  cells.forEach((row, r) =>
+    row.forEach((raw, c) => {
+      const id = leafOf(raw);
+      if (!id) return;
+      const b = box.get(id);
+      if (!b) box.set(id, { c0: c, c1: c, r0: r, r1: r });
+      else {
+        b.c0 = Math.min(b.c0, c);
+        b.c1 = Math.max(b.c1, c);
+        b.r0 = Math.min(b.r0, r);
+        b.r1 = Math.max(b.r1, r);
+      }
+    }),
+  );
+  const { env } = environment(input, intent, f, 0);
+  const need = new Map<string, number>();
+  const needOf = (id: string) => {
+    let value = need.get(id);
+    if (value === undefined) {
+      const b = box.get(id)!;
+      value = sketchMinExtent(input, env, id, 'x', {
+        w: (b.c1 - b.c0 + 1) * cellW,
+        h: (b.r1 - b.r0 + 1) * cellH,
+      });
+      need.set(id, value);
+    }
+    return value;
+  };
+  const have = f.x1 - f.x0;
+  let worst: { ids: string[]; need: number; r0: number; r1: number } | null = null;
+  cells.forEach((row, r) => {
+    const ids: string[] = [];
+    for (const raw of row) {
+      const id = leafOf(raw);
+      if (id && ids[ids.length - 1] !== id && !ids.includes(id)) ids.push(id);
+    }
+    if (ids.length < 2) return;
+    const total = ids.reduce((sum, id) => sum + needOf(id), 0);
+    if (total <= have) return;
+    const same = worst && worst.ids.join('|') === ids.join('|') && worst.r1 === r - 1;
+    if (same) worst!.r1 = r;
+    else if (!worst || total - have > worst.need - have) worst = { ids, need: total, r0: r, r1: r };
+  });
+  if (!worst) return null;
+  const found = worst as { ids: string[]; need: number; r0: number; r1: number };
+  const typesOf = new Map(intent.leaves.map((leaf) => [leaf.id, leaf.types]));
+  const garage = found.ids.find((id) => (typesOf.get(id) ?? []).includes('garage'));
+  const rowsText = found.r0 === found.r1 ? `${found.r0 + 1}` : `${found.r0 + 1}–${found.r1 + 1}`;
+  const each = found.ids.map((id) => `"${id}" ≥ ${round2(needOf(id) / 100)} m`).join(', ');
+  const quoted = found.ids.map((id) => `"${id}"`).join(', ');
+  return arrangeIssue(
+    'sketch_row_too_narrow',
+    `Bản phác tầng ${input.level}: hàng ${rowsText} đặt ${quoted} cạnh nhau theo bề ngang — cần ít nhất ${round2(found.need / 100)} m (${each}) mà tầng chỉ rộng ${round2(have / 100)} m.`,
+    {
+      rows: rowsText,
+      rooms: quoted,
+      each,
+      need_m: round2(found.need / 100),
+      have_m: round2(have / 100),
+      // Nhà phố được vào nhà qua gara (T115): gara nằm trong hàng hỏng thì câu nhắc nói luôn lối ra — gara chiếm trọn
+      // hàng đường và làm phòng lối vào, phòng khách ngay sau nó.
+      garage:
+        input.level === 1 && input.garageEntry === true && garage
+          ? ` With the garage across the street rows, make "${garage}" the entry_room: people walk in beside the car through a door next to the garage door, then straight into the living room behind it.`
+          : '',
+    },
+    found.ids[0],
+  );
 }
 
 /**

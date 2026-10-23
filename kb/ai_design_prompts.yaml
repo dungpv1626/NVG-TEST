@@ -28,7 +28,8 @@
 # 9.9.2 (11/10/2026, T155 — lượt thật 79669685; T157): khối `floor_level` nói phòng khép kín / ban công riêng không phục vụ phòng khác (giặt phơi không mở qua ban công riêng của phòng ngủ); câu nhắc balcony_side_missing_reshaped (bản phác ĐÃ có ban công dọc mặt ấy, chương trình chia lại tầng mới nắn thành khối góc); câu nhắc stair_arrival_blocked (tầng trên: đầu người từ dưới bước ra không giáp lối đi, T157).
 # 9.9.3 (13/10/2026, T160 — Haan chấm phương án d084a46e): câu nhắc C14 (ô giao thông to như một phòng), D6 (ban công chính mặt tiền mở từ giao thông chung), D7 (ban công mặt hông nhỏ hơn mặt tiền). Chỉ gửi khi phương án dưới ngưỡng. Gỡ hai câu tự mâu thuẫn: C12 bản phác «draw it one cell wide» (trái `corridor_min_cells` = 2 ô của biệt thự) nay theo `corridor_min_cells`; D5 bỏ thứ tự «bedroom first» (trái D6).
 # 9.10.0 (14/10/2026, T161 — Haan hỏi lỗi d084a46e ở mô hình hay dựng hình): luật 6 — hành lang / khu chung dọc trọn `arrival` của ô thang (tri thức `stair_min_m.arrival` mới, ngay lượt đầu); hành lang đúng `corridor_min_cells` ô, sàn rộng hơn là phòng; luật 10 + `B_balcony` + `R_balcony` — ban công chính mặt tiền lớn nhất, mở từ hành lang / khu chung, ban công khác nhỏ (thay «bedroom first» cho mọi ban công); câu nhắc `balcony_main_access`, `balcony_main_depth` (hai câu đầu bài mới). Rút câu trùng ý để vừa trần T46: câu mở đầu kể lại lược đồ, «Relationships…» (đã có trong lược đồ), «habitable rooms on open_faces» (trùng `knowledge.faces`), «the stair where it is on storey 1» (trùng luật 6).
-version: '9.10.0'
+# 9.11.0 (23/10/2026, T163 — lượt thật THU5 nhà phố 5 × 18 m có ô tô): `floor_level` luật 7 có câu `[[entry_garage|…]]` — gara được làm entry_room khi hàng đường không đủ cho gara và phòng khách cạnh nhau (luật T115 trước chỉ có ở `house_layout` / `house_bands`); câu nhắc mới sketch_row_too_narrow, entrance_wrong_side_garage, door_outside_on_boundary_garage.
+version: '9.11.0'
 
 program:
   system: |
@@ -198,7 +199,11 @@ floor_level:
        `knowledge.stair_min_m`; on every storey a corridor or the living space runs along all of
        its `arrival` side(s) (where people step on, off).
     7. Garages together reach `knowledge.garage_min_m2` when given. `garage_room` is the garage, or
-       null. `entry_room` is the storey-1 room with the front door, on the brief's entrance side.
+       null. `entry_room` is the storey-1 room with the front door, on the brief's entrance side.[[entry_garage|
+       When the street rows are too narrow for the garage and the living room side by side, the
+       garage runs across them and is the `entry_room`: people walk in beside the car through a
+       door next to the garage door, then straight into the living room behind it. Never put the
+       living room in front of the garage.]]
     8. No `wc` over the cells of a `kitchen` or `altar_room` one storey down; no wc or laundry over a
        living, dining or bedroom below.
     9. An `altar_room` never shares a wall with a `wc` nor faces a wc door.
@@ -323,6 +328,8 @@ floor_level:
     sketch_pinwheel: '- The sketch of this storey is a pinwheel with no wall-to-wall dividing line; redraw it as bands of rooms.'
     sketch_pinwheel_at: '- The sketch of this storey has no wall-to-wall dividing line in {area}: the nearest line, {line}, is cut by {rooms}. Make each of those rooms one rectangle that stays on one side of that line (a corridor is one straight band, not a T), so the area splits into bands.'
     sketch_rooms_too_small: '- The sketch of this storey puts too many rooms side by side in one band; spread them over more bands.'
+    # T163 (lượt thật THU5, nhà phố 5 m): gara và phòng khách vẽ cạnh nhau ở hàng đường, cộng cạnh tối thiểu vượt bề ngang.
+    sketch_row_too_narrow: '- In the sketch, rows {rows} put {rooms} side by side across the storey; together they need at least {need_m} m ({each}) but the storey is only {have_m} m wide, so the program had to move rooms away from where you drew them. Stack those rooms one behind the other along the depth, each across the width it needs.{garage}'
     sketch_island_room: '- In the sketch, {rooms} sit completely inside another room, so they have no way out; draw them touching a corridor or an outside wall.'
     # Không phải mã cổng: chương trình dựng khi phòng mang cửa chính thiếu vách ra ngoài hoặc bị đi
     # xuyên (`entryBoxedIssue`, lượt đo 458d9a91) — thay dòng `route_through_service` trỏ vào nó.
@@ -339,9 +346,13 @@ floor_level:
     room_without_door: '- Room "{room}" had no door: it touched only {neighbours}; draw it against a corridor or shared room.'
     room_unreachable_on_level: '- Room "{room}" could not be reached from {from}; draw it against a corridor.'
     entrance_wrong_side: '- The client put the main entrance on the {side} side; make entry_room a room drawn on that side.'
+    # T163: nhà phố có gara ở hàng đường (vào nhà qua gara, T115) — câu trên đẩy phòng khách ra cạnh / trước gara; lô 5 m
+    # không đủ bề ngang cho cả hai (lượt thật THU5: ba lượt sửa nộp lại y nguyên, lượt thứ năm mô hình trả danh mục rỗng).
+    entrance_wrong_side_garage: '- The main entrance is on the {side} side, where the garage "{garage}" is: make "{garage}" the entry_room.'
     vehicle_door_wrong_side: '- The client put the vehicle entrance on the {side} side; draw the garage on that side.'
     door_no_outside_edge: '- "{room}" does not reach the outside of the block, so it cannot carry the front door; choose a room drawn on an open side.'
     door_outside_on_boundary: '- "{room}" needs a door to the outside but only touches a neighbour''s side; draw it touching the street row or another open side, with no other room between it and that side.'
+    door_outside_on_boundary_garage: '- "{room}" cannot carry the front door: the garage "{garage}" takes the street side. People walk in through "{garage}" beside the car (a door next to the garage door), then into "{room}" right behind it; do not move "{room}" beside or in front of the garage.'
     ensuite_door_wrong: '- "{room}" is en-suite to "{parent}" but ended up away from it; draw it against "{parent}".'
     door_from_stair: '- Room "{room}" could only be entered from the stair "{stair}"; only corridors, the living/dining space, the roof terrace and the elevator open off the stair; every other room (wc, kitchen and storage included) opens off a corridor — draw a corridor between them.'
     stair_arrival_blocked: '- The stair "{stair}": people from the storey below step off on its {end} side, but that side touches only {touching}. Put the corridor or the living space along that whole {end} side of "{stair}", where the flight arrives; an opening anywhere else on the stair is beside a flight and nobody can step out there.'
@@ -1019,6 +1030,7 @@ house_layout:
     sketch_pinwheel: '- This storey is a pinwheel with no wall-to-wall dividing line; lay it out as bands of rooms.'
     sketch_pinwheel_at: '- This storey has no wall-to-wall dividing line in {area}: the nearest line, {line}, is cut by {rooms}. Make each of those rooms stay on one side of that line (a corridor is one straight band, not a T), so the area splits into bands.'
     sketch_rooms_too_small: '- This storey puts too many rooms side by side in one band; spread them over more bands.'
+    sketch_row_too_narrow: '- {rooms} stand side by side across the storey; together they need at least {need_m} m ({each}) but the storey is only {have_m} m wide. Place them one behind the other along the depth, each across the width it needs.{garage}'
     sketch_island_room: '- {rooms} sit completely inside another room, so they have no way out; place them touching a corridor or an outside wall.'
     sketch_stair_isolated: '- The stair "{stair}" touches no corridor or shared room — it only touches {touching}, so nobody can step off it on this storey. Put the corridor (or the living space) against the stair along at least {door_mm} mm. A lift beside the stair opens onto that same corridor; it never sits between the stair and the corridor.{also}'
     sketch_replaced: '- Your layout of storey {level} failed the checks below, so the program partitioned that storey itself and moved rooms away from where you placed them — the problems after these lines may come from that. Fix storey {level} first so the program can keep your layout.'

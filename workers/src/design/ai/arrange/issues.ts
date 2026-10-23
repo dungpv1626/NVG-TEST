@@ -49,6 +49,8 @@ export const ARRANGE_ISSUE_CODES = [
   'sketch_stair_only',
   // Ép ô thang / thang máy về ô tầng dưới đã dựng xoá trọn một phòng (lượt thật 913bc2ad).
   'sketch_core_overlap',
+  // Hàng bản phác đặt cạnh nhau những phòng cộng cạnh tối thiểu vượt bề ngang tầng (T163, lượt thật THU5 nhà phố 5 m).
+  'sketch_row_too_narrow',
 ] as const;
 
 export type ArrangeIssueCode = (typeof ARRANGE_ISSUE_CODES)[number];
@@ -137,6 +139,8 @@ export const REVISABLE_CODES: ReadonlySet<string> = new Set([
   'sketch_stair_isolated',
   'sketch_stair_only',
   'sketch_core_overlap',
+  // Hàng bản phác không dựng nổi theo bề ngang (T163): mô hình đổi bố cục dải — chương trình không dời được cả hàng.
+  'sketch_row_too_narrow',
   // Phòng hụt diện tích tối thiểu đầu bài khai (Haan chọn 23/09/2026, sau lượt chạy thật fad0c0fa):
   // bản phác vẽ master 16 ô cho mức 25 m² — chỗ sai là số ô mô hình vẽ, nên mô hình sửa được. Trước đó
   // mã này là lỗi hình học và lượt chạy dừng ngay, mô hình không bao giờ được biết phải vẽ to hơn.

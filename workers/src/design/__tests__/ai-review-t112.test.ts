@@ -242,6 +242,8 @@ describe('lời dẫn 9.4.0 ghép theo đầu bài', () => {
       terrace: true,
       ong_ba_unset: false,
       roof: false,
+      // Đầu bài này không cho vào nhà qua gara (T163) — câu gara làm entry_room không có.
+      entry_garage: false,
     });
     expect(text).not.toMatch(/elevator|lift/i);
     expect(text).not.toContain('ong_ba');

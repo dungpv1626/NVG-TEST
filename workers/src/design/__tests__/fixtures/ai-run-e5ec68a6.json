@@ -1,0 +1,1289 @@
+{
+ "digest": {
+  "schema_version": "1.2.0",
+  "building_type": "nha_pho",
+  "locality": "ha_noi",
+  "floors": 4,
+  "site": {
+   "shape": "chu_nhat",
+   "width_m": 5,
+   "depth_m": 18,
+   "rear_width_m": null,
+   "boundary_m": null,
+   "orientation": "DN",
+   "access_sides": [
+    "front"
+   ],
+   "adjacent": {
+    "front": "duong_lon",
+    "back": "nha_hang_xom",
+    "left": "nha_hang_xom",
+    "right": "nha_hang_xom"
+   },
+   "setback_required_m": {
+    "front": 0,
+    "back": 1.5,
+    "left": 0,
+    "right": 0
+   },
+   "max_density": 0.9,
+   "main_entrance_side": "front",
+   "vehicle_entrance_side": "front",
+   "boundary_walls": {
+    "front": null,
+    "back": "rieng",
+    "left": "rieng",
+    "right": "rieng"
+   },
+   "road_level_m": 0,
+   "land_level_m": 0.15,
+   "harsh_sun_sides": [
+    "front"
+   ],
+   "cool_wind_sides": [
+    "front"
+   ],
+   "road_width_m": 6,
+   "flood_risk": "khong",
+   "existing_structure": "nha_cu_pha_do",
+   "neighbour_floors": {
+    "front": null,
+    "back": 2,
+    "left": 4,
+    "right": 3
+   }
+  },
+  "family": [
+   {
+    "role": "ong_ba",
+    "count": 1,
+    "floor": 2,
+    "floor_pref": null,
+    "needs": [
+     "bedroom"
+    ],
+    "ensuite": true,
+    "ages": null
+   },
+   {
+    "role": "vo_chong",
+    "count": 2,
+    "floor": 3,
+    "floor_pref": null,
+    "needs": [
+     "balcony",
+     "closet"
+    ],
+    "ensuite": true,
+    "ages": null
+   },
+   {
+    "role": "con",
+    "count": 1,
+    "floor": 3,
+    "floor_pref": null,
+    "needs": [
+     "bedroom",
+     "study_area"
+    ],
+    "ensuite": null,
+    "ages": null
+   },
+   {
+    "role": "con",
+    "count": 1,
+    "floor": 4,
+    "floor_pref": null,
+    "needs": [
+     "bedroom",
+     "study_area"
+    ],
+    "ensuite": null,
+    "ages": null
+   }
+  ],
+  "required_spaces": [
+   {
+    "type": "garage",
+    "floor": 1,
+    "area_m2": null,
+    "ensuite": null,
+    "amenities": "1 ô tô 5 chỗ, 2 xe máy"
+   },
+   {
+    "type": "living",
+    "floor": 1,
+    "area_m2": 16,
+    "ensuite": null,
+    "amenities": null
+   },
+   {
+    "type": "kitchen",
+    "floor": 1,
+    "area_m2": null,
+    "ensuite": null,
+    "amenities": null
+   },
+   {
+    "type": "dining",
+    "floor": 1,
+    "area_m2": null,
+    "ensuite": null,
+    "amenities": null
+   },
+   {
+    "type": "wc",
+    "floor": 1,
+    "area_m2": null,
+    "ensuite": null,
+    "amenities": null
+   },
+   {
+    "type": "light_well",
+    "floor": 1,
+    "area_m2": null,
+    "ensuite": null,
+    "amenities": "giếng trời giữa nhà, thông suốt lên mái"
+   },
+   {
+    "type": "bedroom",
+    "floor": 2,
+    "area_m2": 15,
+    "ensuite": true,
+    "amenities": "phòng bà nội 70 tuổi"
+   },
+   {
+    "type": "master_bedroom",
+    "floor": 3,
+    "area_m2": 16,
+    "ensuite": true,
+    "amenities": null
+   },
+   {
+    "type": "bedroom",
+    "floor": 3,
+    "area_m2": 10,
+    "ensuite": false,
+    "amenities": null
+   },
+   {
+    "type": "bedroom",
+    "floor": 4,
+    "area_m2": 10,
+    "ensuite": false,
+    "amenities": null
+   },
+   {
+    "type": "study",
+    "floor": 2,
+    "area_m2": 10,
+    "ensuite": null,
+    "amenities": null
+   },
+   {
+    "type": "wc",
+    "floor": 2,
+    "area_m2": null,
+    "ensuite": null,
+    "amenities": null
+   },
+   {
+    "type": "balcony",
+    "floor": 3,
+    "area_m2": null,
+    "ensuite": null,
+    "amenities": null
+   },
+   {
+    "type": "altar_room",
+    "floor": 4,
+    "area_m2": 9,
+    "ensuite": null,
+    "amenities": null
+   },
+   {
+    "type": "laundry",
+    "floor": 4,
+    "area_m2": null,
+    "ensuite": null,
+    "amenities": "máy giặt, phơi đồ"
+   },
+   {
+    "type": "wc",
+    "floor": 4,
+    "area_m2": null,
+    "ensuite": null,
+    "amenities": null
+   },
+   {
+    "type": "terrace",
+    "floor": 4,
+    "area_m2": null,
+    "ensuite": null,
+    "amenities": "sân thượng phía sau, trồng cây"
+   }
+  ],
+  "massing": null,
+  "parking": {
+   "cars": 1,
+   "motorbikes": 2,
+   "car_size": "gam_thap",
+   "ev_charging": false
+  },
+  "style": "hien_dai",
+  "priorities": [
+   "natural_light",
+   "natural_ventilation",
+   "area_efficiency",
+   "easy_maintenance"
+  ],
+  "free_text": {
+   "design_task": null,
+   "functional_needs": null,
+   "style_note": null,
+   "site_condition": null
+  },
+  "survey": null,
+  "household": {
+   "occupation": "nhân viên văn phòng",
+   "religion": "tho_cung_to_tien",
+   "altar_arrangement": "phong_tho_rieng",
+   "altar_floor": 4,
+   "feng_shui": "khong_xem",
+   "feng_shui_notes": null,
+   "taboos": null,
+   "home_business": {
+    "mode": "khong",
+    "floor_count": null,
+    "separate_entrance": null,
+    "customer_wc": null,
+    "staff_count": null,
+    "note": null
+   }
+  },
+  "lifestyle": {
+   "cooking": "nau_hang_ngay_don_gian",
+   "second_kitchen": false,
+   "dining_place": "ban_an_rieng",
+   "living_dining_kitchen": "an_bep_lien_khach_rieng",
+   "guests": "thinh_thoang",
+   "overnight_guests": false,
+   "work_from_home": true,
+   "night_shift": false,
+   "reduced_mobility": false,
+   "drying": "phoi_nang_ngoai_troi",
+   "pets": "khong",
+   "daily_rhythm": null
+  },
+  "storage": {
+   "level": "it",
+   "items": [
+    "kho_chung",
+    "do_theo_mua"
+   ],
+   "note": null
+  },
+  "vertical": {
+   "elevator": "khong",
+   "elevator_capacity": null,
+   "elevator_shaft_width_m": null,
+   "elevator_shaft_depth_m": null,
+   "elevator_position": null,
+   "elevator_layout_note": null,
+   "stair_type": "thang_ho",
+   "stair_shape": "chu_u"
+  },
+  "entrance": {
+   "floor_above_road_m": 0.15,
+   "steps_from_yard": false,
+   "step_count": null,
+   "vehicle_ramp": true
+  },
+  "balconies": {
+   "required_sides": [
+    "front"
+   ],
+   "optional_sides": null,
+   "projection_by_side": {
+    "front": 0.9
+   },
+   "sides": [
+    "front"
+   ],
+   "scope": "chi_mat_tien",
+   "projection_over_boundary": true,
+   "projection_m": 0.9,
+   "drying_balcony": false,
+   "note": null,
+   "main_front_access": null,
+   "main_front_depth_m": null
+  },
+  "systems": {
+   "water_storage": [
+    "bon_mai",
+    "may_bom_tang_ap"
+   ],
+   "solar_water": true,
+   "aircon_outdoor": "san_thuong",
+   "note": null
+  },
+  "future": {
+   "expansion": "khong",
+   "expansion_floors": null,
+   "phasing": false
+  },
+  "finishing_level": "kha",
+  "custom": null
+ },
+ "intents": {
+  "round1": {
+   "variant_label": "Giếng trời giữa nhà – lõi thang lệch trái",
+   "rationale": "Tổ chức lõi thang chữ U và giếng trời tại nửa sau nhà để đưa sáng, gió xuống các tầng giữa. Tầng 1 ưu tiên gara đủ xe, khách riêng và cụm bếp–ăn liên thông; các tầng trên dành cho không gian riêng tư, làm việc và thờ cúng. Sân thượng được chuyển ra mặt trước để tuân thủ yêu cầu mặt thoáng duy nhất của lô đất.",
+   "assumptions": [
+    "Yêu cầu sân thượng phía sau xung đột với quy tắc chỉ được bố trí sân thượng có cạnh dài tại mặt trước; phương án đặt sân thượng phía trước, vẫn dành diện tích trồng cây.",
+    "Ban công chung mặt tiền được bố trí tại tầng 3 để là ban công chính; ban công nhỏ kế bên thuộc phòng ngủ chính.",
+    "Giếng trời giữa nhà thông mái được giữ thẳng trục tại góc sau phải, kết hợp lấy sáng cho hành lang và khu thang.",
+    "Cần xác nhận lại kích thước xe thực tế; gara dự kiến đáp ứng một sedan 5 chỗ và hai xe máy theo cách đỗ nối tiếp. "
+   ],
+   "rooms": [
+    {
+     "id": "G1",
+     "type": "garage",
+     "level": 1,
+     "target_area_m2": 20,
+     "ensuite_of": null
+    },
+    {
+     "id": "L1",
+     "type": "living",
+     "level": 1,
+     "target_area_m2": 16,
+     "ensuite_of": null
+    },
+    {
+     "id": "K1",
+     "type": "kitchen",
+     "level": 1,
+     "target_area_m2": 6,
+     "ensuite_of": null
+    },
+    {
+     "id": "D1",
+     "type": "dining",
+     "level": 1,
+     "target_area_m2": 9,
+     "ensuite_of": null
+    },
+    {
+     "id": "W1",
+     "type": "wc",
+     "level": 1,
+     "target_area_m2": 2.4,
+     "ensuite_of": null
+    },
+    {
+     "id": "C1",
+     "type": "circulation",
+     "level": 1,
+     "target_area_m2": 4,
+     "ensuite_of": null
+    },
+    {
+     "id": "S1",
+     "type": "stair",
+     "level": 1,
+     "target_area_m2": 8,
+     "ensuite_of": null
+    },
+    {
+     "id": "LW1",
+     "type": "light_well",
+     "level": 1,
+     "target_area_m2": 1.5,
+     "ensuite_of": null
+    },
+    {
+     "id": "B2",
+     "type": "bedroom",
+     "level": 2,
+     "target_area_m2": 15,
+     "ensuite_of": null
+    },
+    {
+     "id": "WB2",
+     "type": "wc",
+     "level": 2,
+     "target_area_m2": 2.4,
+     "ensuite_of": "B2"
+    },
+    {
+     "id": "ST2",
+     "type": "study",
+     "level": 2,
+     "target_area_m2": 10,
+     "ensuite_of": null
+    },
+    {
+     "id": "W2",
+     "type": "wc",
+     "level": 2,
+     "target_area_m2": 2.4,
+     "ensuite_of": null
+    },
+    {
+     "id": "C2",
+     "type": "circulation",
+     "level": 2,
+     "target_area_m2": 7,
+     "ensuite_of": null
+    },
+    {
+     "id": "C2B",
+     "type": "circulation",
+     "level": 2,
+     "target_area_m2": 3,
+     "ensuite_of": null
+    },
+    {
+     "id": "S2",
+     "type": "stair",
+     "level": 2,
+     "target_area_m2": 8,
+     "ensuite_of": null
+    },
+    {
+     "id": "LW2",
+     "type": "light_well",
+     "level": 2,
+     "target_area_m2": 1.5,
+     "ensuite_of": null
+    },
+    {
+     "id": "MB3",
+     "type": "master_bedroom",
+     "level": 3,
+     "target_area_m2": 16,
+     "ensuite_of": null
+    },
+    {
+     "id": "WM3",
+     "type": "wc",
+     "level": 3,
+     "target_area_m2": 2.4,
+     "ensuite_of": "MB3"
+    },
+    {
+     "id": "CH3",
+     "type": "bedroom",
+     "level": 3,
+     "target_area_m2": 10,
+     "ensuite_of": null
+    },
+    {
+     "id": "BM3",
+     "type": "balcony",
+     "level": 3,
+     "target_area_m2": 3,
+     "ensuite_of": null
+    },
+    {
+     "id": "BP3",
+     "type": "balcony",
+     "level": 3,
+     "target_area_m2": 2,
+     "ensuite_of": "MB3"
+    },
+    {
+     "id": "C3",
+     "type": "circulation",
+     "level": 3,
+     "target_area_m2": 6,
+     "ensuite_of": null
+    },
+    {
+     "id": "C3B",
+     "type": "circulation",
+     "level": 3,
+     "target_area_m2": 4,
+     "ensuite_of": null
+    },
+    {
+     "id": "C3C",
+     "type": "circulation",
+     "level": 3,
+     "target_area_m2": 3,
+     "ensuite_of": null
+    },
+    {
+     "id": "S3",
+     "type": "stair",
+     "level": 3,
+     "target_area_m2": 8,
+     "ensuite_of": null
+    },
+    {
+     "id": "LW3",
+     "type": "light_well",
+     "level": 3,
+     "target_area_m2": 1.5,
+     "ensuite_of": null
+    },
+    {
+     "id": "T4",
+     "type": "terrace",
+     "level": 4,
+     "target_area_m2": 6,
+     "ensuite_of": null
+    },
+    {
+     "id": "B4",
+     "type": "bedroom",
+     "level": 4,
+     "target_area_m2": 10,
+     "ensuite_of": null
+    },
+    {
+     "id": "A4",
+     "type": "altar_room",
+     "level": 4,
+     "target_area_m2": 9,
+     "ensuite_of": null
+    },
+    {
+     "id": "LA4",
+     "type": "laundry",
+     "level": 4,
+     "target_area_m2": 3,
+     "ensuite_of": null
+    },
+    {
+     "id": "W4",
+     "type": "wc",
+     "level": 4,
+     "target_area_m2": 2.4,
+     "ensuite_of": null
+    },
+    {
+     "id": "C4",
+     "type": "circulation",
+     "level": 4,
+     "target_area_m2": 6,
+     "ensuite_of": null
+    },
+    {
+     "id": "C4B",
+     "type": "circulation",
+     "level": 4,
+     "target_area_m2": 3,
+     "ensuite_of": null
+    },
+    {
+     "id": "S4",
+     "type": "stair",
+     "level": 4,
+     "target_area_m2": 8,
+     "ensuite_of": null
+    },
+    {
+     "id": "LW4",
+     "type": "light_well",
+     "level": 4,
+     "target_area_m2": 1.5,
+     "ensuite_of": null
+    }
+   ],
+   "relationships": [
+    {
+     "a": "L1",
+     "b": "D1",
+     "kind": "adjacent"
+    },
+    {
+     "a": "D1",
+     "b": "K1",
+     "kind": "open"
+    },
+    {
+     "a": "D1",
+     "b": "W1",
+     "kind": "adjacent"
+    },
+    {
+     "a": "W1",
+     "b": "C1",
+     "kind": "adjacent"
+    },
+    {
+     "a": "C1",
+     "b": "S1",
+     "kind": "adjacent"
+    },
+    {
+     "a": "D1",
+     "b": "C1",
+     "kind": "adjacent"
+    },
+    {
+     "a": "B2",
+     "b": "WB2",
+     "kind": "adjacent"
+    },
+    {
+     "a": "B2",
+     "b": "C2",
+     "kind": "adjacent"
+    },
+    {
+     "a": "ST2",
+     "b": "C2",
+     "kind": "adjacent"
+    },
+    {
+     "a": "W2",
+     "b": "C2",
+     "kind": "adjacent"
+    },
+    {
+     "a": "C2",
+     "b": "C2B",
+     "kind": "adjacent"
+    },
+    {
+     "a": "C2B",
+     "b": "S2",
+     "kind": "adjacent"
+    },
+    {
+     "a": "MB3",
+     "b": "WM3",
+     "kind": "adjacent"
+    },
+    {
+     "a": "MB3",
+     "b": "BP3",
+     "kind": "adjacent"
+    },
+    {
+     "a": "MB3",
+     "b": "C3B",
+     "kind": "adjacent"
+    },
+    {
+     "a": "CH3",
+     "b": "C3",
+     "kind": "adjacent"
+    },
+    {
+     "a": "BM3",
+     "b": "C3",
+     "kind": "adjacent"
+    },
+    {
+     "a": "C3",
+     "b": "C3B",
+     "kind": "adjacent"
+    },
+    {
+     "a": "C3B",
+     "b": "C3C",
+     "kind": "adjacent"
+    },
+    {
+     "a": "C3B",
+     "b": "S3",
+     "kind": "adjacent"
+    },
+    {
+     "a": "T4",
+     "b": "C4",
+     "kind": "adjacent"
+    },
+    {
+     "a": "B4",
+     "b": "C4",
+     "kind": "adjacent"
+    },
+    {
+     "a": "A4",
+     "b": "C4",
+     "kind": "adjacent"
+    },
+    {
+     "a": "LA4",
+     "b": "C4B",
+     "kind": "adjacent"
+    },
+    {
+     "a": "W4",
+     "b": "C4B",
+     "kind": "adjacent"
+    },
+    {
+     "a": "C4B",
+     "b": "S4",
+     "kind": "adjacent"
+    }
+   ],
+   "sketches": [
+    {
+     "level": 1,
+     "rows": [
+      "G1 G1 G1 L1 L1",
+      "G1 G1 G1 L1 L1",
+      "G1 G1 G1 L1 L1",
+      "G1 G1 G1 L1 L1",
+      "G1 G1 G1 L1 L1",
+      "G1 G1 G1 L1 L1",
+      "G1 G1 G1 L1 L1",
+      "G1 G1 G1 L1 L1",
+      "G1 G1 G1 L1 L1",
+      "K1 K1 K1 D1 D1",
+      "K1 K1 K1 D1 D1",
+      "W1 W1 W1 D1 D1",
+      "C1 C1 C1 D1 D1",
+      "S1 S1 S1 D1 D1",
+      "S1 S1 S1 D1 D1",
+      "S1 S1 S1 LW1 LW1",
+      "S1 S1 S1 LW1 LW1"
+     ]
+    },
+    {
+     "level": 2,
+     "rows": [
+      "B2 B2 B2 B2 WB2",
+      "B2 B2 B2 B2 WB2",
+      "B2 B2 B2 B2 WB2",
+      "B2 B2 B2 B2 C2",
+      "B2 B2 B2 B2 C2",
+      "ST2 ST2 ST2 C2 C2",
+      "ST2 ST2 ST2 C2 C2",
+      "ST2 ST2 ST2 C2 C2",
+      "ST2 ST2 ST2 C2 C2",
+      "W2 W2 W2 C2 C2",
+      "W2 W2 W2 C2 C2",
+      "C2B C2B C2B C2 C2",
+      "C2B C2B C2B C2 C2",
+      "S2 S2 S2 C2 C2",
+      "S2 S2 S2 C2 C2",
+      "S2 S2 S2 LW2 LW2",
+      "S2 S2 S2 LW2 LW2"
+     ]
+    },
+    {
+     "level": 3,
+     "rows": [
+      "BM3 BM3 BM3 BP3 BP3",
+      "C3 C3 C3 MB3 MB3",
+      "C3 C3 C3 MB3 MB3",
+      "CH3 CH3 CH3 MB3 MB3",
+      "CH3 CH3 CH3 MB3 MB3",
+      "CH3 CH3 CH3 MB3 MB3",
+      "CH3 CH3 CH3 MB3 MB3",
+      "C3B C3B C3B MB3 MB3",
+      "C3B C3B C3B MB3 MB3",
+      "C3B C3B C3B MB3 MB3",
+      "C3B C3B C3B WM3 WM3",
+      "C3B C3B C3B WM3 WM3",
+      "C3B C3B C3B C3C C3C",
+      "S3 S3 S3 C3C C3C",
+      "S3 S3 S3 C3C C3C",
+      "S3 S3 S3 LW3 LW3",
+      "S3 S3 S3 LW3 LW3"
+     ]
+    },
+    {
+     "level": 4,
+     "rows": [
+      "T4 T4 T4 T4 T4",
+      "T4 T4 T4 T4 T4",
+      "C4 C4 C4 B4 B4",
+      "C4 C4 C4 B4 B4",
+      "C4 C4 C4 B4 B4",
+      "A4 A4 A4 B4 B4",
+      "A4 A4 A4 B4 B4",
+      "A4 A4 A4 B4 B4",
+      "A4 A4 A4 B4 B4",
+      "C4B C4B C4B LA4 LA4",
+      "C4B C4B C4B LA4 LA4",
+      "C4B C4B C4B LA4 LA4",
+      "C4B C4B C4B W4 W4",
+      "S4 S4 S4 W4 W4",
+      "S4 S4 S4 W4 W4",
+      "S4 S4 S4 LW4 LW4",
+      "S4 S4 S4 LW4 LW4"
+     ]
+    }
+   ],
+   "entry_room": "L1",
+   "garage_room": "G1"
+  },
+  "round2": {
+   "variant_label": "Hiệu chỉnh lõi giao thông và tầng mái",
+   "rationale": "Bổ sung hành lang hai hàng ô trước thang tầng 1, đồng thời tổ chức hành lang dọc liên tục tầng 4 để tất cả các phòng đều tiếp cận được từ thang.",
+   "assumptions": [],
+   "rooms": [
+    {
+     "id": "gr1",
+     "type": "garage",
+     "level": 1,
+     "target_area_m2": 20,
+     "ensuite_of": null
+    },
+    {
+     "id": "lv1",
+     "type": "living",
+     "level": 1,
+     "target_area_m2": 16,
+     "ensuite_of": null
+    },
+    {
+     "id": "kt1",
+     "type": "kitchen",
+     "level": 1,
+     "target_area_m2": 6,
+     "ensuite_of": null
+    },
+    {
+     "id": "dn1",
+     "type": "dining",
+     "level": 1,
+     "target_area_m2": 9,
+     "ensuite_of": null
+    },
+    {
+     "id": "wc1",
+     "type": "wc",
+     "level": 1,
+     "target_area_m2": 2.4,
+     "ensuite_of": null
+    },
+    {
+     "id": "co1",
+     "type": "circulation",
+     "level": 1,
+     "target_area_m2": 6,
+     "ensuite_of": null
+    },
+    {
+     "id": "st1",
+     "type": "stair",
+     "level": 1,
+     "target_area_m2": 8,
+     "ensuite_of": null
+    },
+    {
+     "id": "lw1",
+     "type": "light_well",
+     "level": 1,
+     "target_area_m2": 1.5,
+     "ensuite_of": null
+    },
+    {
+     "id": "te1",
+     "type": "terrace",
+     "level": 4,
+     "target_area_m2": 6,
+     "ensuite_of": null
+    },
+    {
+     "id": "bd3",
+     "type": "bedroom",
+     "level": 4,
+     "target_area_m2": 10,
+     "ensuite_of": null
+    },
+    {
+     "id": "ar1",
+     "type": "altar_room",
+     "level": 4,
+     "target_area_m2": 9,
+     "ensuite_of": null
+    },
+    {
+     "id": "ld1",
+     "type": "laundry",
+     "level": 4,
+     "target_area_m2": 3,
+     "ensuite_of": null
+    },
+    {
+     "id": "wc5",
+     "type": "wc",
+     "level": 4,
+     "target_area_m2": 2.4,
+     "ensuite_of": null
+    },
+    {
+     "id": "co8",
+     "type": "circulation",
+     "level": 4,
+     "target_area_m2": 8,
+     "ensuite_of": null
+    },
+    {
+     "id": "co9",
+     "type": "circulation",
+     "level": 4,
+     "target_area_m2": 3,
+     "ensuite_of": null
+    },
+    {
+     "id": "st4",
+     "type": "stair",
+     "level": 4,
+     "target_area_m2": 8,
+     "ensuite_of": null
+    },
+    {
+     "id": "lw4",
+     "type": "light_well",
+     "level": 4,
+     "target_area_m2": 1.5,
+     "ensuite_of": null
+    }
+   ],
+   "relationships": [
+    {
+     "a": "lv1",
+     "b": "dn1",
+     "kind": "adjacent"
+    },
+    {
+     "a": "dn1",
+     "b": "kt1",
+     "kind": "open"
+    },
+    {
+     "a": "dn1",
+     "b": "co1",
+     "kind": "adjacent"
+    },
+    {
+     "a": "wc1",
+     "b": "co1",
+     "kind": "adjacent"
+    },
+    {
+     "a": "co1",
+     "b": "st1",
+     "kind": "adjacent"
+    },
+    {
+     "a": "te1",
+     "b": "co8",
+     "kind": "adjacent"
+    },
+    {
+     "a": "te1",
+     "b": "ld1",
+     "kind": "adjacent"
+    },
+    {
+     "a": "wc5",
+     "b": "co8",
+     "kind": "adjacent"
+    },
+    {
+     "a": "bd3",
+     "b": "co8",
+     "kind": "adjacent"
+    },
+    {
+     "a": "ar1",
+     "b": "co8",
+     "kind": "adjacent"
+    },
+    {
+     "a": "co8",
+     "b": "co9",
+     "kind": "adjacent"
+    },
+    {
+     "a": "co9",
+     "b": "st4",
+     "kind": "adjacent"
+    }
+   ],
+   "sketches": [
+    {
+     "level": 1,
+     "rows": [
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "kt1 kt1 kt1 dn1 dn1",
+      "kt1 kt1 kt1 dn1 dn1",
+      "wc1 wc1 wc1 dn1 dn1",
+      "co1 co1 co1 dn1 dn1",
+      "co1 co1 co1 dn1 dn1",
+      "st1 st1 st1 dn1 dn1",
+      "st1 st1 st1 dn1 dn1",
+      "st1 st1 st1 lw1 lw1",
+      "st1 st1 st1 lw1 lw1"
+     ]
+    },
+    {
+     "level": 4,
+     "rows": [
+      "te1 te1 te1 ld1 ld1",
+      "te1 te1 te1 ld1 ld1",
+      "co8 co8 wc5 wc5 wc5",
+      "co8 co8 bd3 bd3 bd3",
+      "co8 co8 bd3 bd3 bd3",
+      "co8 co8 bd3 bd3 bd3",
+      "co8 co8 bd3 bd3 bd3",
+      "co8 co8 ar1 ar1 ar1",
+      "co8 co8 ar1 ar1 ar1",
+      "co8 co8 ar1 ar1 ar1",
+      "co8 co8 ar1 ar1 ar1",
+      "co9 co9 co9 . .",
+      "co9 co9 co9 . .",
+      "st4 st4 st4 . .",
+      "st4 st4 st4 . .",
+      "st4 st4 st4 lw4 lw4",
+      "st4 st4 st4 lw4 lw4"
+     ]
+    }
+   ],
+   "entry_room": "lv1",
+   "garage_room": "gr1"
+  },
+  "round3": {
+   "variant_label": "Điều chỉnh phòng khách mặt tiền",
+   "rationale": "Mở rộng phòng khách lên hàng mặt tiền để cửa chính vào trực tiếp từ phía trước, đồng thời giữ nguyên bãi xe và lõi thang phía sau.",
+   "assumptions": [],
+   "rooms": [
+    {
+     "id": "gr1",
+     "type": "garage",
+     "level": 1,
+     "target_area_m2": 20,
+     "ensuite_of": null
+    },
+    {
+     "id": "lv1",
+     "type": "living",
+     "level": 1,
+     "target_area_m2": 16,
+     "ensuite_of": null
+    },
+    {
+     "id": "kt1",
+     "type": "kitchen",
+     "level": 1,
+     "target_area_m2": 6,
+     "ensuite_of": null
+    },
+    {
+     "id": "dn1",
+     "type": "dining",
+     "level": 1,
+     "target_area_m2": 9,
+     "ensuite_of": null
+    },
+    {
+     "id": "wc1",
+     "type": "wc",
+     "level": 1,
+     "target_area_m2": 2.4,
+     "ensuite_of": null
+    },
+    {
+     "id": "co1",
+     "type": "circulation",
+     "level": 1,
+     "target_area_m2": 6,
+     "ensuite_of": null
+    },
+    {
+     "id": "st1",
+     "type": "stair",
+     "level": 1,
+     "target_area_m2": 8,
+     "ensuite_of": null
+    },
+    {
+     "id": "lw1",
+     "type": "light_well",
+     "level": 1,
+     "target_area_m2": 1.5,
+     "ensuite_of": null
+    }
+   ],
+   "relationships": [
+    {
+     "a": "lv1",
+     "b": "dn1",
+     "kind": "adjacent"
+    },
+    {
+     "a": "dn1",
+     "b": "kt1",
+     "kind": "open"
+    },
+    {
+     "a": "dn1",
+     "b": "co1",
+     "kind": "adjacent"
+    },
+    {
+     "a": "wc1",
+     "b": "co1",
+     "kind": "adjacent"
+    },
+    {
+     "a": "co1",
+     "b": "st1",
+     "kind": "adjacent"
+    }
+   ],
+   "sketches": [
+    {
+     "level": 1,
+     "rows": [
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "kt1 kt1 kt1 lv1 lv1",
+      "kt1 kt1 kt1 dn1 dn1",
+      "wc1 wc1 wc1 dn1 dn1",
+      "co1 co1 co1 dn1 dn1",
+      "co1 co1 co1 dn1 dn1",
+      "st1 st1 st1 dn1 dn1",
+      "st1 st1 st1 dn1 dn1",
+      "st1 st1 st1 lw1 lw1",
+      "st1 st1 st1 lw1 lw1"
+     ]
+    }
+   ],
+   "entry_room": "lv1",
+   "garage_room": "gr1"
+  },
+  "round4": {
+   "variant_label": "Hiệu chỉnh lối vào phòng khách",
+   "rationale": "Phòng khách lv1 được giữ trực tiếp trên hàng mặt phố, bảo đảm cửa chính từ mặt trước đi thẳng vào phòng khách mà không qua gara.",
+   "assumptions": [],
+   "rooms": [
+    {
+     "id": "gr1",
+     "type": "garage",
+     "level": 1,
+     "target_area_m2": 20,
+     "ensuite_of": null
+    },
+    {
+     "id": "lv1",
+     "type": "living",
+     "level": 1,
+     "target_area_m2": 16,
+     "ensuite_of": null
+    },
+    {
+     "id": "kt1",
+     "type": "kitchen",
+     "level": 1,
+     "target_area_m2": 6,
+     "ensuite_of": null
+    },
+    {
+     "id": "dn1",
+     "type": "dining",
+     "level": 1,
+     "target_area_m2": 9,
+     "ensuite_of": null
+    },
+    {
+     "id": "wc1",
+     "type": "wc",
+     "level": 1,
+     "target_area_m2": 2.4,
+     "ensuite_of": null
+    },
+    {
+     "id": "co1",
+     "type": "circulation",
+     "level": 1,
+     "target_area_m2": 6,
+     "ensuite_of": null
+    },
+    {
+     "id": "st1",
+     "type": "stair",
+     "level": 1,
+     "target_area_m2": 8,
+     "ensuite_of": null
+    },
+    {
+     "id": "lw1",
+     "type": "light_well",
+     "level": 1,
+     "target_area_m2": 1.5,
+     "ensuite_of": null
+    }
+   ],
+   "relationships": [
+    {
+     "a": "lv1",
+     "b": "dn1",
+     "kind": "adjacent"
+    },
+    {
+     "a": "dn1",
+     "b": "kt1",
+     "kind": "open"
+    },
+    {
+     "a": "dn1",
+     "b": "co1",
+     "kind": "adjacent"
+    },
+    {
+     "a": "wc1",
+     "b": "co1",
+     "kind": "adjacent"
+    },
+    {
+     "a": "co1",
+     "b": "st1",
+     "kind": "adjacent"
+    }
+   ],
+   "sketches": [
+    {
+     "level": 1,
+     "rows": [
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "gr1 gr1 gr1 lv1 lv1",
+      "kt1 kt1 kt1 lv1 lv1",
+      "kt1 kt1 kt1 dn1 dn1",
+      "wc1 wc1 wc1 dn1 dn1",
+      "co1 co1 co1 dn1 dn1",
+      "co1 co1 co1 dn1 dn1",
+      "st1 st1 st1 dn1 dn1",
+      "st1 st1 st1 dn1 dn1",
+      "st1 st1 st1 lw1 lw1",
+      "st1 st1 st1 lw1 lw1"
+     ]
+    }
+   ],
+   "entry_room": "lv1",
+   "garage_room": "gr1"
+  }
+ }
+}
