@@ -172,6 +172,19 @@ describe('formatPromptText', () => {
     expect(text).toContain('Token vào / ra    : 5666 / 31669');
   });
 
+  it('phần 4 in câu trả lời thô của mô hình sau lược đồ; lời gọi hỏng thì nói không có (T165)', () => {
+    const answered = formatPromptText(
+      { ...record, output: { rooms: [{ id: 'gr1', type: 'garage' }], sketches: [] } },
+      meta,
+    );
+    const schema = answered.indexOf('3. LƯỢC ĐỒ ĐẦU RA BẮT BUỘC');
+    const output = answered.indexOf('4. CÂU TRẢ LỜI CỦA MÔ HÌNH');
+    expect(output).toBeGreaterThan(schema);
+    expect(answered.slice(output)).toContain('"id": "gr1"');
+    const failed = formatPromptText(record, meta);
+    expect(failed.slice(failed.indexOf('4. CÂU TRẢ LỜI CỦA MÔ HÌNH'))).toContain('(không có');
+  });
+
   it('lược đồ in đúng phương ngữ đã gửi — OpenAI strict không có `pattern`, `$ref` đã nhúng', () => {
     const text = formatPromptText(record, meta);
     const schemaPart = text.slice(text.indexOf('3. LƯỢC ĐỒ ĐẦU RA BẮT BUỘC'));

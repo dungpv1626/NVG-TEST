@@ -1094,6 +1094,11 @@ export interface HousePromptFlags {
   ong_ba_unset: boolean;
   /** Lượt hình chữ nhật có danh mục mái — mô hình khai khu trên mái (`knowledge.roof_level`). */
   roof?: boolean;
+  /**
+   * Loại hình cho gara làm phòng lối vào (`passage.entry_room_by_building_type`, T115), đầu bài có ô tô, cửa xe cùng mặt
+   * cửa chính — lời dẫn lưới nói gara được làm entry_room (T165, lượt thật THU5).
+   */
+  entry_garage?: boolean;
 }
 
 /**
@@ -1101,7 +1106,7 @@ export interface HousePromptFlags {
  * dữ liệu — ném, không im lặng gửi chữ thô `[[…]]` cho mô hình.
  */
 export function houseSystem(template: string, flags: HousePromptFlags): string {
-  const known = { roof: false, ...flags };
+  const known = { roof: false, entry_garage: false, ...flags };
   return template.replace(/\[\[(\w+)\|([\s\S]*?)\]\]/g, (_, flag: string, text: string) => {
     if (!(flag in known)) {
       throw new Error(
@@ -1280,6 +1285,7 @@ export function planContext(input: PlanContextInput): PlanContext {
         (m) => m.role === 'ong_ba' && m.rooms > 0 && m.floor === null,
       ),
       roof: rect && roof !== null,
+      entry_garage: entryViaGarageBrief(input),
     },
     schema: bands
       ? houseBandsJsonSchema()
@@ -1288,6 +1294,21 @@ export function planContext(input: PlanContextInput): PlanContext {
         : houseIntentJsonSchema(),
     bands,
   };
+}
+
+/**
+ * Đầu bài cho vào nhà qua gara (T115): loại hình khai gara là phòng lối vào được, có ô tô, cửa xe cùng mặt cửa chính (hay
+ * không khai mặt cửa xe). Cùng điều kiện `ruleFacts.entryViaGarage` của chế độ hình chữ nhật, nhưng đọc từ đầu bài — lời
+ * dẫn lưới gửi trước khi có danh mục phòng.
+ */
+function entryViaGarageBrief(input: PlanContextInput): boolean {
+  const site = input.digest.site;
+  return (
+    input.groups.passage?.entryRoomByBuildingType.get(input.digest.building_type)?.has('garage') ===
+      true &&
+    (input.digest.parking?.cars ?? 0) > 0 &&
+    (!site.vehicle_entrance_side || site.vehicle_entrance_side === site.main_entrance_side)
+  );
 }
 
 /** Số bậc và chiều dài ô thang cần của một tầng thường — cùng phép tính cổng dùng (`tree/stair-fit.ts`). */
@@ -3476,6 +3497,10 @@ export function hintsFor(issues: readonly PlanIssue[], prompts: AiPrompts, prefi
       (issue.params?.corner !== undefined
         ? prompts.floorLevel.hints[`${issue.code}_corner`]
         : undefined) ??
+      // Nhà phố vào nhà qua gara (T115, T165): lỗi cửa chính kèm mã gara thì câu nói đổi phòng lối vào sang gara.
+      (issue.params?.garage !== undefined && issue.params.garage !== ''
+        ? prompts.floorLevel.hints[`${issue.code}_garage`]
+        : undefined) ??
       prompts.floorLevel.hints[issue.code] ??
       prompts.floorLevel.hintDefault;
     const grid = prompts.floorLevel.gridMm;
@@ -4529,6 +4554,15 @@ export function evaluateHouse(
         ],
       };
     }
+    if (!arrangedLevel(groundResult)) {
+      groundResult = withGarageEntryHint(
+        groundResult,
+        groundIntent,
+        current,
+        input,
+        sketches.get(ground!),
+      );
+    }
   }
   const groundDone = arrangedLevel(groundResult);
   if (!groundDone) {
@@ -4967,6 +5001,39 @@ function garageEntry(
   const space = program.spaces.find((s) => s.id === garage);
   if (!space || space.level !== 1) return [];
   return passage.entryRoomByBuildingType.get(buildingType)?.has(space.type) ? [garage] : [];
+}
+
+/**
+ * Tầng 1 nhà phố hỏng vì cửa chính, gara (loại được làm phòng lối vào, T115) đứng ở hàng đường của bản phác: lỗi cửa
+ * chính của phòng mô hình chọn mang thêm mã gara, để câu nhắc nói «gara làm entry_room» (`*_garage` trong
+ * `floor_level.hints`) thay cho «vẽ phòng khách chạm hàng đường» (T165).
+ *
+ * Lượt thật THU5 (23/10/2026, nhà phố 5 × 18 m có ô tô): câu cũ đẩy phòng khách ra trước gara (xe đi xuyên phòng khách)
+ * hoặc vẽ nó 2 ô cạnh gara 3 ô — lô 5 m không đủ cho cả hai; lời dẫn mặt bằng lưới chưa từng nói gara được làm lối vào
+ * (luật ấy chỉ có ở `house_layout` / `house_bands`, T115). Chỉ đổi câu gửi mô hình, không đổi phòng mang cửa chính.
+ */
+function withGarageEntryHint<T extends { issues: PlanIssue[] }>(
+  result: T,
+  intent: AiPlanIntent,
+  program: AiSpaceProgram,
+  input: PlanContextInput,
+  rows: readonly string[] | null | undefined,
+): T {
+  const passage = input.groups.passage;
+  if (!passage) return result;
+  const [garage] = garageEntry(intent, program, passage, input.digest.building_type);
+  const street = rows?.[0]?.trim().split(/\s+/) ?? [];
+  if (!garage || !street.includes(garage)) return result;
+  let changed = false;
+  const issues = result.issues.map((issue) => {
+    const ours =
+      issue.code === 'entrance_wrong_side' ||
+      (issue.code === 'door_outside_on_boundary' && issue.params?.room === intent.entry_room);
+    if (!ours) return issue;
+    changed = true;
+    return { ...issue, params: { ...(issue.params ?? {}), garage } };
+  });
+  return changed ? { ...result, issues } : result;
 }
 
 /** Tiện ích đã gộp trỏ về phòng mẹ thì mẹ xuất hiện hai lần — giữ dòng đầu. */

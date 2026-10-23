@@ -4191,7 +4191,7 @@ văn hai lượt thật), `plan-main-rejection.test.ts` (Worker), `ai-result-bun
 **Chờ anh Dũng quyết:** (1) trần chi phí có thành hạn mức CHẶN không (dừng vòng sửa khi vượt số tiền); (2) giữ khoá
 «Xác nhận đầu bài» khi dưới ngưỡng, hay chỉ cảnh báo; (3) nhóm gợi ý sửa đầu bài có cần thêm nhóm nào.
 
-## T164 — Anh Dũng chốt ba câu của T163 (23/10/2026)
+### T164 — Anh Dũng chốt ba câu của T163 (23/10/2026)
 
 1. **Trần chi phí CHẶN thật**: mỗi lượt AI Design có mức tối đa (tham số do Quản trị đặt; demo 0,5 USD ghi rõ DEMO; để
    trống = không giới hạn). Lượt sửa kế tiếp có thể vượt mức thì dừng, báo «đã dừng vì chạm mức chi phí» kèm lý do hỏng
@@ -4203,3 +4203,48 @@ văn hai lượt thật), `plan-main-rejection.test.ts` (Worker), `ai-result-bun
    màn hình chặn. Thay câu «Worker xác nhận không tự chặn theo điểm» của T163.
 3. **Giữ hiện lý do hỏng chính trên màn hình** (đảo một phần quyết định 07/10/2026 «lý do chỉ ở báo cáo»); danh sách bước
    vẫn ẩn. Lý do: người dùng cần biết sửa đầu bài hay chạy lại mà không phải tải báo cáo `.md`.
+
+### T165 — Nhà phố 5 m có ô tô: lời dẫn lưới cho gara làm lối vào, câu nhắc nói đúng chỗ bản phác không dựng nổi (23/10/2026, mạch B)
+
+**Đầu vào.** Hai lượt «Xếp mặt bằng» THẬT của hồ sơ thử NVO-TK-2026-THU5 (23/10/2026, GPT-5.6 Terra, lời dẫn 9.10.0,
+đường lưới): nhà phố 4 tầng, lô 5 × 18 m, lùi sau 1,5 m (khối 5 × 16,5 m), mặt trước giáp đường, ba mặt giáp nhà, 1 ô tô
++ 2 xe máy, thang chữ U. Lượt `ef5fbffc` 5 lời gọi (0,46 USD), lượt `e5ec68a6` 4 lời gọi (0,28 USD), không phương án.
+
+**Câu trả lời của mô hình CÓ được lưu** — `ai_calls/<callId>.json` trường `output` (từ 15/09/2026), cả lời gọi bị bác.
+Chỗ thiếu là tệp chữ `formatPromptText` (và báo cáo `.md` dựng từ nó) không in ra, nên tưởng đã mất. Nay có phần 4 «Câu
+trả lời của mô hình». Phát lại dựng lại chín lời gọi khớp TỪNG KÝ TỰ với bản ghi (đầu bài `anonymiseForAi` của đầu bài
+đã xác nhận, ngữ cảnh đúng `ai-design-steps.ts`), nên phép thử phát lại là đúng lượt thật.
+
+**Nguyên nhân (đo trên phát lại).**
+1. Lô 5 m: gara cần 3,1 m, phòng khách 3,3 m (`sketchMinExtent`) — không đặt cạnh nhau được ở hàng đường. Lời giải nhà
+   ống là gara trọn hàng đường, vào nhà qua gara (T115). Bộ xếp ĐÃ cho việc đó (`entry_room_by_building_type`,
+   `entryAlternatives`), nhưng lời dẫn LƯỚI (`floor_level`) chưa từng nói — luật T115 chỉ ở `house_layout` / `house_bands`.
+2. `ef5fbffc` vòng 1–3: mô hình vẽ đúng kiểu nhà ống (gara trọn hàng đường, phòng khách sau) nhưng chọn phòng khách làm
+   `entry_room`; câu nhắc `door_outside_on_boundary` bảo «vẽ phòng khách chạm hàng đường». Vòng 4 mô hình đưa phòng
+   khách RA TRƯỚC gara (xe đi xuyên phòng khách, mất lối vào); vòng 5 mô hình tự viết «không thể vừa giữ gara vừa để
+   phòng khách chạm mặt tiền trên lô 5 ô» và trả danh mục rỗng. Các lỗi khác của vòng 1–3 (phòng không lối vào, phòng làm
+   việc 10 ô < 12 ô `min_cells`, phòng thờ 9 ô < 11, thang tầng 4 cô lập, lên thang từ cạnh dài) là lỗi bản phác thật của
+   mô hình, câu nhắc đúng.
+3. `e5ec68a6`: mô hình vẽ gara 3 ô cạnh phòng khách 2 ô ở hàng đường. Bộ xếp chia lại tầng, phòng khách ra sau gara, câu
+   nhắc vẫn «vẽ phòng khách chạm hàng đường» — trong khi bản phác ĐANG chạm. Ba lượt sửa nộp lại y nguyên.
+4. Mặt tiền / cạnh giáp đường lấy từ đầu bài là ĐÚNG (mặt thoáng duy nhất = trước; cửa chính, cửa xe = trước). Lỗi
+   «cửa chỉ đặt được trên cạnh giáp nhà hàng xóm» là hệ quả của việc bộ xếp phải đẩy phòng khách ra sau gara.
+
+**Đã sửa (không gọi mô hình).**
+- `arrange/index.ts#sketchRowTooNarrow`, mã `sketch_row_too_narrow` (sửa được): hàng bản phác đặt cạnh nhau những phòng
+  cộng cạnh tối thiểu vượt bề ngang tầng. CHỈ thêm vào câu nhắc khi tầng đã hỏng, đứng đầu danh sách — không bác thêm
+  tầng nào. Gara trong hàng ấy (nhà phố) thì câu nói luôn «gara làm entry_room».
+- `plan.ts#withGarageEntryHint`: tầng 1 nhà phố hỏng vì cửa chính, gara ở hàng đường của bản phác → câu
+  `door_outside_on_boundary_garage` / `entrance_wrong_side_garage` thay cho «vẽ phòng khách chạm hàng đường».
+- Lời dẫn 9.11.0: luật 7 của `floor_level` có `[[entry_garage|…]]` (cờ `entry_garage`: loại hình cho gara làm lối vào,
+  có ô tô, cửa xe cùng mặt cửa chính) — mô hình biết ngay lượt đầu.
+- `prompt-record.ts#formatPromptText`: phần 4 câu trả lời thô.
+
+**Đo.** Phát lại 221 vòng của 55 lượt ghi (`fixtures/ai-run-*.json`), đối chứng là cùng mã với thay đổi gỡ: ngữ cảnh
+mặc định của phép thử 21 / 221 vòng ra mặt bằng ở cả hai, không vòng nào đổi mã lỗi; ngữ cảnh như Workflow hiện nay (loại
+thang, số đo nhà ống, mặt thoáng) 10 / 221 ở cả hai, chỉ bốn vòng của `e5ec68a6` thêm `sketch_row_too_narrow`. Đúng dự
+kiến: thay đổi chỉ đổi CÂU gửi mô hình, không đổi bộ xếp. Lợi chỉ đo được bằng lượt thật:
+hai lượt THU5 nay nhận câu nhắc giải được (phép thử `ai-live-thu5-nhapho.test.ts`). Không lượt ghi nào ra mặt bằng nhờ
+riêng bộ xếp: vòng 3 của `ef5fbffc` với gara làm lối vào còn hỏng vì phòng ăn + bếp gộp thông 2,16 × 7,68 m (tỉ lệ
+3,55 > 3,2 của `usable.max_aspect.dining`) — dải 2 m cạnh thang U 2,4 m. Có nên đo tỉ lệ cho cặp gộp thông
+(`open_pairs`) theo từng phần thay vì cả khối là câu hỏi cho Haan, chưa đổi.

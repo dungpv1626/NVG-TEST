@@ -186,6 +186,13 @@ export function formatPromptText(record: PromptRecord, meta: PromptCallMeta): st
         : '3. LƯỢC ĐỒ ĐẦU RA BẮT BUỘC',
     ),
     JSON.stringify(sentSchema, null, 2),
+    // Câu trả lời thô (T165, 23/10/2026): bản ghi giữ `output` từ 15/09/2026 nhưng tệp chữ — và báo cáo `.md` của lượt
+    // chạy dựng từ nó — không in ra, nên lượt thật THU5 hỏng mà người đọc báo cáo tưởng câu trả lời đã mất. In cả khi
+    // câu trả lời bị bác ở hợp đồng: đó là lượt cần đọc lại nhất.
+    rule('4. CÂU TRẢ LỜI CỦA MÔ HÌNH (nguyên văn, chưa kiểm hợp đồng)'),
+    record.output === undefined
+      ? '(không có — lời gọi hỏng trước khi nhận được câu trả lời)'
+      : JSON.stringify(record.output, null, 2),
     '',
   ];
   return lines.join('\n');
