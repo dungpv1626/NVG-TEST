@@ -14,6 +14,7 @@ import { DB_TARGET, DEMO_PROJECT_REF } from '../env';
 import { compactSequences, removeDemoData } from './remove';
 import { loadCashFlow } from './scenario-cash-flow';
 import { loadChecklists } from './scenario-checklists';
+import { loadDefaults } from './scenario-defaults';
 import { loadNvc } from './scenario-nvc';
 import { loadNs } from './scenario-ns';
 import { loadNvs } from './scenario-nvs';
@@ -28,6 +29,10 @@ const SCENARIOS = {
   nvo: {
     label: 'NVO — hồ sơ thiết kế nhà phố từ đầu bài tới bàn giao, yêu cầu làm rõ',
     run: loadNvo,
+  },
+  'mac-dinh': {
+    label: 'Tham số DEMO cho mọi con số NVG chưa quyết (chỉ điền ô còn trống)',
+    run: loadDefaults,
   },
 } as const;
 
