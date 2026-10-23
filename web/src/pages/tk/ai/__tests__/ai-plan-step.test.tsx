@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { cleanup, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithApp } from '@/test/render';
 
@@ -25,6 +25,8 @@ const state = vi.hoisted(() => ({
   edit: vi.fn((_input: unknown) => Promise.resolve({ runId: 'r-edit' })),
   hide: vi.fn((_input: unknown, _options?: unknown) => undefined),
   costHistory: { runs: [], calls: [] } as unknown,
+  /** Mức chi phí chặn thật (T164) máy chủ trả — `undefined` = máy chủ cũ không nói. */
+  capUsd: undefined as number | null | undefined,
   drawSheetImage: vi.fn((_input: unknown) =>
     Promise.resolve({
       imageArtifactId: 'sha256:img',
@@ -92,7 +94,7 @@ vi.mock('@/hooks/use-ai-design', () => ({
       // «bước mặt bằng không có ô chọn ảnh» chỉ có nghĩa khi danh mục thật sự có tuyến để chọn.
       image: [imageRoute()],
       defaults: { text: 'ai_text_openai', image: 'ai_image_gemini' },
-      limits: { planCallsMax: 5 },
+      limits: { planCallsMax: 5, runCostCapUsd: state.capUsd },
     },
     isLoading: false,
     error: null,
@@ -651,6 +653,62 @@ describe('Mặc định MỘT phương án, và mức suy nghĩ đi kèm lượt
     expect(state.start).not.toHaveBeenCalled();
     state.costHistory = { runs: [], calls: [] };
   });
+
+  it('hộp hỏi lại nói MỨC CHẶN thật khi Quản trị đã đặt (T164), và nói «chưa đặt» khi để trống', async () => {
+    state.review = null;
+    state.run = null;
+    state.capUsd = 0.5;
+    show();
+    await userEvent.click(screen.getByRole('button', { name: /^Xếp mặt bằng/ }));
+    expect(
+      within(screen.getByRole('dialog')).getByText(/Mức chi phí tối đa của lượt: 0,5 USD/),
+    ).toBeInTheDocument();
+    cleanup();
+
+    state.capUsd = null;
+    show();
+    await userEvent.click(screen.getByRole('button', { name: /^Xếp mặt bằng/ }));
+    const dialog = within(screen.getByRole('dialog'));
+    expect(dialog.queryByText(/Mức chi phí tối đa/)).toBeNull();
+    expect(dialog.getByText(/Chưa đặt mức chi phí tối đa/)).toBeInTheDocument();
+    state.capUsd = undefined;
+  });
+
+  it('lượt dừng vì chạm mức chi phí: khối «Vì sao chưa xếp được» nói câu dừng VÀ lý do hỏng của lượt chính', () => {
+    state.review = null;
+    state.run = {
+      id: 'r-cap',
+      stage: 'plan',
+      status: 'failed',
+      progress: { steps: [] },
+      result: {
+        plans: [],
+        failed: [
+          {
+            variantId: 'AI-A',
+            error: 'Đã dừng vì chạm mức chi phí 0,50 USD (đã tiêu 0,46 USD).',
+            costCap: { capUsd: 0.5, spentUsd: 0.46, nextUsd: 0.115, reason: 'over' },
+            reasons: [{ level: 1, messages: ['Phòng "living_1" ở tầng 1 không có lối vào.'] }],
+            main: {
+              round: 2,
+              levels: [{ level: 1, messages: ['Phòng "office_1" ở tầng 1 không có lối vào.'] }],
+            },
+          },
+        ],
+      },
+      error: 'Đã dừng vì chạm mức chi phí 0,50 USD (đã tiêu 0,46 USD).',
+      createdAt: '2026-10-23T00:00:00Z',
+      updatedAt: '2026-10-23T00:05:00Z',
+    };
+    show();
+    const reasons = within(screen.getByRole('region', { name: 'Lý do chưa xếp được' }));
+    expect(
+      reasons.getByText('Đã dừng vì chạm mức chi phí 0,50 USD (đã tiêu 0,46 USD).'),
+    ).toBeInTheDocument();
+    expect(reasons.getByText(/Lý do của lượt 2/)).toBeInTheDocument();
+    expect(reasons.getByText(/không có lối vào/)).toBeInTheDocument();
+    state.run = null;
+  });
 });
 
 describe('Ý định bố cục của AI (T43, 14/09/2026)', () => {
@@ -733,7 +791,7 @@ describe('Điểm, ngưỡng và bản sửa — sau khi gỡ ô yêu cầu sử
       <AiPlanStep projectId="p1" readOnly={false} state={designState as never} />,
     );
     expect(screen.getByText(/Đạt ngưỡng 65/)).toBeInTheDocument();
-    first.unmount();
+    cleanup();
     state.review = review({ score: scored(60), acceptPercent: 65, editable: true });
     show();
     expect(screen.getByText(/Dưới ngưỡng 65/)).toBeInTheDocument();

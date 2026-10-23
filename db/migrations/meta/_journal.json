@@ -1478,6 +1478,13 @@
       "when": 1791630000000,
       "tag": "0218_tgd_tu_duyet_hop_dong_sap_het_han",
       "breakpoints": true
+    },
+    {
+      "idx": 219,
+      "version": "7",
+      "when": 1791640000000,
+      "tag": "0219_ai_design_muc_chi_phi",
+      "breakpoints": true
     }
   ]
 }

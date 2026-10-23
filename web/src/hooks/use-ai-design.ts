@@ -56,7 +56,14 @@ export interface AiModelCatalogue {
   /** Nhà cung cấp không phát sinh hoá đơn — để tính tiền thật của từng dòng nhật ký. */
   freeProviders?: string[];
   /** Trần số lượt gọi mô hình của một phương án mặt bằng (lượt đầu + lượt sửa). Vắng ở máy chủ cũ. */
-  limits?: { planCallsMax?: number };
+  limits?: {
+    planCallsMax?: number;
+    /**
+     * Mức chi phí CHẶN THẬT của một lượt, USD (T164, `design_setting.ai_run_cost_cap_usd`) — `null` =
+     * không giới hạn. Vắng ở máy chủ cũ.
+     */
+    runCostCapUsd?: number | null;
+  };
 }
 
 // ---------------------------------------------------------------------------

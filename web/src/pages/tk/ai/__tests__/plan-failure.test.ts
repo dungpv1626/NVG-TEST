@@ -5,7 +5,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { failureViews, readableMessage, type FailedVariant } from '../plan-failure';
+import {
+  costStopMessage,
+  failureViews,
+  readableMessage,
+  type FailedVariant,
+} from '../plan-failure';
 
 const LABELS = { living: 'Phòng khách', wc: 'Khu vệ sinh', office: 'Phòng làm việc' };
 
@@ -103,5 +108,27 @@ describe('failureViews', () => {
     expect(text).not.toMatch(/Sai cấu trúc/);
     expect(view!.hints.some((h) => h.startsWith('Diện tích'))).toBe(true);
     expect(view!.hints.some((h) => h.startsWith('Lối đi'))).toBe(true);
+  });
+});
+
+describe('Dừng vì mức chi phí (T164)', () => {
+  it('có `costCap` thì có câu dừng — số kiểu Việt Nam, đúng câu Worker viết; lý do lượt chính vẫn còn', () => {
+    const [view] = failureViews(
+      [{ ...e5ec68a6, costCap: { capUsd: 0.5, spentUsd: 0.46, reason: 'over' } }],
+      LABELS,
+    );
+    expect(view!.costStop).toBe('Đã dừng vì chạm mức chi phí 0,50 USD (đã tiêu 0,46 USD).');
+    expect(view!.groups.length).toBeGreaterThan(0);
+  });
+
+  it('không tính được giá lượt trước: câu nói rõ vì sao dừng', () => {
+    expect(costStopMessage({ capUsd: 0.5, spentUsd: 0.04, reason: 'unpriced' })).toMatch(
+      /không tính được chi phí.*mức chi phí 0,50 USD \(đã tiêu 0,040 USD\)/,
+    );
+  });
+
+  it('không có `costCap` thì không có câu dừng', () => {
+    const [view] = failureViews([e5ec68a6], LABELS);
+    expect(view!.costStop).toBeNull();
   });
 });

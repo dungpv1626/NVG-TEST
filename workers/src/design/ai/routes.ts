@@ -63,6 +63,7 @@ import { ruleMessages } from './plan-messages-data';
 import { aiPrompts } from './prompts-data';
 import { checkPlan } from './plan-check';
 import { houseRevisionsMax } from './plan';
+import { parseCostCap, readRunCostCap, RUN_COST_CAP_KEY } from './cost-cap';
 import { planQuality } from './plan-quality-data';
 import { scoreForScreen } from './plan-score';
 import { AiProgramRejected, generateAiProgram, type AiProgramRound } from './program';
@@ -126,7 +127,7 @@ aiApp.get('/models', async (c) => {
   const settings = await db
     .from('design_setting')
     .select('key, value')
-    .in('key', ['ai_text_route_default', 'ai_image_route_default']);
+    .in('key', ['ai_text_route_default', 'ai_image_route_default', RUN_COST_CAP_KEY]);
   // Danh mục không phụ thuộc RLS, nên phải tự chặn token hỏng: PostgREST trả 401 thì người gọi
   // chưa đăng nhập, không phải "tenant chưa cấu hình mặc định".
   if (settings.error && settings.status === 401) {
@@ -153,6 +154,10 @@ aiApp.get('/models', async (c) => {
     // trần chi phí trước khi bấm (23/10/2026). Đọc cùng hàm vòng lặp dùng, không chép số.
     limits: {
       planCallsMax: houseRevisionsMax(c.env.AI_PROMPT_PIPELINE === 'v6' ? 'v6' : null) + 1,
+      // Mức chi phí CHẶN THẬT của một lượt (T164) — đọc cùng hàm tuyến khởi động dùng; `null` = không giới hạn.
+      runCostCapUsd: parseCostCap(
+        (settings.data ?? []).find((r) => r.key === RUN_COST_CAP_KEY)?.value ?? null,
+      ),
     },
   });
 });
@@ -1535,6 +1540,8 @@ aiApp.post('/plan/runs', async (c) => {
     briefRef: brief.id,
     digest,
     rulePacks: choice,
+    // Mức chi phí của lượt (T164) — chốt lúc bấm, vòng lặp Workflow đọc từ đây.
+    costCapUsd: await readRunCostCap(repo.db, scope.tenantId),
     variants,
   };
 
@@ -1691,6 +1698,7 @@ aiApp.post('/plan/edit', async (c) => {
     briefRef,
     digest,
     rulePacks: { standards: false, experience: false },
+    costCapUsd: await readRunCostCap(repo.db, scope.tenantId),
     variants: [variant],
     edit: { baseArtifactId: body.artifactId, instruction },
   };

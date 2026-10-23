@@ -144,6 +144,8 @@ export function AiPlanStep({
   const models = useAiModels();
   /** Trần số lượt gọi mô hình mỗi phương án (lượt đầu + lượt sửa) — máy chủ cũ không trả thì `null`. */
   const callsMax = models.data?.limits?.planCallsMax ?? null;
+  /** Mức chi phí chặn thật của một lượt (T164); `undefined` = máy chủ cũ không nói. */
+  const capUsd = models.data?.limits?.runCostCapUsd;
   /** Đang hỏi lại trước khi chạy (23/10/2026): một lượt hỏng vẫn tốn 0,28–0,46 USD. */
   const [askRun, setAskRun] = useState(false);
   const hidePlan = useHideAiPlan();
@@ -537,6 +539,7 @@ export function AiPlanStep({
             estimate={cost.estimate}
             units={Number(count)}
             callsMax={callsMax}
+            capUsd={capUsd}
             modelName={ai.selected?.short ?? ai.selected?.label ?? null}
           />
         </ConfirmDialog>
@@ -653,11 +656,14 @@ export function RunCostNotice({
   estimate,
   units,
   callsMax,
+  capUsd,
   modelName,
 }: {
   estimate: CostEstimate | null;
   units: number;
   callsMax: number | null;
+  /** Mức chặn thật (T164): số = có mức, `null` = không giới hạn, vắng = máy chủ cũ không nói. */
+  capUsd?: number | null;
   modelName: string | null;
 }): React.ReactElement {
   const ceiling = costCeiling(estimate, callsMax, units);
@@ -683,6 +689,14 @@ export function RunCostNotice({
           thêm.
         </p>
       )}
+      {typeof capUsd === 'number' ? (
+        <p className="font-medium">
+          Mức chi phí tối đa của lượt: {formatUsd(capUsd)}. Lời gọi sửa kế tiếp có thể vượt mức này
+          thì chương trình dừng và báo lý do — Quản trị hệ thống đặt mức.
+        </p>
+      ) : capUsd === null ? (
+        <p>Chưa đặt mức chi phí tối đa — lượt chạy không bị dừng theo số tiền.</p>
+      ) : null}
       <p>Lượt không ra phương án vẫn tính tiền các lượt gọi đã dùng.</p>
     </div>
   );
@@ -713,6 +727,7 @@ function PlanFailureReasons({
                 ? `Lý do của lượt cuối (đã gọi mô hình ${view.attempts} lượt).`
                 : 'Lý do của lượt cuối.'}
           </p>
+          {view.costStop && <p className="font-medium text-tk-am-fg">{view.costStop}</p>}
           {view.lastUnusable && (
             <p className="text-xs text-fg-subtle">
               Lượt cuối mô hình trả câu trả lời không dùng được; lý do của các lượt trước có trong

@@ -107,6 +107,8 @@ import {
   type FacadeWriteOutcome,
 } from './ai-facade-steps';
 import { mandatoryRules } from '../ai/mandatory-data';
+import { costUsd } from '../ai/call-log';
+import { costCapDecision, costCapMessage, type CostCapStop } from '../ai/cost-cap';
 
 /** Lượt sửa theo yêu cầu kỹ sư gọi mô hình tối đa bấy nhiêu lần: một lần, cộng một lần kèm lý do cổng. */
 const EDIT_CALLS_MAX = 4;
@@ -260,6 +262,9 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
     }
 
     const { board, stop } = this.startLive(params, repo);
+    // Tiền (giá niêm yết) từng lời gọi mô hình của CẢ lượt, mọi phương án cộng chung — mức chi phí
+    // (T164) là của lượt người bấm, không phải của từng phương án.
+    const spend: (number | null)[] = [];
     // Ba phương án chạy SONG SONG: mỗi phương án là một lượt gọi độc lập, và chờ tuần tự thì
     // người dùng chờ gấp ba. `allSettled` vì một phương án hỏng không được giết hai phương án
     // kia — hai bản vẽ dùng được vẫn hơn không có gì.
@@ -268,8 +273,8 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       settled = await Promise.allSettled(
         params.variants.map((variant) =>
           params.edit
-            ? this.runEdit(step, deps, params, variant, board)
-            : this.runVariant(step, deps, params, variant, board),
+            ? this.runEdit(step, deps, params, variant, board, spend)
+            : this.runVariant(step, deps, params, variant, board, spend),
         ),
       );
     } finally {
@@ -291,17 +296,26 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       reasons: LevelRejection[];
       /** Lượt hỏng NHẸ NHẤT khi nó không phải lượt cuối (`AiPlanRejectedWithMain`). */
       main?: MainRejection;
+      /** Dừng vì chạm mức chi phí của lượt (T164). */
+      costCap?: CostCapStop;
     }[] = [];
     params.variants.forEach((variant, index) => {
       const outcome = settled[index];
       if (outcome?.status === 'fulfilled') plans.push(outcome.value);
       else {
         const reason = outcome?.reason;
+        const capped = reason instanceof AiPlanRejectedWithMain ? reason.costCap : null;
         failed.push({
           variantId: variant.id,
-          error: reason instanceof AiPlanRejected ? reason.message : userFacing(reason),
+          // Dừng vì tiền thì câu chính nói đúng điều ấy; lý do hỏng của lượt chính vẫn ở `main` / `reasons`.
+          error: capped
+            ? costCapMessage(capped)
+            : reason instanceof AiPlanRejected
+              ? reason.message
+              : userFacing(reason),
           reasons: reason instanceof AiPlanRejected ? reason.levels : [],
           ...(reason instanceof AiPlanRejectedWithMain && reason.main ? { main: reason.main } : {}),
+          ...(capped ? { costCap: capped } : {}),
         });
       }
     });
@@ -612,6 +626,29 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
   }
 
   /**
+   * Mức chi phí của lượt (T164): trước MỖI lời gọi sửa kế tiếp, tiền đã tiêu + ước tính một lời gọi nữa
+   * vượt mức thì dừng. Mức trống thì không có bước nào — đúng như trước.
+   *
+   * Quyết định nằm trong một `step.do` để Workflow phát lại thấy ĐÚNG quyết định lần đầu: các phương án
+   * chạy song song cộng chung `spend`, nên lúc phát lại (bước đã lưu trả về tức thì, thứ tự khác) tổng
+   * nhìn thấy có thể khác — và một quyết định «gọi tiếp» mới ở lần phát lại là một lời gọi tính tiền mới.
+   */
+  private async costCheck(
+    step: WorkflowStep,
+    params: AiDesignParams,
+    beforeStepId: string,
+    spend: readonly (number | null)[],
+  ): Promise<CostCapStop | null> {
+    const cap = params.costCapUsd ?? null;
+    if (cap === null) return null;
+    const costs = [...spend];
+    const decided = (await step.do(`${beforeStepId}:cost-cap`, async () => ({
+      stop: costCapDecision(cap, costs),
+    }))) as { stop: CostCapStop | null };
+    return decided.stop;
+  }
+
+  /**
    * Một phương án: AI khai cả nhà → chương trình kiểm và xếp → (AI sửa → xếp lại) tối đa ba lần → lưu
    * (T45).
    *
@@ -625,6 +662,8 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
     params: AiDesignParams,
     variant: PlanVariant,
     board: LivePlanBoard,
+    /** Tiền từng lời gọi của cả lượt (mọi phương án) — cho mức chi phí T164. */
+    spend: (number | null)[],
     /** Lượt sửa bố cục theo yêu cầu kỹ sư (T53): lượt 1 đã là `revise` của ý định lưu trong artifact. */
     seed: { hints: string[]; previousJson: string } | null = null,
   ): Promise<WriteOutcome> {
@@ -645,6 +684,8 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       : null;
     let best: BestArranged | null = null;
     let bestFailed: ArrangeOutcome | null = null;
+    // Lượt xếp gần nhất — lý do hỏng mang theo khi dừng vì mức chi phí (T164).
+    let lastArranged: ArrangeOutcome | null = null;
     // Vòng của `bestFailed` — để màn hình nói lý do của lượt gần đạt nhất kèm số lượt (23/10/2026).
     let bestFailedRound = 0;
     let resent = 0;
@@ -660,6 +701,29 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       const id = (phase: HousePhase) => houseStepId(variant.id, phase, round);
       const label = (phase: HousePhase) => houseStepLabel(variant.id, phase, round);
       if (board.signal.aborted) throw new NonRetryableError(RUN_CANCELLED);
+
+      // Lời gọi SỬA kế tiếp (vòng sau, hoặc vòng đầu của lượt sửa theo yêu cầu đã tiêu lời gọi dịch yêu
+      // cầu): chạm mức chi phí thì dừng ở đây, trước khi tốn thêm (T164).
+      if (round > 1 || seed) {
+        const capped = await this.costCheck(step, params, id('propose'), spend);
+        if (capped) {
+          // Đã có một bản xếp được (dưới ngưỡng): lưu bản ấy như mọi đường dừng khác.
+          if (best) return this.writeBest(step, deps, params, variant, best, calls.length);
+          const last = lastArranged;
+          if (!last) {
+            throw new AiPlanRejectedWithMain(
+              [{ level: 0, messages: [costCapMessage(capped)] }],
+              null,
+              capped,
+            );
+          }
+          throw new AiPlanRejectedWithMain(
+            finalRejections(last.rejections, first ?? last.rejections, last.retry, calls.length),
+            mainRejection(bestFailed, bestFailedRound, last, deps.prompts),
+            capped,
+          );
+        }
+      }
 
       await markStep(db, runId, id('propose'), 'running', { label: label('propose') });
       const hooks = (): LevelLiveHooks => {
@@ -688,12 +752,16 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
         ),
       )) as ProposeOutcome;
       calls.push(proposal.call);
+      // Vòng sửa chạy tuyến `revise_route` (nếu khai) — tính bằng giá của tuyến ấy, như `logCall`.
+      const revise = (retry?.hints?.length ?? 0) > 0 ? deps.revise : undefined;
+      spend.push(costUsd(revise ? revise.pricing : deps.pricing, proposal.call.usage));
       await markStep(db, runId, id('propose'), 'done');
 
       await markStep(db, runId, id('arrange'), 'running', { label: label('arrange') });
       const arranged = (await step.do(id('arrange'), async () =>
         arrangeHouseStep(deps, params, variant, proposal, round, retry?.previousJson ?? null),
       )) as ArrangeOutcome;
+      lastArranged = arranged;
 
       if (arranged.arrangedJson) {
         await markStep(db, runId, id('arrange'), 'done');
@@ -776,6 +844,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
     params: AiDesignParams,
     variant: PlanVariant,
     board: LivePlanBoard,
+    spend: (number | null)[],
   ): Promise<WriteOutcome> {
     const db = deps.repo.db;
     const runId = params.runId;
@@ -784,6 +853,12 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       if (board.signal.aborted) throw new NonRetryableError(RUN_CANCELLED);
       const callId = editStepId('call', n);
       const callLabel = n === 1 ? 'AI đọc yêu cầu sửa' : 'AI sửa lại thao tác';
+      if (retry) {
+        const capped = await this.costCheck(step, params, callId, spend);
+        if (capped) {
+          throw new AiPlanRejectedWithMain([{ level: 0, messages: retry.issues }], null, capped);
+        }
+      }
       await markStep(db, runId, callId, 'running', { label: callLabel });
       const hooks = (): LevelLiveHooks => {
         board.begin(callId, callLabel);
@@ -800,6 +875,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
           board.signal,
         ),
       )) as EditCallOutcome;
+      spend.push(costUsd(deps.pricing, proposal.call.usage));
       await markStep(db, runId, callId, 'done');
 
       const applyId = editStepId('apply', n);
@@ -817,7 +893,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       }
       if ('relayout' in outcome) {
         await markStep(db, runId, applyId, 'done');
-        return this.runVariant(step, deps, params, variant, board, {
+        return this.runVariant(step, deps, params, variant, board, spend, {
           hints: [`- The architect asks for this change: ${outcome.relayout}`],
           previousJson: outcome.previousJson,
         });

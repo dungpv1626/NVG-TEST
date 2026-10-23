@@ -4197,6 +4197,20 @@ văn hai lượt thật), `plan-main-rejection.test.ts` (Worker), `ai-result-bun
    trống = không giới hạn). Lượt sửa kế tiếp có thể vượt mức thì dừng, báo «đã dừng vì chạm mức chi phí» kèm lý do hỏng
    của lượt chính. Lý do: hai lượt thật 23/10 tốn ≈ 0,74 USD mà không ra phương án. Làm SAU khi gộp mạch B (sửa vòng
    lặp Workflow mà B đang đụng).
+   **Đã làm (23/10/2026, sau khi gộp mạch B).** Mức ở `design_setting.ai_run_cost_cap_usd` theo tenant (migration 0219
+   khai khoá, giá trị `null` = không giới hạn; kịch bản demo `mac-dinh` đặt 0,5 USD, ghi chú DEMO). Tuyến khởi động đọc
+   mức một lần và chốt vào `params.costCapUsd` (cả «Xếp mặt bằng» lẫn sửa theo yêu cầu). Vòng lặp
+   (`workflows/ai-design.ts`): mỗi lời gọi xong cộng giá niêm yết của nó (giá tuyến `revise_route` cho vòng sửa) vào sổ
+   CHUNG của lượt — mọi phương án cộng chung; trước mỗi lời gọi sửa kế tiếp (`runVariant` vòng ≥ 2 hoặc vòng đầu của
+   lượt sửa bố cục, `runEdit` lời gọi ≥ 2), `costCapDecision` (`ai/cost-cap.ts`, hàm thuần): đã tiêu + trung bình một
+   lời gọi đã có > mức thì dừng; có lời gọi không tính được tiền thì cũng dừng (không bảo đảm được mức). Quyết định nằm
+   trong một `step.do` riêng để Workflow phát lại thấy đúng quyết định lần đầu. Dừng mà đã có bản xếp được dưới ngưỡng
+   thì lưu bản ấy như mọi đường dừng khác; không thì phương án hỏng với `error` = «Đã dừng vì chạm mức chi phí X USD (đã
+   tiêu Y USD).», `costCap`, và vẫn mang `main` / `reasons` của lượt chính. Màn hình: hộp hỏi lại nói mức chặn
+   (`GET /design/ai/models` trả `limits.runCostCapUsd`) hoặc «Chưa đặt mức chi phí tối đa»; khối «Vì sao chưa xếp được»
+   đặt câu dừng lên đầu. Chưa có chỗ trên giao diện để Quản trị sửa mức — sửa bằng SQL / Supabase. Mặt đứng và phối cảnh
+   chưa áp mức. Hàng rào: `ai-cost-cap.test.ts` (hàm thuần + quét mã Workflow), `plan-failure.test.ts`,
+   `ai-plan-step.test.tsx`; bốn đột biến đo tay đều đỏ.
 2. **Giữ khoá «Xác nhận đầu bài»** dưới `brief_completeness_min` hoặc còn mâu thuẫn nghiêm trọng, và chặn cả ở Worker
    (`briefConfirmBlock` trong `brief/gate.ts`, `confirmBrief` gọi trước khi đúc artifact, trả 422). Lý do: đầu bài thiếu
    làm bộ xếp hỏng mà lượt hỏng vẫn tốn tiền; đầu bài đã xác nhận bất biến nên chặn ở đây rẻ nhất; trước đây chỉ nút trên

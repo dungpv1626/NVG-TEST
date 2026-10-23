@@ -31,6 +31,8 @@ export interface FailedVariant {
   reasons?: FailedReason[];
   /** Lượt hỏng nhẹ nhất khi nó không phải lượt cuối. Vắng ở lượt chạy trước 23/10/2026. */
   main?: { round: number; levels: Array<Pick<FailedReason, 'level' | 'messages' | 'codes'>> };
+  /** Lượt dừng vì chạm mức chi phí (T164) — Worker ghi `workers/src/design/ai/cost-cap.ts::CostCapStop`. */
+  costCap?: { capUsd: number; spentUsd: number; reason?: 'over' | 'unpriced' };
 }
 
 export interface FailureView {
@@ -44,6 +46,8 @@ export interface FailureView {
   /** Lượt cuối là câu trả lời không dùng được (sai cấu trúc) — chỉ có khi không có `main`. */
   lastUnusable: boolean;
   hints: string[];
+  /** Câu «đã dừng vì chạm mức chi phí» (T164); `null` khi lượt dừng vì lý do khác. */
+  costStop: string | null;
 }
 
 const ANSWER_UNUSABLE = 'answer_unusable';
@@ -78,6 +82,19 @@ export function readableMessage(message: string, roomLabels: Record<string, stri
       return label ? `«${label} ${n}»` : whole;
     })
     .replace(/(\d)\.(\d)/g, '$1,$2');
+}
+
+/** USD kiểu Việt Nam, khớp câu Worker viết (`formatUsdVi`): dấu phẩy, hai chữ số — ba khi dưới 0,1. */
+function usdVi(value: number): string {
+  const digits = value > 0 && value < 0.1 ? 3 : 2;
+  return `${value.toFixed(digits).replace('.', ',')} USD`;
+}
+
+/** Câu dừng vì mức chi phí — dựng từ số, không đọc lại `error`, để lượt cũ / lượt khác không lẫn vào. */
+export function costStopMessage(cap: NonNullable<FailedVariant['costCap']>): string {
+  return cap.reason === 'unpriced'
+    ? `Đã dừng vì không tính được chi phí lời gọi trước của mô hình này, trong khi lượt có mức chi phí ${usdVi(cap.capUsd)} (đã tiêu ${usdVi(cap.spentUsd)}).`
+    : `Đã dừng vì chạm mức chi phí ${usdVi(cap.capUsd)} (đã tiêu ${usdVi(cap.spentUsd)}).`;
 }
 
 function hintsFor(codes: readonly string[]): string[] {
@@ -126,6 +143,7 @@ export function failureViews(
       groups: [...earlier, ...groups],
       lastUnusable,
       hints: groups.length === 0 && !earlier.length ? [] : hintsFor(codes),
+      costStop: item.costCap ? costStopMessage(item.costCap) : null,
     };
   });
 }

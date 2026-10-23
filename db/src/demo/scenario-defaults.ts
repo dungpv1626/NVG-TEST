@@ -63,6 +63,9 @@ const SLA_HOURS: Record<string, { hours: number; label: string }> = {
 /** Mức tồn tối thiểu cho vật tư chưa đặt mức: 15 % số đang tồn, làm tròn. */
 const MIN_STOCK_RATIO = 0.15;
 
+/** Mức chi phí tối đa của một lượt AI Design, USD (T164) — hai lượt hỏng thật 23/10 tốn ≈ 0,74 USD. */
+const AI_RUN_COST_CAP_USD = 0.5;
+
 const DEMO_NOTE =
   'Giá trị DEMO (anh Dũng 23/10/2026: lấy số mặc định khi NVG chưa quyết) — NVG thay.';
 
@@ -162,6 +165,32 @@ export async function loadDefaults(): Promise<'created' | 'skipped'> {
     check(
       'đặt mức tồn tối thiểu demo',
       await kho.from('inventory_items').update({ min_quantity: min }).eq('id', i.id),
+    );
+    wrote++;
+  }
+
+  // --- 5. Mức chi phí tối đa của một lượt AI Design (T164) ----------------------------------------
+  // Khoá do migration 0219 khai với giá trị `null` (không giới hạn). Chỉ đặt khi còn trống.
+  const { data: caps } = await admin
+    .from('design_setting')
+    .select('tenant_id, value, description')
+    .eq('key', 'ai_run_cost_cap_usd');
+  for (const cap of (caps ?? []) as {
+    tenant_id: string;
+    value: unknown;
+    description: string | null;
+  }[]) {
+    if (cap.value !== null) continue;
+    check(
+      'đặt mức chi phí demo của một lượt AI Design',
+      await admin
+        .from('design_setting')
+        .update({
+          value: AI_RUN_COST_CAP_USD,
+          description: `${cap.description ?? ''} ${DEMO_NOTE}`.trim(),
+        })
+        .eq('tenant_id', cap.tenant_id)
+        .eq('key', 'ai_run_cost_cap_usd'),
     );
     wrote++;
   }

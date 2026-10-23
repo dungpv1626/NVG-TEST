@@ -122,6 +122,12 @@ export interface AiDesignParams {
    * đổi luôn bộ ngưỡng gửi cho mô hình, mà không có gì nói ra.
    */
   rulePacks: { standards: boolean; experience: boolean };
+  /**
+   * Mức chi phí tối đa của lượt, USD (T164, `design_setting.ai_run_cost_cap_usd`) — vắng / `null` = không
+   * giới hạn. Chốt lúc bấm cùng lý do với `rulePacks`: đổi cấu hình giữa chừng không đổi lượt đang chạy, và
+   * quyết định dừng phải đọc ra cùng một số khi Workflow phát lại.
+   */
+  costCapUsd?: number | null;
   variants: PlanVariant[];
   /**
    * Lượt SỬA theo yêu cầu kỹ sư trên một phương án đã lưu (T53). Có mặt thì Workflow không khai mới:

@@ -11,6 +11,7 @@
 
 import { AiPlanRejected, revisionBase, type LevelRejection } from '../ai/plan';
 import type { AiPrompts } from '../ai/prompts';
+import type { CostCapStop } from '../ai/cost-cap';
 
 /** Lượt hỏng nhẹ nhất của một phương án, khi nó KHÔNG phải lượt cuối. */
 export interface MainRejection {
@@ -24,6 +25,8 @@ export class AiPlanRejectedWithMain extends AiPlanRejected {
   constructor(
     levels: LevelRejection[],
     readonly main: MainRejection | null,
+    /** Lượt dừng vì chạm mức chi phí (T164) — `null` khi dừng vì lý do khác. */
+    readonly costCap: CostCapStop | null = null,
   ) {
     super(levels);
   }
