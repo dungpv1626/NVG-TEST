@@ -278,6 +278,11 @@ export interface SketchTreeInput {
   maxAspect?: (leafId: string) => number | null;
   /** Mã phòng mẹ của một lá khép kín; `null` khi lá đứng riêng. */
   ensuiteOf?: (leafId: string) => string | null;
+  /**
+   * Lá là ô lõi (thang bộ, thang máy) — nắn phòng lồi không được lấy ô của nó tới mức hụt cạnh tối thiểu (T166). Vắng:
+   * không lá nào được giữ.
+   */
+  fixedCore?: (leafId: string) => boolean;
   /** Dòng gỡ lỗi — chỉ phép thử dùng. */
   trace?: (line: string) => void;
 }
@@ -333,7 +338,20 @@ export function sketchTrees(input: SketchTreeInput): SketchTrees {
     };
   }
 
-  const reshaped = rectangularise(grid, input.leaves.length);
+  // Ô lõi nhường ô khi một phòng lồi ăn trọn khung bao không được tụt dưới cạnh tối thiểu của nó (T166, lượt thật
+  // 4eade9b1): phòng ăn + bếp gộp thông vẽ hình chữ L, ăn trọn khung bao thì lấy mất cột thứ ba của ô thang chữ U —
+  // ô thang còn 2 ô cho mức 2,4 m, bộ xếp căn ra lọt lòng 2,07 m < 2,15 m và cả tầng hỏng ở cả ba lượt sửa sau.
+  const cellW = (footprint.x1 - footprint.x0) / grid.cols;
+  const cellH = (footprint.y1 - footprint.y0) / grid.rows;
+  const fits = (id: string, box: Box) => {
+    if (!input.fixedCore?.(id)) return true;
+    const w = (box.c1 - box.c0) * cellW;
+    const h = (box.r1 - box.r0) * cellH;
+    const minX = Math.max(input.minCell, input.minExtent?.(id, 'x', { w, h }) ?? 0);
+    const minY = Math.max(input.minCell, input.minExtent?.(id, 'y', { w, h }) ?? 0);
+    return w + 0.5 >= minX && h + 0.5 >= minY;
+  };
+  const reshaped = rectangularise(grid, input.leaves.length, fits);
   if (input.trace) {
     const short = new Map(
       [...boxes(grid).keys()].map((id, i) => [id, String.fromCharCode(97 + i)]),
@@ -845,7 +863,12 @@ function snapKeepsLevel(
  * Nắn phòng không chữ nhật: giữ chữ nhật LỚN NHẤT gồm toàn ô của nó, trả phần lồi cho phòng kề (không
  * trả lại chính nó). Lặp tới khi mọi phòng là chữ nhật hoặc hết lượt. Trả mã các phòng đã nắn.
  */
-function rectangularise(grid: SketchGrid, rooms: number): string[] {
+function rectangularise(
+  grid: SketchGrid,
+  rooms: number,
+  /** Chữ nhật ô `box` có đủ cạnh tối thiểu cho phòng `id` không — vắng thì không kiểm (T166). */
+  fits?: (id: string, box: Box) => boolean,
+): string[] {
   const touched = new Set<string>();
   const exclude = new Set<string>();
   const passes = Math.max(1, rooms) * RESHAPE_PASSES_PER_ROOM;
@@ -859,7 +882,7 @@ function rectangularise(grid: SketchGrid, rooms: number): string[] {
     // Cách 1: cho phòng ăn trọn khung bao của nó, nếu mọi phòng nhường ô vẫn còn là chữ nhật và không
     // biến mất. Một ô thò sang cột bên (lượt 58d9ff66: phòng ngủ chính) nắn bằng cách cắt thì quay
     // vòng — phòng nhận ô lại thành lồi và trả về.
-    if (expandToBox(grid, id)) {
+    if (expandToBox(grid, id, fits)) {
       touched.add(id);
       continue;
     }
@@ -886,12 +909,17 @@ function rectangularise(grid: SketchGrid, rooms: number): string[] {
 }
 
 /**
- * Cho phòng `id` ăn trọn chữ nhật bao của nó. Chỉ nhận khi mọi phòng bị lấy ô vẫn là chữ nhật đầy và
- * còn ít nhất một ô. Trả `true` khi đã đổi.
+ * Cho phòng `id` ăn trọn chữ nhật bao của nó. Chỉ nhận khi mọi phòng bị lấy ô vẫn là chữ nhật đầy, còn ít
+ * nhất một ô, và — khi có `fits` — không phòng nào từ đủ cạnh tối thiểu thành thiếu (T166). Trả `true` khi đã đổi.
  */
-function expandToBox(grid: SketchGrid, id: string): boolean {
+function expandToBox(
+  grid: SketchGrid,
+  id: string,
+  fits?: (id: string, box: Box) => boolean,
+): boolean {
   const box = boxes(grid).get(id);
   if (!box) return false;
+  const beforeBoxes = boxes(grid);
   const before = grid.cells.map((row) => [...row]);
   const donors = new Set<string>();
   for (let r = box.r0; r < box.r1; r += 1) {
@@ -905,7 +933,9 @@ function expandToBox(grid: SketchGrid, id: string): boolean {
   const after = boxes(grid);
   const ok = [...donors].every((donor) => {
     const donorBox = after.get(donor);
-    return donorBox !== undefined && area(donorBox) === countCells(grid, donor);
+    if (donorBox === undefined || area(donorBox) !== countCells(grid, donor)) return false;
+    const was = beforeBoxes.get(donor);
+    return !fits || !was || !fits(donor, was) || fits(donor, donorBox);
   });
   if (ok) return true;
   grid.cells.splice(0, grid.cells.length, ...before);

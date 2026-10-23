@@ -317,7 +317,7 @@ floor_level:
     # Cùng lỗi, khi chương trình đếm được số ô bản phác (`withSketchCells`, lượt đo 011b4adc).
     arrange_room_below_brief_area_tight: '- Room "{room}" came out at {area_m2} m² from {cells} sketch cells but the client requires at least {min_m2} m²; it needs at least {need_cells} cells, and no single neighbour ({tight}) can give that many without dropping below its own minimum — the stair, lift and corridors give none, and pushing into them breaks them. Rearrange the bands of this storey instead so the missing cells come from the rooms with spare area: {spare}; rooms the client gave no minimum may also shrink below the target you set for them. Keep the stair and lift cells where they are.'
     arrange_room_below_brief_area_cells: '- Room "{room}" came out at {area_m2} m² from {cells} sketch cells but the client requires at least {min_m2} m²; draw it with at least {need_cells} cells (take them from a neighbour that has spare area) and give it more target area.'
-    arrange_stair_too_short: '- The stair "{room}" is only {have_m} m long in the direction of travel but its steps need {need_m} m; draw the stair longer.'
+    arrange_stair_too_short: '- The stair "{room}" is only {have_m} m {dir} but its steps need {need_m} m; draw the stair {fix}.'
     arrange_anchor_conflict: '- The stair "{room}" must sit exactly over the stair below; draw it on the same cells as the storey below.'
     arrange_no_parti: '- No arrangement could be built from this storey; redraw the sketch in clear bands of rooms.'
     arrange_unreachable: '- Room "{room}" could not be reached from the entrance; draw it against a corridor or the living room.'

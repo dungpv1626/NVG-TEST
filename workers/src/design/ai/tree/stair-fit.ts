@@ -106,7 +106,7 @@ export function stairFitsEither(
 export function stairShortfall(
   construction: ConstructionNorms,
   stair: { rect: readonly number[]; up: string; flights: number; treads: number },
-): { needCm: number; haveCm: number } | null {
+): { needCm: number; haveCm: number; across?: true } | null {
   const [x0 = 0, y0 = 0, x1 = 0, y1 = 0] = stair.rect;
   const alongY = stair.up.endsWith('y');
   const haveCm = alongY ? y1 - y0 : x1 - x0;
@@ -116,7 +116,9 @@ export function stairShortfall(
   if (params) {
     const need = stairNeed(params);
     if (haveCm + 1 < need.along) return { needCm: need.along, haveCm };
-    if (acrossCm + 1 < need.across) return { needCm: need.across, haveCm: acrossCm };
+    // Thiếu bề NGANG hai vế (T166): báo là chiều ngang — câu cũ nói «dài theo chiều đi lên» cho cả hai ca, lượt thật
+    // 4eade9b1 nhận «dài 2,07 m … cần 2,15 m» trong khi ô thang dài 3,88 m, chỉ thiếu bề ngang.
+    if (acrossCm + 1 < need.across) return { needCm: need.across, haveCm: acrossCm, across: true };
     return null;
   }
   const needCm = stairRunNeedCm(construction, {

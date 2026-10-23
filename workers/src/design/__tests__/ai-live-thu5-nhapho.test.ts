@@ -62,6 +62,7 @@ function thu5Input(run: RecordedRun) {
 const RAW: Record<string, RecordedRun> = {
   ef5fbffc: JSON.parse(read('workers/src/design/__tests__/fixtures/ai-run-ef5fbffc.json')),
   e5ec68a6: JSON.parse(read('workers/src/design/__tests__/fixtures/ai-run-e5ec68a6.json')),
+  '4eade9b1': JSON.parse(read('workers/src/design/__tests__/fixtures/ai-run-4eade9b1.json')),
 };
 
 /** Chạy lại cả vòng lặp thật (`generateAiPlan`) với các câu trả lời đã ghi, theo thứ tự; trả lời gọi đã gửi. */
@@ -183,5 +184,42 @@ describe('phát lại ef5fbffc — gara trọn hàng đường, phòng khách sa
   it('câu trả lời vòng 5 (danh mục rỗng, mô hình tự nói không giải được) vẫn bị bác ở hợp đồng', async () => {
     const { error } = await replayLoop('ef5fbffc');
     expect(String(error)).toMatch(/Sai cấu trúc ở rooms/);
+  });
+});
+
+/**
+ * Lượt thật thứ ba 4eade9b1 (23/10/2026, sau T165; 5 lời gọi, 0,29 USD): mô hình vẽ đúng kiểu nhà ống ngay lời gọi 1
+ * (gara trọn hàng đường làm lối vào, phòng khách sau, thang chữ U 3 × 4 ô, bếp ăn, WC, giếng trời). Vòng 4 sửa đúng
+ * phòng khách 20 ô — nhưng phòng ăn + bếp gộp thông vẽ hình chữ L, bộ nắn bản phác cho nó ăn trọn khung bao, lấy mất cột
+ * thứ ba của ô thang (3 → 2 ô, mức 2,4 m): thang ra lọt lòng 2,07 m < 2,15 m ngang hai vế, phòng khách bị ép còn
+ * 12,79 m². Vòng ấy bị gạt là «tệ hơn», lượt hết tiền ở lỗi 13,7 m² của vòng 3 (T166).
+ */
+describe('phát lại 4eade9b1 — phòng lồi không được ăn cột của ô thang', () => {
+  it('vòng 4: tầng 1 và 2 qua; câu nhắc lời gọi 5 chỉ còn lỗi bản phác thật của tầng 3–4', async () => {
+    const { prompts: sent } = await replayLoop('4eade9b1');
+    expect(sent.length).toBeGreaterThanOrEqual(5);
+    const fifth = sent[4]!;
+    expect(fifth).toContain('Storey 1, 2 passed every check');
+    expect(fifth).not.toContain('"lv1" came out at');
+    expect(fifth).not.toMatch(/stair "st1" is only/);
+    expect(fifth).toMatch(
+      /Storey 3: In the sketch, these rooms are not one rectangle of cells: co6/,
+    );
+  });
+
+  it('vòng 1: thiếu bề NGANG thang thì câu nói bề ngang, không nói «theo chiều đi lên»', () => {
+    const run = loadRun('4eade9b1');
+    const input = thu5Input(run);
+    const context = planContext(input);
+    const generator = programGenerator(FAKE_CALL, 'ai_text_fake', prompts.version, false);
+    const result = evaluateHouseBest(
+      input,
+      context,
+      run.intents.round1 as HouseIntent,
+      generator,
+      prompts,
+    );
+    const messages = result.rejections.flatMap((rejection) => rejection.messages).join(' | ');
+    expect(messages).not.toMatch(/chỉ dài 2\.\d+ m theo chiều đi lên/);
   });
 });

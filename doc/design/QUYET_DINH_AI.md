@@ -4262,3 +4262,38 @@ hai lượt THU5 nay nhận câu nhắc giải được (phép thử `ai-live-th
 riêng bộ xếp: vòng 3 của `ef5fbffc` với gara làm lối vào còn hỏng vì phòng ăn + bếp gộp thông 2,16 × 7,68 m (tỉ lệ
 3,55 > 3,2 của `usable.max_aspect.dining`) — dải 2 m cạnh thang U 2,4 m. Có nên đo tỉ lệ cho cặp gộp thông
 (`open_pairs`) theo từng phần thay vì cả khối là câu hỏi cho Haan, chưa đổi.
+
+### T166 — Phòng lồi nắn bản phác không được ăn cạnh tối thiểu của phòng nhường ô (ô thang); câu thang thiếu bề ngang nói đúng chiều (23/10/2026, mạch B)
+
+**Đầu vào.** Lượt thật thứ ba của THU5 `4eade9b1` (sau T165, 5 lời gọi, 0,29 USD): mô hình vẽ đúng kiểu nhà ống ngay lời
+gọi 1 (gara trọn hàng đường làm lối vào, phòng khách sau, thang chữ U 3 × 4 ô, bếp ăn, WC, giếng trời). Phát lại dựng lại
+5 lời gọi khớp từng ký tự (fixture `ai-run-4eade9b1.json`).
+
+**Nguyên nhân.** Vòng 4 mô hình sửa đúng phòng khách (20 ô). Phòng ăn + bếp gộp thông vẽ hình chữ L; `rectangularise`
+(`arrange/sketch.ts`) cho nó «ăn trọn khung bao» (`expandToBox`) — khung bao trùm cột thứ ba của ô thang, mà điều kiện
+duy nhất là phòng nhường ô vẫn chữ nhật. Ô thang còn 2 ô (cần 2,4 m theo tim), bộ xếp ra lọt lòng 2,07 m < 2,15 m ngang
+hai vế, phòng khách bị ép còn 12,79 m². Vòng ấy bị gạt là «tệ hơn» (2 lỗi so với 1), lượt dừng ở lỗi phòng khách 13,7 m²
+của vòng 3 (bản phác vòng 3 vẽ phòng khách 15 ô < 18 ô `min_cells` — lỗi thật của mô hình). Câu báo thang thiếu bề NGANG
+lại nói «dài … theo chiều đi lên», nên mô hình không biết phải làm thang rộng hơn. Phòng khách 16 m² VỪA tầng 1: bản phác
+vòng 4 cho 5 × 3,88 m theo tim (~17,8 m² lọt lòng) — không phải đầu bài quá sức.
+
+Vòng 1 (thang 3,53 < 3,6 m) không phải lỗi căn vách bản phác: bản phác hỏng vì hành lang không cửa / WC chỉ giáp thang,
+các vòng khung dự phòng mới rút ngắn ô thang — giữ nguyên.
+
+**Đã sửa.** `expandToBox` nhận `fits`: ô LÕI (thang bộ, thang máy — `fixedCore`) đang đủ cạnh tối thiểu (`minExtent`)
+thì không được thành thiếu; không ăn được thì đi đường cắt phần lồi như cũ. Áp cho mọi phòng thì hai phép thử cũ đỏ
+(`ai-run-75ba`, `ai-run-d084a46e` — hành lang / phòng thường nhường ô là cách nắn đúng), nên chỉ giữ ô lõi. `stairShortfall` đánh dấu `across`; câu tiếng Việt «chỉ rộng …
+ngang các vế», câu nhắc `arrange_stair_too_short` mang `{dir}` / `{fix}` (draw the stair wider / longer).
+
+**Đo.** Phát lại 226 vòng (55 lượt cũ + 4eade9b1), đối chứng cùng mã với thay đổi gỡ: ngữ cảnh mặc định 23 / 226 vòng ra
+mặt bằng ở cả hai (3 vòng đổi mã lỗi), ngữ cảnh như Workflow 10 / 226 ở cả hai (6 vòng đổi mã lỗi; `2c522a90` vòng 4 từ
+lỗi cả nhà sang lỗi phòng hẹp tầng 2 — vẫn hỏng). Số tầng hỏng 217 → 217 và 246 → 248. Lợi đo được nằm ở lượt mới: vòng 4 của 4eade9b1 nay qua tầng 1 và 2, câu nhắc lời
+gọi 5 chỉ còn lỗi bản phác thật của tầng 3–4 (hành lang không chữ nhật, thiếu WC tầng 4, đầu bước ra của thang chỉ giáp
+phòng) — trước là «phòng khách 13,7 m²» của bản đã bị gạt. Câu trả lời ghi của lời gọi 5 trả cho câu nhắc cũ nên không
+phát lại được tiếp: lượt này vẫn chưa ra mặt bằng trong năm câu trả lời đã có.
+
+Biến thể đầu bài phòng khách tối thiểu 13 m² (anh Dũng chọn cho bản đầu bài mới), phát lại cùng năm câu trả lời: tầng 1
+qua ngay vòng 3 (bản phác 15 ô), nhưng cũng dừng ở cùng lỗi bản phác tầng 3–4. Các lỗi ấy có từ lời gọi 1 mà không lời
+nhắc nào nói tới, vì khi tầng 1 hỏng thì tầng trên chỉ được SOÁT bản phác (`sketch_prechecked`: lối vào, sàn đầu bài),
+không soát phòng không chữ nhật / thiếu phòng / đầu bước ra của thang — việc nên làm tiếp: soát thêm ba lỗi ấy ngay khi
+tầng dưới hỏng, để một lượt sửa gỡ cả nhà.

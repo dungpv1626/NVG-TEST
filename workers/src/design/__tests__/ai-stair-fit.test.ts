@@ -58,6 +58,16 @@ describe('thang dựng từ tham số', () => {
     ).not.toBe(null);
   });
 
+  it('thang chữ U thiếu bề NGANG thì kết quả đánh dấu `across` (T166, lượt 4eade9b1: 2,07 × 3,77 m)', () => {
+    const u = { ...norms, stairs: { ...norms.stairs, shape: 'chu_u' as const } };
+    expect(stairShortfall(u, { rect: [0, 0, 207, 377], up: '+y', flights: 2, treads: 21 })).toEqual(
+      { needCm: 215, haveCm: 207, across: true },
+    );
+    expect(stairShortfall(u, { rect: [0, 0, 230, 353], up: '+y', flights: 2, treads: 21 })).toEqual(
+      { needCm: 360, haveCm: 353 },
+    );
+  });
+
   it('quy cách không có bề sâu bậc thì không kiểm', () => {
     const bare = { ...norms, stairs: { riser_m: 0.17, two_flights_min_width_m: 1.6 } };
     expect(stairShortfall(bare, { rect: [0, 0, 100, 100], up: '+y', flights: 1, treads: 21 })).toBe(

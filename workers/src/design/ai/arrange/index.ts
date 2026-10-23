@@ -1963,6 +1963,7 @@ function sketchStage(
     },
     maxAspect: (id) => env.leafById.get(id)?.aspectHard ?? null,
     ensuiteOf: (id) => env.leafById.get(id)?.parent ?? null,
+    fixedCore: (id) => coreLeaf(input, intent, id),
     ...(input.trace ? { trace: input.trace } : {}),
   });
   if (drawn.issues.length) {
@@ -2030,6 +2031,12 @@ function sketchStage(
   };
 }
 
+/** Lá là ô lõi — thang bộ hay thang máy (T166): nắn phòng lồi trên bản phác không lấy ô của nó tới mức hụt. */
+function coreLeaf(input: ArrangeInput, intent: LevelIntent, id: string): boolean {
+  const leaf = intent.leaves.find((item) => item.id === id);
+  return !!leaf?.types.some((type) => input.stairTypes.includes(type) || type === 'elevator');
+}
+
 /** Cây từ bản phác đã ép khu vệ sinh — cùng bộ tham số với bản gốc, chỉ khác lưới ô. */
 function treesOfStacked(
   input: ArrangeInput,
@@ -2054,6 +2061,7 @@ function treesOfStacked(
     },
     maxAspect: (id) => env.leafById.get(id)?.aspectHard ?? null,
     ensuiteOf: (id) => env.leafById.get(id)?.parent ?? null,
+    fixedCore: (id) => coreLeaf(input, intent, id),
     ...(input.trace ? { trace: input.trace } : {}),
   }).trees;
 }
@@ -2877,11 +2885,13 @@ function shortStairCell(
     if (!short) continue;
     return arrangeIssue(
       'arrange_stair_too_short',
-      `Ô thang "${cell.id}" ở tầng ${input.level} chỉ dài được ${round2(short.haveCm / 100)} m — ${treads} bậc cần ít nhất ${round2(short.needCm / 100)} m.`,
+      `Ô thang "${cell.id}" ở tầng ${input.level} chỉ ${short.across ? 'rộng' : 'dài'} được ${round2(short.haveCm / 100)} m — ${treads} bậc cần ít nhất ${round2(short.needCm / 100)} m.`,
       {
         room: cell.id,
         need_m: round2(short.needCm / 100),
         have_m: round2(short.haveCm / 100),
+        dir: short.across ? 'wide across its flights' : 'long in the direction of travel',
+        fix: short.across ? 'wider' : 'longer',
         zone: zoneOfRect(input.anchors?.footprint ?? input.buildableCm, cell.rect),
       },
       cell.id,
@@ -3701,13 +3711,15 @@ function shortStairs(input: ArrangeInput, level: AiPlanRoomsLevel): PlanIssue[] 
     return [
       arrangeIssue(
         'arrange_stair_too_short',
-        `Ô thang "${room}" ở tầng ${input.level} chỉ dài ${round2(short.haveCm / 100)} m theo chiều đi lên — ${stair.treads} bậc${
+        `Ô thang "${room}" ở tầng ${input.level} chỉ ${short.across ? 'rộng' : 'dài'} ${round2(short.haveCm / 100)} m ${short.across ? 'ngang các vế' : 'theo chiều đi lên'} — ${stair.treads} bậc${
           (stair.flights ?? 1) > 1 ? ' chia hai vế' : ''
         } cần ít nhất ${round2(short.needCm / 100)} m.`,
         {
           room,
           need_m: round2(short.needCm / 100),
           have_m: round2(short.haveCm / 100),
+          dir: short.across ? 'wide across its flights' : 'long in the direction of travel',
+          fix: short.across ? 'wider' : 'longer',
           zone: zoneOfRect(input.anchors?.footprint ?? input.buildableCm, { x0, y0, x1, y1 }),
         },
         room,
