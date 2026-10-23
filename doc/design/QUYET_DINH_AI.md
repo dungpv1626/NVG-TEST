@@ -4130,3 +4130,63 @@ xếp lại giao diện và luồng — không đổi `contracts/`, `workers/`, 
 
 **Còn mở:** chưa có ước tính cho mặt đứng / ảnh (các nút ấy đã có giá ảnh niêm yết trên thẻ mô hình); số lượt mẫu tối
 thiểu cho ước tính để ở 1 (ghi rõ «trung bình n lượt trước») — chưa có tham số NVG.
+
+### T163 — Sửa chỗ khó dùng sau lượt chạy AI Design thật đầu tiên (23/10/2026, anh Dũng, mạch A)
+
+**Bối cảnh.** Lượt chạy thật đầu tiên trên máy (hồ sơ `NVO-TK-2026-THU5`, nhà phố 5 × 18 m 4 tầng, GPT-5.6 Terra):
+hai lượt «Xếp mặt bằng» hỏng, ≈ 0,74 USD, 0 phương án (CLAUDE.md 9.3 «Bước tiếp theo» 2b, phần A — phần giao diện,
+không tốn lượt gọi mô hình nào). Mười ba chỗ, đã làm như sau.
+
+**Lượt hỏng nói được vì sao — đảo một phần quyết định 07/10/2026 («câu lỗi của bộ xếp chỉ nằm trong báo cáo»).**
+- Worker: vòng lặp vốn giữ lượt hỏng nhẹ nhất để gửi lại mô hình (`revisionBase`, T73 i). Nay mang lượt ấy ra kết quả
+  (`result.failed[].main = { round, levels }`, `workflows/plan-main-rejection.ts`) khi nó nhẹ hơn hẳn lượt cuối — chọn
+  bằng đúng phép so của vòng lặp, không đặt thước thứ hai. Bước «Xếp lại» hỏng ghi lý do của vòng ấy vào `error` của
+  bước. Lượt ef5fbffc: lượt cuối là «Sai cấu trúc ở rooms…», lý do thật nằm ở các lượt trước.
+- Màn hình: khối «Vì sao chưa xếp được» dưới thẻ tiến độ — lý do của lượt chính (hoặc lượt cuối với lượt chạy cũ;
+  lượt cuối không dùng được thì nói thẳng ra), mã phòng đổi sang tên phòng của danh mục, số thập phân dấu phẩy, kèm
+  «Gợi ý sửa đầu bài» theo NHÓM mã lỗi (lối vào / diện tích / lối đi / câu trả lời hỏng). Danh sách bước, bảng lượt
+  gọi, lý do từng vòng vẫn chỉ ở báo cáo `.md` (giữ phần còn lại của quyết định 07/10).
+- Câu do bộ xếp viết (`arrange/`, mạch B) vẫn mang dấu chấm thập phân; màn hình đổi lúc hiện (`plan-failure.ts`).
+
+**Chi phí trước khi bấm.** Chưa có lượt nào bằng mô hình đang chọn thì ước tính bằng **bảng giá niêm yết của mô hình
+này × số token ĐO ĐƯỢC ở các lượt trước bằng mô hình khác** (`estimateFromPricing`) — cả hai đều là số thật, không đặt
+số token nào; câu chữ ghi rõ «ước tính theo bảng giá… số thật có thể lệch nhiều». Không có lượt nào ghi token → vẫn
+«Chưa đủ dữ liệu». Bấm «Xếp mặt bằng» / «Chạy lại» → hộp hỏi lại: ước tính, nguồn của số, số lượt sửa tối đa mỗi
+phương án (`GET /design/ai/models` trả `limits.planCallsMax` = `houseRevisionsMax() + 1`, đọc cùng hàm vòng lặp dùng)
+và **trần** nếu phải dùng hết (giá trung bình một lượt gọi × số lượt × số phương án). Trần là con số để hỏi, **chưa
+phải hạn mức chặn** — chặn cứng theo tiền cần sửa vòng lặp Workflow, để anh Dũng quyết.
+
+**Đầu bài.**
+- Mật độ xây dựng: ô vẫn hỏi PHẦN TRĂM, hợp đồng vẫn lưu TỈ LỆ (`value_scale` 0,01) — một nghĩa, không đổi dữ liệu.
+  Gõ dưới 1 vào ô phần trăm (0,9 với ý 90 %) thì cảnh báo `mat_do_nghi_ghi_ti_le` («đang là 0,9% — có phải 90%?»),
+  không chặn, không tự đổi số.
+- «Còn thiếu» chỉ đếm câu bắt buộc; câu «(tùy chọn)» chưa trả lời gấp riêng («Câu tùy chọn chưa trả lời (n)»).
+- «Xác nhận đầu bài»: khoá kèm lý do ngay dưới nút khi mức đầy đủ dưới `brief_completeness_min` hoặc còn mâu thuẫn
+  nghiêm trọng; đủ điều kiện thì hộp hỏi lại (xác nhận xong muốn đổi phải lập phiên bản mới). Worker xác nhận không
+  tự chặn theo điểm — chặn ở đây vì bản đã xác nhận dưới ngưỡng không dựng được gì (cổng Lớp 2 / nhánh AI chặn).
+- «Lưu nháp» giữa chừng lưu rồi ở lại bước đang sửa; bước cuối «Lưu và đóng».
+- Mục dài: câu tùy chọn CHƯA trả lời (không dính câu soát nào) gấp sau «Hiện thêm N câu chi tiết (tùy chọn)» — mục 1
+  từ 26 câu còn ~13 trên màn hình. Không bỏ trường nào khỏi biểu mẫu hay hợp đồng, `scoreBrief` không đổi nên web và
+  Worker vẫn chấm một con số (T63). Tập câu gấp CHỤP lúc vào bước / bấm mở-gấp — tính lại mỗi lần gõ thì xoá chữ trong
+  một ô tùy chọn làm ô ấy biến mất giữa lúc gõ. Bấm một câu tùy chọn ở khung phải thì mục tự mở.
+- Bộ đếm bước một kiểu «Bước X trên Y» (đầu mục đầu bài, thanh bước, thanh chuyển màn hình hồ sơ, tiến trình thiết
+  kế). Hai con số tổng vẫn khác nhau có chủ ý: thanh chuyển đếm MÀN HÌNH con (5), tiến trình đếm GIAI ĐOẠN (6, có
+  «Dự toán» và «Bàn giao» dùng chung màn hình).
+
+**AI Design khác.** Ô chọn model ghi nhãn bậc ngay dưới nút («Cân bằng», «Nhanh, rẻ nhất»), thẻ mặc định của công ty
+mang nhãn «Mặc định của công ty», bảng chọn có câu gợi ý. Chưa có mặt bằng thì khối «Ảnh mặt bằng có nội thất» gấp sau
+một dòng («Đã có bản vẽ mặt bằng của kỹ sư?…») — lối vẽ từ bản tải lên (T114 Đợt 4) vẫn còn. Dải bốn bước ghi «Đang
+chạy» / «Hỏng» (nạp lại `/state` khi bắt đầu lượt; trước đó dải đọc trạng thái cũ và ghi «Chưa chạy» suốt lượt).
+
+**Trùng khoá React.** «Việc cần làm» của hồ sơ (`thieu_ban_ve` lặp theo bộ môn), «Chỗ chưa nhất quán» của đầu bài
+(`dien_tich_vuot_san_xay_duoc` lặp theo tầng), ghi chú tờ vẽ — khoá kèm bộ môn / vị trí. Kiểm bằng Playwright: không
+còn cảnh báo trên hồ sơ, đầu bài, AI Design.
+
+**Hàng rào.** `brief-form.test.tsx` (còn thiếu / tùy chọn, lưu nháp ở lại, xác nhận khoá + hỏi lại, gấp câu tùy chọn,
+bộ đếm), `design-brief.test.ts` + `balcony-brief.test.ts` (mật độ, dấu phẩy), `plan-failure.test.ts` (dữ liệu nguyên
+văn hai lượt thật), `plan-main-rejection.test.ts` (Worker), `ai-result-bundle.test.ts` (ước tính theo bảng giá, trần),
+`ai-plan-step.test.tsx` (hộp hỏi lại, lý do hiện, khối ảnh gấp), `ai-design-tab.test.tsx` («Hỏng»),
+`ai-model-cards.test.tsx` (nhãn bậc, gợi ý).
+
+**Chờ anh Dũng quyết:** (1) trần chi phí có thành hạn mức CHẶN không (dừng vòng sửa khi vượt số tiền); (2) giữ khoá
+«Xác nhận đầu bài» khi dưới ngưỡng, hay chỉ cảnh báo; (3) nhóm gợi ý sửa đầu bài có cần thêm nhóm nào.

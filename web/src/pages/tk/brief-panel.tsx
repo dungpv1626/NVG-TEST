@@ -1206,8 +1206,9 @@ function CompletenessPanel({
         <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
           <p className="font-medium">Chỗ chưa nhất quán ({issues.length})</p>
           <ul className="mt-2 space-y-2">
-            {issues.map((issue) => (
-              <li key={issue.code}>
+            {/* Một mã có thể lặp theo từng tầng (`dien_tich_vuot_san_xay_duoc`) — khoá kèm vị trí. */}
+            {issues.map((issue, index) => (
+              <li key={`${issue.code}:${index}`}>
                 {onJumpPath ? (
                   <button
                     type="button"

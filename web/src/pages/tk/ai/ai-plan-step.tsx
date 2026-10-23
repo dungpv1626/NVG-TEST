@@ -245,7 +245,7 @@ export function AiPlanStep({
           ) : (
             <div className="space-y-4">
               {/* Model và mức suy nghĩ cùng một hàng, hai ô dạng viên (07/10/2026). */}
-              <div className="flex items-end gap-2 *:first:min-w-0 *:last:shrink-0">
+              <div className="flex items-start gap-2 *:first:min-w-0 *:last:shrink-0">
                 <AiModePicker
                   kind="text"
                   choice={ai.choice}
@@ -669,13 +669,18 @@ export function RunCostNotice({
           ? `Chi phí ước tính ≈ ${formatUsd(estimate.perUnitUsd * units)} — ${estimateSource(estimate)}.`
           : 'Chưa đủ dữ liệu để ước tính chi phí — chưa có lượt nào ghi số token, hoặc mô hình này chưa khai giá niêm yết.'}
       </p>
-      {callsMax !== null && (
+      {callsMax !== null ? (
         <p>
           Bản đầu chưa qua kiểm thì chương trình gọi lại mô hình để sửa, tối đa {callsMax - 1} lượt
           sửa mỗi phương án ({callsMax} lượt gọi).
           {ceiling !== null
             ? ` Trần nếu phải dùng hết: ≈ ${formatUsd(ceiling)}${units > 1 ? ` cho ${units} phương án` : ''}.`
             : ' Chưa đủ dữ liệu để ước tính trần.'}
+        </p>
+      ) : (
+        <p>
+          Bản đầu chưa qua kiểm thì chương trình gọi lại mô hình để sửa — mỗi lượt sửa tính tiền
+          thêm.
         </p>
       )}
       <p>Lượt không ra phương án vẫn tính tiền các lượt gọi đã dùng.</p>
@@ -894,8 +899,8 @@ function PlanDetail({
             <ul className="mt-3 space-y-1">
               {/* Chỗ bộ vẽ tự xử lý (kẹp lỗ mở quá khổ, bỏ nhãn phòng quá nhỏ, hạ tỷ lệ). Không
                   phải lỗi, nhưng im lặng thì người đọc tưởng tờ vẽ nói đủ mọi thứ trong dữ liệu. */}
-              {current!.notes.map((note) => (
-                <li key={note.code} className="text-fg-subtle">
+              {current!.notes.map((note, index) => (
+                <li key={`${note.code}:${index}`} className="text-fg-subtle">
                   {note.message}
                 </li>
               ))}

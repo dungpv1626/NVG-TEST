@@ -163,11 +163,10 @@ describe('Ô chọn model dạng thẻ', () => {
 });
 
 describe('Tên model dễ hiểu + gợi ý chọn (23/10/2026)', () => {
-  it('nút thu gọn ghi kèm nhãn bậc, không chỉ tên model trần', () => {
+  it('dưới nút thu gọn ghi nhãn bậc, không chỉ tên model trần', () => {
     show([OPENAI, OPENAI_FAST], 'ai_text_openai_fast');
-    expect(screen.getByRole('button', { name: /Đổi model/ })).toHaveTextContent(
-      'GPT-5 mini · Nhanh, rẻ hơn',
-    );
+    expect(screen.getByRole('button', { name: /Đổi model/ })).toHaveTextContent('GPT-5 mini');
+    expect(screen.getByTestId('model-tag')).toHaveTextContent('Nhanh, rẻ hơn');
   });
 
   it('thẻ mặc định của công ty mang nhãn gợi ý; bảng có câu gợi ý cách chọn', async () => {

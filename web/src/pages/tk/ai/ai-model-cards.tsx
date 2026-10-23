@@ -202,14 +202,21 @@ export function ModelChooser({
         )}
         <span className="truncate font-semibold">
           {selected ? titleOf(selected) : 'Chưa có model nào dùng được'}
-          {/* Nhãn bậc ngay trên nút: tên model trần không nói nó rẻ hay đắt, nhanh hay kỹ. */}
-          {selected?.tag && <span className="font-normal text-tk-t2"> · {selected.tag}</span>}
         </span>
         <ChevronDown
           className={cn('size-4 shrink-0 text-tk-t2 transition-transform', open && 'rotate-180')}
           aria-hidden
         />
       </button>
+
+      {/* Nhãn bậc ngay dưới nút (23/10/2026): tên model trần không nói nó rẻ hay đắt, nhanh hay kỹ.
+          Dòng riêng, không chen vào nút — cột thiết lập hẹp, chen vào thì bị cắt mất. */}
+      {selected?.tag && (
+        <p className="mt-1 text-xs text-fg-subtle" data-testid="model-tag">
+          {selected.tag}
+          {selected.route === recommended && ' · mặc định của công ty'}
+        </p>
+      )}
 
       {open && shown && (
         <div
