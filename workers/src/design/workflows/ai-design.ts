@@ -87,6 +87,12 @@ import {
   type PlanVariant,
   revisionBase,
 } from '../ai/plan';
+import {
+  AiPlanRejectedWithMain,
+  mainRejection,
+  roundSummary,
+  type MainRejection,
+} from './plan-main-rejection';
 import { roomVocabulary as vocabularyIndex } from '../kb/vocabulary-data';
 import { facadeVocabulary } from '../kb/facade-vocabulary-data';
 import { facadeQuality } from '../ai/facade/quality-data';
@@ -279,7 +285,13 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
     }
 
     const plans: WriteOutcome[] = [];
-    const failed: { variantId: string; error: string; reasons: LevelRejection[] }[] = [];
+    const failed: {
+      variantId: string;
+      error: string;
+      reasons: LevelRejection[];
+      /** Lượt hỏng NHẸ NHẤT khi nó không phải lượt cuối (`AiPlanRejectedWithMain`). */
+      main?: MainRejection;
+    }[] = [];
     params.variants.forEach((variant, index) => {
       const outcome = settled[index];
       if (outcome?.status === 'fulfilled') plans.push(outcome.value);
@@ -289,6 +301,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
           variantId: variant.id,
           error: reason instanceof AiPlanRejected ? reason.message : userFacing(reason),
           reasons: reason instanceof AiPlanRejected ? reason.levels : [],
+          ...(reason instanceof AiPlanRejectedWithMain && reason.main ? { main: reason.main } : {}),
         });
       }
     });
@@ -632,6 +645,8 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       : null;
     let best: BestArranged | null = null;
     let bestFailed: ArrangeOutcome | null = null;
+    // Vòng của `bestFailed` — để màn hình nói lý do của lượt gần đạt nhất kèm số lượt (23/10/2026).
+    let bestFailedRound = 0;
     let resent = 0;
     // Tập lỗi từng lượt hỏng — thôi gọi khi `STUCK_AFTER` lượt liền y hệt (`stuckRepeating`).
     const history: string[] = [];
@@ -698,7 +713,11 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
         continue;
       }
 
-      await markStep(db, runId, id('arrange'), 'failed');
+      // Lý do của TỪNG vòng ghi vào bước (lượt chạy thật 23/10/2026: bước «Xếp lại» hỏng mà không
+      // một chữ nào — lý do thật chỉ còn trong câu nhắc gửi mô hình).
+      await markStep(db, runId, id('arrange'), 'failed', {
+        error: roundSummary(arranged.rejections),
+      });
       for (const rejection of arranged.rejections) {
         if (rejection.level > 0) failedLevels.add(rejection.level);
       }
@@ -717,19 +736,21 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       ) {
         // Một lượt TRƯỚC đã xếp được (dưới ngưỡng), lượt sửa vì điểm thì hỏng: lưu bản đã có.
         if (best) return this.writeBest(step, deps, params, variant, best, calls.length);
-        throw new AiPlanRejected(
+        throw new AiPlanRejectedWithMain(
           finalRejections(
             arranged.rejections,
             first,
             repeated ? 'unchanged' : arranged.retry,
             calls.length,
           ),
+          mainRejection(bestFailed, bestFailedRound, arranged, deps.prompts),
         );
       }
       if (stuckRepeating(history, stuckAfter(params.pipeline))) {
         if (best) return this.writeBest(step, deps, params, variant, best, calls.length);
-        throw new AiPlanRejected(
+        throw new AiPlanRejectedWithMain(
           finalRejections(arranged.rejections, first, 'stuck', calls.length),
+          mainRejection(bestFailed, bestFailedRound, arranged, deps.prompts),
         );
       }
       // Sửa tiếp từ lượt hỏng nhẹ nhất, không phải lượt mới nhất (T73 i, lượt đo 5cd78ef7).
@@ -738,6 +759,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
           ? revisionBase(bestFailed, arranged, deps.prompts, resent >= STALLED_AFTER)
           : { best: bestFailed, next: arranged };
       resent = picked.best === arranged ? 0 : resent + 1;
+      if (picked.best === arranged) bestFailedRound = round;
       bestFailed = picked.best;
       previous = picked.next;
     }

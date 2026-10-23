@@ -176,6 +176,7 @@ export function AiFacadeStep({
                 <AiModePicker
                   kind="text"
                   choice={ai.choice}
+                  recommended={ai.defaultRoute}
                   options={ai.options}
                   onMode={ai.pickMode}
                   onRoute={ai.pickRoute}

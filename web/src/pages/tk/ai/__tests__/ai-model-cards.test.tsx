@@ -161,3 +161,29 @@ describe('Ô chọn model dạng thẻ', () => {
     expect(screen.getByText(/m2 · Chưa có giá niêm yết trong cấu hình/)).toBeInTheDocument();
   });
 });
+
+describe('Tên model dễ hiểu + gợi ý chọn (23/10/2026)', () => {
+  it('nút thu gọn ghi kèm nhãn bậc, không chỉ tên model trần', () => {
+    show([OPENAI, OPENAI_FAST], 'ai_text_openai_fast');
+    expect(screen.getByRole('button', { name: /Đổi model/ })).toHaveTextContent(
+      'GPT-5 mini · Nhanh, rẻ hơn',
+    );
+  });
+
+  it('thẻ mặc định của công ty mang nhãn gợi ý; bảng có câu gợi ý cách chọn', async () => {
+    render(
+      <ModelChooser
+        kind="text"
+        options={[OPENAI, OPENAI_FAST]}
+        value="ai_text_openai_fast"
+        onChange={vi.fn()}
+        recommended="ai_text_openai"
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /Đổi model/ }));
+    expect(screen.getByText(/^Gợi ý: chưa quen thì dùng model/)).toBeInTheDocument();
+    const cards = screen.getAllByRole('radio');
+    expect(cards[0]).toHaveTextContent('Mặc định của công ty');
+    expect(cards[1]).not.toHaveTextContent('Mặc định của công ty');
+  });
+});

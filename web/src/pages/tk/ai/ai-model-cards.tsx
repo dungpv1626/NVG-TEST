@@ -140,8 +140,14 @@ export function ModelChooser({
   value,
   onChange,
   disabled = false,
+  recommended = null,
 }: {
   options: AiModelOption[];
+  /**
+   * Tuyến mặc định của công ty (`design_setting`) — thẻ ấy mang nhãn «Mặc định của công ty» làm gợi ý
+   * cho người chưa quen (lượt chạy thật 23/10/2026: ô chỉ ghi «GPT-5.6 Terra», không biết chọn gì).
+   */
+  recommended?: string | null;
   /** Tên tuyến đang chọn. */
   value: string | null;
   onChange: (route: string) => void;
@@ -196,6 +202,8 @@ export function ModelChooser({
         )}
         <span className="truncate font-semibold">
           {selected ? titleOf(selected) : 'Chưa có model nào dùng được'}
+          {/* Nhãn bậc ngay trên nút: tên model trần không nói nó rẻ hay đắt, nhanh hay kỹ. */}
+          {selected?.tag && <span className="font-normal text-tk-t2"> · {selected.tag}</span>}
         </span>
         <ChevronDown
           className={cn('size-4 shrink-0 text-tk-t2 transition-transform', open && 'rotate-180')}
@@ -252,6 +260,11 @@ export function ModelChooser({
             })}
           </div>
 
+          <p className="mt-3 px-1 text-xs text-tk-t2">
+            Gợi ý: chưa quen thì dùng model mang nhãn «Mặc định của công ty». Bản xếp bị bác nhiều
+            lượt thì thử bậc cao hơn; cần thử nhiều lượt cho rẻ thì chọn bậc rẻ. Giá niêm yết ghi
+            dưới từng thẻ.
+          </p>
           <p className="mt-3 mb-2 flex flex-wrap items-baseline justify-between gap-2 px-1 text-xs text-tk-t2">
             <span>Các model của {shown.label}:</span>
             <span>{shown.options.length} model</span>
@@ -266,6 +279,7 @@ export function ModelChooser({
               <ModelCard
                 key={option.route}
                 option={option}
+                recommended={option.route === recommended}
                 checked={option.route === value}
                 onPick={() => {
                   onChange(option.route);
@@ -284,9 +298,11 @@ function ModelCard({
   option,
   checked,
   onPick,
+  recommended = false,
 }: {
   option: AiModelOption;
   checked: boolean;
+  recommended?: boolean;
   onPick: () => void;
 }): React.ReactElement {
   return (
@@ -316,6 +332,9 @@ function ModelCard({
           </span>
         )}
       </span>
+      {recommended && (
+        <span className="mt-1 block text-xs font-medium text-tk-gr-fg">Mặc định của công ty</span>
+      )}
       {option.blurb && <span className="mt-1 block text-xs text-tk-t2">{option.blurb}</span>}
       <span className="mt-1 block text-xs text-tk-t3">
         {option.model} · {priceShort(option)}

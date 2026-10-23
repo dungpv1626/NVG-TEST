@@ -55,7 +55,7 @@ export function PlanEditPanel({
   onSubmit: (instruction: string) => void;
 }): React.ReactElement {
   const [text, setText] = useState('');
-  const cost = useCostEstimate('plan_edit', route);
+  const cost = useCostEstimate('plan_edit', route, option);
   const rooms = review.levels.find((item) => item.level === level)?.roomList ?? [];
   const applied = notes.filter((note) => note.code === 'edit_applied');
   const explanation = notes.find((note) => note.code === 'edit_explanation');

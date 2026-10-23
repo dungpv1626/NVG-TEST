@@ -203,6 +203,50 @@ describe('Dải bước của tab AI Design', () => {
     expect(await screen.findByText('Có 3')).toBeInTheDocument();
     expect(screen.getByText('Đang chạy')).toBeInTheDocument();
   });
+
+  it('lượt xếp gần nhất hỏng, chưa có phương án: bước ghi «Hỏng», không «Chưa chạy» (23/10/2026)', async () => {
+    const run = (status: string) => ({
+      id: 'r1',
+      stage: 'plan',
+      status,
+      progress: {},
+      result: null,
+      error: null,
+      createdAt: '',
+      updatedAt: '',
+    });
+    state.design = designState({ runs: { plan: run('failed') } });
+    const view = renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
+    expect(await screen.findByText('Hỏng')).toBeInTheDocument();
+    expect(screen.queryByText('Chưa chạy')).toBeNull();
+    view.unmount();
+
+    state.design = designState({ runs: { plan: run('running') } });
+    renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
+    expect(await screen.findByText('Đang chạy')).toBeInTheDocument();
+    expect(screen.queryByText('Chưa chạy')).toBeNull();
+  });
+
+  it('đã có phương án thì lượt hỏng sau không xoá «Có n»', async () => {
+    state.design = designState({
+      plans: [{ artifactId: REF, createdAt: '' }],
+      runs: {
+        plan: {
+          id: 'r1',
+          stage: 'plan',
+          status: 'failed',
+          progress: {},
+          result: null,
+          error: null,
+          createdAt: '',
+          updatedAt: '',
+        },
+      },
+    });
+    renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
+    expect(await screen.findByText('Có 1')).toBeInTheDocument();
+    expect(screen.queryByText('Hỏng')).toBeNull();
+  });
 });
 
 describe('Mặt đứng dựng theo phương án cũ (T59)', () => {

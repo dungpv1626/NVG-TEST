@@ -55,6 +55,8 @@ export interface AiModelCatalogue {
   defaults: { text: string | null; image: string | null };
   /** Nhà cung cấp không phát sinh hoá đơn — để tính tiền thật của từng dòng nhật ký. */
   freeProviders?: string[];
+  /** Trần số lượt gọi mô hình của một phương án mặt bằng (lượt đầu + lượt sửa). Vắng ở máy chủ cũ. */
+  limits?: { planCallsMax?: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -450,6 +452,7 @@ export function useCancelAiRun() {
  * một chỗ để gửi sai khoá mà Worker im lặng bỏ qua.
  */
 export function useStartAiRun(stage: Exclude<AiStage, 'program'>) {
+  const queryClient = useQueryClient();
   return useMutation<
     { runId: string },
     Error,
@@ -457,6 +460,10 @@ export function useStartAiRun(stage: Exclude<AiStage, 'program'>) {
   >({
     mutationFn: ({ projectId, route, options }) =>
       designApi<{ runId: string }>(`/design/ai/${stage}/runs`, { projectId, route, ...options }),
+    // Dải bốn bước đọc `runs` từ `/state`: không nạp lại thì nó ghi «Chưa chạy» suốt lượt đang chạy
+    // (lượt chạy thật 23/10/2026). Lượt chốt (xong / hỏng) thì bước nạp lại lần nữa.
+    onSuccess: (_out, { projectId }) =>
+      void queryClient.invalidateQueries({ queryKey: ['ai_design_state', projectId] }),
   });
 }
 
@@ -469,6 +476,7 @@ export function useStartAiRun(stage: Exclude<AiStage, 'program'>) {
  * sửa là phương án MỚI, bản gốc giữ nguyên.
  */
 export function useEditAiPlan() {
+  const queryClient = useQueryClient();
   return useMutation<
     { runId: string },
     Error,
@@ -481,6 +489,8 @@ export function useEditAiPlan() {
     }
   >({
     mutationFn: (body) => designApi<{ runId: string }>('/design/ai/plan/edit', body),
+    onSuccess: (_out, { projectId }) =>
+      void queryClient.invalidateQueries({ queryKey: ['ai_design_state', projectId] }),
   });
 }
 

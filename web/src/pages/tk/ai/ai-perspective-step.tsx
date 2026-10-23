@@ -306,6 +306,7 @@ export function AiPerspectiveStep({
                 <AiModePicker
                   kind="image"
                   choice={image.choice}
+                  recommended={image.defaultRoute}
                   options={image.options}
                   onMode={image.pickMode}
                   onRoute={image.pickRoute}

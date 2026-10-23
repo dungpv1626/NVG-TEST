@@ -75,14 +75,28 @@ const STEP_IDS: readonly StepId[] = ['dau-vao', 'mat-bang', 'mat-ngoai', 'ket-qu
 function statusOf(
   step: StepId,
   state: AiDesignState,
-): { done: boolean; running: boolean; blocked: string | null; count: number } {
+): {
+  done: boolean;
+  running: boolean;
+  /** Lượt chạy gần nhất của bước HỎNG và bước chưa có kết quả nào — dải ghi «Hỏng», không «Chưa chạy». */
+  failed: boolean;
+  blocked: string | null;
+  count: number;
+} {
   switch (step) {
     case 'dau-vao':
-      return { done: Boolean(state.briefArtifactId), running: false, blocked: null, count: 0 };
+      return {
+        done: Boolean(state.briefArtifactId),
+        running: false,
+        failed: false,
+        blocked: null,
+        count: 0,
+      };
     case 'mat-bang':
       return {
         done: state.plans.length > 0,
         running: isRunning(state, 'plan'),
+        failed: state.plans.length === 0 && isFailed(state, 'plan'),
         // Mặt bằng đọc đầu bài + khảo sát, không đọc chương trình không gian (T45, 15/09/2026).
         blocked: state.briefArtifactId ? null : 'Cần xác nhận đầu bài trước.',
         count: state.plans.length,
@@ -92,6 +106,11 @@ function statusOf(
         // Mặt đứng dựng theo phương án cũ (T59) chưa tính là xong: cửa trên tờ ấy của nhà khác.
         done: Boolean(state.facadeArtifactId) && !facadeIsStale(state),
         running: isRunning(state, 'facade') || isRunning(state, 'images'),
+        failed:
+          (!state.facadeArtifactId && isFailed(state, 'facade')) ||
+          (Boolean(state.facadeArtifactId) &&
+            !state.imageSetArtifactId &&
+            isFailed(state, 'images')),
         // Chỉ chặn khi chưa có phương án nào. Chọn phương án làm nền là việc NGAY TRONG bước này.
         blocked: state.plans.length > 0 ? null : 'Cần xếp mặt bằng trước.',
         count: 0,
@@ -100,6 +119,7 @@ function statusOf(
       return {
         done: false,
         running: false,
+        failed: false,
         blocked: state.plans.length > 0 ? null : 'Cần ít nhất một phương án mặt bằng.',
         count: 0,
       };
@@ -108,6 +128,10 @@ function statusOf(
 
 function isRunning(state: AiDesignState, stage: 'plan' | 'facade' | 'images'): boolean {
   return state.runs[stage]?.status === 'running' || state.runs[stage]?.status === 'queued';
+}
+
+function isFailed(state: AiDesignState, stage: 'plan' | 'facade' | 'images'): boolean {
+  return state.runs[stage]?.status === 'failed';
 }
 
 /** Phối cảnh mở được chưa, và nếu chưa thì vì sao. */
@@ -242,6 +266,8 @@ export function AiDesignTab({
                       {/* Trạng thái luôn kèm CHỮ, không chỉ màu (CGD 6.8). */}
                       {s.running ? (
                         <Chip tone="bl">Đang chạy</Chip>
+                      ) : s.failed ? (
+                        <Chip tone="rd">Hỏng</Chip>
                       ) : step.id === 'mat-ngoai' && facadeIsStale(data) ? (
                         <Chip tone="am">Theo phương án cũ</Chip>
                       ) : step.id === 'ket-qua' ? (

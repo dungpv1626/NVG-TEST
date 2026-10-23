@@ -123,6 +123,8 @@ export function useAiChoice(
     pickRoute,
     options,
     selected,
+    /** Tuyến mặc định của công ty — gợi ý trên ô chọn (`ModelChooser.recommended`). */
+    defaultRoute: models.data?.defaults[kind] ?? null,
     loading: models.isLoading,
     error: models.error,
   };
@@ -136,9 +138,12 @@ export function AiModePicker({
   onRoute,
   allowSolver = true,
   disabled = false,
+  recommended = null,
 }: {
   kind: 'text' | 'image';
   choice: AiChoice;
+  /** Tuyến mặc định của công ty — thẻ ấy mang nhãn gợi ý. */
+  recommended?: string | null;
   options: AiModelOption[];
   onMode: (mode: AiMode) => void;
   onRoute: (route: string) => void;
@@ -168,6 +173,7 @@ export function AiModePicker({
           value={choice.route}
           onChange={onRoute}
           disabled={disabled}
+          recommended={recommended}
         />
       )}
     </div>

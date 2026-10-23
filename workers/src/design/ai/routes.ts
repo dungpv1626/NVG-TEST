@@ -62,6 +62,7 @@ import {
 import { ruleMessages } from './plan-messages-data';
 import { aiPrompts } from './prompts-data';
 import { checkPlan } from './plan-check';
+import { houseRevisionsMax } from './plan';
 import { planQuality } from './plan-quality-data';
 import { scoreForScreen } from './plan-score';
 import { AiProgramRejected, generateAiProgram, type AiProgramRound } from './program';
@@ -147,6 +148,11 @@ aiApp.get('/models', async (c) => {
     defaults: {
       text: pickDefault('text', 'ai_text_route_default'),
       image: pickDefault('image', 'ai_image_route_default'),
+    },
+    // Số lượt gọi mô hình TỐI ĐA của một phương án mặt bằng (lượt đầu + lượt sửa) — để màn hình nói
+    // trần chi phí trước khi bấm (23/10/2026). Đọc cùng hàm vòng lặp dùng, không chép số.
+    limits: {
+      planCallsMax: houseRevisionsMax(c.env.AI_PROMPT_PIPELINE === 'v6' ? 'v6' : null) + 1,
     },
   });
 });

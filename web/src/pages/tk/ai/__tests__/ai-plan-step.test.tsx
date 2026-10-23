@@ -92,6 +92,7 @@ vi.mock('@/hooks/use-ai-design', () => ({
       // «bước mặt bằng không có ô chọn ảnh» chỉ có nghĩa khi danh mục thật sự có tuyến để chọn.
       image: [imageRoute()],
       defaults: { text: 'ai_text_openai', image: 'ai_image_gemini' },
+      limits: { planCallsMax: 5 },
     },
     isLoading: false,
     error: null,
@@ -433,7 +434,7 @@ describe('Mỗi tầng một lượt, cổng hỏng thì không vẽ (T38, T39)'
     };
   }
 
-  it('chưa xếp được: màn hình chỉ một dòng, số tiền và nút tải báo cáo — không bày lý do (07/10/2026)', () => {
+  it('chưa xếp được: thẻ tiến độ một dòng + số tiền + báo cáo; lý do CHÍNH hiện riêng, không bày danh sách bước (23/10/2026)', () => {
     state.review = null;
     state.run = failedRun();
     renderWithApp(
@@ -449,7 +450,11 @@ describe('Mỗi tầng một lượt, cổng hỏng thì không vẽ (T38, T39)'
     expect(progress.getByRole('button', { name: 'Tải báo cáo (.md)' })).toBeInTheDocument();
     expect(progress.getByRole('button', { name: 'Chạy lại' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Phương án chưa xếp được' })).toBeNull();
-    expect(screen.queryByText(/không có cửa hay ô thông nào mở vào/)).toBeNull();
+    // Lượt chạy thật 23/10/2026: «Chưa xếp được» trơn không nói phải sửa gì. Lý do chính hiện bằng
+    // chữ (T07/10 gỡ danh sách bước và lý do từng lượt — phần ấy vẫn chỉ ở báo cáo).
+    const reasons = within(screen.getByRole('region', { name: 'Lý do chưa xếp được' }));
+    expect(reasons.getByText('Tầng 2')).toBeInTheDocument();
+    expect(reasons.getByText(/không có cửa hay ô thông nào mở vào/)).toBeInTheDocument();
     expect(screen.queryByText('Xếp lại tầng 2 · AI-A')).toBeNull();
     expect(screen.queryByRole('img', { name: /Tờ mặt bằng/ })).toBeNull();
     state.run = null;
@@ -586,11 +591,65 @@ describe('Mặc định MỘT phương án, và mức suy nghĩ đi kèm lượt
     await userEvent.click(await screen.findByRole('button', { name: /Đổi mức suy nghĩ/ }));
     await userEvent.click(screen.getByRole('radio', { name: /^Cao/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Xếp mặt bằng' }));
+    // Hỏi lại trước khi tiêu tiền (23/10/2026) — chưa gọi gì cho tới khi xác nhận.
+    const dialog = screen.getByRole('dialog', { name: /Xếp một phương án mặt bằng\?/ });
+    expect(state.start).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Xếp mặt bằng' }));
     expect(state.start).toHaveBeenCalledWith(
       expect.objectContaining({
         options: expect.objectContaining({ count: 1, reasoningEffort: 'high' }),
       }),
     );
+  });
+
+  it('hộp hỏi lại nói số lượt sửa tối đa và trần chi phí; «Chưa chạy» thì không gọi gì', async () => {
+    state.review = null;
+    state.run = null;
+    state.start.mockClear();
+    state.costHistory = {
+      runs: [
+        {
+          id: 'r0',
+          project_id: 'p9',
+          status: 'failed',
+          result: { plans: [], failed: [{}] },
+          created_at: '2026-10-01T10:00:00Z',
+          updated_at: '2026-10-01T10:05:00Z',
+        },
+      ],
+      calls: [
+        {
+          project_id: 'p9',
+          created_at: '2026-10-01T10:01:00Z',
+          route: 'ai_text_openai',
+          purpose: 'plan_house',
+          status: 'ok',
+          input_tokens: 4000,
+          output_tokens: 12000,
+          cost_usd: '0.15',
+        },
+        {
+          project_id: 'p9',
+          created_at: '2026-10-01T10:02:00Z',
+          route: 'ai_text_openai',
+          purpose: 'plan_house_revise',
+          status: 'ok',
+          input_tokens: 7000,
+          output_tokens: 9000,
+          cost_usd: '0.05',
+        },
+      ],
+    };
+    show();
+    await userEvent.click(screen.getByRole('button', { name: /^Xếp mặt bằng/ }));
+    const dialog = within(screen.getByRole('dialog'));
+    expect(dialog.getByText(/tối đa 4 lượt sửa mỗi phương án \(5 lượt gọi\)/)).toBeInTheDocument();
+    // 0,1 USD mỗi lượt gọi × 5 lượt = 0,5 USD.
+    expect(dialog.getByText(/Trần nếu phải dùng hết: ≈ 0,5/)).toBeInTheDocument();
+    await userEvent.click(dialog.getByRole('button', { name: 'Chưa chạy' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(state.start).not.toHaveBeenCalled();
+    state.costHistory = { runs: [], calls: [] };
   });
 });
 
@@ -960,5 +1019,22 @@ describe('So sánh phương án cạnh nhau (Đợt 5B)', () => {
     state.review = review();
     show();
     expect(screen.queryByRole('button', { name: /So sánh/ })).toBeNull();
+  });
+});
+
+describe('Chưa có mặt bằng thì không bày khối ảnh nội thất (23/10/2026)', () => {
+  it('khối ảnh nội thất gấp sau một dòng, không mở sẵn dưới «Chưa có phương án»', () => {
+    state.review = null;
+    state.run = null;
+    renderWithApp(
+      <AiPlanStep
+        projectId="p1"
+        readOnly={false}
+        state={{ ...designState, plans: [], planHeadArtifactId: null } as never}
+      />,
+    );
+    expect(screen.getByText('Chưa có phương án mặt bằng')).toBeInTheDocument();
+    expect(screen.getByText(/Đã có bản vẽ mặt bằng của kỹ sư\?/)).toBeInTheDocument();
+    expect(screen.getByText('Ảnh mặt bằng có nội thất')).not.toBeVisible();
   });
 });

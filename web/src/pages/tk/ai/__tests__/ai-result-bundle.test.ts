@@ -3,7 +3,13 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { estimateRunCost, planRunUnits, type CostCallRow } from '../run-cost-estimate';
+import {
+  costCeiling,
+  estimateFromPricing,
+  estimateRunCost,
+  planRunUnits,
+  type CostCallRow,
+} from '../run-cost-estimate';
 import { topDeductions } from '../plan-deductions';
 import {
   bundleFiles,
@@ -65,7 +71,7 @@ describe('Chi phí ước tính (estimateRunCost)', () => {
       calls,
       PLAN,
     );
-    expect(est).toEqual({ perUnitUsd: 0.2, samples: 2 });
+    expect(est).toMatchObject({ perUnitUsd: 0.2, samples: 2, basis: 'history' });
   });
 
   it('lượt do tuyến KHÁC khởi đầu thì bỏ; lượt có dòng chưa có giá thì bỏ, không coi là 0', () => {
@@ -87,7 +93,7 @@ describe('Chi phí ước tính (estimateRunCost)', () => {
         ],
         PLAN,
       ),
-    ).toEqual({ perUnitUsd: 0.1, samples: 1 });
+    ).toMatchObject({ perUnitUsd: 0.1, samples: 1, basis: 'history' });
   });
 
   it('dòng ngoài khoảng thời gian / khác hồ sơ / khác mục đích không tính', () => {
@@ -101,7 +107,7 @@ describe('Chi phí ước tính (estimateRunCost)', () => {
       ],
       PLAN,
     );
-    expect(est).toEqual({ perUnitUsd: 0.1, samples: 1 });
+    expect(est).toMatchObject({ perUnitUsd: 0.1, samples: 1, basis: 'history' });
   });
 
   it('số phương án đọc từ kết quả lượt chạy', () => {
@@ -234,5 +240,55 @@ describe('Bộ kết quả — tên tệp theo mã hồ sơ', () => {
     expect(text).toContain('Không kiểm quy chuẩn xây dựng.');
     expect(text).toContain('Mặt đứng: chưa có');
     expect(text).toContain('x_noi-that');
+  });
+});
+
+describe('Ước tính lần đầu theo bảng giá (estimateFromPricing, 23/10/2026)', () => {
+  const PRICED = {
+    purposes: ['plan_house', 'plan_house_revise'],
+    inputPer1mUsd: 2,
+    outputPer1mUsd: 12,
+  };
+
+  it('nhân bảng giá của mô hình đang chọn với số token ĐO ĐƯỢC ở lượt trước (tuyến nào cũng được)', () => {
+    const calls = [
+      call({ route: 'r-khac', inputTokens: 500_000, outputTokens: 50_000 }),
+      call({
+        route: 'r-khac',
+        purpose: 'plan_house_revise',
+        createdAt: '2026-10-01T10:02:00Z',
+        inputTokens: 500_000,
+        outputTokens: 50_000,
+      }),
+    ];
+    const est = estimateFromPricing([run()], calls, PRICED);
+    // (1.000.000 × 2 + 100.000 × 12) / 1e6 = 3,2 USD mỗi phương án; 1,6 USD mỗi lượt gọi.
+    expect(est?.basis).toBe('pricing');
+    expect(est?.samples).toBe(1);
+    expect(est?.perUnitUsd).toBeCloseTo(3.2);
+    expect(est?.perCallUsd).toBeCloseTo(1.6);
+  });
+
+  it('không bịa: chưa có lượt nào, mô hình chưa khai giá, hoặc lượt thiếu số token → null', () => {
+    expect(estimateFromPricing([], [], PRICED)).toBeNull();
+    expect(estimateFromPricing([run()], [call({})], { ...PRICED, inputPer1mUsd: null })).toBeNull();
+    expect(estimateFromPricing([run()], [call({ inputTokens: null })], PRICED)).toBeNull();
+  });
+
+  it('trần = giá một lượt gọi × số lượt tối đa × số phương án; thiếu một trong hai thì null', () => {
+    const est = { perUnitUsd: 0.4, samples: 2, basis: 'history' as const, perCallUsd: 0.1 };
+    expect(costCeiling(est, 5, 2)).toBeCloseTo(1);
+    expect(costCeiling(est, null, 2)).toBeNull();
+    expect(costCeiling({ ...est, perCallUsd: null }, 5, 1)).toBeNull();
+    expect(costCeiling(null, 5, 1)).toBeNull();
+  });
+
+  it('ước tính từ tiền thật cũng mang giá một lượt gọi', () => {
+    const est = estimateRunCost(
+      [run()],
+      [call({}), call({ purpose: 'plan_house_revise', createdAt: '2026-10-01T10:02:00Z' })],
+      PLAN,
+    );
+    expect(est?.perCallUsd).toBeCloseTo(0.1);
   });
 });

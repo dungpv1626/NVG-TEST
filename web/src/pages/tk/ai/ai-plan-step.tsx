@@ -53,6 +53,7 @@ import { Skeleton } from '@/components/ui/states';
 import {
   useAiPlanReview,
   useAiPlanSheet,
+  useAiModels,
   useAiRun,
   useChooseAiPlan,
   useDownloadAiPlanDxf,
@@ -78,9 +79,17 @@ import { SheetSizeControl, sheetWidthStyle, useSheetSize } from './sheet-size';
 import { fileSlug, numberedNames } from './variant-name';
 import { SheetViewer } from './sheet-zoom';
 import { cn } from '@/lib/utils';
-import { CostEstimateLine, costOnButton, useCostEstimate } from './ai-cost-estimate';
+import {
+  CostEstimateLine,
+  costOnButton,
+  estimateSource,
+  useCostEstimate,
+} from './ai-cost-estimate';
+import { costCeiling, type CostEstimate } from './run-cost-estimate';
+import { formatUsd } from './ai-usage';
 import { AiPlanCompare, DeductionList, ScoreChip } from './ai-plan-compare';
 import { PlanEditPanel } from './ai-plan-edit';
+import { failureViews, type FailedVariant } from './plan-failure';
 
 /** Kết quả một lượt chạy giai đoạn mặt bằng, đúng hình dạng Workflow ghi vào `design_ai_run`. */
 interface PlanRunResult {
@@ -94,23 +103,7 @@ interface PlanRunResult {
     findings: AiPlanIssue[];
     notes: Array<{ code: string; message: string }>;
   }>;
-  failed: Array<{
-    variantId: string;
-    error: string;
-    /** Lý do theo từng tầng; tầng `0` là lỗi LIÊN TẦNG. Vắng ở lượt chạy trước 13/09/2026. */
-    reasons?: Array<{
-      level: number;
-      messages: string[];
-      /** Lỗi của lượt đầu khi tầng đã được gọi lần hai (V-26). */
-      firstMessages?: string[];
-      /** `none` chỉ còn ở lượt chạy trước 15/09/2026: lý do nằm ở diện tích hay khối xây (T43). */
-      retry?: 'revise' | 'resample' | 'none' | 'unchanged' | 'stuck';
-      /** Số lượt gọi mô hình đã dùng khi bác (T45). Vắng ở lượt chạy trước 15/09/2026. */
-      attempts?: number;
-      /** Chỗ chương trình đã tự sửa ở lượt cuối. */
-      notes?: string[];
-    }>;
-  }>;
+  failed: FailedVariant[];
 }
 
 const COUNTS = ['1', '2', '3'] as const;
@@ -147,7 +140,12 @@ export function AiPlanStep({
   const [editRunId, setEditRunId] = useState<string | null>(null);
   // «Một phương án» (tờ vẽ đầy đủ) hay «So sánh» (các phương án đặt cạnh nhau) — Đợt 5B.
   const [view, setView] = useState<'mot' | 'so-sanh'>('mot');
-  const cost = useCostEstimate('plan', ai.choice.route ?? null);
+  const cost = useCostEstimate('plan', ai.choice.route ?? null, ai.selected);
+  const models = useAiModels();
+  /** Trần số lượt gọi mô hình mỗi phương án (lượt đầu + lượt sửa) — máy chủ cũ không trả thì `null`. */
+  const callsMax = models.data?.limits?.planCallsMax ?? null;
+  /** Đang hỏi lại trước khi chạy (23/10/2026): một lượt hỏng vẫn tốn 0,28–0,46 USD. */
+  const [askRun, setAskRun] = useState(false);
   const hidePlan = useHideAiPlan();
   /** Phương án đang chờ xác nhận xoá khỏi danh sách — `null` = không hỏi gì. */
   const [askHide, setAskHide] = useState<{ artifactId: string; name: string } | null>(null);
@@ -213,6 +211,7 @@ export function AiPlanStep({
   };
 
   const onRun = () => {
+    setAskRun(false);
     if (!ai.choice.route) return;
     void start
       .mutateAsync({
@@ -255,6 +254,7 @@ export function AiPlanStep({
                   onRoute={ai.pickRoute}
                   allowSolver={false}
                   disabled={running || start.isPending}
+                  recommended={ai.defaultRoute}
                 />
                 <ReasoningEffortPicker
                   value={effort}
@@ -288,7 +288,7 @@ export function AiPlanStep({
               <Button
                 variant="primary"
                 className="w-full"
-                onClick={onRun}
+                onClick={() => setAskRun(true)}
                 disabled={running || start.isPending || !ai.choice.route}
               >
                 {start.isPending
@@ -320,7 +320,7 @@ export function AiPlanStep({
             purposePrefix="plan_house"
             reportTitle="Báo cáo lượt xếp mặt bằng"
             reportExtra={failedVariantsMarkdown(runResult?.failed ?? [])}
-            onRetry={readOnly ? undefined : onRun}
+            onRetry={readOnly ? undefined : () => setAskRun(true)}
             retryDisabled={start.isPending || !ai.choice.route}
             runningLabel="Đang xếp mặt bằng"
             doneLabel={
@@ -330,6 +330,9 @@ export function AiPlanStep({
             }
             failedLabel="Chưa xếp được mặt bằng"
           />
+        )}
+        {!running && (runResult?.failed.length ?? 0) > 0 && (
+          <PlanFailureReasons failed={runResult!.failed} roomLabels={state.roomLabels} />
         )}
       </div>
 
@@ -437,14 +440,24 @@ export function AiPlanStep({
           </div>
         )}
 
-        {entries.length === 0 && !review.isLoading && (
-          <PlanImagePanel
-            projectId={projectId}
-            review={null}
-            level={1}
-            readOnly={readOnly}
-            disabled={running}
-          />
+        {/* Chưa có mặt bằng thì khối ảnh nội thất KHÔNG bày ra (lượt chạy thật 23/10/2026: cả một khối
+            chọn tệp, chọn model, nút vẽ nằm dưới «Chưa có phương án» làm người dùng tưởng phải làm nó
+            trước). Lối vẽ từ bản vẽ kỹ sư tải lên (T114 Đợt 4) vẫn còn, gấp sau một dòng. */}
+        {entries.length === 0 && !review.isLoading && !running && (
+          <details className="rounded-lg border border-tk-line bg-tk-panel p-3">
+            <summary className="cursor-pointer text-fg-subtle select-none hover:text-fg">
+              Đã có bản vẽ mặt bằng của kỹ sư? Vẽ ảnh mặt bằng có nội thất từ bản tải lên
+            </summary>
+            <div className="mt-3">
+              <PlanImagePanel
+                projectId={projectId}
+                review={null}
+                level={1}
+                readOnly={readOnly}
+                disabled={running}
+              />
+            </div>
+          </details>
         )}
 
         {(view === 'mot' || entries.length < 2) && review.isLoading && (
@@ -511,6 +524,24 @@ export function AiPlanStep({
         )}
       </div>
 
+      {askRun && (
+        <ConfirmDialog
+          title={`Xếp ${count === '1' ? 'một phương án' : `${count} phương án`} mặt bằng?`}
+          confirmLabel="Xếp mặt bằng"
+          cancelLabel="Chưa chạy"
+          className="border-tk-line bg-tk-panel text-tk-tx"
+          onCancel={() => setAskRun(false)}
+          onConfirm={onRun}
+        >
+          <RunCostNotice
+            estimate={cost.estimate}
+            units={Number(count)}
+            callsMax={callsMax}
+            modelName={ai.selected?.short ?? ai.selected?.label ?? null}
+          />
+        </ConfirmDialog>
+      )}
+
       {/* Hộp thoại NỔI giữa màn hình (Haan 18/09/2026) — hỏi lại trước khi xoá một phương án khỏi
           dải chọn. Không `window.confirm`: nút của hộp gốc theo tiếng của trình duyệt. */}
       {askHide && (
@@ -564,6 +595,17 @@ export function failedVariantsMarkdown(failed: PlanRunResult['failed']): string 
   const list = (items: string[]) => items.map((m) => `- ${m}`);
   for (const item of failed) {
     out.push(`### ${item.variantId}`, '', item.error, '');
+    if (item.main) {
+      out.push(`#### Lượt hỏng nhẹ nhất — lượt ${item.main.round}`, '');
+      for (const level of item.main.levels) {
+        out.push(
+          `${level.level === 0 ? 'Cả nhà' : `Tầng ${level.level}`}:`,
+          '',
+          ...list(level.messages),
+          '',
+        );
+      }
+    }
     for (const reason of item.reasons ?? []) {
       out.push(`#### ${reason.level === 0 ? 'Cả nhà' : `Tầng ${reason.level}`}`, '');
       if (reason.firstMessages) {
@@ -595,6 +637,109 @@ export function failedVariantsMarkdown(failed: PlanRunResult['failed']): string 
     }
   }
   return out.join('\n');
+}
+
+/**
+ * Lý do chưa xếp được, NGAY dưới thẻ tiến độ (lượt chạy thật 23/10/2026). Haan 07/10/2026 đã gỡ danh
+ * sách bước và câu lỗi của bộ xếp khỏi màn hình («không có nhiều ý nghĩa» với người thiết kế); phần
+ * này không đưa chúng trở lại — chỉ lý do CHÍNH bằng tên phòng, và gợi ý chỗ sửa đầu bài. Nguyên văn
+ * từng lượt vẫn ở báo cáo `.md`.
+ */
+/**
+ * Nội dung hộp hỏi lại trước khi xếp mặt bằng: ước tính, nguồn của số, và TRẦN khi phải gọi lại hết
+ * lượt sửa. Không có số thì nói chưa đủ dữ liệu — không hiện 0 (CLAUDE.md 5.2).
+ */
+export function RunCostNotice({
+  estimate,
+  units,
+  callsMax,
+  modelName,
+}: {
+  estimate: CostEstimate | null;
+  units: number;
+  callsMax: number | null;
+  modelName: string | null;
+}): React.ReactElement {
+  const ceiling = costCeiling(estimate, callsMax, units);
+  return (
+    <div className="space-y-2">
+      <p>
+        {modelName ? `Mô hình ${modelName}. ` : ''}
+        {estimate
+          ? `Chi phí ước tính ≈ ${formatUsd(estimate.perUnitUsd * units)} — ${estimateSource(estimate)}.`
+          : 'Chưa đủ dữ liệu để ước tính chi phí — chưa có lượt nào ghi số token, hoặc mô hình này chưa khai giá niêm yết.'}
+      </p>
+      {callsMax !== null && (
+        <p>
+          Bản đầu chưa qua kiểm thì chương trình gọi lại mô hình để sửa, tối đa {callsMax - 1} lượt
+          sửa mỗi phương án ({callsMax} lượt gọi).
+          {ceiling !== null
+            ? ` Trần nếu phải dùng hết: ≈ ${formatUsd(ceiling)}${units > 1 ? ` cho ${units} phương án` : ''}.`
+            : ' Chưa đủ dữ liệu để ước tính trần.'}
+        </p>
+      )}
+      <p>Lượt không ra phương án vẫn tính tiền các lượt gọi đã dùng.</p>
+    </div>
+  );
+}
+
+function PlanFailureReasons({
+  failed,
+  roomLabels,
+}: {
+  failed: FailedVariant[];
+  roomLabels: Record<string, string>;
+}): React.ReactElement {
+  const views = failureViews(failed, roomLabels);
+  return (
+    <section
+      aria-label="Lý do chưa xếp được"
+      className="space-y-3 rounded-lg border border-tk-line bg-tk-panel p-3"
+    >
+      {views.map((view) => (
+        <div key={view.variantId} className="space-y-2">
+          <p className="font-medium">
+            {views.length > 1 ? `${view.variantId}: ` : ''}Vì sao chưa xếp được
+          </p>
+          <p className="text-xs text-fg-subtle">
+            {view.round !== null
+              ? `Lý do của lượt ${view.round}${view.attempts ? ` trên ${view.attempts}` : ''} — lượt gần đạt nhất; các lượt sau không khá hơn.`
+              : view.attempts
+                ? `Lý do của lượt cuối (đã gọi mô hình ${view.attempts} lượt).`
+                : 'Lý do của lượt cuối.'}
+          </p>
+          {view.lastUnusable && (
+            <p className="text-xs text-fg-subtle">
+              Lượt cuối mô hình trả câu trả lời không dùng được; lý do của các lượt trước có trong
+              báo cáo tải về.
+            </p>
+          )}
+          {view.groups.map((group) => (
+            <div key={group.title}>
+              <p className="text-xs font-medium text-tk-t2">{group.title}</p>
+              <ul className="mt-1 list-disc space-y-1 pl-5">
+                {group.messages.map((message, index) => (
+                  <li key={index}>{message}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+          {view.hints.length > 0 && (
+            <div className="rounded-md bg-tk-am-bg2 p-2.5">
+              <p className="text-xs font-medium text-tk-am-fg">
+                Gợi ý sửa đầu bài trước khi chạy lại
+              </p>
+              <ul className="mt-1 list-disc space-y-1 pl-5 text-tk-am-fg2">
+                {view.hints.map((hint) => (
+                  <li key={hint}>{hint}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      ))}
+    </section>
+  );
 }
 
 function PlanDetail({
