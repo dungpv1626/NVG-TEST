@@ -310,6 +310,59 @@
      lớp. Hai mức đúng bản mẫu §4.5. */
   --shadow-tk-panel: 0 12px 26px rgb(0 0 0 / 0.22);
   --shadow-tk-card: 0 14px 30px rgb(0 0 0 / 0.26);
+
+  /* --- Giao diện v2 (`design_handoff_nvg_v2/README.md` › Design tokens) --------------------
+     CHỜ CHỦ DỰ ÁN DUYỆT (DESIGN_SYSTEM.md §8). Chỉ THÊM token, KHÔNG đổi giá trị token đang dùng:
+     các trang hiện tại không đổi một pixel cho tới khi khung v2 (bước 2) dùng tới. Giá trị chép
+     nguyên văn bản thiết kế, trừ chỗ ghi «lệch» (không đạt tương phản). */
+  /* Khung xanh rừng bao ngoài + nút chính v2. Cùng mã `brand-forest` nhưng là token riêng: nút
+     chính hiện tại vẫn là `brand` (xanh lá logo) tới khi duyệt. Chữ trắng 11.97:1. */
+  --color-shell: #0a3f28;
+  --color-shell-hover: #0f2a1e;
+  /* Thẻ tối nhấn mạnh («Bước tiếp theo», «Sau khi lưu», thẻ Kanban cần chú ý). Chữ trắng 15.3:1. */
+  --color-shell-card: #0f2a1e;
+  /* Nhãn trên nền tối: chính 7.94:1 trên khung, phụ 6.31:1 trên khung / 8.08:1 trên thẻ tối. */
+  --color-shell-fg: #c7d6ce;
+  --color-shell-fg-subtle: #a9c2b5;
+  /* Mục sidebar đang chọn / đang trỏ — lớp trắng mờ trên khung, không phải màu đặc. */
+  --color-shell-active: rgb(255 255 255 / 0.12);
+  --color-shell-line: rgb(255 255 255 / 0.1);
+  /* Bảng nội dung bo 24 đặt trong khung — nền ám xanh (khác `surface-sunken` xám của Bước 0b). */
+  --color-canvas: #eef4f0;
+  /* Nền viên nhạt: subnav đang chọn, tab điện thoại đang chọn, chip. */
+  --color-pill: #dfebe4;
+  /* Nền cột Kanban. */
+  --color-board-col: #e2ece6;
+  /* Xanh nhạt của thanh tiến độ, vòng, cột mini (= `chart-2`). */
+  --color-meter: #8fcba9;
+  /* Chữ v2: chính 14.67:1 / phụ 5.07:1 trên nền nội dung; phụ 5.65:1 trên thẻ trắng, 4.62:1
+     trên nền viên. */
+  --color-ink: #13231b;
+  --color-ink-subtle: #5a6b62;
+  /* Đường kẻ trong thẻ, giữa các dòng bảng (đường kẻ mạnh vẫn là `border` #E4E6E9). */
+  --color-line-soft: #eef1ef;
+
+  /* Bo góc v2. Nút / chip / tab / subnav dùng `rounded-full` (999), không cần token. */
+  --radius-field: 12px; /* ô nhập */
+  --radius-kanban: 14px; /* thẻ Kanban */
+  --radius-card: 18px; /* thẻ trắng, bảng trong thẻ, cột Kanban */
+  --radius-card-dark: 22px; /* thẻ tối */
+  --radius-canvas: 24px; /* bảng nội dung */
+  --radius-shell: 32px; /* khung ngoài — máy tính */
+  --radius-shell-mobile: 40px; /* khung ngoài — điện thoại */
+
+  /* Chữ v2. Thang cũ (xs 12 · base 14 · md 16) dùng lại cho nội dung, tiêu đề thẻ, nhãn phụ. */
+  --text-title: 1.75rem; /* 28px/700 — tiêu đề trang */
+  --text-title--line-height: 1.2;
+  --text-title--letter-spacing: -0.02em;
+  --text-kpi: 1.75rem; /* 28px/600 — số ô chỉ số (kèm `tabular-nums`) */
+  --text-kpi--line-height: 1.15;
+  --text-group: 0.6875rem; /* 11px/600 — nhãn nhóm sidebar, chỉ chỗ này */
+  --text-group--line-height: 1.3;
+  --text-group--letter-spacing: 0.06em;
+
+  /* Bóng v2: chỉ nút nổi (FAB) trên điện thoại; hộp thoại vẫn `shadow-overlay`. */
+  --shadow-fab: 0 8px 24px rgb(10 63 40 / 0.35);
 }
 
 /* Lưới khoảng cách bội số 8px (6.5) khớp thang mặc định của Tailwind

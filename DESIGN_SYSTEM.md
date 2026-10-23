@@ -234,3 +234,48 @@ nền tối). Chữ trên nền `brand` dùng `text-fg-inverse`, không `text-wh
 `--color-tk-bl-*` · `-gr-*` · `-am-*` · `-pu-*` · `-rd-*` cho sáu thẻ công cụ trang Tổng quan. Đây là
 màu **phân loại**, gần màu trạng thái (tím ~ Tranh chấp, hổ phách ~ Chờ duyệt, đỏ ~ Quá hạn) → **chỉ làm
 nền, viền, ô icon BÊN TRONG thẻ**; cấm làm nhãn trạng thái, nền dòng bảng, nút hành động chính.
+
+---
+
+## 8. Giao diện v2 — token mới (CHỜ CHỦ DỰ ÁN DUYỆT)
+
+Nguồn: `design_handoff_nvg_v2/README.md` › Design tokens (bản thiết kế lại toàn bộ frontend, 120 màn). Bước 1
+chỉ **thêm** token ở `web/src/index.css`; không đổi giá trị token đang dùng, nên trang hiện tại không đổi.
+Các token mới bắt đầu được dùng từ bước 2 (khung + sidebar). Test tương phản: `design-rules.test.ts`.
+
+| Token                                                        | Mã                                       | Vai trò                                         |
+| ------------------------------------------------------------ | ---------------------------------------- | ----------------------------------------------- |
+| `--color-shell` / `-shell-hover`                             | `#0A3F28` / `#0F2A1E`                    | khung ngoài, **nút chính v2**                   |
+| `--color-shell-card`                                         | `#0F2A1E`                                | thẻ tối («Bước tiếp theo», «Sau khi lưu»)       |
+| `--color-shell-fg` / `-shell-fg-subtle`                      | `#C7D6CE` / `#A9C2B5`                    | nhãn trên nền tối                               |
+| `--color-shell-active` / `-shell-line`                       | trắng 12 % / 10 %                        | mục sidebar đang chọn, đường kẻ trên nền tối    |
+| `--color-canvas`                                             | `#EEF4F0`                                | bảng nội dung (nền ám xanh)                     |
+| `--color-pill`                                               | `#DFEBE4`                                | viên đang chọn (subnav, tab điện thoại, chip)   |
+| `--color-board-col`                                          | `#E2ECE6`                                | cột Kanban                                      |
+| `--color-meter`                                              | `#8FCBA9`                                | thanh tiến độ, vòng, cột mini                   |
+| `--color-ink` / `-ink-subtle`                                | `#13231B` / `#5A6B62`                    | chữ chính / phụ v2                              |
+| `--color-line-soft`                                          | `#EEF1EF`                                | kẻ giữa các dòng trong thẻ                      |
+| `--radius-field/kanban/card/card-dark/canvas/shell(-mobile)` | 12 / 14 / 18 / 22 / 24 / 32 (40)         | ô nhập … khung ngoài                            |
+| `--text-title` · `--text-kpi` · `--text-group`               | 28/700 −0,02em · 28/600 · 11/600 +0,06em | tiêu đề trang · số ô chỉ số · nhãn nhóm sidebar |
+| `--shadow-fab`                                               | `0 8px 24px` rừng 35 %                   | chỉ nút nổi điện thoại                          |
+
+### 8.1 Chỗ khác các mục trên — cần duyệt
+
+1. **Nền ám xanh** `#EEF4F0` cho bảng nội dung — ngược §2.2 (Bước 0b bỏ ám xanh vì cam / xanh dương logo đứng cạnh trông bẩn).
+2. **Nút chính màu rừng** `#0A3F28` thay xanh lá logo `#057B47` (§2.4); xanh lá logo lùi về «xanh nhấn».
+3. **Chữ** `#13231B` / `#5A6B62` (ám xanh) thay `#1C1C1A` / `#555A61` (trung tính); đều đạt 4,5:1.
+4. **Bo góc lớn hơn nhiều**: thẻ 18, bảng nội dung 24, khung 32 (§4: 9 / 10 / 14 / 16); nút, chip, tab bo tròn hẳn.
+5. **Tiêu đề trang 28/700** (§3: 20, Dashboard 26) và thêm cỡ **11px** cho nhãn nhóm sidebar (§3 chỉ cho 10px ở một chỗ).
+6. **Thẻ tối** trên nền sáng để nhấn mạnh — trước đây không có (§1 «phẳng, hạn chế trang trí»).
+7. **Sidebar nền tối cho mọi module** — trước đây thanh tối chỉ trong `/tk/*` (§7.4).
+8. **FAB có bóng** — §4 chỉ cho bóng ở lớp phủ.
+
+### 8.2 Chỗ CỐ Ý không theo bản thiết kế (đã đo)
+
+- **Nền nhãn trạng thái giữ nguyên** (§2.1 hàng rào cứng): bản v2 ghi Nháp `#F1F2F4`, Hoàn thành `#DCF5E9`, Tranh chấp
+  `#EFEBFF`, nhưng **Hoàn thành chữ `#1C8157` trên `#DCF5E9` chỉ 4,22:1** (< 4,5). Giữ `#EBECF0` / `#DCFFF1` / `#EAE6FF`.
+- **Nút bị khoá** nền `#8A9097` chữ trắng chỉ 3,22:1 — WCAG miễn cho điều khiển không bấm được, nhưng lý do khoá vẫn
+  phải ghi bằng chữ thường dưới nút (như hiện nay).
+- **Viền ô nhập** `#8A9097` trên nền nội dung `#EEF4F0` chỉ 2,89:1 (< 3, WCAG 1.4.11) — ô nhập phải nằm trong thẻ
+  trắng (3,22:1), không đặt thẳng trên nền nội dung.
+- Nút nguy hiểm `#CA3521` chữ trắng 5,19:1 — đã có (`Button variant="danger"`), không thêm token.

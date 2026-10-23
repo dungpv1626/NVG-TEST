@@ -229,6 +229,22 @@ describe('Tương phản màu đạt WCAG AA', () => {
     expect(contrast(token(fg), token(bg))).toBeGreaterThanOrEqual(4.5);
   });
 
+  /** Giao diện v2 (DESIGN_SYSTEM.md §8) — mọi cặp chữ / nền mà bản thiết kế dùng. */
+  it.each([
+    ['chữ v2 trên nền nội dung', 'ink', 'canvas'],
+    ['chữ phụ v2 trên nền nội dung', 'ink-subtle', 'canvas'],
+    ['chữ phụ v2 trên thẻ trắng', 'ink-subtle', 'surface'],
+    ['chữ phụ v2 trên nền viên', 'ink-subtle', 'pill'],
+    ['chữ phụ v2 trên cột Kanban', 'ink-subtle', 'board-col'],
+    ['chữ trắng trên khung / nút chính v2', 'fg-inverse', 'shell'],
+    ['nhãn trên khung', 'shell-fg', 'shell'],
+    ['nhãn phụ trên khung', 'shell-fg-subtle', 'shell'],
+    ['nhãn phụ trên thẻ tối', 'shell-fg-subtle', 'shell-card'],
+    ['chữ v2 trên nền cam nhấn', 'ink', 'brand-accent'],
+  ])('%s đạt ≥ 4.5:1', (_label, fg, bg) => {
+    expect(contrast(token(fg), token(bg))).toBeGreaterThanOrEqual(4.5);
+  });
+
   /** Chữ trắng trên cam logo chỉ 2.36:1 — cam chỉ được đi với chữ tối. */
   it('cam logo không đạt với chữ trắng, nên không lớp nào ghép nền cam với chữ trắng', () => {
     expect(contrast(token('fg-inverse'), token('brand-accent'))).toBeLessThan(4.5);
