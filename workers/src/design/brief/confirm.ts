@@ -7,6 +7,7 @@ import { ArtifactRepository } from '../artifacts';
 import { denyUnlessWritable, type UserDb } from '../auth-scope';
 import type { DesignEnv } from '../env';
 import { readEffectiveBriefForm } from './form-config';
+import { briefConfirmBlock, readCompletenessThreshold } from './gate';
 import { buildBriefPayload } from './payload';
 
 export type ConfirmBriefResult =
@@ -100,6 +101,14 @@ export async function confirmBrief(
     projectCode: row.project.code,
     config: form.config,
   });
+
+  // Cổng đầy đủ + mâu thuẫn nghiêm trọng đặt cả ở đây, không chỉ ở nút trên màn hình (T164):
+  // đầu bài đã xác nhận thì bất biến, xác nhận một bản chưa dựng nổi mặt bằng là khoá lỗi lại.
+  const blocked = briefConfirmBlock(
+    built.payload,
+    await readCompletenessThreshold(db, company.data.tenant_id as string),
+  );
+  if (blocked) return { ok: false, error: blocked, status: 422 };
 
   // Đúc artifact TRƯỚC khi đánh dấu xác nhận: hợp đồng thiếu trường bắt buộc thì dừng ở đây
   // với câu đọc được, và đầu bài vẫn ở trạng thái sửa được.

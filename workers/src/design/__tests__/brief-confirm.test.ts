@@ -18,7 +18,8 @@ import {
   type DesignBriefDraft,
 } from '@nvg/shared/design';
 import { buildBriefPayload, BriefPayloadError } from '../brief/payload';
-import { gateLayer2 } from '../brief/gate';
+import { readFileSync } from 'node:fs';
+import { briefConfirmBlock, gateLayer2 } from '../brief/gate';
 
 const PROJECT_ID = '11111111-1111-1111-1111-111111111111';
 
@@ -177,5 +178,26 @@ describe('Cổng chặn — mâu thuẫn NGHIÊM TRỌNG (13/09/2026)', () => {
       massing: { wings_preferred: 2, footprint_shape: 'chu_nhat' },
     };
     expect(gateLayer2(warned, 0.7).allowed).toBe(true);
+  });
+});
+
+describe('Xác nhận đầu bài đi qua cùng cổng (T164, anh Dũng 23/10/2026)', () => {
+  it('dưới ngưỡng thì không xác nhận được, kèm lý do', () => {
+    const msg = briefConfirmBlock({ completeness_score: 0.5, missing_fields: ['floors'] }, 0.7);
+    expect(msg).toContain('Chưa xác nhận được đầu bài');
+    expect(msg).toContain('50%');
+    expect(briefConfirmBlock({ completeness_score: 0.75, missing_fields: [] }, 0.7)).toBeNull();
+  });
+
+  it('thiếu cấu hình ngưỡng thì cũng không xác nhận được', () => {
+    expect(briefConfirmBlock({ completeness_score: 0.9, missing_fields: [] }, null)).not.toBeNull();
+  });
+
+  it('confirmBrief gọi cổng TRƯỚC khi đúc artifact — gỡ là chỉ còn nút trên màn hình chặn', () => {
+    const src = readFileSync(new URL('../brief/confirm.ts', import.meta.url), 'utf8');
+    const gate = src.indexOf('briefConfirmBlock(');
+    const write = src.indexOf('repo.write(');
+    expect(gate).toBeGreaterThan(0);
+    expect(gate).toBeLessThan(write);
   });
 });

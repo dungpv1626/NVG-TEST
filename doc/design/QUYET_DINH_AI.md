@@ -4190,3 +4190,16 @@ văn hai lượt thật), `plan-main-rejection.test.ts` (Worker), `ai-result-bun
 
 **Chờ anh Dũng quyết:** (1) trần chi phí có thành hạn mức CHẶN không (dừng vòng sửa khi vượt số tiền); (2) giữ khoá
 «Xác nhận đầu bài» khi dưới ngưỡng, hay chỉ cảnh báo; (3) nhóm gợi ý sửa đầu bài có cần thêm nhóm nào.
+
+## T164 — Anh Dũng chốt ba câu của T163 (23/10/2026)
+
+1. **Trần chi phí CHẶN thật**: mỗi lượt AI Design có mức tối đa (tham số do Quản trị đặt; demo 0,5 USD ghi rõ DEMO; để
+   trống = không giới hạn). Lượt sửa kế tiếp có thể vượt mức thì dừng, báo «đã dừng vì chạm mức chi phí» kèm lý do hỏng
+   của lượt chính. Lý do: hai lượt thật 23/10 tốn ≈ 0,74 USD mà không ra phương án. Làm SAU khi gộp mạch B (sửa vòng
+   lặp Workflow mà B đang đụng).
+2. **Giữ khoá «Xác nhận đầu bài»** dưới `brief_completeness_min` hoặc còn mâu thuẫn nghiêm trọng, và chặn cả ở Worker
+   (`briefConfirmBlock` trong `brief/gate.ts`, `confirmBrief` gọi trước khi đúc artifact, trả 422). Lý do: đầu bài thiếu
+   làm bộ xếp hỏng mà lượt hỏng vẫn tốn tiền; đầu bài đã xác nhận bất biến nên chặn ở đây rẻ nhất; trước đây chỉ nút trên
+   màn hình chặn. Thay câu «Worker xác nhận không tự chặn theo điểm» của T163.
+3. **Giữ hiện lý do hỏng chính trên màn hình** (đảo một phần quyết định 07/10/2026 «lý do chỉ ở báo cáo»); danh sách bước
+   vẫn ẩn. Lý do: người dùng cần biết sửa đầu bài hay chạy lại mà không phải tải báo cáo `.md`.

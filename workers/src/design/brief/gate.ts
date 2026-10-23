@@ -98,3 +98,17 @@ export function gateLayer2(briefPayload: unknown, threshold: number | null): Gat
     message: `Đầu bài mới đạt ${percent(score)}, cần từ ${percent(threshold)} mới dựng được phương án tự động.${list}`,
   };
 }
+
+/**
+ * Chặn XÁC NHẬN đầu bài khi chưa qua cổng Lớp 2 (anh Dũng 23/10/2026, T164).
+ *
+ * Trước đây chỉ màn hình khoá nút; Worker vẫn đúc artifact cho đầu bài 40 %, rồi lượt AI Design
+ * mới bị chặn — hoặc tệ hơn, ai gọi thẳng endpoint là có đầu bài «đã xác nhận» không dựng nổi
+ * mặt bằng. Cùng một cổng với Lớp 2 để màn hình, xác nhận và lượt AI không lệch nhau.
+ *
+ * Trả câu giải thích khi bị chặn, `null` khi được xác nhận.
+ */
+export function briefConfirmBlock(briefPayload: unknown, threshold: number | null): string | null {
+  const gate = gateLayer2(briefPayload, threshold);
+  return gate.allowed ? null : `Chưa xác nhận được đầu bài. ${gate.message}`;
+}
