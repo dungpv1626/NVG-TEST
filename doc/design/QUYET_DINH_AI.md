@@ -4311,6 +4311,6 @@ tầng không có ô nào trên bản phác, cùng phép kiểm `sketchTrees` v�
 - đầu bước ra của thang: phụ thuộc chiều thang tầng 1 đã dựng — tầng 1 hỏng thì không có, đoán là bịa.
 
 **Đo.** Độ chính xác: trong mọi vòng ghi, 9 / 9 tầng có bản phác thiếu phòng đều hỏng khi được xếp thật (tầng 1 đã qua).
-Phát lại 226 vòng ngữ cảnh Workflow, đối chứng 605ec3d: 10 / 226 vòng ra mặt bằng ở cả hai; 8 vòng của 5 lượt (182665ea,
+Phát lại 226 vòng ngữ cảnh Workflow, đối chứng 605ec3d: 10 / 226 vòng ra mặt bằng ở cả hai; 8 vòng của 4 lượt (182665ea,
 4eade9b1, f1a88ac1, fdd486b1) thêm `sketch_room_missing` cho tầng trên ngay vòng tầng 1 hỏng, không vòng nào đổi gì khác.
 4eade9b1: câu nhắc lời gọi 2 nay có «Storey 4: … leaves out wc5» (trước: lời gọi 5).
