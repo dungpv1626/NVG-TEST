@@ -14,6 +14,7 @@ import { BUTTONS, ERRORS, formatCurrency, QUOTE_STAGES } from '@nvg/shared';
 import { RecordNotFound } from '@/components/entity/entity-detail';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
+import { FormLayout, FormSection } from '@/components/ui/form-page';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { MoneyInput } from '@/components/ui/money-input';
@@ -157,86 +158,98 @@ export function QuoteCreatePage() {
         breadcrumbs={breadcrumbs}
       />
 
-      <form onSubmit={handleSubmit} noValidate className="max-w-2xl rounded-card bg-surface p-6">
-        {nextVersion > 1 && (
-          <p className="mb-4 rounded-sm bg-surface-sunken px-3 py-2 text-fg-subtle">
-            Phiên bản {nextVersion - 1} sẽ chuyển thành bản cũ khi lưu. Phiên bản mới bắt đầu ở
-            trạng thái nháp và phải được phê duyệt lại trước khi gửi khách hàng.
-          </p>
-        )}
+      <form onSubmit={handleSubmit} noValidate>
+        {/* v2 (màn 2.6): khuôn biểu mẫu + «Sau khi lưu» — đúng luồng đang chạy (nháp → phê duyệt →
+            gửi khách → cơ hội tự sang Đàm phán, 0162). */}
+        <FormLayout
+          afterSave={[
+            'Báo giá lưu ở trạng thái Nháp.',
+            'Gửi phê duyệt ở tab Báo giá của cơ hội; có giảm giá thì Tổng Giám đốc duyệt.',
+            'Đã duyệt thì gửi khách; gửi khách xong cơ hội tự sang Đàm phán.',
+          ]}
+        >
+          {nextVersion > 1 && (
+            <p className="rounded-field bg-pill px-3 py-2 text-ink-subtle">
+              Phiên bản {nextVersion - 1} sẽ chuyển thành bản cũ khi lưu. Phiên bản mới bắt đầu ở
+              trạng thái nháp và phải được phê duyệt lại trước khi gửi khách hàng.
+            </p>
+          )}
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Giá trị báo giá" required>
-            <MoneyInput
-              value={form.totalValue}
-              onChange={(v) => update('totalValue', v)}
-              placeholder="Đơn vị: đồng"
-              required
-              autoFocus
-            />
-            {totalValue && (
-              <span className="block text-xs text-fg-subtle">{formatCurrency(totalValue)}</span>
-            )}
-          </Field>
+          <FormSection n={1} title="Giá và điều kiện">
+            <Field label="Giá trị báo giá" required>
+              <MoneyInput
+                value={form.totalValue}
+                onChange={(v) => update('totalValue', v)}
+                placeholder="Đơn vị: đồng"
+                required
+                autoFocus
+              />
+              {totalValue && (
+                <span className="block text-xs text-fg-subtle">{formatCurrency(totalValue)}</span>
+              )}
+            </Field>
 
-          <Field
-            label="Mức giảm giá"
-            hint="Khác 0 thì báo giá phải qua phê duyệt của Tổng Giám đốc."
-          >
-            <MoneyInput
-              value={form.discountAmount}
-              onChange={(v) => update('discountAmount', v)}
-              placeholder="Không giảm giá"
-            />
+            <Field
+              label="Mức giảm giá"
+              hint="Khác 0 thì báo giá phải qua phê duyệt của Tổng Giám đốc."
+            >
+              <MoneyInput
+                value={form.discountAmount}
+                onChange={(v) => update('discountAmount', v)}
+                placeholder="Không giảm giá"
+              />
+              {hasDiscount && (
+                <span className="block text-xs text-fg-subtle">
+                  {formatCurrency(discountAmount)}
+                </span>
+              )}
+            </Field>
+
             {hasDiscount && (
-              <span className="block text-xs text-fg-subtle">{formatCurrency(discountAmount)}</span>
+              <Field label="Lý do giảm giá" required className="sm:col-span-2">
+                <textarea
+                  value={form.discountReason}
+                  onChange={(e) => update('discountReason', e.target.value)}
+                  rows={2}
+                  placeholder="Nêu căn cứ: cạnh tranh giá, khách hàng cũ, khối lượng lớn…"
+                  className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
+                />
+              </Field>
             )}
-          </Field>
 
-          {hasDiscount && (
-            <Field label="Lý do giảm giá" required className="sm:col-span-2">
+            <Field label="Hiệu lực đến">
+              <DateInput value={form.validUntil} onChange={(v) => update('validUntil', v)} />
+            </Field>
+
+            <Field label="Ghi chú" className="sm:col-span-2">
               <textarea
-                value={form.discountReason}
-                onChange={(e) => update('discountReason', e.target.value)}
-                rows={2}
-                placeholder="Nêu căn cứ: cạnh tranh giá, khách hàng cũ, khối lượng lớn…"
+                value={form.notes}
+                onChange={(e) => update('notes', e.target.value)}
+                rows={3}
+                placeholder="Phạm vi công việc, điều kiện thanh toán, điểm cần lưu ý khi thương thảo"
                 className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
               />
             </Field>
+          </FormSection>
+
+          {formError && (
+            <p
+              role="alert"
+              className="rounded-field bg-status-overdue-bg px-3 py-2 text-status-overdue"
+            >
+              {formError}
+            </p>
           )}
 
-          <Field label="Hiệu lực đến">
-            <DateInput value={form.validUntil} onChange={(v) => update('validUntil', v)} />
-          </Field>
-
-          <Field label="Ghi chú" className="sm:col-span-2">
-            <textarea
-              value={form.notes}
-              onChange={(e) => update('notes', e.target.value)}
-              rows={3}
-              placeholder="Phạm vi công việc, điều kiện thanh toán, điểm cần lưu ý khi thương thảo"
-              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
-            />
-          </Field>
-        </div>
-
-        {formError && (
-          <p
-            role="alert"
-            className="mt-4 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
-          >
-            {formError}
-          </p>
-        )}
-
-        <div className="mt-6 flex items-center gap-2">
-          <Button type="submit" variant="primary" disabled={createVersion.isPending}>
-            {createVersion.isPending ? 'Đang lưu…' : BUTTONS.saveDraft}
-          </Button>
-          <Button type="button" variant="subtle" onClick={handleCancel}>
-            {BUTTONS.cancel}
-          </Button>
-        </div>
+          <div className="flex items-center gap-2">
+            <Button type="submit" variant="primary" disabled={createVersion.isPending}>
+              {createVersion.isPending ? 'Đang lưu…' : BUTTONS.saveDraft}
+            </Button>
+            <Button type="button" variant="subtle" onClick={handleCancel}>
+              {BUTTONS.cancel}
+            </Button>
+          </div>
+        </FormLayout>
       </form>
     </>
   );
