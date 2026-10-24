@@ -117,7 +117,7 @@ export function PurchaseRequestCreatePage() {
             <select
               value={siteId}
               onChange={(e) => setSiteId(e.target.value)}
-              className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
             >
               <option value="">Không gắn công trình</option>
               {(sites ?? []).map((site) => (
@@ -141,7 +141,7 @@ export function PurchaseRequestCreatePage() {
               name="cost_code"
               required={Boolean(siteId)}
               disabled={!siteId}
-              className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3 disabled:bg-surface-sunken disabled:opacity-60"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 disabled:bg-surface-sunken disabled:opacity-60"
             >
               <option value="">Chọn mã chi phí</option>
               {(costCodes ?? []).map((line) => (
@@ -160,7 +160,7 @@ export function PurchaseRequestCreatePage() {
             <select
               name="urgency"
               defaultValue="thuong"
-              className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
             >
               <option value="thuong">{PURCHASE_URGENCY_LABELS.thuong}</option>
               <option value="gap">{PURCHASE_URGENCY_LABELS.gap}</option>
@@ -176,7 +176,7 @@ export function PurchaseRequestCreatePage() {
           <textarea
             name="notes"
             rows={3}
-            className="w-full rounded-sm border border-border-strong bg-surface px-3 py-2"
+            className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
           />
         </Field>
 

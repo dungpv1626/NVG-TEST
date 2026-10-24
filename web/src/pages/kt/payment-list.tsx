@@ -79,7 +79,6 @@ export function PaymentRequestListPage() {
 
   return (
     <>
-      <KtNav />
       <PageHeader
         help={APP_HELP.paymentRequests}
         title="Đề nghị chi"
@@ -87,6 +86,7 @@ export function PaymentRequestListPage() {
         breadcrumbs={[{ label: 'Kế toán – Tài chính' }, { label: 'Đề nghị chi' }]}
         actions={headerAction}
       />
+      <KtNav />
 
       <EntityTable<PaymentRow>
         rows={rows}

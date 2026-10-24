@@ -109,7 +109,7 @@ export function SitePrepCard({
             value={commander}
             disabled={!canEdit}
             onChange={(e) => setCommander(e.target.value)}
-            className="h-9 w-full rounded-sm border border-border bg-surface px-3 disabled:bg-surface-sunken"
+            className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 disabled:bg-surface-sunken"
           >
             <option value="">Chưa phân công</option>
             {users.map((u) => (

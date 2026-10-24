@@ -80,12 +80,12 @@ export function HrDashboardPage() {
 
   return (
     <>
-      <NsNav />
       <PageHeader
         title="Việc cần xử lý"
         description="Giấy tờ tới hạn, bảng chấm công đang chờ, và nhân sự sắp hết thử việc."
         breadcrumbs={[{ label: 'Hành chính – Nhân sự' }, { label: 'Việc cần xử lý' }]}
       />
+      <NsNav />
 
       {docsError && <ErrorState message={toUserMessage(docsError, 'view')} />}
 

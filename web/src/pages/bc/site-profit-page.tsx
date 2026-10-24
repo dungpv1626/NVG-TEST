@@ -190,12 +190,12 @@ export function SiteProfitPage() {
   const rows = list.data ?? [];
   return (
     <>
-      <BcNav />
       <PageHeader
         title="Lãi / lỗ quản trị từng công trình"
         breadcrumbs={[{ label: 'Báo cáo' }, { label: 'Lãi / lỗ quản trị' }]}
         description="Số quản trị, không thay sổ kế toán chính thức. Doanh thu hợp đồng gồm phát sinh đã duyệt; chi phí thực tế cập nhật theo chứng từ chi, mua hàng, xuất kho đã ghi vào ngân sách công trình."
       />
+      <BcNav />
       {list.isLoading ? (
         <TableSkeleton />
       ) : list.error ? (
@@ -205,10 +205,7 @@ export function SiteProfitPage() {
       ) : (
         <ul className="space-y-3">
           {rows.map((r) => (
-            <li
-              key={r.construction_site_id}
-              className="rounded-card bg-surface p-4"
-            >
+            <li key={r.construction_site_id} className="rounded-card bg-surface p-4">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <Link
                   to={`/tc/cong-trinh/${r.construction_site_id}`}

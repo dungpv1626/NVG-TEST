@@ -28,7 +28,7 @@ const BREADCRUMBS = [
   { label: 'Ghi mới' },
 ];
 
-const SELECT_CLASS = 'h-9 w-full rounded-sm border border-border-strong bg-surface px-3';
+const SELECT_CLASS = 'h-11 w-full rounded-field border border-border-strong bg-surface px-3';
 
 export function LeadCreatePage() {
   const navigate = useNavigate();
@@ -136,11 +136,7 @@ export function LeadCreatePage() {
   return (
     <>
       <PageHeader title="Ghi đầu mối" breadcrumbs={BREADCRUMBS} />
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        className="max-w-2xl rounded-card bg-surface p-6"
-      >
+      <form onSubmit={handleSubmit} noValidate className="max-w-2xl rounded-card bg-surface p-6">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Tên người liên hệ / doanh nghiệp" required className="sm:col-span-2">
             <Input
@@ -245,7 +241,7 @@ export function LeadCreatePage() {
               onChange={(e) => update('need', e.target.value)}
               rows={3}
               placeholder="Khách nói gì khi liên hệ"
-              className="w-full rounded-sm border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
+              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
             />
           </Field>
         </div>

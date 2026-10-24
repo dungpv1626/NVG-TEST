@@ -131,16 +131,13 @@ export function SiteAssignmentPage() {
       )}
 
       {showForm && (
-        <form
-          onSubmit={addAssignment}
-          className="mb-4 rounded-card bg-surface p-4"
-        >
+        <form onSubmit={addAssignment} className="mb-4 rounded-card bg-surface p-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Người được phân công" required>
               <select
                 value={form.userId}
                 onChange={(e) => setForm({ ...form, userId: e.target.value })}
-                className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
               >
                 <option value="">Chọn người</option>
                 {(users ?? [])
@@ -157,7 +154,7 @@ export function SiteAssignmentPage() {
               <select
                 value={form.siteId}
                 onChange={(e) => setForm({ ...form, siteId: e.target.value })}
-                className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
               >
                 <option value="">Chọn công trình</option>
                 {(sites ?? []).map((s) => (

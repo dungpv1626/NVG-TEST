@@ -26,7 +26,7 @@ import { cn } from '@/lib/utils';
 export const CLASSIFICATION_ANCHOR = 'phan-loai';
 
 const SELECT =
-  'h-9 w-full rounded-sm border border-border bg-surface px-3 disabled:bg-surface-sunken';
+  'h-11 w-full rounded-field border border-border-strong bg-surface px-3 disabled:bg-surface-sunken';
 
 export function ClassificationCard({
   opportunityId,

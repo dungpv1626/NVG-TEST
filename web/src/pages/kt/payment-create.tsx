@@ -31,7 +31,7 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
 import { useCompanyScope } from '@/lib/company-scope';
 
-const SELECT_CLASS = 'h-9 w-full rounded-sm border border-border-strong bg-surface px-3';
+const SELECT_CLASS = 'h-11 w-full rounded-field border border-border-strong bg-surface px-3';
 
 export function PaymentRequestCreatePage() {
   const [params] = useSearchParams();
@@ -262,7 +262,7 @@ function PaymentRequestForm({ order }: { order: PurchaseOrderDetailRecord | null
           <textarea
             name="notes"
             rows={3}
-            className="w-full rounded-sm border border-border-strong bg-surface px-3 py-2"
+            className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
           />
         </Field>
 

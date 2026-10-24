@@ -96,12 +96,12 @@ export function LeavePage() {
 
   return (
     <>
-      <NsNav />
       <PageHeader
         title="Nghỉ phép"
         description="Đơn đã duyệt mới được ghi là ngày nghỉ có phép trên bảng chấm công."
         breadcrumbs={[{ label: 'Hành chính – Nhân sự' }, { label: 'Nghỉ phép' }]}
       />
+      <NsNav />
 
       {pageError && <ErrorState message={pageError} />}
       {notice && (
@@ -115,7 +115,7 @@ export function LeavePage() {
         >
           <Field label="Nhân sự" required>
             <select
-              className="h-9 w-full rounded border border-border bg-surface px-2"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
               required
@@ -133,7 +133,7 @@ export function LeavePage() {
 
           <Field label="Loại nghỉ" required>
             <select
-              className="h-9 w-full rounded border border-border bg-surface px-2"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               value={type}
               onChange={(e) => setType(e.target.value as LeaveType)}
             >

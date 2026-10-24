@@ -95,7 +95,7 @@ export function AcceptanceChecklistField({
                 onChange={(e) => update(item.key, { note: e.target.value })}
                 placeholder="Không đạt ở đâu, cần khắc phục gì"
                 aria-label={`Ghi chú — ${item.label}`}
-                className="mt-2 h-10 w-full rounded-sm border border-border bg-surface px-3"
+                className="mt-2 h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               />
             )}
             {answer.result !== 'khong_ap_dung' &&

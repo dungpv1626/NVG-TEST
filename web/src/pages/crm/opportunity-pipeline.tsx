@@ -141,7 +141,6 @@ export function OpportunityPipelinePage() {
   return (
     <>
       {promptDialog.dialog}
-      <CrmNav />
       <PageHeader
         title="Cơ hội kinh doanh"
         breadcrumbs={[{ label: 'Khách hàng & Cơ hội' }, { label: 'Cơ hội kinh doanh' }]}
@@ -171,6 +170,7 @@ export function OpportunityPipelinePage() {
           </div>
         }
       />
+      <CrmNav />
 
       {moveError && (
         <p

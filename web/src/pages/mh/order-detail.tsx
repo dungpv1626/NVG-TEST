@@ -202,10 +202,7 @@ export function PurchaseOrderDetailPage() {
                     </p>
                   </li>
                   {(deliveries ?? []).map((delivery) => (
-                    <li
-                      key={delivery.id}
-                      className="rounded-card bg-surface px-4 py-3"
-                    >
+                    <li key={delivery.id} className="rounded-card bg-surface px-4 py-3">
                       <p className="font-medium">
                         Phiếu giao nhận {delivery.code ?? EM_DASH} ·{' '}
                         {formatDate(delivery.delivered_date)}
@@ -333,7 +330,7 @@ export function PurchaseOrderDetailPage() {
                       <input
                         defaultValue={order.contract_number ?? ''}
                         maxLength={64}
-                        className="mt-1 h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                        className="mt-1 h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                         onBlur={(e) =>
                           void run(() =>
                             update.mutateAsync({

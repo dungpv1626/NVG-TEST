@@ -58,13 +58,13 @@ export function PurchaseRequestListPage() {
 
   return (
     <>
-      <MhNav />
       <PageHeader
         help={APP_HELP.purchaseRequests}
         title="Đề nghị mua"
         breadcrumbs={[{ label: 'Mua hàng – Vật tư' }, { label: 'Đề nghị mua' }]}
         actions={headerAction}
       />
+      <MhNav />
 
       <EntityTable<RequestRow>
         rows={rows}

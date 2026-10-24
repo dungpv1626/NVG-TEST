@@ -58,12 +58,12 @@ export function PurchaseOrderListPage() {
 
   return (
     <>
-      <MhNav />
       <PageHeader
         title="Đơn đặt hàng"
         breadcrumbs={[{ label: 'Mua hàng – Vật tư' }, { label: 'Đơn đặt hàng' }]}
         description="Đơn hàng được lập từ đề nghị mua đã duyệt và báo giá đã chọn — không lập trực tiếp ở đây."
       />
+      <MhNav />
 
       {/* Đợt 4 — 4C: đơn quá hẹn / đến hạn giao đứng trên cùng. */}
       <OrderDuePanel />

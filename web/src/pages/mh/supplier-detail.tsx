@@ -223,7 +223,7 @@ export function SupplierDetailPage() {
                     rows={3}
                     defaultValue={supplier.rating_notes ?? ''}
                     disabled={!canEdit}
-                    className="w-full rounded-sm border border-border-strong bg-surface px-3 py-2"
+                    className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
                   />
                 </Field>
                 {canEdit && (

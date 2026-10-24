@@ -111,12 +111,12 @@ export function CollectionRequestListPage() {
   const rows = data ?? [];
   return (
     <>
-      <KtNav />
       <PageHeader
         title="Đề nghị thu tiền"
         breadcrumbs={[{ label: 'Kế toán – Tài chính' }, { label: 'Đề nghị thu tiền' }]}
         description="Hồ sơ đề nghị thanh toán gửi chủ đầu tư. Lập từ biên bản nghiệm thu đã ký hoặc từ đợt thu đã đến hạn."
       />
+      <KtNav />
       {isLoading ? (
         <TableSkeleton />
       ) : error ? (
@@ -396,7 +396,7 @@ export function CollectionRequestDetailPage() {
             onChange={(e) => setBasis(e.target.value)}
             disabled={!editable}
             rows={5}
-            className="w-full rounded-sm border border-border-strong bg-surface px-3 py-2"
+            className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
           />
         </Field>
         <Field label="Nội dung thêm" optional className="sm:col-span-2">
@@ -405,7 +405,7 @@ export function CollectionRequestDetailPage() {
             onChange={(e) => setContent(e.target.value)}
             disabled={!editable}
             rows={3}
-            className="w-full rounded-sm border border-border-strong bg-surface px-3 py-2"
+            className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
           />
         </Field>
         <div className="flex flex-wrap gap-2 sm:col-span-2">

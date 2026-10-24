@@ -315,12 +315,12 @@ export function StocktakePage() {
   return (
     <>
       {promptDialog.dialog}
-      <KhoNav />
       <PageHeader
         title="Kiểm kê"
         breadcrumbs={[{ label: 'Kho' }, { label: 'Kiểm kê' }]}
         description="Trong lúc kiểm kê, kho tạm dừng nhập xuất. Sổ kho chỉ đổi sau khi biên bản chênh lệch được phê duyệt."
       />
+      <KhoNav />
 
       {pageError && (
         <p
@@ -337,7 +337,7 @@ export function StocktakePage() {
             <select
               value={warehouseId}
               onChange={(e) => setWarehouseId(e.target.value)}
-              className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
             >
               <option value="">Chọn kho</option>
               {(warehouses ?? []).map((w) => (

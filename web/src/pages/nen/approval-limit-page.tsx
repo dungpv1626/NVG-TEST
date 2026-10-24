@@ -87,12 +87,12 @@ export function ApprovalLimitPage() {
 
   return (
     <>
-      <NenNav />
       <PageHeader
         title="Hạn mức phê duyệt"
         description="Ai được duyệt loại nghiệp vụ nào, tới mức tiền nào. Mức đang chạy là mức tạm của tài liệu, chờ Nhà Việt Group ban hành quy chế chính thức."
         breadcrumbs={[{ label: 'Quản trị hệ thống' }, { label: 'Hạn mức phê duyệt' }]}
       />
+      <NenNav />
 
       {isLoading && <TableSkeleton columns={6} />}
       {error && <ErrorState message={toUserMessage(error)} onRetry={() => void refetch()} />}
@@ -153,11 +153,7 @@ export function ApprovalLimitPage() {
       )}
 
       {editing && (
-        <form
-          ref={editFormRef}
-          onSubmit={submit}
-          className="mt-4 rounded-card bg-surface p-4"
-        >
+        <form ref={editFormRef} onSubmit={submit} className="mt-4 rounded-card bg-surface p-4">
           <h2 className="font-semibold">
             {subjectLabel(editing.subject)} · {editing.role?.label ?? ''} · bước {editing.step}
           </h2>

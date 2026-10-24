@@ -106,12 +106,12 @@ export function AuditLogPage() {
 
   return (
     <>
-      <NenNav />
       <PageHeader
         title="Nhật ký"
         description="Ai làm gì, ai xem dữ liệu nhạy cảm, khi nào. Chỉ đọc — không sửa, không xóa được từ giao diện."
         breadcrumbs={[{ label: 'Quản trị hệ thống' }, { label: 'Nhật ký' }]}
       />
+      <NenNav />
 
       <SegmentedControl
         options={TABS}

@@ -380,7 +380,7 @@ function QuoteVersionCard({
               rows={2}
               autoFocus
               placeholder="Khách chấp thuận, đề nghị giảm thêm, yêu cầu điều chỉnh phạm vi…"
-              className="w-full rounded-sm border border-border bg-surface px-3 py-2 placeholder:text-fg-subtle"
+              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
             />
           </label>
           <div className="flex items-center gap-2">

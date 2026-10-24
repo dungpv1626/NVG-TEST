@@ -397,7 +397,7 @@ function ItemRow({
           value={row.cost_group}
           onChange={(e) => onChange({ ...row, cost_group: e.target.value as CostGroup })}
           aria-label="Nhóm chi phí"
-          className="h-10 w-full rounded-sm border border-border bg-surface px-2 sm:h-8"
+          className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-8"
         >
           {COST_GROUPS.map((g) => (
             <option key={g} value={g}>

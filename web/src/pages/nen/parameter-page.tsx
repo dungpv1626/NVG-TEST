@@ -138,12 +138,12 @@ export function ParameterPage() {
 
   return (
     <>
-      <NenNav />
       <PageHeader
         title="Tham số hệ thống"
         description="Giá trị vận hành do Nhà Việt Group quyết định. Đổi tham số không làm thay đổi chứng từ đã phát hành — chứng từ giữ giá trị đã áp dụng tại thời điểm lập."
         breadcrumbs={[{ label: 'Quản trị hệ thống' }, { label: 'Tham số hệ thống' }]}
       />
+      <NenNav />
 
       {isLoading && <TableSkeleton />}
       {error && <ErrorState message={toUserMessage(error)} onRetry={() => void refetch()} />}
@@ -221,11 +221,7 @@ export function ParameterPage() {
       )}
 
       {editing && (
-        <form
-          ref={editFormRef}
-          onSubmit={submit}
-          className="mt-4 rounded-card bg-surface p-4"
-        >
+        <form ref={editFormRef} onSubmit={submit} className="mt-4 rounded-card bg-surface p-4">
           <h2 className="font-semibold">{editing.label}</h2>
           <p className="mt-1 text-fg-subtle">
             {editing.description ?? 'Không có mô tả cho tham số này.'}
@@ -244,7 +240,7 @@ export function ParameterPage() {
                 value={rawValue}
                 onChange={(e) => setRawValue(e.target.value)}
                 rows={rawValue.length > 60 ? 6 : 2}
-                className="w-full rounded-sm border border-border bg-surface px-3 py-2 placeholder:text-fg-subtle"
+                className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
               />
             </Field>
             <Field label="Áp dụng từ" hint="Không hồi tố: chứng từ đã phát hành giữ giá trị cũ.">

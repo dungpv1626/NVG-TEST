@@ -137,7 +137,6 @@ export function StockMovementPage() {
 
   return (
     <>
-      <KhoNav />
       <PageHeader
         title="Phiếu kho"
         breadcrumbs={[{ label: 'Kho' }, { label: 'Phiếu kho' }]}
@@ -149,6 +148,7 @@ export function StockMovementPage() {
           ) : undefined
         }
       />
+      <KhoNav />
 
       {!canEdit && (
         <BlockedNotice
@@ -176,7 +176,7 @@ export function StockMovementPage() {
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as StockMovementType)}
-                className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               >
                 <option value="nhap">{STOCK_MOVEMENT_TYPE_LABELS.nhap}</option>
                 <option value="xuat">{STOCK_MOVEMENT_TYPE_LABELS.xuat}</option>
@@ -189,7 +189,7 @@ export function StockMovementPage() {
                 value={warehouseId}
                 onChange={(e) => setWarehouseId(e.target.value)}
                 required
-                className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               >
                 <option value="">Chọn kho</option>
                 {(warehouses ?? []).map((w) => (
@@ -206,7 +206,7 @@ export function StockMovementPage() {
                   value={targetWarehouseId}
                   onChange={(e) => setTargetWarehouseId(e.target.value)}
                   required
-                  className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                  className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                 >
                   <option value="">Chọn kho nhận</option>
                   {(warehouses ?? [])
@@ -226,7 +226,7 @@ export function StockMovementPage() {
                   <select
                     value={issueReason}
                     onChange={(e) => setIssueReason(e.target.value as StockIssueReason)}
-                    className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                    className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                   >
                     {Object.entries(STOCK_ISSUE_REASON_LABELS).map(([value, label]) => (
                       <option key={value} value={value}>
@@ -244,7 +244,7 @@ export function StockMovementPage() {
                     value={siteId}
                     onChange={(e) => setSiteId(e.target.value)}
                     required={issueReason === 'cong_trinh'}
-                    className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                    className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                   >
                     <option value="">Chọn công trình</option>
                     {(sites ?? []).map((s) => (
@@ -272,7 +272,7 @@ export function StockMovementPage() {
                         ),
                       )
                     }
-                    className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                    className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                   >
                     <option value="">Chọn vật tư</option>
                     {(materials ?? []).map((m) => (

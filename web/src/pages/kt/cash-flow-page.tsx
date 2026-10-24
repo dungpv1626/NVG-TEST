@@ -87,7 +87,6 @@ export function CashFlowPage() {
 
   return (
     <>
-      <KtNav />
       <PageHeader
         title="Dòng tiền"
         description="Số dư, kế hoạch thu – chi, công nợ đến hạn và khoản đã duyệt chưa chi."
@@ -100,6 +99,7 @@ export function CashFlowPage() {
           ) : undefined
         }
       />
+      <KtNav />
 
       {pageError && (
         <p
@@ -128,7 +128,7 @@ export function CashFlowPage() {
             <select
               name="period_type"
               defaultValue="thang"
-              className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
             >
               <option value="thang">{CASH_FLOW_PERIOD_TYPE_LABELS.thang}</option>
               <option value="tuan">{CASH_FLOW_PERIOD_TYPE_LABELS.tuan}</option>
@@ -180,10 +180,7 @@ export function CashFlowPage() {
         (data ?? []).map((row) => {
           const shortfall = toMoney(row.closing_balance) < 0n;
           return (
-            <section
-              key={row.company_id}
-              className="mb-4 rounded-card bg-surface p-4"
-            >
+            <section key={row.company_id} className="mb-4 rounded-card bg-surface p-4">
               <h2 className="mb-3 font-semibold">
                 {row.company_name} ({row.company_code})
               </h2>

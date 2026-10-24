@@ -119,11 +119,7 @@ export function SubcontractorPanel({
       )}
 
       {adding && (
-        <form
-          onSubmit={submit}
-          noValidate
-          className="rounded-card bg-surface p-4"
-        >
+        <form onSubmit={submit} noValidate className="rounded-card bg-surface p-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Tên tổ đội / nhà thầu phụ" required>
               <Input
@@ -139,7 +135,7 @@ export function SubcontractorPanel({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, form: e.target.value as SubcontractForm }))
                 }
-                className="h-10 w-full rounded-sm border border-border bg-surface px-3"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               >
                 {SUBCONTRACT_FORMS.map((v) => (
                   <option key={v} value={v}>
@@ -154,7 +150,7 @@ export function SubcontractorPanel({
                 value={form.scopeOfWork}
                 onChange={(e) => setForm((f) => ({ ...f, scopeOfWork: e.target.value }))}
                 rows={2}
-                className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+                className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
               />
             </Field>
 
@@ -187,7 +183,7 @@ export function SubcontractorPanel({
               <select
                 value={form.responsibleUserId}
                 onChange={(e) => setForm((f) => ({ ...f, responsibleUserId: e.target.value }))}
-                className="h-10 w-full rounded-sm border border-border bg-surface px-3"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               >
                 <option value="">Chỉ huy trưởng công trình</option>
                 {(users ?? []).map((u) => (
@@ -260,7 +256,7 @@ export function SubcontractorPanel({
                       onChange={(e) =>
                         void update(c.id, { status: e.target.value as SubcontractorStatus })
                       }
-                      className="h-10 w-full rounded-sm border border-border bg-surface px-3"
+                      className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                     >
                       {SUBCONTRACTOR_STATUSES.map((s) => (
                         <option key={s} value={s}>
@@ -278,7 +274,7 @@ export function SubcontractorPanel({
                           quality_rating: e.target.value ? Number(e.target.value) : null,
                         })
                       }
-                      className="h-10 w-full rounded-sm border border-border bg-surface px-3"
+                      className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                     >
                       <option value="">Chưa đánh giá</option>
                       {[1, 2, 3, 4, 5].map((n) => (

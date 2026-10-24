@@ -39,12 +39,12 @@ export function CapabilityPage() {
 
   return (
     <>
-      <DaNav />
       <PageHeader
         title="Hồ sơ năng lực"
         description="Nhập một lần, gắn vào gói thầu bằng một bấm; giấy hết hạn trước ngày nộp bị báo đỏ."
         breadcrumbs={[{ label: 'Dự án – Đấu thầu' }, { label: 'Hồ sơ năng lực' }]}
       />
+      <DaNav />
 
       <section className="space-y-3">
         <h2 className="font-semibold">Giấy tờ của pháp nhân</h2>

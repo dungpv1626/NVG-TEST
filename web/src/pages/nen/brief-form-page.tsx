@@ -177,12 +177,12 @@ export function BriefFormAdminPage() {
 
   return (
     <div>
-      <NenNav />
       <PageHeader
         title="Biểu mẫu đầu bài"
         description="Thêm, sửa và ẩn các mục khảo sát của Đầu bài thiết kế. Thay đổi áp dụng ngay cho mọi hồ sơ đang soạn."
         breadcrumbs={[{ label: 'Quản trị hệ thống' }, { label: 'Biểu mẫu đầu bài' }]}
       />
+      <NenNav />
 
       {broken && (
         <p className="mb-4 rounded border border-status-overdue bg-status-overdue-bg p-3 text-status-overdue">
@@ -544,7 +544,7 @@ function AddQuestion({
           {/* Danh sách đóng, chữ bên trong là chữ của mình — `<select>` không tự sinh câu nào. */}
           <select
             id="new-control"
-            className="min-h-10 w-full rounded border border-border bg-surface px-2"
+            className="min-h-11 w-full rounded-field border border-border-strong bg-surface px-3"
             value={control}
             onChange={(e) => setControl(e.target.value as CustomControl)}
           >

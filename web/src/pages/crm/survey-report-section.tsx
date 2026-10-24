@@ -306,7 +306,7 @@ function RecordingItem({
             onChange={(e) => setText(e.target.value)}
             rows={3}
             placeholder="Chưa có chữ — bấm «Chép chữ» hoặc gõ tóm tắt đoạn này"
-            className="w-full rounded-sm border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
+            className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
           />
           {text !== null && text !== (recording.transcript ?? '') && (
             <Button

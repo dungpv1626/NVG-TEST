@@ -180,11 +180,7 @@ export function BiddingCreatePage() {
     <>
       <PageHeader title="Tạo gói thầu mới" breadcrumbs={BREADCRUMBS} />
 
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        className="max-w-2xl rounded-card bg-surface p-6"
-      >
+      <form onSubmit={handleSubmit} noValidate className="max-w-2xl rounded-card bg-surface p-6">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Tên gói thầu" required className="sm:col-span-2">
             <Input value={form.name} onChange={(e) => update('name', e.target.value)} autoFocus />
@@ -198,7 +194,7 @@ export function BiddingCreatePage() {
             <select
               value={form.opportunityId}
               onChange={(e) => update('opportunityId', e.target.value)}
-              className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
             >
               <option value="">Không đến từ cơ hội (thư mời thầu trực tiếp)</option>
               {(opportunities ?? []).map((o) => (
@@ -213,7 +209,7 @@ export function BiddingCreatePage() {
             <select
               value={form.customerId}
               onChange={(e) => update('customerId', e.target.value)}
-              className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
             >
               <option value="">Chưa xác định</option>
               {(customers ?? []).map((c) => (
@@ -228,7 +224,7 @@ export function BiddingCreatePage() {
             <select
               value={form.responsibleUserId}
               onChange={(e) => update('responsibleUserId', e.target.value)}
-              className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
             >
               <option value="">Người tạo hồ sơ</option>
               {(users ?? []).map((u) => (
@@ -266,7 +262,7 @@ export function BiddingCreatePage() {
               value={form.clarificationNotes}
               onChange={(e) => update('clarificationNotes', e.target.value)}
               rows={3}
-              className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
             />
           </Field>
         </div>

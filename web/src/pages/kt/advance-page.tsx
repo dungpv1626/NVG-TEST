@@ -49,7 +49,6 @@ export function AdvanceListPage() {
 
   return (
     <>
-      <KtNav />
       <PageHeader
         title="Tạm ứng"
         description="Các khoản đã ứng ra và phần còn phải hoàn."
@@ -62,6 +61,7 @@ export function AdvanceListPage() {
           ) : undefined
         }
       />
+      <KtNav />
 
       <EntityTable<AdvanceRow>
         rows={rows}

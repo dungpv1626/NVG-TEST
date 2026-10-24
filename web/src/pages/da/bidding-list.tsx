@@ -52,13 +52,13 @@ export function BiddingListPage() {
 
   return (
     <>
-      <DaNav />
       <PageHeader
         help={APP_HELP.bidding}
         title="Gói thầu"
         breadcrumbs={[{ label: 'Dự án – Đấu thầu' }, { label: 'Gói thầu' }]}
         actions={headerAction}
       />
+      <DaNav />
 
       <EntityTable<BiddingRow>
         rows={rows}

@@ -53,7 +53,6 @@ export function EmployeeListPage() {
 
   return (
     <>
-      <NsNav />
       <PageHeader
         help={APP_HELP.employees}
         title="Hồ sơ nhân sự"
@@ -61,6 +60,7 @@ export function EmployeeListPage() {
         breadcrumbs={[{ label: 'Hành chính – Nhân sự' }, { label: 'Hồ sơ nhân sự' }]}
         actions={headerAction}
       />
+      <NsNav />
 
       <EntityTable<EmployeeRow>
         rows={rows}

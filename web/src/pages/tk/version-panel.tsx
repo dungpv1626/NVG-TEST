@@ -203,11 +203,7 @@ export function VersionPanel({
       ) : (
         canAdd &&
         (adding ? (
-          <form
-            onSubmit={addVersion}
-            noValidate
-            className="rounded-card bg-surface p-4"
-          >
+          <form onSubmit={addVersion} noValidate className="rounded-card bg-surface p-4">
             <p className="mb-4 font-medium">
               {revisionOnly ? 'Thêm bản điều chỉnh' : 'Thêm phiên bản mới'}
             </p>
@@ -513,7 +509,7 @@ function VersionCard({
                 onChange={(e) =>
                   setReview((r) => ({ ...r, reviewerType: e.target.value as DesignReviewerType }))
                 }
-                className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
               >
                 {(Object.keys(DESIGN_REVIEWER_TYPE_LABELS) as DesignReviewerType[]).map((t) => (
                   <option key={t} value={t}>
@@ -529,7 +525,7 @@ function VersionCard({
                 onChange={(e) =>
                   setReview((r) => ({ ...r, decision: e.target.value as DesignReviewDecision }))
                 }
-                className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
               >
                 {(Object.keys(DESIGN_REVIEW_DECISION_LABELS) as DesignReviewDecision[]).map((d) => (
                   <option key={d} value={d}>
@@ -569,7 +565,7 @@ function VersionCard({
                 value={review.comments}
                 onChange={(e) => setReview((r) => ({ ...r, comments: e.target.value }))}
                 rows={3}
-                className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+                className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
               />
             </Field>
           </div>

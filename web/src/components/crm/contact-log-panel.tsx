@@ -207,7 +207,7 @@ function NewLogForm({ subject }: { subject: ContactSubject }) {
           onChange={(e) => set('content', e.target.value)}
           rows={3}
           placeholder="Khách hỏi gì, mình báo gì"
-          className="w-full rounded-sm border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
+          className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
         />
       </Field>
 

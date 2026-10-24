@@ -203,11 +203,7 @@ export function SiteLogPanel({
       )}
 
       {!readOnly && (
-        <form
-          onSubmit={submit}
-          noValidate
-          className="rounded-card bg-surface p-4"
-        >
+        <form onSubmit={submit} noValidate className="rounded-card bg-surface p-4">
           <p className="mb-3 font-medium">Ghi nhật ký hôm nay</p>
 
           {canSpeak && (
@@ -252,7 +248,7 @@ export function SiteLogPanel({
                 value={form.content}
                 onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
                 rows={form.content.split('\n').length > 3 ? 8 : 3}
-                className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+                className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
                 placeholder="Việc đã làm, khối lượng, vướng mắc hoặc sự việc tại hiện trường."
               />
             </Field>
@@ -269,7 +265,7 @@ export function SiteLogPanel({
               <select
                 value={form.logType}
                 onChange={(e) => setForm((f) => ({ ...f, logType: e.target.value as SiteLogType }))}
-                className="h-10 w-full rounded-sm border border-border bg-surface px-3"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               >
                 {SITE_LOG_TYPES.map((t) => (
                   <option key={t} value={t}>

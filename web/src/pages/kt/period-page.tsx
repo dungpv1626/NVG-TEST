@@ -125,12 +125,12 @@ export function AccountingPeriodPage() {
   return (
     <>
       {promptDialog.dialog}
-      <KtNav />
       <PageHeader
         title="Kỳ kế toán"
         description="Chốt sổ theo tháng. Kỳ đã khóa không ghi thêm khoản chi mang ngày trong kỳ."
         breadcrumbs={[{ label: 'Kế toán – Tài chính' }, { label: 'Kỳ kế toán' }]}
       />
+      <KtNav />
 
       {pageError && (
         <p

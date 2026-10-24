@@ -78,12 +78,12 @@ export function SiteListPage() {
 
   return (
     <>
-      <TcNav />
       <PageHeader
         help={APP_HELP.sites}
         title="Công trình"
         breadcrumbs={[{ label: 'Thi công & Ngân sách' }, { label: 'Công trình' }]}
       />
+      <TcNav />
 
       <EntityTable<SiteRow>
         rows={rows}

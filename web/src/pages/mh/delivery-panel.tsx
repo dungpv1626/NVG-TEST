@@ -207,10 +207,7 @@ export function DeliveryPanel({
                 0,
               );
               return (
-                <li
-                  key={delivery.id}
-                  className="rounded-card bg-surface px-4 py-3"
-                >
+                <li key={delivery.id} className="rounded-card bg-surface px-4 py-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <p className="font-medium">
                       {delivery.code ?? 'Phiếu giao nhận'} · {formatDate(delivery.delivered_date)}
@@ -242,7 +239,7 @@ export function DeliveryPanel({
                           <select
                             value={stockWarehouseId}
                             onChange={(e) => setStockWarehouseId(e.target.value)}
-                            className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                            className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                           >
                             <option value="">Chọn kho</option>
                             {(warehouses ?? []).map((w) => (
@@ -340,7 +337,7 @@ export function DeliveryPanel({
                         <select
                           name={`issue_type_${line.id}`}
                           defaultValue=""
-                          className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                          className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                         >
                           <option value="">Không có</option>
                           <option value="thieu">{DELIVERY_ISSUE_LABELS.thieu}</option>
@@ -360,7 +357,7 @@ export function DeliveryPanel({
                 <textarea
                   name="notes"
                   rows={2}
-                  className="w-full rounded-sm border border-border-strong bg-surface px-3 py-2"
+                  className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
                 />
               </Field>
 

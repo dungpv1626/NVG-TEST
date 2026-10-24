@@ -68,7 +68,6 @@ export function CustomerListPage() {
 
   return (
     <>
-      <CrmNav />
       <PageHeader
         help={APP_HELP.customers}
         title="Khách hàng"
@@ -77,6 +76,7 @@ export function CustomerListPage() {
         // "DUY NHẤT một hành động chính trên mỗi màn hình" (Content Guidelines 6.3).
         actions={headerAction}
       />
+      <CrmNav />
 
       <EntityTable<CustomerRow>
         rows={rows}

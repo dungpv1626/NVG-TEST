@@ -31,7 +31,7 @@ import { useSiteCostCodes } from '@/hooks/use-purchasing';
 import { toUserMessage } from '@/hooks/use-error-message';
 
 const EM_DASH = '—';
-const SELECT_CLASS = 'h-9 w-full rounded-sm border border-border-strong bg-surface px-3';
+const SELECT_CLASS = 'h-11 w-full rounded-field border border-border-strong bg-surface px-3';
 
 export function AllocationPanel({
   requestId,

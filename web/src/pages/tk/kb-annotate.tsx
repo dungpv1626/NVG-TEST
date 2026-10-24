@@ -99,7 +99,6 @@ export function KbAnnotatePage() {
 
   return (
     <>
-      <TkNav />
       <PageHeader
         title={data.project_code}
         breadcrumbs={[
@@ -109,6 +108,7 @@ export function KbAnnotatePage() {
         ]}
         description={`Chất lượng trích ${Math.round((data.quality_score ?? 0) * 100)}% · ${plans.length} tầng · lô ${data.site_width_m ?? '—'} × ${data.site_depth_m ?? '—'} m`}
       />
+      <TkNav />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section aria-label="Mặt bằng đã trích">

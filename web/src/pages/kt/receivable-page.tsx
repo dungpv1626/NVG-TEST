@@ -44,7 +44,7 @@ import { useCompanyScope } from '@/lib/company-scope';
 import { cn } from '@/lib/utils';
 import { KtNav } from './kt-nav';
 
-const SELECT_CLASS = 'h-9 w-full rounded-sm border border-border-strong bg-surface px-3';
+const SELECT_CLASS = 'h-11 w-full rounded-field border border-border-strong bg-surface px-3';
 
 interface ReceivableRow extends EntityRow {
   partyLabel: string;
@@ -147,7 +147,6 @@ export function ReceivablePage() {
 
   return (
     <>
-      <KtNav />
       <PageHeader
         title="Công nợ"
         description="Theo dõi theo khách hàng, nhà cung cấp, hợp đồng và hạn thanh toán."
@@ -160,6 +159,7 @@ export function ReceivablePage() {
           ) : undefined
         }
       />
+      <KtNav />
 
       {pageError && (
         <p

@@ -118,10 +118,7 @@ export function DisciplinePanel({
         {TECHNICAL_DISCIPLINES.map((discipline) => {
           const task = byDiscipline.get(discipline);
           return (
-            <section
-              key={discipline}
-              className="rounded-card bg-surface p-4"
-            >
+            <section key={discipline} className="rounded-card bg-surface p-4">
               <div className="mb-3 flex items-center gap-2">
                 <p className="font-medium">{DESIGN_DISCIPLINE_LABELS[discipline]}</p>
                 <StatusLozenge
@@ -140,7 +137,7 @@ export function DisciplinePanel({
                     onChange={(e) =>
                       void save(discipline, task, { assignee_id: e.target.value || null })
                     }
-                    className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+                    className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
                   >
                     <option value="">Chưa phân công</option>
                     {(users ?? []).map((u) => (
@@ -164,7 +161,7 @@ export function DisciplinePanel({
                           status === 'hoan_thanh' ? 100 : (task?.progress_percent ?? 0),
                       });
                     }}
-                    className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+                    className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
                   >
                     {DISCIPLINE_TASK_STATUSES.map((s) => (
                       <option key={s} value={s}>
@@ -190,7 +187,7 @@ export function DisciplinePanel({
                     defaultValue={task?.conflict_notes ?? ''}
                     disabled={readOnly}
                     rows={3}
-                    className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+                    className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
                     placeholder="Dầm chắn cửa sổ, ống kỹ thuật đâm vào cột…"
                     onBlur={(e) =>
                       void save(discipline, task, { conflict_notes: e.target.value.trim() || null })

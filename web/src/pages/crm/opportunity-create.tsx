@@ -14,6 +14,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { BUTTONS, ERRORS, OPPORTUNITY_PROJECT_TYPES, formatCurrency } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
+import { FormLayout, FormSection } from '@/components/ui/form-page';
 import { DateInput } from '@/components/ui/date-input';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
@@ -188,99 +189,107 @@ export function OpportunityCreatePage() {
           </Button>
         </div>
       ) : (
-        <form
-          onSubmit={handleSubmit}
-          noValidate
-          className="max-w-2xl rounded-card bg-surface p-6"
-        >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Khách hàng" required className="sm:col-span-2">
-              <select
-                value={form.customerId}
-                onChange={(e) => update('customerId', e.target.value)}
-                className="h-9 w-full rounded-sm border border-border bg-surface px-3"
+        <form onSubmit={handleSubmit} noValidate>
+          {/* v2 (màn 2.2): mục đánh số + thẻ «Sau khi lưu» — chỉ ghi việc hệ thống thật sự làm khi lưu
+              (bước Tiếp nhận, người tạo chịu trách nhiệm, điều kiện qua Xác minh của `stage_readiness`). */}
+          <FormLayout
+            afterSave={[
+              'Cơ hội vào bước Tiếp nhận; người tạo là người chịu trách nhiệm.',
+              'Bước kế: Xác minh — cần phân loại khách (M2–M4) và loại công trình.',
+              'Sau đó khảo sát và được Ban Giám đốc duyệt báo cáo khảo sát mới lập được báo giá.',
+            ]}
+          >
+            <FormSection n={1} title="Khách hàng">
+              <Field label="Khách hàng" required className="sm:col-span-2">
+                <select
+                  value={form.customerId}
+                  onChange={(e) => update('customerId', e.target.value)}
+                  className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
+                >
+                  <option value="">Chọn khách hàng</option>
+                  {(customers ?? []).map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </FormSection>
+
+            <FormSection n={2} title="Nhu cầu">
+              <Field label="Tên cơ hội" required className="sm:col-span-2">
+                <Input
+                  value={form.name}
+                  onChange={(e) => update('name', e.target.value)}
+                  placeholder="Ví dụ: Nhà xưởng cơ khí 3.500 m2 — KCN Quang Minh"
+                />
+              </Field>
+
+              <Field label="Loại công trình">
+                <select
+                  value={form.projectType}
+                  onChange={(e) => update('projectType', e.target.value)}
+                  className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
+                >
+                  <option value="">Chưa xác định</option>
+                  {OPPORTUNITY_PROJECT_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Giá trị dự kiến">
+                <MoneyInput
+                  value={form.estimatedValue}
+                  onChange={(v) => update('estimatedValue', v)}
+                  placeholder="Đơn vị: đồng"
+                />
+                {parsedValue && (
+                  <p className="text-xs text-fg-subtle">{formatCurrency(parsedValue)}</p>
+                )}
+              </Field>
+
+              <Field label="Tiến độ mong muốn">
+                <DateInput
+                  value={form.expectedStartDate}
+                  onChange={(v) => update('expectedStartDate', v)}
+                />
+              </Field>
+
+              <Field label="Thời hạn xử lý">
+                <DateInput value={form.dueDate} onChange={(v) => update('dueDate', v)} />
+              </Field>
+
+              <Field label="Ghi chú" className="sm:col-span-2">
+                <textarea
+                  value={form.notes}
+                  onChange={(e) => update('notes', e.target.value)}
+                  rows={3}
+                  className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
+                />
+              </Field>
+            </FormSection>
+
+            {error && (
+              <p
+                role="alert"
+                className="rounded-field bg-status-overdue-bg px-3 py-2 text-status-overdue"
               >
-                <option value="">Chọn khách hàng</option>
-                {(customers ?? []).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.code})
-                  </option>
-                ))}
-              </select>
-            </Field>
+                {error}
+              </p>
+            )}
 
-            <Field label="Tên cơ hội" required className="sm:col-span-2">
-              <Input
-                value={form.name}
-                onChange={(e) => update('name', e.target.value)}
-                placeholder="Ví dụ: Nhà xưởng cơ khí 3.500 m2 — KCN Quang Minh"
-              />
-            </Field>
-
-            <Field label="Loại công trình">
-              <select
-                value={form.projectType}
-                onChange={(e) => update('projectType', e.target.value)}
-                className="h-9 w-full rounded-sm border border-border bg-surface px-3"
-              >
-                <option value="">Chưa xác định</option>
-                {OPPORTUNITY_PROJECT_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            <Field label="Giá trị dự kiến">
-              <MoneyInput
-                value={form.estimatedValue}
-                onChange={(v) => update('estimatedValue', v)}
-                placeholder="Đơn vị: đồng"
-              />
-              {parsedValue && (
-                <p className="text-xs text-fg-subtle">{formatCurrency(parsedValue)}</p>
-              )}
-            </Field>
-
-            <Field label="Tiến độ mong muốn">
-              <DateInput
-                value={form.expectedStartDate}
-                onChange={(v) => update('expectedStartDate', v)}
-              />
-            </Field>
-
-            <Field label="Thời hạn xử lý">
-              <DateInput value={form.dueDate} onChange={(v) => update('dueDate', v)} />
-            </Field>
-
-            <Field label="Ghi chú" className="sm:col-span-2">
-              <textarea
-                value={form.notes}
-                onChange={(e) => update('notes', e.target.value)}
-                rows={3}
-                className="w-full rounded-sm border border-border bg-surface px-3 py-2"
-              />
-            </Field>
-          </div>
-
-          {error && (
-            <p
-              role="alert"
-              className="mt-4 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
-            >
-              {error}
-            </p>
-          )}
-
-          <div className="mt-6 flex items-center gap-2">
-            <Button type="submit" variant="primary" disabled={createOpportunity.isPending}>
-              {createOpportunity.isPending ? 'Đang lưu…' : BUTTONS.save}
-            </Button>
-            <Button type="button" variant="subtle" onClick={handleCancel}>
-              {BUTTONS.cancel}
-            </Button>
-          </div>
+            <div className="flex items-center gap-2">
+              <Button type="submit" variant="primary" disabled={createOpportunity.isPending}>
+                {createOpportunity.isPending ? 'Đang lưu…' : BUTTONS.save}
+              </Button>
+              <Button type="button" variant="subtle" onClick={handleCancel}>
+                {BUTTONS.cancel}
+              </Button>
+            </div>
+          </FormLayout>
         </form>
       )}
     </>

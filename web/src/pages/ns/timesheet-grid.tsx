@@ -279,7 +279,7 @@ export function TimesheetGrid({
               <select
                 value={kind}
                 onChange={(e) => setKind(e.target.value as AttendanceKind)}
-                className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               >
                 {ATTENDANCE_KINDS.map((k) => (
                   <option key={k} value={k}>

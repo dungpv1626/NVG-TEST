@@ -112,7 +112,6 @@ export function UnitPriceListPage() {
 
   return (
     <>
-      <DaNav />
       <PageHeader
         title="Đơn giá & định mức"
         description="Dùng chung cho Đấu thầu, Thiết kế và Mua hàng. Đây là dữ liệu giá vốn — mọi lượt xem được ghi nhật ký."
@@ -128,12 +127,10 @@ export function UnitPriceListPage() {
           ) : undefined
         }
       />
+      <DaNav />
 
       {showForm && (
-        <form
-          onSubmit={addPrice}
-          className="mb-4 rounded-card bg-surface p-4"
-        >
+        <form onSubmit={addPrice} className="mb-4 rounded-card bg-surface p-4">
           <div className="grid gap-3 sm:grid-cols-4">
             <Field label="Mã vật tư / công việc" required>
               <Input
@@ -157,7 +154,7 @@ export function UnitPriceListPage() {
               <select
                 value={form.costGroup}
                 onChange={(e) => setForm({ ...form, costGroup: e.target.value as CostGroup })}
-                className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
               >
                 {COST_GROUPS.map((g) => (
                   <option key={g} value={g}>
@@ -177,7 +174,7 @@ export function UnitPriceListPage() {
               <select
                 value={form.source}
                 onChange={(e) => setForm({ ...form, source: e.target.value as UnitPriceSource })}
-                className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
               >
                 {UNIT_PRICE_SOURCES.map((s) => (
                   <option key={s} value={s}>

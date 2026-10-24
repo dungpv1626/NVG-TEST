@@ -38,7 +38,7 @@ export interface DocumentCategory {
   yearly?: boolean;
 }
 
-const SELECT_BOX = 'h-10 w-full rounded-sm border border-border bg-surface px-2 sm:h-9';
+const SELECT_BOX = 'h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9';
 
 export function ExpiryTag({
   expiry,

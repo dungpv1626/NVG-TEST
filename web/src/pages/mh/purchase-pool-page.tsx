@@ -49,12 +49,12 @@ export function PurchasePoolPage() {
 
   return (
     <>
-      <MhNav />
       <PageHeader
         title="Gom đề nghị mua"
         breadcrumbs={[{ label: 'Mua hàng – Vật tư' }, { label: 'Gom đề nghị mua' }]}
         description="Đề nghị đang chờ Mua hàng từ mọi công trình và xưởng, gộp theo vật tư, xếp theo ngày cần."
       />
+      <MhNav />
 
       <label className="mb-4 flex min-h-10 items-center gap-2">
         <input
@@ -197,7 +197,7 @@ function GroupQuoteActions({ group }: { group: PoolGroup }) {
           <select
             value={supplierId}
             onChange={(e) => setSupplierId(e.target.value)}
-            className="h-10 w-full rounded-sm border border-border-strong bg-surface px-3"
+            className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
           >
             <option value="">Chọn nhà cung cấp</option>
             {(suppliers ?? [])

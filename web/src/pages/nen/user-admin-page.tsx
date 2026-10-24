@@ -81,7 +81,6 @@ export function UserAdminPage() {
 
   return (
     <>
-      <NenNav />
       <PageHeader
         title="Người dùng"
         description="Tài khoản, pháp nhân và vai trò được gán. Thu hồi quyền truy cập bằng cách ngừng kích hoạt, không xóa tài khoản."
@@ -94,6 +93,7 @@ export function UserAdminPage() {
           ) : undefined
         }
       />
+      <NenNav />
 
       {adding && <NewAccountForm onDone={() => setAdding(false)} />}
 

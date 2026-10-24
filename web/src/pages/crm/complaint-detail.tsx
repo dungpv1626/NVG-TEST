@@ -208,7 +208,7 @@ export function ComplaintDetailPage() {
                     disabled={!canEdit}
                     rows={5}
                     placeholder="Nguyên nhân, biện pháp đã thực hiện, thời điểm hoàn thành, chi phí phát sinh nếu có"
-                    className="w-full rounded-sm border border-border bg-surface px-3 py-2 placeholder:text-fg-subtle disabled:opacity-60"
+                    className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle disabled:opacity-60"
                   />
                 </label>
 

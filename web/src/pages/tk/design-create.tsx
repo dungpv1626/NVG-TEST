@@ -179,11 +179,7 @@ export function DesignCreatePage() {
     <>
       <PageHeader title="Tạo dự án thiết kế mới" breadcrumbs={BREADCRUMBS} />
 
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        className="max-w-2xl rounded-card bg-surface p-6"
-      >
+      <form onSubmit={handleSubmit} noValidate className="max-w-2xl rounded-card bg-surface p-6">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Tên dự án thiết kế" required className="sm:col-span-2">
             <Input value={form.name} onChange={(e) => update('name', e.target.value)} autoFocus />
@@ -197,7 +193,7 @@ export function DesignCreatePage() {
             <select
               value={form.opportunityId}
               onChange={(e) => update('opportunityId', e.target.value)}
-              className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
             >
               <option value="">Không đến từ cơ hội (khách hàng liên hệ trực tiếp)</option>
               {(opportunities ?? []).map((o) => (
@@ -212,7 +208,7 @@ export function DesignCreatePage() {
             <select
               value={form.customerId}
               onChange={(e) => update('customerId', e.target.value)}
-              className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
             >
               <option value="">Chưa xác định</option>
               {(customers ?? []).map((c) => (
@@ -227,7 +223,7 @@ export function DesignCreatePage() {
             <select
               value={form.responsibleUserId}
               onChange={(e) => update('responsibleUserId', e.target.value)}
-              className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
             >
               <option value="">Người tạo hồ sơ</option>
               {(users ?? []).map((u) => (
@@ -260,7 +256,7 @@ export function DesignCreatePage() {
               value={form.notes}
               onChange={(e) => update('notes', e.target.value)}
               rows={3}
-              className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
             />
           </Field>
         </div>

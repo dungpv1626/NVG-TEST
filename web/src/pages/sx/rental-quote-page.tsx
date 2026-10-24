@@ -126,12 +126,12 @@ export function RentalQuotePage() {
 
   return (
     <>
-      <SxNav />
       <PageHeader
         title="Báo giá thuê"
         description="Máy kiểm tồn kho cho thuê và tính tiền theo đơn giá đã cấu hình — không tự đặt giá."
         breadcrumbs={[{ label: 'Sản xuất – Cho thuê' }, { label: 'Báo giá thuê' }]}
       />
+      <SxNav />
       {companyId === null ? (
         <EmptyState message="Chọn pháp nhân cho thuê (Nhà Việt Steel) ở bộ chọn góc trên bên trái." />
       ) : isLoading ? (

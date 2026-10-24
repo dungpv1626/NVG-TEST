@@ -75,12 +75,12 @@ export function CashForecastPage() {
 
   return (
     <>
-      <KtNav />
       <PageHeader
         title="Dòng tiền theo tuần"
         breadcrumbs={[{ label: 'Kế toán – Tài chính' }, { label: 'Dòng tiền theo tuần' }]}
         description="Thu và chi dự kiến từng tuần từ số có trên hệ thống: công nợ, đợt thu của hợp đồng đã ký, đề nghị chi đã duyệt chưa chi."
       />
+      <KtNav />
       <SegmentedControl
         options={['4', '8'] as const}
         value={weekOption}

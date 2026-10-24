@@ -99,7 +99,6 @@ export function ProductionOrderListPage() {
 
   return (
     <>
-      <SxNav />
       <PageHeader
         title="Lệnh sản xuất"
         breadcrumbs={[{ label: 'Sản xuất & Cho thuê' }, { label: 'Lệnh sản xuất' }]}
@@ -111,6 +110,7 @@ export function ProductionOrderListPage() {
           ) : undefined
         }
       />
+      <SxNav />
 
       {!canEdit && (
         <BlockedNotice
@@ -155,7 +155,7 @@ export function ProductionOrderListPage() {
             <textarea
               name="notes"
               rows={2}
-              className="w-full rounded-sm border border-border-strong bg-surface px-3 py-2"
+              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
             />
           </Field>
 

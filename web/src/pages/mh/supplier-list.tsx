@@ -85,7 +85,6 @@ export function SupplierListPage() {
 
   return (
     <>
-      <MhNav />
       <PageHeader
         title="Nhà cung cấp"
         breadcrumbs={[{ label: 'Mua hàng – Vật tư' }, { label: 'Nhà cung cấp' }]}
@@ -98,6 +97,7 @@ export function SupplierListPage() {
           ) : undefined
         }
       />
+      <MhNav />
 
       {isFormOpen && (
         <form
@@ -128,7 +128,7 @@ export function SupplierListPage() {
               <select
                 name="supplier_class"
                 defaultValue="du_phong"
-                className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               >
                 <option value="chinh">{SUPPLIER_CLASS_LABELS.chinh}</option>
                 <option value="du_phong">{SUPPLIER_CLASS_LABELS.du_phong}</option>

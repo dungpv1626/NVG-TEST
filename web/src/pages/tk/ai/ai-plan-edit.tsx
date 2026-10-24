@@ -114,7 +114,7 @@ export function PlanEditPanel({
               rows={3}
               maxLength={2000}
               placeholder="Ví dụ: cửa phòng ngủ 26 m² tầng 1 chuyển về cuối vách hành lang; bỏ vách giữa phòng khách và chỗ để xe."
-              className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
             />
           </Field>
           {rooms.length > 0 && (

@@ -20,7 +20,7 @@ import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
 import { useCompanyScope } from '@/lib/company-scope';
 import { useCanEditShowcase } from './showcase-library';
 
-const SELECT_CLASS = 'h-9 w-full rounded-sm border border-border-strong bg-surface px-3';
+const SELECT_CLASS = 'h-11 w-full rounded-field border border-border-strong bg-surface px-3';
 
 export function ShowcaseFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -230,7 +230,7 @@ function ShowcaseForm({ item }: { item: ShowcaseItem | null }) {
               onChange={(e) => set('description', e.target.value)}
               rows={4}
               placeholder="Điểm nổi bật của công trình — không ghi giá, không ghi tên chủ nhà"
-              className="w-full rounded-sm border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
+              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
             />
           </Field>
         </div>

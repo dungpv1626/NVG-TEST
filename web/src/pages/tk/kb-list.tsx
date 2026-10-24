@@ -56,7 +56,6 @@ export function KbListPage() {
 
   return (
     <>
-      <TkNav />
       <PageHeader
         title="Hồ sơ cũ đã số hoá"
         breadcrumbs={[{ label: 'Thiết kế' }, { label: 'Hồ sơ cũ đã số hoá' }]}
@@ -66,6 +65,7 @@ export function KbListPage() {
             : undefined
         }
       />
+      <TkNav />
 
       <EntityTable<KbRow>
         rows={rows}

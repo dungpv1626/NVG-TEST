@@ -100,7 +100,6 @@ export function MaterialListPage() {
 
   return (
     <>
-      <KhoNav />
       <PageHeader
         title="Danh mục vật tư"
         breadcrumbs={[{ label: 'Kho' }, { label: 'Danh mục vật tư' }]}
@@ -113,6 +112,7 @@ export function MaterialListPage() {
           ) : undefined
         }
       />
+      <KhoNav />
 
       {isFormOpen && canEdit && (
         <form
@@ -134,7 +134,7 @@ export function MaterialListPage() {
                 name="group_code"
                 required
                 defaultValue=""
-                className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               >
                 <option value="">Chọn nhóm</option>
                 {Object.entries(MATERIAL_GROUPS).map(([code, label]) => (
@@ -334,7 +334,7 @@ export function WarehouseListPage() {
               <select
                 value={warehouseType}
                 onChange={(e) => setWarehouseType(e.target.value as WarehouseType)}
-                className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               >
                 {Object.entries(WAREHOUSE_TYPE_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -352,7 +352,7 @@ export function WarehouseListPage() {
                 name="construction_site_id"
                 required={warehouseType === 'kho_cong_trinh'}
                 disabled={warehouseType !== 'kho_cong_trinh'}
-                className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3 disabled:bg-surface-sunken disabled:opacity-60"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 disabled:bg-surface-sunken disabled:opacity-60"
               >
                 <option value="">Không gắn công trình</option>
                 {(sites ?? []).map((s) => (

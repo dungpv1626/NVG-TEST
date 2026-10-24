@@ -164,7 +164,7 @@ function QuotationForm({
         <select
           value={supplierId}
           onChange={(e) => setSupplierId(e.target.value)}
-          className="h-10 w-full rounded-sm border border-border-strong bg-surface px-3 sm:max-w-md"
+          className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:max-w-md"
         >
           <option value="">Chọn nhà cung cấp</option>
           {(suppliers ?? [])
@@ -306,7 +306,7 @@ function QuotationFields({
           <select
             value={vat}
             onChange={(e) => setVat(e.target.value)}
-            className="h-10 w-full rounded-sm border border-border-strong bg-surface px-3"
+            className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
           >
             <option value="">Chưa hỏi</option>
             <option value="co">Có</option>

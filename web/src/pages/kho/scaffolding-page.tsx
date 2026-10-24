@@ -180,13 +180,13 @@ export function ScaffoldingPage() {
 
   return (
     <>
-      <KhoNav />
       <PageHeader
         help={APP_HELP.scaffolding}
         title="Giàn giáo"
         breadcrumbs={[{ label: 'Kho' }, { label: 'Giàn giáo' }]}
         description="Theo dõi theo lô và theo tình trạng. Tình trạng chỉ đổi qua biên bản."
       />
+      <KhoNav />
 
       {pageError && (
         <p
@@ -320,7 +320,7 @@ export function ScaffoldingPage() {
                         <select
                           value={eventType}
                           onChange={(e) => setEventType(e.target.value as ScaffoldingEventType)}
-                          className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                          className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                         >
                           <option value="sua_chua">{SCAFFOLDING_EVENT_LABELS.sua_chua}</option>
                           <option value="mat_mat">{SCAFFOLDING_EVENT_LABELS.mat_mat}</option>
@@ -348,7 +348,7 @@ export function ScaffoldingPage() {
                           <select
                             name="result_condition"
                             defaultValue="hong_cho_sua"
-                            className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                            className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                           >
                             <option value="hong_cho_sua">
                               {SCAFFOLDING_CONDITION_LABELS.hong_cho_sua}
@@ -378,7 +378,7 @@ export function ScaffoldingPage() {
                         name="reason"
                         required
                         rows={2}
-                        className="w-full rounded-sm border border-border-strong bg-surface px-3 py-2"
+                        className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
                       />
                     </Field>
                     <Button type="submit" variant="primary" disabled={recordEvent.isPending}>

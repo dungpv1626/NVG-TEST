@@ -143,7 +143,6 @@ export function SlaPage() {
 
   return (
     <>
-      <NenNav />
       <PageHeader
         title="Thời hạn xử lý"
         description="Cam kết bao lâu thì một đề nghị phải được xử lý xong. Đồng hồ hạn trên Hộp thư Phê duyệt và cảnh báo quá hạn đều đọc bảng này."
@@ -159,6 +158,7 @@ export function SlaPage() {
           ) : undefined
         }
       />
+      <NenNav />
 
       {isLoading && <TableSkeleton columns={5} />}
       {error && <ErrorState message={toUserMessage(error)} onRetry={() => void refetch()} />}
@@ -238,10 +238,7 @@ export function SlaPage() {
       )}
 
       {showForm && (
-        <form
-          onSubmit={addSla}
-          className="mt-4 rounded-card bg-surface p-4"
-        >
+        <form onSubmit={addSla} className="mt-4 rounded-card bg-surface p-4">
           <p className="mb-3 text-fg-subtle">
             Chỉ thêm dòng khi Ban Giám đốc đã quyết. Dòng hẹp hơn thay thế dòng rộng hơn, không cộng
             dồn: đúng cả vai trò lẫn pháp nhân được ưu tiên trước dòng chung.
@@ -253,7 +250,7 @@ export function SlaPage() {
                 onChange={(e) =>
                   setForm({ ...form, requestType: e.target.value as SlaRequestType })
                 }
-                className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
               >
                 {SLA_REQUEST_TYPES.map((s) => (
                   <option key={s} value={s}>
@@ -273,7 +270,7 @@ export function SlaPage() {
               <select
                 value={form.roleId}
                 onChange={(e) => setForm({ ...form, roleId: e.target.value })}
-                className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
               >
                 <option value="">Mọi vai trò tiếp nhận</option>
                 {(roles ?? []).map((r) => (
@@ -287,7 +284,7 @@ export function SlaPage() {
               <select
                 value={form.companyId}
                 onChange={(e) => setForm({ ...form, companyId: e.target.value })}
-                className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
               >
                 <option value="">Mọi pháp nhân</option>
                 {(companies ?? [])
@@ -328,11 +325,7 @@ export function SlaPage() {
       )}
 
       {editing && (
-        <form
-          ref={editFormRef}
-          onSubmit={saveEdit}
-          className="mt-4 rounded-card bg-surface p-4"
-        >
+        <form ref={editFormRef} onSubmit={saveEdit} className="mt-4 rounded-card bg-surface p-4">
           <h2 className="font-semibold">{editing.label}</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <Field label="Số giờ cam kết" required>

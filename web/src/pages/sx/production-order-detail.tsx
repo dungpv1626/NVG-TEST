@@ -193,7 +193,7 @@ export function ProductionOrderDetailPage() {
                       <select
                         value={materialId}
                         onChange={(e) => setMaterialId(e.target.value)}
-                        className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                        className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                       >
                         <option value="">Chọn nguyên liệu</option>
                         {(materials ?? []).map((m) => (

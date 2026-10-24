@@ -443,7 +443,7 @@ export function RentalAgreementDetailPage() {
                   defaultValue={agreement.notes ?? ''}
                   disabled={!canEdit}
                   rows={3}
-                  className="w-full rounded-sm border border-border-strong bg-surface px-3 py-2 disabled:bg-surface-sunken"
+                  className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 disabled:bg-surface-sunken"
                   onChange={(e) => setNotes(e.target.value)}
                   onBlur={() => void saveNotes()}
                 />

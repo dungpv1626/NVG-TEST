@@ -107,12 +107,12 @@ export function AssetPage() {
 
   return (
     <>
-      <NsNav />
       <PageHeader
         title="Tài sản cấp phát"
         description="Mỗi lần cấp phát, điều chuyển, sửa chữa, thu hồi hay thanh lý đều để lại một biên bản."
         breadcrumbs={[{ label: 'Hành chính – Nhân sự' }, { label: 'Tài sản' }]}
       />
+      <NsNav />
 
       {pageError && <ErrorState message={pageError} />}
       {notice && (
@@ -195,7 +195,7 @@ export function AssetPage() {
             <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Field label="Loại biên bản">
                 <select
-                  className="h-9 w-full rounded border border-border bg-surface px-2"
+                  className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                   value={eventType}
                   onChange={(e) => setEventType(e.target.value as AssetEventType)}
                 >
@@ -210,7 +210,7 @@ export function AssetPage() {
               {needsReceiver && (
                 <Field label="Người nhận" required>
                   <select
-                    className="h-9 w-full rounded border border-border bg-surface px-2"
+                    className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                     value={toEmployee}
                     onChange={(e) => setToEmployee(e.target.value)}
                   >

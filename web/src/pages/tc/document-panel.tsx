@@ -227,10 +227,7 @@ export function SiteDocumentPanel({
       )}
 
       {editing && (
-        <form
-          onSubmit={submit}
-          className="rounded-card bg-surface p-4"
-        >
+        <form onSubmit={submit} className="rounded-card bg-surface p-4">
           <p className="mb-3 font-medium">
             {existing ? `Phát hành bản mới — ${existing.title}` : 'Thêm hồ sơ của công trình'}
           </p>
@@ -251,7 +248,7 @@ export function SiteDocumentPanel({
                     onChange={(e) =>
                       setForm({ ...form, category: e.target.value as SiteDocumentCategory })
                     }
-                    className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+                    className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
                   >
                     {SITE_DOCUMENT_CATEGORIES.map((c) => (
                       <option key={c} value={c}>

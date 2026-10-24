@@ -82,7 +82,6 @@ export function SiteBoardPage() {
 
   return (
     <>
-      <TcNav />
       <PageHeader
         title="Bảng theo dõi công trình"
         breadcrumbs={[
@@ -92,6 +91,7 @@ export function SiteBoardPage() {
         ]}
         description="Mỗi công trình đang chạy (và công trình bảo hành còn phiếu mở) một dòng: mốc hiện tại, nhật ký hôm nay, mốc chờ kiểm, phiếu bảo hành, đề nghị đang mở. Công trình có vấn đề đứng trên."
       />
+      <TcNav />
 
       {!isLoading && !error && (
         <dl className="mb-4 grid grid-cols-3 gap-2">

@@ -44,12 +44,12 @@ export function StockScanPage() {
 
   return (
     <>
-      <KhoNav />
       <PageHeader
         title="Quét mã"
         breadcrumbs={[{ label: 'Kho' }, { label: 'Quét mã' }]}
         description="Quét mã vạch trên tem, hoặc gõ mã vật tư khi tem mờ."
       />
+      <KhoNav />
 
       <form onSubmit={submit} className="mb-4 max-w-xl">
         <Field label="Mã vạch hoặc mã vật tư" hint="Máy quét cầm tay gõ mã rồi tự bấm Enter.">
@@ -107,10 +107,7 @@ export function StockScanPage() {
                 lastMovementAt: row.last_movement_at,
               });
               return (
-                <li
-                  key={row.warehouse_id}
-                  className="rounded-card bg-surface px-4 py-3"
-                >
+                <li key={row.warehouse_id} className="rounded-card bg-surface px-4 py-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <p className="font-medium">{row.warehouse_name}</p>
                     <p className="text-lg font-semibold tabular-nums">

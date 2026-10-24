@@ -105,12 +105,12 @@ export function InventoryListPage() {
 
   return (
     <>
-      <KhoNav />
       <PageHeader
         title="Tồn kho"
         breadcrumbs={[{ label: 'Kho' }, { label: 'Tồn kho' }]}
         description="Sổ kho chỉ đổi qua phiếu nhập, xuất, điều chuyển hoặc điều chỉnh kiểm kê."
       />
+      <KhoNav />
 
       {rowError && (
         <p
@@ -126,7 +126,7 @@ export function InventoryListPage() {
           <select
             value={warehouseId}
             onChange={(e) => setWarehouseId(e.target.value)}
-            className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+            className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
           >
             <option value="">Tất cả kho</option>
             {(warehouses ?? []).map((w) => (

@@ -32,7 +32,7 @@ import {
 import { toUserMessage } from '@/hooks/use-error-message';
 import { CAPABILITY_CATEGORIES } from './capability-page';
 
-const TEXTAREA = 'w-full rounded-sm border border-border bg-surface px-3 py-2';
+const TEXTAREA = 'w-full rounded-field border border-border-strong bg-surface px-3 py-2';
 const labelOf = (v: string) => CAPABILITY_CATEGORIES.find((c) => c.value === v)?.label ?? v;
 
 function ErrorLine({ message }: { message: string | null }) {
@@ -297,7 +297,7 @@ export function BidClarificationPanel({
           <div className="grid gap-3 rounded-card bg-surface-sunken p-3 sm:grid-cols-3">
             <Field label="Chiều hỏi">
               <select
-                className="h-10 w-full rounded-sm border border-border bg-surface px-2 sm:h-9"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
                 value={q.direction}
                 onChange={(e) =>
                   setQ((x) => ({ ...x, direction: e.target.value as 'nvg_hoi' | 'cdt_hoi' }))

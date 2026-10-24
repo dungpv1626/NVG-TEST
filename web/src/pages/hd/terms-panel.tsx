@@ -287,10 +287,7 @@ export function TermsPanel({
         const formOpen = editing?.type === type;
 
         return (
-          <section
-            key={type}
-            className="rounded-card bg-surface p-4"
-          >
+          <section key={type} className="rounded-card bg-surface p-4">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <p className="font-medium">{CONTRACT_TERM_TYPE_LABELS[type]}</p>
               {required && rows.length === 0 && (
@@ -462,7 +459,7 @@ export function TermsPanel({
                       onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                       rows={3}
                       placeholder={spec.placeholder}
-                      className="w-full rounded-sm border border-border bg-surface px-3 py-2 placeholder:text-fg-subtle"
+                      className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
                       autoFocus
                     />
                   </Field>

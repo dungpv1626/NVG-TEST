@@ -84,7 +84,6 @@ function DesignProjectList({ mode }: { mode: 'project' | 'ai' }) {
 
   return (
     <>
-      <TkNav />
       <PageHeader
         title={mode === 'ai' ? 'AI Design' : 'Dự án thiết kế'}
         breadcrumbs={[
@@ -93,6 +92,7 @@ function DesignProjectList({ mode }: { mode: 'project' | 'ai' }) {
         ]}
         actions={headerAction}
       />
+      <TkNav />
       {mode === 'ai' && (
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <p className="mr-auto text-fg-subtle">

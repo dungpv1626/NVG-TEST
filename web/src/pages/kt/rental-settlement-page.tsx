@@ -241,12 +241,12 @@ export function RentalSettlementPage() {
 
   return (
     <>
-      <KtNav />
       <PageHeader
         title="Thuê giàn giáo"
         description="Đối soát biên bản thu hồi với công nợ, và tất toán hợp đồng thuê khi khách đã trả hết."
         breadcrumbs={[{ label: 'Kế toán – Tài chính' }, { label: 'Thuê giàn giáo' }]}
       />
+      <KtNav />
 
       {pageError && (
         <p

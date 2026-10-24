@@ -312,7 +312,7 @@ export function PaymentRequestDetailPage() {
             <select
               name="method"
               defaultValue="chuyen_khoan"
-              className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
             >
               <option value="chuyen_khoan">{PAYMENT_METHOD_LABELS.chuyen_khoan}</option>
               <option value="tien_mat">{PAYMENT_METHOD_LABELS.tien_mat}</option>

@@ -147,7 +147,7 @@ export function WarrantyClaimForm({
             value={form.description}
             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
             rows={3}
-            className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+            className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
             placeholder="Hiện tượng, vị trí, từ khi nào."
           />
         </Field>
@@ -173,7 +173,7 @@ export function WarrantyClaimForm({
           <select
             value={form.assignee}
             onChange={(e) => setForm((f) => ({ ...f, assignee: e.target.value }))}
-            className="h-10 w-full rounded-sm border border-border bg-surface px-3"
+            className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
           >
             <option value="">Chỉ huy trưởng công trình (mặc định)</option>
             {(candidates ?? []).map((u) => (
@@ -387,7 +387,7 @@ export function WarrantyClaimItem({
                 value={form.resolution}
                 onChange={(e) => setForm((f) => ({ ...f, resolution: e.target.value }))}
                 rows={2}
-                className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+                className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
               />
             </Field>
             <div className="sm:col-span-2">
@@ -435,7 +435,7 @@ export function WarrantyClaimItem({
               value={form.resolution}
               onChange={(e) => setForm((f) => ({ ...f, resolution: e.target.value }))}
               rows={2}
-              className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
               placeholder="Ngoài phạm vi hợp đồng, do người dùng làm hỏng…"
             />
           </Field>

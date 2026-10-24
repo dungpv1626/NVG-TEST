@@ -153,7 +153,7 @@ function MilestoneAcceptanceForm({
             onChange={(e) => setIssues(e.target.value)}
             rows={2}
             disabled={saving}
-            className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+            className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
           />
         </Field>
       </div>

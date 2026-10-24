@@ -167,7 +167,7 @@ export function CustomerFields({
         <select
           value={value.source}
           onChange={(e) => onChange('source', e.target.value)}
-          className="h-9 w-full rounded-sm border border-border bg-surface px-3"
+          className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
         >
           <option value="">Chưa xác định</option>
           {SOURCES.map((s) => (
@@ -187,7 +187,7 @@ export function CustomerFields({
           <select
             value={value.responsibleUserId}
             onChange={(e) => onChange('responsibleUserId', e.target.value)}
-            className="h-9 w-full rounded-sm border border-border bg-surface px-3"
+            className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
           >
             <option value="">Chưa phân công</option>
             {responsibleOptions.map((u) => (
@@ -208,7 +208,7 @@ export function CustomerFields({
           value={value.needs}
           onChange={(e) => onChange('needs', e.target.value)}
           rows={3}
-          className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+          className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
         />
       </Field>
 
@@ -217,7 +217,7 @@ export function CustomerFields({
           value={value.notes}
           onChange={(e) => onChange('notes', e.target.value)}
           rows={3}
-          className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+          className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
         />
       </Field>
     </div>

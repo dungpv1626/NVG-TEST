@@ -23,12 +23,12 @@ export function CompanyDocumentPage() {
   const canEdit = useCan('NS', 'edit');
   return (
     <>
-      <NsNav />
       <PageHeader
         title="Giấy tờ pháp nhân"
         description="Giấy phép, bảo hiểm, đăng kiểm của công ty — hệ thống nhắc người phụ trách khi hết hạn."
         breadcrumbs={[{ label: 'Hành chính – Nhân sự' }, { label: 'Giấy tờ pháp nhân' }]}
       />
+      <NsNav />
       <CompanyDocumentsPanel
         categories={HC_DOCUMENT_CATEGORIES}
         remindParamKey="hc.document_remind_days"

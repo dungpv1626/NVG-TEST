@@ -235,11 +235,7 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
       )}
 
       {adding && (
-        <form
-          onSubmit={submit}
-          noValidate
-          className="rounded-card bg-surface p-4"
-        >
+        <form onSubmit={submit} noValidate className="rounded-card bg-surface p-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field
               label="Loại nghiệm thu"
@@ -255,7 +251,7 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
                 onChange={(e) =>
                   setForm((f) => ({ ...f, acceptanceType: e.target.value as AcceptanceType }))
                 }
-                className="h-10 w-full rounded-sm border border-border bg-surface px-3"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               >
                 {ACCEPTANCE_TYPES.map((t) => (
                   <option key={t} value={t}>
@@ -285,7 +281,7 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
                   setChecklistId(e.target.value);
                   setAnswers({});
                 }}
-                className="h-10 w-full rounded-sm border border-border bg-surface px-3"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               >
                 <option value="">Không dùng danh mục kiểm tra</option>
                 {(checklists ?? [])
@@ -314,7 +310,7 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
                 value={form.scope}
                 onChange={(e) => setForm((f) => ({ ...f, scope: e.target.value }))}
                 rows={2}
-                className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+                className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
               />
             </Field>
 
@@ -338,7 +334,7 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
                 <select
                   value={form.subcontractorId}
                   onChange={(e) => setForm((f) => ({ ...f, subcontractorId: e.target.value }))}
-                  className="h-10 w-full rounded-sm border border-border bg-surface px-3"
+                  className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                 >
                   <option value="">Chọn tổ đội</option>
                   {(crews ?? []).map((c) => (
@@ -366,7 +362,7 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
                 value={form.outstandingIssues}
                 onChange={(e) => setForm((f) => ({ ...f, outstandingIssues: e.target.value }))}
                 rows={2}
-                className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+                className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
               />
             </Field>
           </div>

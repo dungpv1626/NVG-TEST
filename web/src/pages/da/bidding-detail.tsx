@@ -200,7 +200,7 @@ export function BiddingDetailPage() {
                   <textarea
                     defaultValue={project.survey_notes ?? ''}
                     rows={8}
-                    className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+                    className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
                     placeholder="Điều kiện thi công, mặt bằng, đường vận chuyển, rủi ro đã nhận diện…"
                     onBlur={(e) =>
                       void run(() =>

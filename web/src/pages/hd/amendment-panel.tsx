@@ -122,11 +122,7 @@ export function AmendmentPanel({
 
       {!readOnly &&
         (adding ? (
-          <form
-            onSubmit={submit}
-            noValidate
-            className="rounded-card bg-surface p-4"
-          >
+          <form onSubmit={submit} noValidate className="rounded-card bg-surface p-4">
             <p className="mb-4 font-medium">Đề xuất phát sinh ngoài hợp đồng</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Tiêu đề" required className="sm:col-span-2">
@@ -142,7 +138,7 @@ export function AmendmentPanel({
                   value={form.content}
                   onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
                   rows={3}
-                  className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+                  className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
                 />
               </Field>
 
@@ -151,7 +147,7 @@ export function AmendmentPanel({
                   value={form.reason}
                   onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
                   rows={2}
-                  className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+                  className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
                 />
               </Field>
 
@@ -204,7 +200,7 @@ export function AmendmentPanel({
                       onChange={(e) =>
                         setForm((f) => ({ ...f, emergencyAuthorizedBy: e.target.value }))
                       }
-                      className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+                      className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
                     >
                       <option value="">Chọn người đã cho phép</option>
                       {(users ?? []).map((u) => (

@@ -157,11 +157,7 @@ export function QuoteCreatePage() {
         breadcrumbs={breadcrumbs}
       />
 
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        className="max-w-2xl rounded-card bg-surface p-6"
-      >
+      <form onSubmit={handleSubmit} noValidate className="max-w-2xl rounded-card bg-surface p-6">
         {nextVersion > 1 && (
           <p className="mb-4 rounded-sm bg-surface-sunken px-3 py-2 text-fg-subtle">
             Phiên bản {nextVersion - 1} sẽ chuyển thành bản cũ khi lưu. Phiên bản mới bắt đầu ở
@@ -204,7 +200,7 @@ export function QuoteCreatePage() {
                 onChange={(e) => update('discountReason', e.target.value)}
                 rows={2}
                 placeholder="Nêu căn cứ: cạnh tranh giá, khách hàng cũ, khối lượng lớn…"
-                className="w-full rounded-sm border border-border bg-surface px-3 py-2 placeholder:text-fg-subtle"
+                className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
               />
             </Field>
           )}
@@ -219,7 +215,7 @@ export function QuoteCreatePage() {
               onChange={(e) => update('notes', e.target.value)}
               rows={3}
               placeholder="Phạm vi công việc, điều kiện thanh toán, điểm cần lưu ý khi thương thảo"
-              className="w-full rounded-sm border border-border bg-surface px-3 py-2 placeholder:text-fg-subtle"
+              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
             />
           </Field>
         </div>

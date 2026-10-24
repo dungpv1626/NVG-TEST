@@ -465,7 +465,7 @@ function SurveyForm({
             <select
               value={form.surveyedBy}
               onChange={(e) => onChange('surveyedBy', e.target.value)}
-              className="h-9 w-full rounded-sm border border-border bg-surface px-3"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
             >
               <option value="">Chưa phân công</option>
               {users.map((u) => (
@@ -481,7 +481,7 @@ function SurveyForm({
               onChange={(e) => onChange('notes', e.target.value)}
               rows={2}
               placeholder="Địa điểm, người đón, giấy tờ cần mang"
-              className="w-full rounded-sm border border-border bg-surface px-3 py-2 placeholder:text-fg-subtle"
+              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
             />
           </Field>
         </div>
@@ -526,7 +526,7 @@ function SurveyForm({
           <select
             value={form.surveyedBy}
             onChange={(e) => onChange('surveyedBy', e.target.value)}
-            className="h-9 w-full rounded-sm border border-border bg-surface px-3"
+            className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
           >
             <option value="">Chưa phân công</option>
             {users.map((u) => (
@@ -565,7 +565,7 @@ function SurveyForm({
             onChange={(e) => onChange('needs', e.target.value)}
             rows={2}
             placeholder="Loại công trình, quy mô, công năng khách hàng cần"
-            className="w-full rounded-sm border border-border bg-surface px-3 py-2 placeholder:text-fg-subtle"
+            className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
           />
         </Field>
 
@@ -607,7 +607,7 @@ function SurveyForm({
             onChange={(e) => onChange('notes', e.target.value)}
             rows={2}
             placeholder="Hiện trạng mặt bằng, rủi ro nhận thấy, điểm cần lưu ý khi báo giá"
-            className="w-full rounded-sm border border-border bg-surface px-3 py-2 placeholder:text-fg-subtle"
+            className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
           />
         </Field>
       </div>
@@ -629,7 +629,7 @@ function SurveyForm({
                     onChange={(e) => onDetailChange(f.key, e.target.value)}
                     rows={f.lines}
                     placeholder={f.hint}
-                    className="w-full rounded-sm border border-border bg-surface px-3 py-2 placeholder:text-fg-subtle"
+                    className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
                   />
                 ) : (
                   <Input

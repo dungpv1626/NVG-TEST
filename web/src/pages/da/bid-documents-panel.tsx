@@ -146,10 +146,7 @@ export function BidDocumentsPanel({
       )}
 
       {!readOnly && !submittedAt && (
-        <form
-          onSubmit={addDocument}
-          className="rounded-card bg-surface p-4"
-        >
+        <form onSubmit={addDocument} className="rounded-card bg-surface p-4">
           <p className="mb-3 font-medium">Thêm đầu mục hồ sơ</p>
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Nhóm hồ sơ">
@@ -158,7 +155,7 @@ export function BidDocumentsPanel({
                 onChange={(e) =>
                   setForm({ ...form, category: e.target.value as BidDocumentCategory })
                 }
-                className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
               >
                 {BID_DOCUMENT_CATEGORIES.map((c) => (
                   <option key={c} value={c}>
@@ -179,7 +176,7 @@ export function BidDocumentsPanel({
               <select
                 value={form.required ? 'yes' : 'no'}
                 onChange={(e) => setForm({ ...form, required: e.target.value === 'yes' })}
-                className="h-10 w-full rounded-sm border border-border bg-surface px-3 sm:h-9"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
               >
                 <option value="yes">Bắt buộc — thiếu thì không nộp được</option>
                 <option value="no">Không bắt buộc</option>

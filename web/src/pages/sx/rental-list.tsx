@@ -163,7 +163,6 @@ export function RentalAgreementListPage() {
 
   return (
     <>
-      <SxNav />
       <PageHeader
         help={APP_HELP.rentals}
         title="Cho thuê giàn giáo"
@@ -176,6 +175,7 @@ export function RentalAgreementListPage() {
           ) : undefined
         }
       />
+      <SxNav />
 
       {!canEdit && (
         <BlockedNotice
@@ -204,7 +204,7 @@ export function RentalAgreementListPage() {
                 value={customerId}
                 onChange={(e) => setCustomerId(e.target.value)}
                 required
-                className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               >
                 <option value="">Chọn khách hàng</option>
                 {(customers ?? []).map((c) => (
@@ -229,7 +229,7 @@ export function RentalAgreementListPage() {
               <select
                 value={siteId}
                 onChange={(e) => setSiteId(e.target.value)}
-                className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               >
                 <option value="">Không gắn công trình</option>
                 {(sites ?? []).map((s) => (
@@ -265,7 +265,7 @@ export function RentalAgreementListPage() {
                         ),
                       )
                     }
-                    className="h-9 w-full rounded-sm border border-border-strong bg-surface px-3"
+                    className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                   >
                     <option value="">Chọn giàn giáo</option>
                     {scaffoldingMaterials.map((m) => (
@@ -317,7 +317,7 @@ export function RentalAgreementListPage() {
             <textarea
               name="notes"
               rows={2}
-              className="w-full rounded-sm border border-border-strong bg-surface px-3 py-2"
+              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
             />
           </Field>
 

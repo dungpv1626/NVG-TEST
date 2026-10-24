@@ -21,7 +21,7 @@ import { useUpdateEmployee, type EmployeeRecord } from '@/hooks/use-hr';
 
 const EDITABLE_STATUSES: EmployeeStatus[] = ['thu_viec', 'chinh_thuc', 'tam_nghi'];
 
-const SELECT_CLASS = 'h-9 w-full rounded-sm border border-border-strong bg-surface px-3';
+const SELECT_CLASS = 'h-11 w-full rounded-field border border-border-strong bg-surface px-3';
 
 export function EmployeeEditForm({
   employee,

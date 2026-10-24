@@ -174,17 +174,13 @@ export function ComplaintCreatePage() {
           }
         />
       ) : (
-        <form
-          onSubmit={handleSubmit}
-          noValidate
-          className="max-w-2xl rounded-card bg-surface p-6"
-        >
+        <form onSubmit={handleSubmit} noValidate className="max-w-2xl rounded-card bg-surface p-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Khách hàng" required className="sm:col-span-2">
               <select
                 value={form.customerId}
                 onChange={(e) => update('customerId', e.target.value)}
-                className="h-9 w-full rounded-sm border border-border bg-surface px-3"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               >
                 <option value="">Chọn khách hàng</option>
                 {(customers ?? []).map((c) => (
@@ -213,7 +209,7 @@ export function ComplaintCreatePage() {
                 value={form.content}
                 onChange={(e) => update('content', e.target.value)}
                 rows={4}
-                className="w-full rounded-sm border border-border bg-surface px-3 py-2 placeholder:text-fg-subtle"
+                className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
               />
             </Field>
 
@@ -221,7 +217,7 @@ export function ComplaintCreatePage() {
               <select
                 value={form.severity}
                 onChange={(e) => update('severity', e.target.value as ComplaintSeverity)}
-                className="h-9 w-full rounded-sm border border-border bg-surface px-3"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               >
                 {COMPLAINT_SEVERITIES.map((s) => (
                   <option key={s} value={s}>
@@ -242,7 +238,7 @@ export function ComplaintCreatePage() {
               <select
                 value={form.assigneeId}
                 onChange={(e) => update('assigneeId', e.target.value)}
-                className="h-9 w-full rounded-sm border border-border bg-surface px-3"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               >
                 <option value="">Chưa phân công</option>
                 {(users ?? []).map((u) => (

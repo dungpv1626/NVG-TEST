@@ -405,7 +405,7 @@ export function SiteDetailPage() {
                         min={0}
                         max={100}
                         defaultValue={site.progress_percent ?? ''}
-                        className="mt-1 h-10 w-full rounded-sm border border-border bg-surface px-3"
+                        className="mt-1 h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                         onBlur={(e) =>
                           void run(() =>
                             updateSite.mutateAsync({
@@ -426,7 +426,7 @@ export function SiteDetailPage() {
                       <textarea
                         defaultValue={site.notes ?? ''}
                         rows={3}
-                        className="mt-1 w-full rounded-sm border border-border bg-surface px-3 py-2"
+                        className="mt-1 w-full rounded-field border border-border-strong bg-surface px-3 py-2"
                         onBlur={(e) =>
                           void run(() =>
                             updateSite.mutateAsync({

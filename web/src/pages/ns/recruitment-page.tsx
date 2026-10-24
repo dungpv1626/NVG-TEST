@@ -129,12 +129,12 @@ export function RecruitmentPage() {
 
   return (
     <>
-      <NsNav />
       <PageHeader
         title="Tuyển dụng"
         description="Yêu cầu tuyển được duyệt trước, ứng viên đi qua từng bước, người phỏng vấn quyết định."
         breadcrumbs={[{ label: 'Hành chính – Nhân sự' }, { label: 'Tuyển dụng' }]}
       />
+      <NsNav />
 
       {pageError && <ErrorState message={pageError} />}
       {notice && (
@@ -151,7 +151,7 @@ export function RecruitmentPage() {
           </Field>
           <Field label="Khối làm việc">
             <select
-              className="h-9 w-full rounded border border-border bg-surface px-2"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               value={block}
               onChange={(e) => setBlock(e.target.value as WorkBlock)}
             >

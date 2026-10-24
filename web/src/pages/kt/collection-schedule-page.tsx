@@ -100,12 +100,12 @@ export function CollectionSchedulePage() {
 
   return (
     <>
-      <KtNav />
       <PageHeader
         title="Đợt thu"
         breadcrumbs={[{ label: 'Kế toán – Tài chính' }, { label: 'Đợt thu' }]}
         description="Các đợt khách phải trả theo hợp đồng đã ký. Đợt gắn mốc thi công / biên bản nghiệm thu tự sang «Đến hạn thu» khi mốc đạt hoặc biên bản ký hai bên."
       />
+      <KtNav />
       <SegmentedControl
         options={['den_han', 'chua_den', 'da_xong'] as const}
         value={filter}
@@ -141,10 +141,7 @@ export function CollectionSchedulePage() {
       ) : (
         <ul className="space-y-3">
           {rows.map((r) => (
-            <li
-              key={r.term_id}
-              className="rounded-card bg-surface p-4"
-            >
+            <li key={r.term_id} className="rounded-card bg-surface p-4">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <p className="font-medium">{r.description}</p>
                 <span className="text-xs text-fg-subtle">

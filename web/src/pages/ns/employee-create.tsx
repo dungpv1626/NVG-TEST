@@ -81,7 +81,6 @@ export function EmployeeCreatePage() {
 
   return (
     <>
-      <NsNav />
       <PageHeader
         title="Thêm nhân sự"
         description="Hồ sơ này theo người đó suốt quá trình làm việc — hợp đồng, chấm công, tài sản đều gắn vào đây."
@@ -91,6 +90,7 @@ export function EmployeeCreatePage() {
           { label: 'Thêm nhân sự' },
         ]}
       />
+      <NsNav />
 
       {pageError && <ErrorState message={pageError} />}
 
@@ -123,7 +123,7 @@ export function EmployeeCreatePage() {
           >
             <select
               id="block"
-              className="h-9 w-full rounded border border-border bg-surface px-2"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               value={block}
               onChange={(e) => setBlock(e.target.value as WorkBlock)}
             >
@@ -139,7 +139,7 @@ export function EmployeeCreatePage() {
             <Field label="Công trường">
               <select
                 id="site"
-                className="h-9 w-full rounded border border-border bg-surface px-2"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                 value={siteId}
                 onChange={(e) => setSiteId(e.target.value)}
               >
@@ -203,7 +203,7 @@ export function EmployeeCreatePage() {
             <Field label="Hình thức trả lương">
               <select
                 id="salary_type"
-                className="h-9 w-full rounded border border-border bg-surface px-2"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
                 value={salaryType}
                 onChange={(e) => setSalaryType(e.target.value as SalaryType)}
               >

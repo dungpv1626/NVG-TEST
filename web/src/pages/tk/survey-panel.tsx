@@ -433,11 +433,7 @@ function SurveyForm({
   }
 
   return (
-    <form
-      onSubmit={submit}
-      noValidate
-      className="rounded-card bg-surface p-4"
-    >
+    <form onSubmit={submit} noValidate className="rounded-card bg-surface p-4">
       <p className="mb-4 font-medium">{title}</p>
       <div className="grid gap-4 sm:grid-cols-3">
         <Field label="Chiều rộng (m)">
@@ -473,7 +469,7 @@ function SurveyForm({
             value={form.measurementNotes}
             onChange={(e) => set('measurementNotes')(e.target.value)}
             rows={3}
-            className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+            className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
             placeholder="Cốt nền, chênh cao, mốc giới, sai khác so với sổ…"
           />
         </Field>
@@ -483,7 +479,7 @@ function SurveyForm({
             value={form.surroundingNotes}
             onChange={(e) => set('surroundingNotes')(e.target.value)}
             rows={3}
-            className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+            className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
             placeholder="Công trình lân cận, đường vào, hạ tầng điện nước, cây xanh, thoát nước…"
           />
         </Field>
@@ -493,7 +489,7 @@ function SurveyForm({
             value={form.usageNotes}
             onChange={(e) => set('usageNotes')(e.target.value)}
             rows={3}
-            className="w-full rounded-sm border border-border bg-surface px-3 py-2"
+            className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
             placeholder="Điều chủ nhà nói tại chỗ về cách dùng từng khu vực…"
           />
         </Field>

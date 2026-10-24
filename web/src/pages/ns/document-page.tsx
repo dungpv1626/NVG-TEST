@@ -90,12 +90,12 @@ export function HrDocumentPage() {
 
   return (
     <>
-      <NsNav />
       <PageHeader
         title="Giấy tờ có thời hạn"
         description="Hệ thống nhắc trước 90, 60, 30 và 7 ngày cho từng loại giấy tờ."
         breadcrumbs={[{ label: 'Hành chính – Nhân sự' }, { label: 'Giấy tờ' }]}
       />
+      <NsNav />
 
       {pageError && <ErrorState message={pageError} />}
 
@@ -106,7 +106,7 @@ export function HrDocumentPage() {
         >
           <Field label="Nhân sự" required>
             <select
-              className="h-9 w-full rounded border border-border bg-surface px-2"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
               required
@@ -124,7 +124,7 @@ export function HrDocumentPage() {
 
           <Field label="Loại giấy tờ" required>
             <select
-              className="h-9 w-full rounded border border-border bg-surface px-2"
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               value={type}
               onChange={(e) => setType(e.target.value as HrDocumentType)}
             >

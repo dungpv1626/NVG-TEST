@@ -29,7 +29,6 @@ export function SiteRequestsPage() {
 
   return (
     <>
-      <TcNav />
       <PageHeader
         help={APP_HELP.siteRequests}
         title="Theo dõi đề nghị"
@@ -40,6 +39,7 @@ export function SiteRequestsPage() {
         ]}
         description="Đề nghị từ công trường đang ở bước nào, ai đang giữ, đã chờ bao lâu — và nhắc người đang giữ khi cần."
       />
+      <TcNav />
       <SegmentedControl
         options={['cua-toi', 'tat-ca'] as const}
         value={scope}
