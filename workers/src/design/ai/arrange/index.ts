@@ -424,6 +424,40 @@ function stairCellsOf(input: ArrangeInput): ArrangeResult['stairCells'] {
 }
 
 /**
+ * Lỗi HÌNH VẼ CHẮC CHẮN hỏng của bản phác một tầng chưa xếp (`precheckOnly`, T167): phòng của tầng không có ô nào — cùng
+ * phép kiểm `sketch_room_missing` của `sketchTrees`, nơi tầng ấy chắc chắn bác khi được xếp thật. Không thêm luật.
+ *
+ * Lượt thật 4eade9b1 (THU5, 23/10/2026): tầng 4 thiếu WC ngay từ lời gọi 1; tầng 1 hỏng nên tầng trên chỉ được soát lối
+ * vào và sàn đầu bài, mô hình chỉ nghe về WC ở lời gọi 5 — khi đã hết lượt. Phòng KHÔNG chữ nhật thì không báo ở đây: bộ
+ * nắn tự gỡ phần lớn (tầng 2 của chính lượt ấy có hành lang chữ L vẫn qua), báo sớm là bắt mô hình vẽ lại tầng đang đạt.
+ */
+function sketchShapeIssues(input: ArrangeInput, intent: LevelIntent): PlanIssue[] {
+  const rows = input.sketch ?? [];
+  if (!rows.length) return [];
+  const leafIds = new Set(intent.leaves.map((leaf) => leaf.id));
+  const out: PlanIssue[] = [];
+  const drawn = new Set<string>();
+  for (const row of rows) {
+    for (const token of row.trim().split(/\s+/)) {
+      const host = intent.hostOf.get(token) ?? token;
+      if (leafIds.has(host)) drawn.add(host);
+    }
+  }
+  const missing = [...leafIds].filter((id) => !drawn.has(id));
+  if (missing.length) {
+    out.push(
+      arrangeIssue(
+        'sketch_room_missing',
+        `Bản phác tầng ${input.level} không vẽ phòng ${missing.map((id) => `"${id}"`).join(', ')}.`,
+        { rooms: missing.join(', ') },
+        missing[0],
+      ),
+    );
+  }
+  return out;
+}
+
+/**
  * Phòng trên bản phác NGUYÊN VĂN của mô hình mà các ô không lấp kín chữ nhật bao của nó. Đọc thẳng các hàng
  * mô hình trả, trước mọi bước chương trình tự nắn (lấp ô trống, ép ô thang), để câu nhắc chỉ nêu lỗi của
  * chính mô hình.
@@ -648,10 +682,26 @@ function arrangeLevelCore(input: ArrangeInput): ArrangeResult {
         };
       }
     }
-    return { layout: null, intent, summary: null, issues, notes, revisable: true };
+    return {
+      layout: null,
+      intent,
+      summary: null,
+      issues: input.precheckOnly
+        ? dedupeIssues([...issues, ...sketchShapeIssues(input, intent)])
+        : issues,
+      notes,
+      revisable: true,
+    };
   }
   if (input.precheckOnly) {
-    return { layout: null, intent, summary: null, issues: [], notes, revisable: true };
+    return {
+      layout: null,
+      intent,
+      summary: null,
+      issues: sketchShapeIssues(input, intent),
+      notes,
+      revisable: true,
+    };
   }
 
   // Bản phác (T48) đi TRƯỚC mọi khung: qua được cổng thì đó là mặt bằng mô hình vẽ, chương trình chỉ căn
