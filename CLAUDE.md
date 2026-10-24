@@ -1042,7 +1042,18 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    `/da/ho-so-nang-luc`; `/sx/bao-gia-thue`. Còn chặn: bảng công (câu 6), 5C-2/3/4/6/7/8/10 (câu 14, 19), mốc NVC (câu 15).
    Lỗ có sẵn chưa sửa: chỉ huy trưởng thấy đơn đặt hàng công trình khác (chính sách `purchase_orders` / `deliveries` chỉ Mẫu
    A) — hỏi anh Dũng có sửa không.
-2b. **AI Design — sửa theo lượt chạy thật 23/10 (chờ anh Dũng chọn thứ tự A / B / C):**
+2a. **Giao diện v2 (`design_handoff_nvg_v2/`, anh Dũng duyệt + giao toàn quyền 24/10/2026) — đã gộp vào `cai-tien-ux`:**
+   token v2 (DESIGN_SYSTEM.md §8), khung xanh rừng + sidebar 4 nhóm + thanh tab điện thoại 4 ô, khuôn chung (danh
+   sách, chi tiết có cột phải «Bước tiếp theo» + «Chuỗi hồ sơ», Kanban, biểu mẫu «Sau khi lưu», trạng thái), trang
+   đăng nhập hai nửa, thanh trang con dưới tiêu đề ở mọi phân hệ, ô nhập thống nhất. Trang mới: `/viec-hom-nay`
+   (Việc hôm nay), `/viec-can-lam/:id` (một phê duyệt), Phê duyệt có ô «Tôi đã gửi / Đã xử lý» (0221
+   `my_approval_box`). Giữ có chủ đích: Tổng quan điều hành mỗi công ty một khung (không gộp số tập đoàn); trang
+   đầu từng vai trò không đổi. Route trong bản thiết kế mà app chưa có (vd `/tc/cong-trinh/mo`, `/hd/hop-dong/soan`,
+   `/kho/phieu`, `/lam-ro/:id`) KHÔNG tự tạo. Còn có thể làm thêm: thanh trên điện thoại nền xanh rừng như bản
+   thiết kế; thông báo nhỏ có «Hoàn tác»; gắn `FormLayout` cho các biểu mẫu còn lại.
+2b. **AI Design — sửa theo lượt chạy thật (A, B đã làm; T163–T168):** 5 lượt thật THU5 ≈ 1,94 USD, chưa ra phương án;
+   trần chi phí 0219 (`ai_run_cost_cap_usd`, máy đang 0,8 USD). Đang làm T169: ô thang tầng 1 dựng 3,4 m thay vì
+   ~2,4 m làm tầng trên mất 1 m bề ngang. Danh sách chỗ khó dùng ban đầu (đã làm hết):
    - (A) giao diện, không tốn AI: hỏng thì hiện LÝ DO tiếng Việt của lượt có lỗi chính (không phải lượt cuối) + gợi ý sửa
      đầu bài; báo cáo `.md` lưu cả câu trả lời của mô hình; trần chi phí / hỏi trước khi gọi lại nhiều lượt, ước tính lần đầu từ
      bảng giá; ô mật độ xây dựng < 1 thì cảnh báo («0,9 là 0,9 % — có phải 90 %?»; gõ 0.9 đang lưu 0,009); câu «(tùy chọn)»
@@ -1069,7 +1080,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: lịch sử bước chung `stage_transitions`; dải tiến trình gói thầu; QĐ-6 giao dịch nội bộ; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0219.** (Đã dùng tới 0218; 0204, 0210–0216 bỏ trống — các mạch song song không dùng tới.)
+**Migration tiếp theo: 0222.** (Đã dùng tới 0221; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 

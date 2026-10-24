@@ -237,11 +237,15 @@ nền, viền, ô icon BÊN TRONG thẻ**; cấm làm nhãn trạng thái, nền
 
 ---
 
-## 8. Giao diện v2 — token mới (CHỜ CHỦ DỰ ÁN DUYỆT)
+## 8. Giao diện v2 — ĐÃ DUYỆT (anh Dũng 24/10/2026), thay một phần §2–§4
 
-Nguồn: `design_handoff_nvg_v2/README.md` › Design tokens (bản thiết kế lại toàn bộ frontend, 120 màn). Bước 1
-chỉ **thêm** token ở `web/src/index.css`; không đổi giá trị token đang dùng, nên trang hiện tại không đổi.
-Các token mới bắt đầu được dùng từ bước 2 (khung + sidebar). Test tương phản: `design-rules.test.ts`.
+Nguồn: `design_handoff_nvg_v2/README.md` › Design tokens (bản thiết kế lại toàn bộ frontend, 120 màn). Anh Dũng
+duyệt cả 8 điểm ở 8.1 (24/10/2026, «làm thế nào bạn thấy tốt nhất»). `--color-fg` / `--color-fg-subtle` nay mang
+đúng giá trị `ink` / `ink-subtle`; nút chính là `shell`; khung xanh rừng + bảng nội dung `canvas` bo 24. Ba chỗ
+ở 8.2 vẫn giữ. Thành phần dùng chung: khung `app-shell.tsx`, `sidebar.tsx` (nhóm nghiệp vụ), `bottom-nav.tsx` (4
+ô), `entity-detail.tsx` + `detail-aside.tsx` (cột phải «Bước tiếp theo» + «Chuỗi hồ sơ»), `step-track.tsx`,
+`record-chain.tsx`, `ui/form-page.tsx` (`FormLayout` «Sau khi lưu» + `FormSection` đánh số). Test tương phản:
+`design-rules.test.ts`.
 
 | Token                                                        | Mã                                       | Vai trò                                         |
 | ------------------------------------------------------------ | ---------------------------------------- | ----------------------------------------------- |
