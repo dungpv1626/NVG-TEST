@@ -15,22 +15,37 @@
  * (Content Guidelines 6.8).
  */
 
-import { CheckSquare, LayoutGrid, ListChecks, Menu, X, type LucideIcon } from 'lucide-react';
+import { Inbox, LayoutGrid, ListChecks, Menu, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { MODULES, type ModuleCode } from '@nvg/shared';
 import { usePendingApprovals } from '@/hooks/use-approvals';
 import { useMyFollowups } from '@/hooks/use-leads';
-import { useDefaultRoute } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { useBottomBarSlot } from './bottom-bar-slot';
 import { MODULE_ICONS, useActiveModule, useModuleRoutes, useVisibleModules } from './module-nav';
+
+/** Thứ tự nhóm nghiệp vụ của sidebar v2 (Kinh doanh → Triển khai → Nội bộ). */
+const NAV_ORDER: readonly ModuleCode[] = [
+  'CRM',
+  'DA',
+  'TK',
+  'HD',
+  'TC',
+  'MH',
+  'KHO',
+  'SX',
+  'KT',
+  'NS',
+  'BC',
+  'NEN',
+];
 
 const ITEM_CLASS =
   'flex min-h-14 flex-1 flex-col items-center justify-center gap-1 px-1 py-1.5 text-[11px]';
 
 /**
- * Thanh tab v2 (`NvgTabbar`): đúng 4 ô — Hôm nay · phân hệ đang mở · Việc cần làm · Thêm. Ô thứ
+ * Thanh tab v2 (`NvgTabbar`): đúng 4 ô — Hôm nay (`/viec-hom-nay`) · phân hệ đang mở · Phê duyệt · Thêm. Ô thứ
  * hai đổi theo phân hệ người dùng đang ở (chưa ở phân hệ nào thì là phân hệ đầu tiên được xem),
  * mọi phân hệ khác nằm trong bảng «Thêm». Ô đang chọn: viên nền nhạt quanh biểu tượng.
  */
@@ -38,13 +53,11 @@ export function BottomNav() {
   const visible = useVisibleModules();
   const moduleRoutes = useModuleRoutes();
   const activeModule = useActiveModule();
-  const homeRoute = useDefaultRoute();
   const [sheetOpen, setSheetOpen] = useState(false);
   const location = useLocation();
   // Cùng hai truy vấn với thanh trên / sidebar — một con số ở mọi nơi.
   const { data: pending } = usePendingApprovals();
   const { data: followups } = useMyFollowups(0);
-  const todoCount = (pending?.length ?? 0) + (followups?.length ?? 0);
 
   // Chuyển trang thì đóng bảng — nếu không, bảng che mất chính màn hình vừa mở.
   useEffect(() => setSheetOpen(false), [location.pathname]);
@@ -95,11 +108,13 @@ export function BottomNav() {
     );
   }
 
+  // Chưa ở phân hệ nào (Việc hôm nay, Phê duyệt…) thì ô thứ hai là phân hệ nghiệp vụ đầu tiên theo thứ
+  // tự nhóm của sidebar — Kinh doanh thấy «Khách hàng», không phải «Báo cáo» đứng đầu `MODULE_CODES`.
   const current: ModuleCode | undefined =
-    activeModule && visible.includes(activeModule) ? activeModule : visible[0];
-  // Trang đầu của nhiều vai trò nằm TRONG một phân hệ (Kinh doanh → /crm/co-hoi): khi đó ô phân hệ
-  // sáng, không phải «Hôm nay» — một mục đang chọn, không hai.
-  const onHome = location.pathname === homeRoute && !activeModule;
+    activeModule && visible.includes(activeModule)
+      ? activeModule
+      : (NAV_ORDER.find((code) => visible.includes(code)) ?? visible[0]);
+  const onHome = location.pathname === '/viec-hom-nay';
   const onTodo = location.pathname.startsWith('/viec-can-lam');
 
   return (
@@ -116,7 +131,13 @@ export function BottomNav() {
           'pb-[env(safe-area-inset-bottom)]',
         )}
       >
-        <TabLink to="/" label="Hôm nay" Icon={ListChecks} active={onHome} />
+        <TabLink
+          to="/viec-hom-nay"
+          label="Hôm nay"
+          Icon={ListChecks}
+          active={onHome}
+          badge={followups?.length || undefined}
+        />
         {current && (
           <TabLink
             to={moduleRoutes[current]}
@@ -127,10 +148,10 @@ export function BottomNav() {
         )}
         <TabLink
           to="/viec-can-lam"
-          label="Việc cần làm"
-          Icon={CheckSquare}
+          label="Phê duyệt"
+          Icon={Inbox}
           active={onTodo}
-          badge={todoCount || undefined}
+          badge={pending?.length || undefined}
         />
         <button
           type="button"

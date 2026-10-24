@@ -305,7 +305,7 @@ export function TopBar() {
         <IconButton
           label={pendingCount ? `Việc cần làm — ${pendingCount} việc chờ xử lý` : 'Việc cần làm'}
           count={pendingCount}
-          to="/viec-can-lam"
+          to="/viec-hom-nay"
         >
           <CheckSquare className="size-4" />
         </IconButton>

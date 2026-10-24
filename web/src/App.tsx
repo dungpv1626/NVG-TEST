@@ -71,6 +71,9 @@ const AuditLogPage = lazy(() =>
 const ApprovalInboxPage = lazy(() =>
   import('@/pages/phe-duyet/approval-inbox-page').then((m) => ({ default: m.ApprovalInboxPage })),
 );
+const TodayPage = lazy(() =>
+  import('@/pages/phe-duyet/today-page').then((m) => ({ default: m.TodayPage })),
+);
 const CustomerListPage = lazy(() =>
   import('@/pages/crm/customer-list').then((m) => ({ default: m.CustomerListPage })),
 );
@@ -553,6 +556,9 @@ const router = createBrowserRouter(
                   `ModuleGuard`: nó gom hồ sơ từ mọi phân hệ, và mỗi dòng đã tự lọc theo
                   hạn mức phê duyệt của vai trò (Mẫu RLS C). */}
         <Route path="viec-can-lam" element={<ApprovalInboxPage />} />
+        {/* v2 (màn 1.6): đường dẫn tới đúng một hồ sơ chờ duyệt — từ thông báo, gửi cho người khác. */}
+        <Route path="viec-can-lam/:id" element={<ApprovalInboxPage />} />
+        <Route path="viec-hom-nay" element={<TodayPage />} />
         {/* Yêu cầu làm rõ (TC-15): không bọc ModuleGuard — bên trả lời (Thiết kế, Dự án) không xem
             được Module TC; RLS của bảng `rfis` quyết ai đọc được. */}
         <Route path="lam-ro/:id" element={<RfiPage />} />

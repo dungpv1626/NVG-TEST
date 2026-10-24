@@ -11,9 +11,8 @@
  * xem thì ẩn hẳn; nhóm không còn mục nào thì ẩn cả nhãn nhóm. Trang con của phân hệ KHÔNG nằm
  * ở đây mà ở thanh viên trên đầu nội dung.
  *
- * «Việc hôm nay» của bản thiết kế chưa có trang riêng: việc chăm sóc khách hôm nay đang nằm
- * chung trang Việc cần làm (`/viec-can-lam`), nên «Của tôi» chỉ có mục đó — chờ chủ dự án
- * quyết tách trang hay không.
+ * «Của tôi» = Tổng quan điều hành (lãnh đạo) · Việc hôm nay (`/viec-hom-nay`, số = khách cần liên hệ
+ * hôm nay) · Phê duyệt (`/viec-can-lam`, số = hồ sơ chờ mình duyệt) — anh Dũng chọn tách 24/10/2026.
  *
  * ── Thu gọn được (06/09/2026) ────────────────────────────────────────────────────────────
  * Hai bề rộng: **248px** mở và **80px** thu. Thu gọn thì mỗi mục xếp DỌC (biểu tượng trên, nhãn
@@ -24,7 +23,14 @@
  * thành cách duy nhất báo vị trí. Một nguồn sự thật: `useActiveModule()`.
  */
 
-import { CheckSquare, Gauge, PanelLeftClose, PanelLeftOpen, type LucideIcon } from 'lucide-react';
+import {
+  Gauge,
+  Inbox,
+  ListChecks,
+  PanelLeftClose,
+  PanelLeftOpen,
+  type LucideIcon,
+} from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { MODULES, type ModuleCode } from '@nvg/shared';
 import { usePendingApprovals } from '@/hooks/use-approvals';
@@ -71,7 +77,6 @@ export function Sidebar() {
   // Cùng hai truy vấn với nút «Việc cần làm» trên thanh trên — hai con số không được lệch nhau.
   const { data: pending } = usePendingApprovals();
   const { data: followups } = useMyFollowups(0);
-  const todoCount = (pending?.length ?? 0) + (followups?.length ?? 0);
 
   const mine: NavItem[] = [
     // Tổng quan điều hành (0169) — chỉ lãnh đạo và Kiểm soát nội bộ (CLAUDE.md 5.4).
@@ -89,14 +94,24 @@ export function Sidebar() {
         ]
       : []),
     {
-      key: 'todo',
+      key: 'today',
+      to: '/viec-hom-nay',
+      label: 'Việc hôm nay',
+      shortLabel: 'Hôm nay',
+      description: 'Khách cần liên hệ, hồ sơ chờ mình duyệt, hồ sơ mình đã gửi',
+      Icon: ListChecks,
+      active: pathname === '/viec-hom-nay',
+      badge: followups?.length || undefined,
+    },
+    {
+      key: 'inbox',
       to: '/viec-can-lam',
-      label: 'Việc cần làm',
-      shortLabel: 'Việc',
-      description: 'Hồ sơ chờ phê duyệt và việc chăm sóc khách hôm nay',
-      Icon: CheckSquare,
+      label: 'Phê duyệt',
+      shortLabel: 'Duyệt',
+      description: 'Hồ sơ chờ phê duyệt, hồ sơ đã gửi, hồ sơ đã xử lý',
+      Icon: Inbox,
       active: pathname === '/viec-can-lam' || pathname.startsWith('/viec-can-lam/'),
-      badge: todoCount || undefined,
+      badge: pending?.length || undefined,
     },
   ];
 

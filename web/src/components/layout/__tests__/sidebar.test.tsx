@@ -100,8 +100,9 @@ describe('Thanh điều hướng trái', () => {
     expect(screen.queryByRole('group', { name: 'Triển khai' })).not.toBeInTheDocument();
   });
 
-  it('Việc cần làm đếm cùng số với thanh trên (phê duyệt + chăm sóc khách)', () => {
+  it('Việc hôm nay đếm khách cần liên hệ, Phê duyệt đếm hồ sơ chờ mình duyệt', () => {
     renderWithApp(<Sidebar />);
-    expect(screen.getByRole('link', { name: /Việc cần làm/ })).toHaveTextContent('3');
+    expect(screen.getByRole('link', { name: /Việc hôm nay/ })).toHaveTextContent('1');
+    expect(screen.getByRole('link', { name: /Phê duyệt/ })).toHaveTextContent('2');
   });
 });

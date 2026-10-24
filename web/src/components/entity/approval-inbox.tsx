@@ -85,6 +85,10 @@ export interface ApprovalInboxProps {
     decision: 'approved' | 'rejected',
     note: string,
   ) => Promise<void>;
+  /** Hồ sơ mở sẵn — trang riêng `/viec-can-lam/:id` (v2, màn 1.6). Trên điện thoại mở thẳng ô xem. */
+  initialSelectedId?: string;
+  /** Báo nơi gọi khi người dùng chọn hồ sơ khác — để đường dẫn theo đúng hồ sơ đang xem. */
+  onSelect?: (id: string) => void;
 }
 
 export function ApprovalInbox({
@@ -93,14 +97,16 @@ export function ApprovalInbox({
   error,
   onRetry,
   onDecision,
+  initialSelectedId,
+  onSelect,
 }: ApprovalInboxProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
   /**
    * Trên điện thoại KHÔNG đủ chỗ cho hai cột. Danh sách và ô xem nhanh thay phiên nhau
    * chiếm cả màn hình; cờ này nhớ đang xem cái nào. Trên máy tính cả hai luôn hiển thị nên
    * cờ này không có tác dụng gì.
    */
-  const [openedOnMobile, setOpenedOnMobile] = useState(false);
+  const [openedOnMobile, setOpenedOnMobile] = useState(Boolean(initialSelectedId));
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -180,6 +186,7 @@ export function ApprovalInbox({
                 onClick={() => {
                   setSelectedId(item.id);
                   setOpenedOnMobile(true);
+                  onSelect?.(item.id);
                 }}
                 aria-current={isActive ? 'true' : undefined}
                 className={cn(

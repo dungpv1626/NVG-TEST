@@ -66,6 +66,32 @@ export function usePendingApprovals() {
   });
 }
 
+/** Một dòng ở ô «Tôi đã gửi» / «Đã xử lý» (0221, `my_approval_box`) — cùng hình với hộp chờ duyệt. */
+export interface BoxApproval extends PendingApproval {
+  /** `pending_approval` | `approved` | `rejected` | … — trạng thái của cả hồ sơ phê duyệt. */
+  status: string;
+  /** Kết quả cuối của hồ sơ khi đã xong (`approved` / `rejected`); `null` khi còn chờ. */
+  final_decision: 'approved' | 'rejected' | null;
+  /** Quyết định gần nhất của CHÍNH người đang xem (ô «Đã xử lý»). */
+  my_decision: 'approved' | 'rejected' | null;
+  decided_at: string | null;
+}
+
+export type ApprovalBox = 'sent' | 'decided';
+
+/** Hồ sơ mình đã gửi / đã quyết trong 90 ngày gần nhất. RLS của `approvals` vẫn quyết phạm vi. */
+export function useApprovalBox(box: ApprovalBox, enabled = true) {
+  return useQuery<BoxApproval[], Error>({
+    queryKey: ['approvals', 'box', box],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('my_approval_box', { p_box: box });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as unknown as BoxApproval[];
+    },
+  });
+}
+
 export function useDecideApproval() {
   const queryClient = useQueryClient();
 

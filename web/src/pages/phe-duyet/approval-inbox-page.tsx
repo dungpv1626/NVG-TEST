@@ -10,16 +10,21 @@
  * Danh sách hiển thị đã được RLS Mẫu C lọc theo hạn mức, không lọc lại ở đây.
  */
 
-import { TodayFollowups } from '@/components/crm/today-followups';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { WaitingOn } from '@/components/entity/waiting-on';
+import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
+import { cn } from '@/lib/utils';
 import { ContractDocumentPreview } from './contract-document-preview';
 import { PurchaseQuotationPreview } from './purchase-quotation-preview';
 import { SurveyReportPreview } from './survey-report-preview';
 import { PageHeader } from '@/components/layout/app-shell';
 import { ApprovalInbox, type ApprovalItem } from '@/components/entity/approval-inbox';
-import { StatusLozenge } from '@/components/ui/status-lozenge';
+import { StatusLozenge, StatusWithLabel } from '@/components/ui/status-lozenge';
 import {
+  useApprovalBox,
   useDecideApproval,
   usePendingApprovals,
+  type ApprovalBox,
   type PendingApproval,
 } from '@/hooks/use-approvals';
 import {
@@ -27,8 +32,9 @@ import {
   formatCurrency,
   formatDateTime,
   formatDeadline,
+  STATUS_GROUPS,
+  type StatusGroup,
 } from '@nvg/shared';
-import { useCan } from '@/lib/auth';
 import { APP_HELP } from '@/lib/help-texts';
 
 /**
@@ -73,10 +79,23 @@ function fullRecordPath(item: PendingApproval): string {
   }
 }
 
+/** Ba ô của hộp thư v2 (màn 1.5) — giữ trên đường dẫn `?o=` để quay lại không mất. */
+const BOXES = [
+  { id: 'cho-toi', label: 'Chờ tôi duyệt' },
+  { id: 'toi-da-gui', label: 'Tôi đã gửi' },
+  { id: 'da-xu-ly', label: 'Đã xử lý' },
+] as const;
+type BoxId = (typeof BOXES)[number]['id'];
+
 export function ApprovalInboxPage() {
+  const { id: routeId } = useParams<{ id?: string }>();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const raw = searchParams.get('o');
+  const box: BoxId = BOXES.some((b) => b.id === raw) ? (raw as BoxId) : 'cho-toi';
+
   const { data, isLoading, error, refetch } = usePendingApprovals();
   const decide = useDecideApproval();
-  const canSeeCrm = useCan('CRM');
 
   const items: ApprovalItem[] | undefined = data?.map((row) => ({
     id: row.id,
@@ -96,36 +115,163 @@ export function ApprovalInboxPage() {
     <>
       <PageHeader
         help={APP_HELP.approvalInbox}
-        title="Việc cần làm"
-        description={
-          canSeeCrm
-            ? 'Khách cần liên hệ và hồ sơ đang chờ phê duyệt, gộp chung từ tất cả module.'
-            : 'Mọi hồ sơ đang chờ phê duyệt, gộp chung từ tất cả module.'
-        }
-        breadcrumbs={[{ label: 'Việc cần làm' }]}
+        title="Phê duyệt"
+        description="Hồ sơ chờ phê duyệt gộp chung từ tất cả module. Hồ sơ do chính mình gửi không nằm ở ô «Chờ tôi duyệt»."
+        breadcrumbs={[{ label: 'Phê duyệt' }]}
       />
 
-      {/* Đợt 1 — 1C: người xem được CRM thấy việc chăm sóc khách của mình trước. */}
-      {canSeeCrm && <TodayFollowups />}
-      {canSeeCrm && <h2 className="mb-2 text-lg font-semibold">Chờ phê duyệt</h2>}
+      <div role="tablist" aria-label="Ô của hộp thư" className="mb-4 flex gap-1.5 overflow-x-auto">
+        {BOXES.map((b) => {
+          const active = b.id === box;
+          const count = b.id === 'cho-toi' ? data?.length : undefined;
+          return (
+            <button
+              key={b.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => {
+                const next = new URLSearchParams(searchParams);
+                if (b.id === 'cho-toi') next.delete('o');
+                else next.set('o', b.id);
+                // Đổi ô thì rời trang của một hồ sơ cụ thể — hồ sơ đó có thể không nằm trong ô mới.
+                if (routeId) void navigate({ pathname: '/viec-can-lam', search: next.toString() });
+                else setSearchParams(next, { replace: true });
+              }}
+              className={cn(
+                'flex h-9 shrink-0 items-center gap-1.5 rounded-full px-4 whitespace-nowrap',
+                active
+                  ? 'bg-shell font-semibold text-fg-inverse'
+                  : 'bg-surface text-ink hover:bg-pill',
+              )}
+            >
+              {b.label}
+              {count ? (
+                <span className="rounded-full bg-brand-accent px-1.5 text-xs font-bold text-ink">
+                  {count}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
 
-      <ApprovalInbox
-        items={items}
-        isLoading={isLoading}
-        error={error}
-        onRetry={() => void refetch()}
-        onDecision={async (item, decision, note) => {
-          await decide.mutateAsync({ approvalId: item.id, decision, note });
-        }}
-      />
+      {box === 'cho-toi' ? (
+        <ApprovalInbox
+          items={items}
+          isLoading={isLoading}
+          error={error}
+          onRetry={() => void refetch()}
+          initialSelectedId={routeId}
+          onSelect={(id) => void navigate(`/viec-can-lam/${id}`, { replace: true })}
+          onDecision={async (item, decision, note) => {
+            await decide.mutateAsync({ approvalId: item.id, decision, note });
+          }}
+        />
+      ) : (
+        <BoxList box={box === 'toi-da-gui' ? 'sent' : 'decided'} />
+      )}
     </>
   );
 }
 
-/**
- * Xem nhanh — Webapp Flow 4.6: "đủ thông tin để QUYẾT ĐỊNH mà KHÔNG cần rời khỏi Hộp thư".
- * Với giảm giá đặc biệt, thứ người duyệt cần là mức giảm và LÝ DO, không phải mã hồ sơ.
- */
+const DECISION_LABEL: Record<'approved' | 'rejected', string> = {
+  approved: 'Đã duyệt',
+  rejected: 'Từ chối / trả về',
+};
+
+/** Ô «Tôi đã gửi» / «Đã xử lý» — chỉ xem; hồ sơ đang chờ của mình có «Đang chờ ai» + «Thúc». */
+function BoxList({ box }: { box: ApprovalBox }) {
+  const { data, isLoading, error, refetch } = useApprovalBox(box);
+  if (error) {
+    return (
+      <ErrorState
+        message="Không tải được danh sách. Kiểm tra kết nối mạng rồi thử lại."
+        onRetry={() => void refetch()}
+        technicalDetail={error.message}
+      />
+    );
+  }
+  if (isLoading) return <TableSkeleton rows={5} columns={3} />;
+  const rows = data ?? [];
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-card bg-surface">
+        <EmptyState
+          message={
+            box === 'sent'
+              ? 'Chưa gửi hồ sơ nào đi phê duyệt trong 90 ngày qua.'
+              : 'Chưa ra quyết định nào trong 90 ngày qua.'
+          }
+        />
+      </div>
+    );
+  }
+  return (
+    <ul
+      className="space-y-2"
+      aria-label={box === 'sent' ? 'Hồ sơ tôi đã gửi' : 'Hồ sơ tôi đã xử lý'}
+    >
+      {rows.map((row) => {
+        const pending = row.status === 'pending_approval';
+        const result = box === 'decided' ? row.my_decision : row.final_decision;
+        return (
+          <li key={row.id} className="rounded-card bg-surface p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0">
+                <Link
+                  to={fullRecordPath(row)}
+                  className="font-semibold text-ink underline-offset-2 hover:underline"
+                >
+                  {row.title}
+                </Link>
+                <div className="mt-0.5 text-xs text-ink-subtle">
+                  {APPROVAL_SUBJECT_LABELS[row.subject]} · {row.entity_code ?? '—'}
+                  {row.company_code ? ` · ${row.company_code}` : ''}
+                </div>
+              </div>
+              {pending ? (
+                <StatusLozenge status="pending_approval" />
+              ) : result ? (
+                <StatusWithLabel
+                  status={result === 'approved' ? 'completed' : 'draft'}
+                  label={DECISION_LABEL[result]}
+                />
+              ) : (
+                <StatusLozenge status={toStatusGroup(row.status)} />
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-subtle">
+              {box === 'sent' ? (
+                <span>Gửi lúc {formatDateTime(row.requested_at)}</span>
+              ) : (
+                <span>Người gửi {row.requested_by_name ?? '—'}</span>
+              )}
+              {box === 'decided' && row.decided_at && (
+                <span>Quyết định lúc {formatDateTime(row.decided_at)}</span>
+              )}
+              {row.amount !== null && (
+                <span className="font-semibold text-ink tabular-nums">
+                  {formatCurrency(row.amount)}
+                </span>
+              )}
+            </div>
+            {box === 'sent' && pending && (
+              <div className="mt-2">
+                <WaitingOn approvalId={row.id} canNudge />
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function toStatusGroup(status: string): StatusGroup {
+  return (STATUS_GROUPS as readonly string[]).includes(status) ? (status as StatusGroup) : 'draft';
+}
+
 function ApprovalPreview({ row }: { row: PendingApproval }) {
   return (
     <dl className="space-y-3">
