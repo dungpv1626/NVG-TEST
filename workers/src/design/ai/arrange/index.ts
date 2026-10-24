@@ -812,7 +812,13 @@ function arrangeLevelCore(input: ArrangeInput): ArrangeResult {
     crookedFailure = crookedIssue;
     // Chỉ khi cả tầng hỏng (`sketchIssues` vào câu nhắc ở cuối): tầng chia lại được thì cắt phần lồi là
     // việc đã xong, gắn vào `sketchFailure` đổi cách lớp gọi xử lý tầng ấy — phát lại bea4c6fa vòng 5, 6 hỏng lại.
+    // Hàng bản phác không dựng nổi theo bề ngang (T168, lượt thật 4a25b460): tầng 3 vẽ phòng ngủ 2 ô cạnh ô thang — thang
+    // (mốc tầng dưới) + phòng ngủ cần 340 + 270 cm trên 500 cm. Chương trình chia lại được tầng nhưng nắn ban công mặt
+    // tiền thành khối góc; lỗi cả nhà «ban công chỉ chạm mặt trước ở góc» tới mô hình như lỗi của nó, còn lỗi thật không
+    // bao giờ tới. Đưa vào lỗi bản phác của tầng chia lại để lớp gọi coi lỗi ban công là hệ quả (T90).
+    const rowTooNarrowDrawn = sketchRowTooNarrow(input, intent, sketch);
     sketchFailure = dedupeIssues([
+      ...(rowTooNarrowDrawn ? [rowTooNarrowDrawn] : []),
       ...drawn.issues,
       ...((bestRevisable as { issues: PlanIssue[] } | null)?.issues ?? []),
       ...((bestSketchFailure as { issues: PlanIssue[] } | null)?.issues ?? []),
@@ -936,7 +942,7 @@ function arrangeLevelCore(input: ArrangeInput): ArrangeResult {
   // Hàng bản phác không dựng nổi theo bề ngang (T165): nguyên nhân của mọi lỗi phía sau (bộ xếp đã phải chia lại
   // tầng), nên đứng đầu — câu nhắc của cách chia lại tả một bố cục mô hình không vẽ.
   const rowTooNarrow = sketch ? sketchRowTooNarrow(input, intent, sketch) : null;
-  const found = [
+  const foundAll = [
     ...(rowTooNarrow ? [rowTooNarrow] : []),
     ...intent.issues,
     ...sketchIssues,
@@ -944,6 +950,17 @@ function arrangeLevelCore(input: ArrangeInput): ArrangeResult {
     ...(weak ? [weak] : []),
     ...(stairOnly ? [stairOnly] : []),
   ];
+  // «Đầu bước ra của thang chỉ giáp …» của một cách CHIA LẠI, trong khi trên bản phác của mô hình đầu ấy đã giáp hành
+  // lang / khu chung (T168, lượt thật b1859741: tầng 4 vẽ hành lang suốt đầu thang, câu nhắc nói «chỉ giáp giếng trời»
+  // — giếng trời ấy do chương trình đặt khi chia lại). Bỏ câu ấy khi còn lỗi sửa được khác để nói.
+  const withoutArrival = foundAll.filter((issue) => issue.code !== 'stair_arrival_blocked');
+  const found =
+    withoutArrival.length < foundAll.length &&
+    withoutArrival.some((issue) => REVISABLE_CODES.has(issue.code)) &&
+    sketch &&
+    sketchArrivalOpen(input, intent, sketch)
+      ? withoutArrival
+      : foundAll;
   // Phòng không chữ nhật chỉ là thông tin THÊM cho câu nhắc của một tầng vốn đã gửi mô hình sửa: tự nó biến
   // một tầng hỏng hình học thành «sửa được» thì lớp gọi bỏ đường cứu khác (phát lại 5bc280ff vòng 3).
   const issues = dedupeIssues([
@@ -1335,6 +1352,62 @@ function sketchRowTooNarrow(
           : '',
     },
     found.ids[0],
+  );
+}
+
+/**
+ * Trên bản phác (đã ép ô thang về mốc tầng dưới), mọi đầu ô thang tầng trên phải giáp lối đi (`stairSidesNeeded`: đầu
+ * bậc 1 và đầu người bước ra) đều giáp phòng đi xuyên được trên TRỌN đầu ấy — `false` khi không biết (tầng 1, chưa có chiều thang)
+ * hay có đầu không chạm (T168).
+ */
+function sketchArrivalOpen(
+  input: ArrangeInput,
+  intent: LevelIntent,
+  sketch: PreparedSketch,
+): boolean {
+  const up = input.anchors?.stairUp ?? null;
+  const passage = input.groups.passage;
+  if (input.level <= 1 || !up || !passage) return false;
+  const params = stairParamsOf(
+    input.construction,
+    stairTreads(input.construction, Math.round(input.construction.levels.storey_height_m * 100)),
+  );
+  if (!params) return false;
+  const leafOf = (id: string | null | undefined) => (id ? (intent.hostOf.get(id) ?? id) : null);
+  const stair = intent.leaves.find((leaf) => leaf.types.some((t) => input.stairTypes.includes(t)));
+  if (!stair) return false;
+  const { cells, rows, cols } = sketch.grid;
+  let r0 = rows;
+  let r1 = -1;
+  let c0 = cols;
+  let c1 = -1;
+  cells.forEach((row, r) =>
+    row.forEach((id, c) => {
+      if (leafOf(id) !== stair.id) return;
+      r0 = Math.min(r0, r);
+      r1 = Math.max(r1, r);
+      c0 = Math.min(c0, c);
+      c1 = Math.max(c1, c);
+    }),
+  );
+  if (r1 < 0) return false;
+  const walk = new Map(
+    intent.leaves.map((leaf) => [leaf.id, leaf.types.some((t) => passage.through.has(t))]),
+  );
+  const across = (side: StairSide): (string | null)[] => {
+    const out: (string | null)[] = [];
+    if (side === 'y0' || side === 'y1') {
+      const r = side === 'y0' ? r0 - 1 : r1 + 1;
+      for (let c = c0; c <= c1; c += 1) out.push(leafOf(cells[r]?.[c]));
+    } else {
+      const c = side === 'x0' ? c0 - 1 : c1 + 1;
+      for (let r = r0; r <= r1; r += 1) out.push(leafOf(cells[r]?.[c]));
+    }
+    return out;
+  };
+  return stairSidesNeeded(up, params).every((side) =>
+    // Trọn đầu ấy, như câu nhắc đòi («along that whole … side»): chạm một ô thì lỗi có thể là thật.
+    across(side).every((id) => id !== null && id !== stair.id && walk.get(id) === true),
   );
 }
 

@@ -4370,6 +4370,26 @@ export function evaluateHouse(
             (level, rows) => {
               const used = arrangedWith.get(level);
               if (!used) return false;
+              // Bản phác vẽ lại từ cách chia của chương trình không được mang lỗi ban công mà bản phác của mô hình
+              // không có (T168, lượt thật 4a25b460): chia lại tầng 3 nắn ban công mặt tiền thành khối góc bên phải;
+              // vẽ lại vào ý định thì vòng sau soát bản phác báo «ban công ở mặt bên phải» như lỗi của mô hình.
+              const balconyFaults = (map: ReadonlyMap<number, readonly string[] | null>) => {
+                let count = 0;
+                checkSketchBalconyDemand(
+                  context.demands.balcony,
+                  renamed.rooms,
+                  map,
+                  () => {
+                    count += 1;
+                  },
+                  context.mandatory?.rules.balconyOnOpenFace?.longRatio ?? null,
+                  renamed.cantilevers ?? [],
+                );
+                return count;
+              };
+              if (balconyFaults(new Map([...sketches, [level, rows]])) > balconyFaults(sketches)) {
+                return false;
+              }
               const check = arrangeFor(
                 input,
                 context,
