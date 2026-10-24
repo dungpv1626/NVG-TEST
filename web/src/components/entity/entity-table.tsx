@@ -465,10 +465,7 @@ export function EntityTable<T extends EntityRow>({
               )}
               <th className="px-5 py-3 font-medium">Mã / Tên</th>
               {displayColumns.map((c) => (
-                <th
-                  key={c.key}
-                  className={cn('px-5 py-3 font-medium', c.numeric && 'text-right')}
-                >
+                <th key={c.key} className={cn('px-5 py-3 font-medium', c.numeric && 'text-right')}>
                   {c.header}
                 </th>
               ))}
@@ -511,7 +508,8 @@ export function EntityTable<T extends EntityRow>({
                       />
                     </td>
                   )}
-                  <td className="px-5 py-3">
+                  {/* Cột Mã / Tên không bị bóp khi bảng nhiều cột — chữ xuống dòng từng từ thì không đọc nổi. */}
+                  <td className="min-w-56 px-5 py-3">
                     <Link
                       to={detailPath(row)}
                       className="font-semibold text-ink underline-offset-2 hover:underline"

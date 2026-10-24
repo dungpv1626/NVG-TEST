@@ -256,7 +256,7 @@ function QuoteVersionCard({
       className={cn(
         'rounded-lg border bg-surface p-4',
         // Bản đang hiệu lực nổi lên so với các bản cũ (NEN-05: "xác định rõ bản đang có hiệu lực").
-        isEffective ? 'border-brand shadow-card' : 'border-border',
+        isEffective ? 'border-brand' : 'border-border',
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">

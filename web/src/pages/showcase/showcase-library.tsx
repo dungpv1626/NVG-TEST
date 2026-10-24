@@ -234,7 +234,7 @@ export function ShowcaseLibraryPage() {
                   <li
                     key={item.id}
                     className={cn(
-                      'overflow-hidden rounded-lg border bg-surface shadow-card',
+                      'overflow-hidden rounded-lg border bg-surface',
                       on ? 'border-brand ring-2 ring-brand' : 'border-border',
                     )}
                   >

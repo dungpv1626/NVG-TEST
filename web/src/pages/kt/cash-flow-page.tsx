@@ -14,7 +14,7 @@
  */
 
 import { useState } from 'react';
-import { CASH_FLOW_PERIOD_TYPE_LABELS, formatCurrency, toMoney } from '@nvg/shared';
+import { CASH_FLOW_PERIOD_TYPE_LABELS, formatCurrency, formatDate, toMoney } from '@nvg/shared';
 import type { CashFlowPeriodType } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
@@ -224,8 +224,8 @@ export function CashFlowPage() {
             {(plans ?? []).map((plan) => (
               <li key={plan.id} className="flex flex-wrap justify-between gap-2">
                 <span>
-                  {CASH_FLOW_PERIOD_TYPE_LABELS[plan.period_type]} · {plan.period_start} →{' '}
-                  {plan.period_end}
+                  {CASH_FLOW_PERIOD_TYPE_LABELS[plan.period_type]} · {formatDate(plan.period_start)}{' '}
+                  – {formatDate(plan.period_end)}
                   {plan.balance_note ? ` · ${plan.balance_note}` : ''}
                 </span>
                 <span className="tabular-nums text-fg-subtle">

@@ -15,6 +15,7 @@ import { PAYMENT_REQUEST_TYPE_LABELS, PAYMENT_REQUEST_TYPES, formatCurrency } fr
 import type { PaymentRequestType } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
+import { FormLayout } from '@/components/ui/form-page';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -123,162 +124,175 @@ function PaymentRequestForm({ order }: { order: PurchaseOrderDetailRecord | null
         ]}
       />
 
-      <form
-        onSubmit={(e) => void submit(e)}
-        className="max-w-3xl space-y-4 rounded-card bg-surface p-4"
+      {/* v2: «Sau khi lưu» bên phải — chỉ ghi việc hệ thống thật sự làm khi lưu. */}
+      <FormLayout
+        afterSave={[
+          'Mở thẳng đề nghị vừa tạo — phân bổ chi phí nhập tiếp ở đó.',
+          'Gửi phê duyệt theo hạn mức phê duyệt; người duyệt thấy đề nghị trong Phê duyệt.',
+        ]}
       >
-        {formError && (
-          <p role="alert" className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
-            {formError}
-          </p>
-        )}
-
-        {order && (
-          <p className="rounded-card bg-surface-sunken px-4 py-3">
-            Thanh toán cho đơn đặt hàng <span className="font-medium">{order.code}</span> —{' '}
-            {order.supplier?.name}, giá trị {formatCurrency(order.total_value)}. Chi phí của đơn đã
-            ghi vào công trình lúc nhận hàng, nên khoản chi này không cộng vào chi phí thực tế lần
-            nữa. Trả nhiều đợt thì sửa số tiền của đợt này.
-          </p>
-        )}
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Loại đề nghị"
-            required
-            hint="Hoàn ứng chọn khoản tạm ứng cần quyết toán ở màn hình chi tiết."
-          >
-            <select
-              value={requestType}
-              onChange={(e) => setRequestType(e.target.value as PaymentRequestType)}
-              disabled={order !== null}
-              className={SELECT_CLASS}
-            >
-              {PAYMENT_REQUEST_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {PAYMENT_REQUEST_TYPE_LABELS[type]}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <Field
-            label="Bộ phận phát sinh"
-            required
-            hint="Quyết định ai là người xác nhận ở bước đầu của luồng duyệt."
-          >
-            <select
-              name="origin_module"
-              defaultValue={order ? 'MH' : 'TC'}
-              className={SELECT_CLASS}
-            >
-              <option value="TC">Công trường (Thi công)</option>
-              <option value="MH">Mua hàng – Vật tư</option>
-              <option value="KHO">Kho</option>
-              <option value="KT">Văn phòng (Kế toán – Tài chính)</option>
-            </select>
-          </Field>
-        </div>
-
-        <Field
-          label="Nội dung đề nghị"
-          required
-          hint="Ví dụ: Thanh toán đợt 1 tiền thép hình cho Nhà cung cấp A."
+        <form
+          onSubmit={(e) => void submit(e)}
+          className="space-y-4 rounded-card bg-surface p-5 lg:p-6"
         >
-          <Input
-            name="title"
-            required
-            maxLength={200}
-            defaultValue={
-              order ? `Thanh toán đơn hàng ${order.code ?? ''} — ${order.request?.title ?? ''}` : ''
-            }
-          />
-        </Field>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Số tiền (đồng)" required hint="Phải bằng tổng các dòng phân bổ chi phí.">
-            <MoneyInput value={amount} onChange={setAmount} required />
-          </Field>
-
-          <Field label="Đề nghị thanh toán trước ngày" required>
-            <DateInput name="due_date" required />
-          </Field>
-
-          {isAdvance ? (
-            <>
-              <Field label="Người nhận tạm ứng" required>
-                <select name="advance_user_id" required className={SELECT_CLASS}>
-                  <option value="">Chọn người nhận</option>
-                  {(users ?? []).map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.full_name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field
-                label="Hạn hoàn ứng"
-                required
-                hint="Quá hạn mà chưa hoàn thì lần ứng sau phải nêu lý do."
-              >
-                <DateInput name="advance_due_date" required />
-              </Field>
-            </>
-          ) : (
-            <>
-              <Field label="Nhà cung cấp" hint="Để trống nếu bên nhận chưa có trong danh mục.">
-                <select
-                  name="supplier_id"
-                  value={supplierId}
-                  onChange={(e) => setSupplierId(e.target.value)}
-                  className={SELECT_CLASS}
-                >
-                  <option value="">Không chọn từ danh mục</option>
-                  {(suppliers ?? []).map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.code} — {s.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field label="Tên bên nhận" hint="Dùng khi bên nhận là tổ đội khoán hoặc cá nhân.">
-                <Input name="payee_name" maxLength={200} />
-              </Field>
-            </>
+          {formError && (
+            <p
+              role="alert"
+              className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
+            >
+              {formError}
+            </p>
           )}
 
-          <Field label="Bộ phận đề nghị" className="sm:col-span-2">
+          {order && (
+            <p className="rounded-card bg-surface-sunken px-4 py-3">
+              Thanh toán cho đơn đặt hàng <span className="font-medium">{order.code}</span> —{' '}
+              {order.supplier?.name}, giá trị {formatCurrency(order.total_value)}. Chi phí của đơn
+              đã ghi vào công trình lúc nhận hàng, nên khoản chi này không cộng vào chi phí thực tế
+              lần nữa. Trả nhiều đợt thì sửa số tiền của đợt này.
+            </p>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Loại đề nghị"
+              required
+              hint="Hoàn ứng chọn khoản tạm ứng cần quyết toán ở màn hình chi tiết."
+            >
+              <select
+                value={requestType}
+                onChange={(e) => setRequestType(e.target.value as PaymentRequestType)}
+                disabled={order !== null}
+                className={SELECT_CLASS}
+              >
+                {PAYMENT_REQUEST_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {PAYMENT_REQUEST_TYPE_LABELS[type]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field
+              label="Bộ phận phát sinh"
+              required
+              hint="Quyết định ai là người xác nhận ở bước đầu của luồng duyệt."
+            >
+              <select
+                name="origin_module"
+                defaultValue={order ? 'MH' : 'TC'}
+                className={SELECT_CLASS}
+              >
+                <option value="TC">Công trường (Thi công)</option>
+                <option value="MH">Mua hàng – Vật tư</option>
+                <option value="KHO">Kho</option>
+                <option value="KT">Văn phòng (Kế toán – Tài chính)</option>
+              </select>
+            </Field>
+          </div>
+
+          <Field
+            label="Nội dung đề nghị"
+            required
+            hint="Ví dụ: Thanh toán đợt 1 tiền thép hình cho Nhà cung cấp A."
+          >
             <Input
-              name="department"
-              maxLength={120}
-              placeholder="Ví dụ: Ban chỉ huy công trình A"
+              name="title"
+              required
+              maxLength={200}
+              defaultValue={
+                order
+                  ? `Thanh toán đơn hàng ${order.code ?? ''} — ${order.request?.title ?? ''}`
+                  : ''
+              }
             />
           </Field>
-        </div>
 
-        <Field label="Ghi chú">
-          <textarea
-            name="notes"
-            rows={3}
-            className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
-          />
-        </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Số tiền (đồng)" required hint="Phải bằng tổng các dòng phân bổ chi phí.">
+              <MoneyInput value={amount} onChange={setAmount} required />
+            </Field>
 
-        <div className="flex gap-2">
-          <Button type="submit" variant="primary" disabled={create.isPending}>
-            Lưu và phân bổ chi phí
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => void navigate('/kt/de-nghi-thanh-toan')}
-          >
-            Hủy
-          </Button>
-        </div>
-      </form>
+            <Field label="Đề nghị thanh toán trước ngày" required>
+              <DateInput name="due_date" required />
+            </Field>
+
+            {isAdvance ? (
+              <>
+                <Field label="Người nhận tạm ứng" required>
+                  <select name="advance_user_id" required className={SELECT_CLASS}>
+                    <option value="">Chọn người nhận</option>
+                    {(users ?? []).map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.full_name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field
+                  label="Hạn hoàn ứng"
+                  required
+                  hint="Quá hạn mà chưa hoàn thì lần ứng sau phải nêu lý do."
+                >
+                  <DateInput name="advance_due_date" required />
+                </Field>
+              </>
+            ) : (
+              <>
+                <Field label="Nhà cung cấp" hint="Để trống nếu bên nhận chưa có trong danh mục.">
+                  <select
+                    name="supplier_id"
+                    value={supplierId}
+                    onChange={(e) => setSupplierId(e.target.value)}
+                    className={SELECT_CLASS}
+                  >
+                    <option value="">Không chọn từ danh mục</option>
+                    {(suppliers ?? []).map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.code} — {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field label="Tên bên nhận" hint="Dùng khi bên nhận là tổ đội khoán hoặc cá nhân.">
+                  <Input name="payee_name" maxLength={200} />
+                </Field>
+              </>
+            )}
+
+            <Field label="Bộ phận đề nghị" className="sm:col-span-2">
+              <Input
+                name="department"
+                maxLength={120}
+                placeholder="Ví dụ: Ban chỉ huy công trình A"
+              />
+            </Field>
+          </div>
+
+          <Field label="Ghi chú">
+            <textarea
+              name="notes"
+              rows={3}
+              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
+            />
+          </Field>
+
+          <div className="flex gap-2">
+            <Button type="submit" variant="primary" disabled={create.isPending}>
+              Lưu và phân bổ chi phí
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void navigate('/kt/de-nghi-thanh-toan')}
+            >
+              Hủy
+            </Button>
+          </div>
+        </form>
+      </FormLayout>
     </>
   );
 }

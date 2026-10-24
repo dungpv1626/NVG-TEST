@@ -17,6 +17,7 @@ import { PURCHASE_URGENCY_LABELS } from '@nvg/shared';
 import type { PurchaseUrgency } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
+import { FormLayout } from '@/components/ui/form-page';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -95,104 +96,115 @@ export function PurchaseRequestCreatePage() {
         ]}
       />
 
-      <form
-        onSubmit={(e) => void submit(e)}
-        className="max-w-3xl space-y-4 rounded-card bg-surface p-4"
+      {/* v2: «Sau khi lưu» bên phải — chỉ ghi việc hệ thống thật sự làm khi lưu. */}
+      <FormLayout
+        afterSave={[
+          'Mở thẳng đề nghị vừa tạo — nhập các mặt hàng ở đó.',
+          'Đủ mặt hàng thì gửi phê duyệt theo hạn mức; duyệt xong Mua hàng hỏi giá và đặt hàng.',
+        ]}
       >
-        {formError && (
-          <p role="alert" className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
-            {formError}
-          </p>
-        )}
-
-        <Field label="Nội dung đề nghị" required hint="Ví dụ: Thép hình cho phần khung tầng 2.">
-          <Input name="title" required maxLength={200} />
-        </Field>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Công trình"
-            hint="Để trống nếu mua cho văn phòng — khi đó đề nghị không gắn vào ngân sách công trình nào."
-          >
-            <select
-              value={siteId}
-              onChange={(e) => setSiteId(e.target.value)}
-              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
+        <form
+          onSubmit={(e) => void submit(e)}
+          className="space-y-4 rounded-card bg-surface p-5 lg:p-6"
+        >
+          {formError && (
+            <p
+              role="alert"
+              className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
             >
-              <option value="">Không gắn công trình</option>
-              {(sites ?? []).map((site) => (
-                <option key={site.id} value={site.id}>
-                  {site.code} — {site.name}
-                </option>
-              ))}
-            </select>
+              {formError}
+            </p>
+          )}
+
+          <Field label="Nội dung đề nghị" required hint="Ví dụ: Thép hình cho phần khung tầng 2.">
+            <Input name="title" required maxLength={200} />
           </Field>
 
-          <Field
-            label="Mã chi phí trong ngân sách"
-            required={Boolean(siteId)}
-            hint={
-              siteId
-                ? 'Chi phí của đề nghị này sẽ cộng vào đúng dòng ngân sách đã chọn, ngay khi đơn hàng được lập.'
-                : 'Chỉ chọn được sau khi chọn công trình.'
-            }
-          >
-            <select
-              name="cost_code"
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Công trình"
+              hint="Để trống nếu mua cho văn phòng — khi đó đề nghị không gắn vào ngân sách công trình nào."
+            >
+              <select
+                value={siteId}
+                onChange={(e) => setSiteId(e.target.value)}
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
+              >
+                <option value="">Không gắn công trình</option>
+                {(sites ?? []).map((site) => (
+                  <option key={site.id} value={site.id}>
+                    {site.code} — {site.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field
+              label="Mã chi phí trong ngân sách"
               required={Boolean(siteId)}
-              disabled={!siteId}
-              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 disabled:bg-surface-sunken disabled:opacity-60"
+              hint={
+                siteId
+                  ? 'Chi phí của đề nghị này sẽ cộng vào đúng dòng ngân sách đã chọn, ngay khi đơn hàng được lập.'
+                  : 'Chỉ chọn được sau khi chọn công trình.'
+              }
             >
-              <option value="">Chọn mã chi phí</option>
-              {(costCodes ?? []).map((line) => (
-                <option key={line.cost_code} value={line.cost_code}>
-                  {line.cost_code} — {line.name}
-                </option>
-              ))}
-            </select>
+              <select
+                name="cost_code"
+                required={Boolean(siteId)}
+                disabled={!siteId}
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 disabled:bg-surface-sunken disabled:opacity-60"
+              >
+                <option value="">Chọn mã chi phí</option>
+                {(costCodes ?? []).map((line) => (
+                  <option key={line.cost_code} value={line.cost_code}>
+                    {line.cost_code} — {line.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Thời điểm cần hàng" required>
+              <DateInput name="needed_date" required />
+            </Field>
+
+            <Field label="Mức cần">
+              <select
+                name="urgency"
+                defaultValue="thuong"
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
+              >
+                <option value="thuong">{PURCHASE_URGENCY_LABELS.thuong}</option>
+                <option value="gap">{PURCHASE_URGENCY_LABELS.gap}</option>
+              </select>
+            </Field>
+
+            <Field label="Địa điểm giao" className="sm:col-span-2">
+              <Input name="delivery_location" maxLength={200} />
+            </Field>
+          </div>
+
+          <Field label="Ghi chú">
+            <textarea
+              name="notes"
+              rows={3}
+              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
+            />
           </Field>
 
-          <Field label="Thời điểm cần hàng" required>
-            <DateInput name="needed_date" required />
-          </Field>
-
-          <Field label="Mức cần">
-            <select
-              name="urgency"
-              defaultValue="thuong"
-              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
+          <div className="flex gap-2">
+            <Button type="submit" variant="primary" disabled={create.isPending}>
+              Lưu và nhập mặt hàng
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void navigate('/mh/de-nghi-mua')}
             >
-              <option value="thuong">{PURCHASE_URGENCY_LABELS.thuong}</option>
-              <option value="gap">{PURCHASE_URGENCY_LABELS.gap}</option>
-            </select>
-          </Field>
-
-          <Field label="Địa điểm giao" className="sm:col-span-2">
-            <Input name="delivery_location" maxLength={200} />
-          </Field>
-        </div>
-
-        <Field label="Ghi chú">
-          <textarea
-            name="notes"
-            rows={3}
-            className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
-          />
-        </Field>
-
-        <div className="flex gap-2">
-          <Button type="submit" variant="primary" disabled={create.isPending}>
-            Lưu và nhập mặt hàng
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => void navigate('/mh/de-nghi-mua')}
-          >
-            Hủy
-          </Button>
-        </div>
-      </form>
+              Hủy
+            </Button>
+          </div>
+        </form>
+      </FormLayout>
     </>
   );
 }

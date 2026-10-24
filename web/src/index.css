@@ -102,8 +102,9 @@
 
   /* --- Chữ (6.3) ------------------------------------------------------------
      KHÔNG dùng đen tuyệt đối #000000 — gắt hơn mức cần thiết. */
-  --color-fg: #1c1c1a; /* chữ chính — tương phản 16.9:1 trên nền trắng */
-  --color-fg-subtle: #555a61; /* chữ phụ — 6.95:1 trên trắng, 6.37:1 trên nền trũng */
+  /* v2 (DESIGN_SYSTEM.md §8, anh Dũng duyệt 24/10/2026): chữ ám xanh, bằng đúng `ink` / `ink-subtle`. */
+  --color-fg: #13231b; /* chữ chính — 14.67:1 trên nền nội dung, 15:1 trên nền trũng */
+  --color-fg-subtle: #5a6b62; /* chữ phụ — 5.65:1 trên trắng, 5.18:1 trên nền trũng */
   --color-fg-inverse: #ffffff;
 
   /* --- 6 màu trạng thái (6.3, ánh xạ đúng Content Guidelines v1.2 5.1) ------

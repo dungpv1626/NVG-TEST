@@ -327,7 +327,7 @@ export function MilestonePanel({
               className={cn(
                 'rounded-lg border bg-surface p-4',
                 m.status === 'dang_lam' || m.status === 'cho_ky_thuat'
-                  ? 'border-border-strong shadow-card'
+                  ? 'border-border-strong'
                   : 'border-border',
                 m.status === 'cho_lam' && 'opacity-70',
               )}

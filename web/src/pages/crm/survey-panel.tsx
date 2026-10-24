@@ -450,7 +450,7 @@ function SurveyForm({
           onSave();
         }}
         noValidate
-        className="rounded-lg border border-brand bg-surface p-4 shadow-card"
+        className="rounded-lg border border-brand bg-surface p-4"
       >
         <h3 className="mb-1 font-semibold">Đặt lịch khảo sát</h3>
         <p className="mb-3 text-xs text-fg-subtle">
@@ -504,7 +504,7 @@ function SurveyForm({
         onSave();
       }}
       noValidate
-      className="rounded-lg border border-brand bg-surface p-4 shadow-card"
+      className="rounded-lg border border-brand bg-surface p-4"
     >
       <h3 className="mb-3 font-semibold">
         {isEditing ? 'Biên bản khảo sát' : 'Đặt lịch khảo sát'}

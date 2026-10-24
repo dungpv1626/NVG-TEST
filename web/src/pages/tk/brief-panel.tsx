@@ -636,7 +636,7 @@ export function BriefPanel({
               để mất dữ liệu đã gõ. */}
           {/* Dính đáy vùng cuộn (07/10/2026): nút «Tiếp / Lưu» luôn trong tầm mắt, không phải cuộn hết
               một bước dài mới bấm được. */}
-          <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center gap-2 rounded-card bg-surface/95 p-3 shadow-card backdrop-blur">
+          <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center gap-2 rounded-card bg-surface/95 p-3 backdrop-blur">
             {index > 0 && (
               <Button variant="secondary" onClick={() => goTo(steps[index - 1]!.section.id)}>
                 <ChevronLeft className="size-4" />

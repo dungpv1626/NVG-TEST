@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { BUTTONS, ERRORS } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
+import { FormLayout, FormSection } from '@/components/ui/form-page';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -181,109 +182,120 @@ export function BiddingCreatePage() {
       <PageHeader title="Tạo gói thầu mới" breadcrumbs={BREADCRUMBS} />
 
       <form onSubmit={handleSubmit} noValidate className="max-w-2xl rounded-card bg-surface p-6">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Tên gói thầu" required className="sm:col-span-2">
-            <Input value={form.name} onChange={(e) => update('name', e.target.value)} autoFocus />
-          </Field>
+        {/* v2: khuôn biểu mẫu + «Sau khi lưu» — chỉ ghi việc hệ thống thật sự làm khi lưu. */}
+        <FormLayout
+          afterSave={[
+            'Mở thẳng trang gói thầu vừa tạo — dự toán, hồ sơ năng lực, vòng làm rõ nhập tiếp ở đó.',
+            'Chưa chọn người chịu trách nhiệm thì người tạo phụ trách.',
+          ]}
+        >
+          <FormSection n={1} title="Thông tin gói thầu">
+            <Field label="Tên gói thầu" required className="sm:col-span-2">
+              <Input value={form.name} onChange={(e) => update('name', e.target.value)} autoFocus />
+            </Field>
 
-          <Field
-            label="Cơ hội kinh doanh"
-            className="sm:col-span-2"
-            hint="Chọn nếu gói thầu đến từ một cơ hội đã chốt — khách hàng và giá trị dự kiến sẽ điền theo."
-          >
-            <select
-              value={form.opportunityId}
-              onChange={(e) => update('opportunityId', e.target.value)}
-              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
+            <Field
+              label="Cơ hội kinh doanh"
+              className="sm:col-span-2"
+              hint="Chọn nếu gói thầu đến từ một cơ hội đã chốt — khách hàng và giá trị dự kiến sẽ điền theo."
             >
-              <option value="">Không đến từ cơ hội (thư mời thầu trực tiếp)</option>
-              {(opportunities ?? []).map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.code} — {o.name}
-                </option>
-              ))}
-            </select>
-          </Field>
+              <select
+                value={form.opportunityId}
+                onChange={(e) => update('opportunityId', e.target.value)}
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
+              >
+                <option value="">Không đến từ cơ hội (thư mời thầu trực tiếp)</option>
+                {(opportunities ?? []).map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.code} — {o.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
 
-          <Field label="Chủ đầu tư">
-            <select
-              value={form.customerId}
-              onChange={(e) => update('customerId', e.target.value)}
-              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
+            <Field label="Chủ đầu tư">
+              <select
+                value={form.customerId}
+                onChange={(e) => update('customerId', e.target.value)}
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
+              >
+                <option value="">Chưa xác định</option>
+                {(customers ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Người chịu trách nhiệm">
+              <select
+                value={form.responsibleUserId}
+                onChange={(e) => update('responsibleUserId', e.target.value)}
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
+              >
+                <option value="">Người tạo hồ sơ</option>
+                {(users ?? []).map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.full_name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Giá trị dự kiến" hint="Đơn vị đồng.">
+              <MoneyInput
+                value={form.estimatedValue}
+                onChange={(v) => update('estimatedValue', v)}
+              />
+            </Field>
+
+            <Field label="Hạn nộp thầu">
+              <DateInput
+                value={form.submissionDeadline}
+                onChange={(v) => update('submissionDeadline', v)}
+              />
+            </Field>
+
+            <Field label="Địa điểm công trình" className="sm:col-span-2">
+              <Input
+                value={form.siteAddress}
+                onChange={(e) => update('siteAddress', e.target.value)}
+              />
+            </Field>
+
+            <Field
+              label="Nội dung cần làm rõ"
+              className="sm:col-span-2"
+              hint="Những điểm hồ sơ mời thầu còn thiếu hoặc mâu thuẫn, cần hỏi lại chủ đầu tư."
             >
-              <option value="">Chưa xác định</option>
-              {(customers ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </Field>
+              <textarea
+                value={form.clarificationNotes}
+                onChange={(e) => update('clarificationNotes', e.target.value)}
+                rows={3}
+                className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
+              />
+            </Field>
+          </FormSection>
 
-          <Field label="Người chịu trách nhiệm">
-            <select
-              value={form.responsibleUserId}
-              onChange={(e) => update('responsibleUserId', e.target.value)}
-              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
+          {error && (
+            <p
+              role="alert"
+              className="rounded-field bg-status-overdue-bg px-3 py-2 text-status-overdue"
             >
-              <option value="">Người tạo hồ sơ</option>
-              {(users ?? []).map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.full_name}
-                </option>
-              ))}
-            </select>
-          </Field>
+              {error}
+            </p>
+          )}
 
-          <Field label="Giá trị dự kiến" hint="Đơn vị đồng.">
-            <MoneyInput value={form.estimatedValue} onChange={(v) => update('estimatedValue', v)} />
-          </Field>
-
-          <Field label="Hạn nộp thầu">
-            <DateInput
-              value={form.submissionDeadline}
-              onChange={(v) => update('submissionDeadline', v)}
-            />
-          </Field>
-
-          <Field label="Địa điểm công trình" className="sm:col-span-2">
-            <Input
-              value={form.siteAddress}
-              onChange={(e) => update('siteAddress', e.target.value)}
-            />
-          </Field>
-
-          <Field
-            label="Nội dung cần làm rõ"
-            className="sm:col-span-2"
-            hint="Những điểm hồ sơ mời thầu còn thiếu hoặc mâu thuẫn, cần hỏi lại chủ đầu tư."
-          >
-            <textarea
-              value={form.clarificationNotes}
-              onChange={(e) => update('clarificationNotes', e.target.value)}
-              rows={3}
-              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
-            />
-          </Field>
-        </div>
-
-        {error && (
-          <p
-            role="alert"
-            className="mt-4 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
-          >
-            {error}
-          </p>
-        )}
-
-        <div className="mt-6 flex items-center gap-2">
-          <Button type="submit" variant="primary" disabled={createProject.isPending}>
-            {createProject.isPending ? 'Đang lưu…' : BUTTONS.save}
-          </Button>
-          <Button type="button" variant="subtle" onClick={handleCancel}>
-            {BUTTONS.cancel}
-          </Button>
-        </div>
+          <div className="flex items-center gap-2">
+            <Button type="submit" variant="primary" disabled={createProject.isPending}>
+              {createProject.isPending ? 'Đang lưu…' : BUTTONS.save}
+            </Button>
+            <Button type="button" variant="subtle" onClick={handleCancel}>
+              {BUTTONS.cancel}
+            </Button>
+          </div>
+        </FormLayout>
       </form>
     </>
   );

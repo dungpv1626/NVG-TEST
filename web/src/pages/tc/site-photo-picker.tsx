@@ -61,7 +61,7 @@ export function SitePhotoPicker({
               <button
                 type="button"
                 aria-label={`Bỏ ảnh ${i + 1}`}
-                className="absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full border border-border bg-surface shadow-card"
+                className="absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full border border-border bg-surface"
                 onClick={() => onChange(files.filter((_, j) => j !== i))}
               >
                 <X className="size-4" aria-hidden />

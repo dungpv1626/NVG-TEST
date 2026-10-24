@@ -20,6 +20,7 @@ import {
 } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
+import { FormLayout, FormSection } from '@/components/ui/form-page';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -175,106 +176,114 @@ export function ComplaintCreatePage() {
         />
       ) : (
         <form onSubmit={handleSubmit} noValidate className="max-w-2xl rounded-card bg-surface p-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Khách hàng" required className="sm:col-span-2">
-              <select
-                value={form.customerId}
-                onChange={(e) => update('customerId', e.target.value)}
-                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
+          {/* v2: khuôn biểu mẫu + «Sau khi lưu» — chỉ ghi việc hệ thống thật sự làm khi lưu. */}
+          <FormLayout
+            afterSave={[
+              'Mở thẳng khiếu nại vừa ghi; người chủ trì và người phối hợp cùng xử lý trên đó.',
+              'Hạn phản hồi (nếu có) hiện ở danh sách khiếu nại để theo dõi.',
+            ]}
+          >
+            <FormSection n={1} title="Nội dung khiếu nại">
+              <Field label="Khách hàng" required className="sm:col-span-2">
+                <select
+                  value={form.customerId}
+                  onChange={(e) => update('customerId', e.target.value)}
+                  className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
+                >
+                  <option value="">Chọn khách hàng</option>
+                  {(customers ?? []).map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Tiêu đề" required className="sm:col-span-2">
+                <Input
+                  value={form.title}
+                  onChange={(e) => update('title', e.target.value)}
+                  placeholder="Ví dụ: Thấm trần tầng 2 sau mưa lớn"
+                />
+              </Field>
+
+              <Field
+                label="Nội dung khách phản ánh"
+                required
+                hint="Ghi đúng lời khách. Không thêm nhận xét cảm tính hay suy đoán."
+                className="sm:col-span-2"
               >
-                <option value="">Chọn khách hàng</option>
-                {(customers ?? []).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.code})
-                  </option>
-                ))}
-              </select>
-            </Field>
+                <textarea
+                  value={form.content}
+                  onChange={(e) => update('content', e.target.value)}
+                  rows={4}
+                  className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
+                />
+              </Field>
 
-            <Field label="Tiêu đề" required className="sm:col-span-2">
-              <Input
-                value={form.title}
-                onChange={(e) => update('title', e.target.value)}
-                placeholder="Ví dụ: Thấm trần tầng 2 sau mưa lớn"
+              <Field label="Mức độ nghiêm trọng">
+                <select
+                  value={form.severity}
+                  onChange={(e) => update('severity', e.target.value as ComplaintSeverity)}
+                  className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
+                >
+                  {COMPLAINT_SEVERITIES.map((s) => (
+                    <option key={s} value={s}>
+                      {COMPLAINT_SEVERITY_LABELS[s]}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Hạn phản hồi">
+                <DateInput
+                  value={form.responseDueDate}
+                  onChange={(v) => update('responseDueDate', v)}
+                />
+              </Field>
+
+              <Field label="Người chủ trì" className="sm:col-span-2">
+                <select
+                  value={form.assigneeId}
+                  onChange={(e) => update('assigneeId', e.target.value)}
+                  className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
+                >
+                  <option value="">Chưa phân công</option>
+                  {(users ?? []).map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.full_name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <PeoplePicker
+                label="Người phối hợp"
+                hint="Người phối hợp cũng sửa được diễn biến xử lý của khiếu nại này."
+                users={(users ?? []).filter((u) => u.id !== form.assigneeId)}
+                selected={form.collaboratorIds}
+                onChange={(ids) => update('collaboratorIds', ids)}
               />
-            </Field>
+            </FormSection>
 
-            <Field
-              label="Nội dung khách phản ánh"
-              required
-              hint="Ghi đúng lời khách. Không thêm nhận xét cảm tính hay suy đoán."
-              className="sm:col-span-2"
-            >
-              <textarea
-                value={form.content}
-                onChange={(e) => update('content', e.target.value)}
-                rows={4}
-                className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
-              />
-            </Field>
-
-            <Field label="Mức độ nghiêm trọng">
-              <select
-                value={form.severity}
-                onChange={(e) => update('severity', e.target.value as ComplaintSeverity)}
-                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
+            {error && (
+              <p
+                role="alert"
+                className="rounded-field bg-status-overdue-bg px-3 py-2 text-status-overdue"
               >
-                {COMPLAINT_SEVERITIES.map((s) => (
-                  <option key={s} value={s}>
-                    {COMPLAINT_SEVERITY_LABELS[s]}
-                  </option>
-                ))}
-              </select>
-            </Field>
+                {error}
+              </p>
+            )}
 
-            <Field label="Hạn phản hồi">
-              <DateInput
-                value={form.responseDueDate}
-                onChange={(v) => update('responseDueDate', v)}
-              />
-            </Field>
-
-            <Field label="Người chủ trì" className="sm:col-span-2">
-              <select
-                value={form.assigneeId}
-                onChange={(e) => update('assigneeId', e.target.value)}
-                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
-              >
-                <option value="">Chưa phân công</option>
-                {(users ?? []).map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.full_name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            <PeoplePicker
-              label="Người phối hợp"
-              hint="Người phối hợp cũng sửa được diễn biến xử lý của khiếu nại này."
-              users={(users ?? []).filter((u) => u.id !== form.assigneeId)}
-              selected={form.collaboratorIds}
-              onChange={(ids) => update('collaboratorIds', ids)}
-            />
-          </div>
-
-          {error && (
-            <p
-              role="alert"
-              className="mt-4 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
-            >
-              {error}
-            </p>
-          )}
-
-          <div className="mt-6 flex items-center gap-2">
-            <Button type="submit" variant="primary" disabled={createComplaint.isPending}>
-              {createComplaint.isPending ? 'Đang lưu…' : BUTTONS.save}
-            </Button>
-            <Button type="button" variant="subtle" onClick={handleCancel}>
-              {BUTTONS.cancel}
-            </Button>
-          </div>
+            <div className="flex items-center gap-2">
+              <Button type="submit" variant="primary" disabled={createComplaint.isPending}>
+                {createComplaint.isPending ? 'Đang lưu…' : BUTTONS.save}
+              </Button>
+              <Button type="button" variant="subtle" onClick={handleCancel}>
+                {BUTTONS.cancel}
+              </Button>
+            </div>
+          </FormLayout>
         </form>
       )}
     </>

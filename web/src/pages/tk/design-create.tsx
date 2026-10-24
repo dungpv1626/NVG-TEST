@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { BUTTONS, ERRORS } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
+import { FormLayout, FormSection } from '@/components/ui/form-page';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -180,101 +181,109 @@ export function DesignCreatePage() {
       <PageHeader title="Tạo dự án thiết kế mới" breadcrumbs={BREADCRUMBS} />
 
       <form onSubmit={handleSubmit} noValidate className="max-w-2xl rounded-card bg-surface p-6">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Tên dự án thiết kế" required className="sm:col-span-2">
-            <Input value={form.name} onChange={(e) => update('name', e.target.value)} autoFocus />
-          </Field>
+        {/* v2: khuôn biểu mẫu + «Sau khi lưu» — chỉ ghi việc hệ thống thật sự làm khi lưu. */}
+        <FormLayout
+          afterSave={[
+            'Mở thẳng hồ sơ thiết kế vừa tạo — đầu bài, khảo sát, bản vẽ nhập tiếp ở đó.',
+            'Chưa chọn người chịu trách nhiệm thì người tạo phụ trách.',
+          ]}
+        >
+          <FormSection n={1} title="Thông tin hồ sơ">
+            <Field label="Tên dự án thiết kế" required className="sm:col-span-2">
+              <Input value={form.name} onChange={(e) => update('name', e.target.value)} autoFocus />
+            </Field>
 
-          <Field
-            label="Cơ hội kinh doanh"
-            className="sm:col-span-2"
-            hint="Chọn nếu dự án đến từ một cơ hội đã chốt khảo sát — khách hàng sẽ điền theo."
-          >
-            <select
-              value={form.opportunityId}
-              onChange={(e) => update('opportunityId', e.target.value)}
-              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
+            <Field
+              label="Cơ hội kinh doanh"
+              className="sm:col-span-2"
+              hint="Chọn nếu dự án đến từ một cơ hội đã chốt khảo sát — khách hàng sẽ điền theo."
             >
-              <option value="">Không đến từ cơ hội (khách hàng liên hệ trực tiếp)</option>
-              {(opportunities ?? []).map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.code} — {o.name}
-                </option>
-              ))}
-            </select>
-          </Field>
+              <select
+                value={form.opportunityId}
+                onChange={(e) => update('opportunityId', e.target.value)}
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
+              >
+                <option value="">Không đến từ cơ hội (khách hàng liên hệ trực tiếp)</option>
+                {(opportunities ?? []).map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.code} — {o.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
 
-          <Field label="Khách hàng">
-            <select
-              value={form.customerId}
-              onChange={(e) => update('customerId', e.target.value)}
-              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
+            <Field label="Khách hàng">
+              <select
+                value={form.customerId}
+                onChange={(e) => update('customerId', e.target.value)}
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
+              >
+                <option value="">Chưa xác định</option>
+                {(customers ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Người chịu trách nhiệm">
+              <select
+                value={form.responsibleUserId}
+                onChange={(e) => update('responsibleUserId', e.target.value)}
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
+              >
+                <option value="">Người tạo hồ sơ</option>
+                {(users ?? []).map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.full_name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field
+              label="Hạn bàn giao hồ sơ thi công"
+              hint="Mốc để tính quá hạn trên danh sách và Dashboard."
             >
-              <option value="">Chưa xác định</option>
-              {(customers ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </Field>
+              <DateInput
+                value={form.handoverDeadline}
+                onChange={(v) => update('handoverDeadline', v)}
+              />
+            </Field>
 
-          <Field label="Người chịu trách nhiệm">
-            <select
-              value={form.responsibleUserId}
-              onChange={(e) => update('responsibleUserId', e.target.value)}
-              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
-            >
-              <option value="">Người tạo hồ sơ</option>
-              {(users ?? []).map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.full_name}
-                </option>
-              ))}
-            </select>
-          </Field>
+            <Field label="Địa điểm khu đất">
+              <Input
+                value={form.siteAddress}
+                onChange={(e) => update('siteAddress', e.target.value)}
+              />
+            </Field>
 
-          <Field
-            label="Hạn bàn giao hồ sơ thi công"
-            hint="Mốc để tính quá hạn trên danh sách và Dashboard."
-          >
-            <DateInput
-              value={form.handoverDeadline}
-              onChange={(v) => update('handoverDeadline', v)}
-            />
-          </Field>
+            <Field label="Ghi chú" className="sm:col-span-2">
+              <textarea
+                value={form.notes}
+                onChange={(e) => update('notes', e.target.value)}
+                rows={3}
+                className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
+              />
+            </Field>
+          </FormSection>
 
-          <Field label="Địa điểm khu đất">
-            <Input
-              value={form.siteAddress}
-              onChange={(e) => update('siteAddress', e.target.value)}
-            />
-          </Field>
+          {error && (
+            <p role="alert" className="mt-4 text-status-overdue">
+              {error}
+            </p>
+          )}
 
-          <Field label="Ghi chú" className="sm:col-span-2">
-            <textarea
-              value={form.notes}
-              onChange={(e) => update('notes', e.target.value)}
-              rows={3}
-              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
-            />
-          </Field>
-        </div>
-
-        {error && (
-          <p role="alert" className="mt-4 text-status-overdue">
-            {error}
-          </p>
-        )}
-
-        <div className="mt-6 flex gap-2">
-          <Button type="submit" variant="primary" disabled={createProject.isPending}>
-            {createProject.isPending ? 'Đang lưu…' : BUTTONS.save}
-          </Button>
-          <Button type="button" variant="secondary" onClick={handleCancel}>
-            {BUTTONS.cancel}
-          </Button>
-        </div>
+          <div className="flex gap-2">
+            <Button type="submit" variant="primary" disabled={createProject.isPending}>
+              {createProject.isPending ? 'Đang lưu…' : BUTTONS.save}
+            </Button>
+            <Button type="button" variant="secondary" onClick={handleCancel}>
+              {BUTTONS.cancel}
+            </Button>
+          </div>
+        </FormLayout>
       </form>
     </>
   );

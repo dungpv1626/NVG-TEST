@@ -54,7 +54,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
         <div
           className={cn(
             'max-w-md rounded-lg border border-border',
-            'bg-surface p-6 text-center shadow-card',
+            'bg-surface p-6 text-center',
           )}
         >
           <h1 className="mb-2 font-semibold">Tài khoản chưa được gán quyền</h1>
