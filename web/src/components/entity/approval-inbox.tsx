@@ -183,12 +183,12 @@ export function ApprovalInbox({
                 }}
                 aria-current={isActive ? 'true' : undefined}
                 className={cn(
-                  'w-full cursor-pointer rounded-lg border p-3 text-left',
+                  'w-full cursor-pointer rounded-card border p-4 text-left',
                   'transition-[background-color,border-color,box-shadow]',
                   'duration-(--motion-fast) ease-(--ease-out)',
                   isActive
-                    ? 'border-brand bg-brand-subtle shadow-raised'
-                    : 'border-border bg-surface shadow-raised hover:bg-surface-hover',
+                    ? 'border-shell bg-surface ring-1 ring-shell'
+                    : 'border-transparent bg-surface hover:border-border-strong',
                 )}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -224,7 +224,7 @@ export function ApprovalInbox({
       {selected && (
         <div
           className={cn(
-            'min-w-0 flex-1 rounded-card bg-surface p-4',
+            'min-w-0 flex-1 rounded-card bg-surface p-5',
             'transition-shadow duration-(--motion-base) ease-(--ease-out)',
             !openedOnMobile && 'hidden lg:block',
           )}
@@ -259,7 +259,7 @@ export function ApprovalInbox({
                 rows={2}
                 placeholder="Nêu căn cứ phê duyệt hoặc lý do từ chối"
                 className={cn(
-                  'w-full rounded-sm border border-border-strong bg-surface px-3 py-2',
+                  'w-full rounded-field border border-border-strong bg-surface px-3 py-2',
                   'placeholder:text-fg-subtle',
                   'transition-[border-color] duration-(--motion-fast) ease-(--ease-out)',
                   'hover:border-fg-subtle',
