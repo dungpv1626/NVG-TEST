@@ -63,6 +63,8 @@ const RAW: Record<string, RecordedRun> = {
   ef5fbffc: JSON.parse(read('workers/src/design/__tests__/fixtures/ai-run-ef5fbffc.json')),
   e5ec68a6: JSON.parse(read('workers/src/design/__tests__/fixtures/ai-run-e5ec68a6.json')),
   '4eade9b1': JSON.parse(read('workers/src/design/__tests__/fixtures/ai-run-4eade9b1.json')),
+  b1859741: JSON.parse(read('workers/src/design/__tests__/fixtures/ai-run-b1859741.json')),
+  '4a25b460': JSON.parse(read('workers/src/design/__tests__/fixtures/ai-run-4a25b460.json')),
 };
 
 /** Chạy lại cả vòng lặp thật (`generateAiPlan`) với các câu trả lời đã ghi, theo thứ tự; trả lời gọi đã gửi. */
@@ -229,5 +231,35 @@ describe('phát lại 4eade9b1 — phòng lồi không được ăn cột của 
     );
     const messages = result.rejections.flatMap((rejection) => rejection.messages).join(' | ');
     expect(messages).not.toMatch(/chỉ dài 2\.\d+ m theo chiều đi lên/);
+  });
+});
+
+/**
+ * Hai lượt thật 24/10/2026 trên THU5 (T168), sau T167. Cả hai qua tầng 1–3 ngay vòng 1–2; tầng 4 / cả nhà hỏng.
+ *
+ *  - 4a25b460: tầng 3 vẽ phòng ngủ 2 ô cạnh ô thang (thang ≥ 2,4 m + phòng ngủ ≥ 2,7 m trên 5 m). Chương trình chia lại
+ *    tầng được nhưng nắn ban công mặt tiền thành khối góc bên phải; kiểm cả nhà báo «ban công chỉ chạm mặt trước ở góc» +
+ *    «ban công ở mặt bên phải» như lỗi của mô hình, lỗi thật (hàng quá hẹp) không bao giờ tới.
+ *  - b1859741: câu nhắc nói «đầu bước ra của thang tầng 4 chỉ giáp giếng trời» — giếng trời ấy do một cách chia lại đặt; bản
+ *    phác của mô hình có hành lang suốt đầu thang. Lỗi thật: phòng giặt chạm hành lang dưới một cửa.
+ */
+describe('phát lại 4a25b460 và b1859741 — lỗi tầng trên tới mô hình đúng chỗ (T168)', () => {
+  it('4a25b460: lời gọi 4 nói hàng thang + phòng ngủ tầng 3 quá hẹp, ban công khối góc là hệ quả của việc chia lại', async () => {
+    const { prompts: sent } = await replayLoop('4a25b460');
+    expect(sent).toHaveLength(5);
+    // Ba lời gọi đầu không đổi so với lượt thật — vẽ lại tầng giữ (T86) không được mang lỗi ban công của cách chia lại.
+    expect(sent[2]).not.toContain('is on the right side');
+    const fourth = sent[3]!;
+    expect(fourth).toMatch(/Storey 3: In the sketch, rows 8–14 put "st3", "bd2" side by side/);
+    expect(fourth).toContain(
+      'it became a corner block only because the program had to partition storey 3',
+    );
+    expect(fourth).not.toContain('move it to an allowed side or drop it');
+  });
+
+  it('b1859741: không còn câu «đầu bước ra chỉ giáp giếng trời» khi bản phác có hành lang suốt đầu thang', async () => {
+    const { prompts: sent } = await replayLoop('b1859741');
+    expect(sent[1]).not.toContain('touches only lw4');
+    expect(sent[1]).toMatch(/Storey 4: In the sketch, "ld1" have no way in/);
   });
 });

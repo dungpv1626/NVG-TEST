@@ -4314,3 +4314,39 @@ tầng không có ô nào trên bản phác, cùng phép kiểm `sketchTrees` v�
 Phát lại 226 vòng ngữ cảnh Workflow, đối chứng 605ec3d: 10 / 226 vòng ra mặt bằng ở cả hai; 8 vòng của 4 lượt (182665ea,
 4eade9b1, f1a88ac1, fdd486b1) thêm `sketch_room_missing` cho tầng trên ngay vòng tầng 1 hỏng, không vòng nào đổi gì khác.
 4eade9b1: câu nhắc lời gọi 2 nay có «Storey 4: … leaves out wc5» (trước: lời gọi 5).
+
+### T168 — Lỗi tầng trên tới mô hình đúng chỗ: hàng quá hẹp của tầng chia lại, ban công khối góc là hệ quả, đầu bước ra thang (24/10/2026, mạch B)
+
+**Đầu vào.** Hai lượt thật THU5 sau T167 (đầu bài giữ phòng khách 16 m²), phát lại khớp từng ký tự (fixture
+`ai-run-4a25b460.json`, `ai-run-b1859741.json`):
+- `4a25b460` (5 lời gọi): tầng 1–3 qua từ vòng 1, hỏng ở kiểm cả nhà «ban công `balcony_1` chỉ chạm mặt trước ở góc» +
+  «ban công ở mặt bên phải, tầng 3».
+- `b1859741` (4 lời gọi, dừng vì trần 0,5 USD): tầng 4 «đầu bước ra phía mặt tiền chỉ giáp `light_well_4`» + phòng giặt
+  chạm hành lang dưới một cửa.
+
+**Nguyên nhân.**
+1. `4a25b460` tầng 3: mô hình vẽ phòng ngủ 2 ô cạnh ô thang ở hàng 8–14. Thang (≥ 2,4 m theo `minExtent`; mốc tầng dưới
+   thực 3,4 m) + phòng ngủ (≥ 2,7 m) không vừa 5 m. Bản phác hỏng, chương trình CHIA LẠI tầng được, nhưng cách chia nắn ban
+   công mặt tiền (mô hình vẽ trọn hàng đường) thành khối góc bên phải. Lỗi bản phác của tầng ấy không có mã nào (chỉ «không
+   ép được mốc»), nên tầng 3 không nằm trong `droppedBelow`: kiểm cả nhà coi lỗi ban công là lỗi của mô hình, gửi câu
+   `_fitted` («vẽ dài hơn, tránh góc») và «chuyển ban công khỏi mặt phải» — lỗi thật không bao giờ tới.
+2. `b1859741` tầng 4: bản phác có hành lang suốt đầu bước ra của thang; câu «chỉ giáp giếng trời» đến từ một cách chia lại
+   (vòng khung), không phải bản phác. Lỗi thật còn lại là của mô hình (phòng giặt, hành lang chữ L).
+
+**Đã sửa.**
+- `arrange/index.ts`: tầng chia lại được thì `sketchFailure` kèm `sketch_row_too_narrow` (T165) — tầng ấy vào
+  `droppedBelow`, lỗi ban công cả nhà thành hệ quả (T90), câu nhắc nói hàng quá hẹp + `_reshaped`.
+- `plan.ts` (vẽ lại tầng giữ, T86/T97): bản phác vẽ lại từ cách chia của chương trình không được mang thêm lỗi ban công so
+  với bản phác của mô hình — không thì giữ bản phác cũ. Thiếu điều này thì sửa trên làm vòng 2 báo «ban công ở mặt bên phải»
+  như lỗi bản phác.
+- `arrange/index.ts#sketchArrivalOpen`: trên bản phác (đã ép thang về mốc) mọi đầu thang cần giáp lối đi đều giáp phòng đi
+  xuyên được TRỌN đầu ấy → bỏ `stair_arrival_blocked` khỏi câu nhắc khi còn lỗi sửa được khác.
+
+**Đo.** Phát lại 234 vòng (58 lượt), ngữ cảnh Workflow, đối chứng d62e581: 10 / 234 vòng ra mặt bằng ở cả hai. 21 vòng bỏ
+câu đầu thang (bản phác đã có lối đi trọn đầu ấy); `02982bd7` vòng 4–5 đổi mã lỗi theo (dây chuyền vòng sửa); không vòng
+nào thêm lỗi. Phát lại vòng lặp thật: `4a25b460` ba lời gọi đầu y nguyên, lời gọi 4 nay nói «hàng 8–14 đặt "st3", "bd2"
+cạnh nhau … cần 5,1 m, tầng 5 m» và «ban công thành khối góc chỉ vì chương trình chia lại tầng 3»; `b1859741` lời gọi 2–3
+không còn câu giếng trời. Không vòng ghi nào của THU5 qua cổng — chưa lưu phương án phát lại nào (việc 2 của anh Dũng).
+
+Còn mở (chưa làm): ô thang tầng 1 dựng rộng 3,4 m (`phac-dien-tich` thắng nhờ điểm) trong khi thang U chỉ cần 2,4 m — mọi
+tầng trên mất 1 m bề ngang cạnh thang; muốn sửa phải để chọn phương án tầng 1 biết tầng trên.
