@@ -38,7 +38,7 @@ export function TodayFollowups() {
         Chăm sóc khách
       </h2>
       {items.length === 0 ? (
-        <p className="rounded-lg border border-border bg-surface px-4 py-3 text-fg-subtle">
+        <p className="rounded-card bg-surface px-4 py-3 text-fg-subtle">
           Không có khách nào cần liên hệ trong 7 ngày tới.
         </p>
       ) : (
@@ -72,7 +72,7 @@ function Group({
       >
         {title} · {items.length}
       </p>
-      <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+      <ul className="divide-y divide-border overflow-hidden rounded-card bg-surface">
         {items.map((item) => {
           const days = daysUntil(item.due_date) ?? 0;
           return (

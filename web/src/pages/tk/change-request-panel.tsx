@@ -155,7 +155,7 @@ export function ChangeRequestPanel({
           <form
             onSubmit={submit}
             noValidate
-            className="rounded-lg border border-border bg-surface p-4 shadow-card"
+            className="rounded-card bg-surface p-4"
           >
             <p className="mb-4 font-medium">Ghi nhận yêu cầu thay đổi</p>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -272,7 +272,7 @@ export function ChangeRequestPanel({
       ) : (
         <ul className="space-y-3">
           {(requests ?? []).map((r) => (
-            <li key={r.id} className="rounded-lg border border-border bg-surface p-4 shadow-card">
+            <li key={r.id} className="rounded-card bg-surface p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">{r.title}</span>
                 <StatusLozenge

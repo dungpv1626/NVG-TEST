@@ -206,7 +206,7 @@ export function SiteLogPanel({
         <form
           onSubmit={submit}
           noValidate
-          className="rounded-lg border border-border bg-surface p-4 shadow-card"
+          className="rounded-card bg-surface p-4"
         >
           <p className="mb-3 font-medium">Ghi nhật ký hôm nay</p>
 
@@ -319,7 +319,7 @@ export function SiteLogPanel({
       ) : (
         <ol className="space-y-3">
           {(logs ?? []).map((log) => (
-            <li key={log.id} className="rounded-lg border border-border bg-surface p-4 shadow-card">
+            <li key={log.id} className="rounded-card bg-surface p-4">
               <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-subtle">
                 <span className="inline-flex items-center gap-1">
                   <CalendarDays className="size-4 shrink-0" aria-hidden />

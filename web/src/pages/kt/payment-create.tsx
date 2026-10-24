@@ -125,7 +125,7 @@ function PaymentRequestForm({ order }: { order: PurchaseOrderDetailRecord | null
 
       <form
         onSubmit={(e) => void submit(e)}
-        className="max-w-3xl space-y-4 rounded-lg border border-border bg-surface p-4"
+        className="max-w-3xl space-y-4 rounded-card bg-surface p-4"
       >
         {formError && (
           <p role="alert" className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
@@ -134,7 +134,7 @@ function PaymentRequestForm({ order }: { order: PurchaseOrderDetailRecord | null
         )}
 
         {order && (
-          <p className="rounded-lg border border-border bg-surface-sunken px-4 py-3">
+          <p className="rounded-card bg-surface-sunken px-4 py-3">
             Thanh toán cho đơn đặt hàng <span className="font-medium">{order.code}</span> —{' '}
             {order.supplier?.name}, giá trị {formatCurrency(order.total_value)}. Chi phí của đơn đã
             ghi vào công trình lúc nhận hàng, nên khoản chi này không cộng vào chi phí thực tế lần

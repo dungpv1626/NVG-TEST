@@ -294,7 +294,7 @@ export function ShowcaseLibraryPage() {
 
           {selected.length > 0 && (
             <div className="fixed inset-x-0 bottom-16 z-20 flex justify-center px-4 lg:bottom-6">
-              <div className="flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-2 shadow-overlay">
+              <div className="flex items-center gap-3 rounded-card bg-surface px-4 py-2 shadow-overlay">
                 <span>Đã chọn {selected.length} mẫu</span>
                 <Button variant="subtle" size="sm" onClick={() => setSelected([])}>
                   Bỏ chọn
@@ -335,7 +335,7 @@ function SharesTab() {
     );
   }
   return (
-    <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
+    <ul className="divide-y divide-border rounded-card bg-surface">
       {list.map((s) => {
         const expired = new Date(s.expires_at).getTime() <= Date.now();
         const state = s.revoked_at ? 'Đã thu hồi' : expired ? 'Hết hạn' : 'Đang mở';

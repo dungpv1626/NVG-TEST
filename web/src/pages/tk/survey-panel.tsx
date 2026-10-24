@@ -238,7 +238,7 @@ export function SurveyPanel({
                 />
               </li>
             ) : (
-              <li key={s.id} className="rounded-lg border border-border bg-surface p-4 shadow-card">
+              <li key={s.id} className="rounded-card bg-surface p-4">
                 <div className="flex items-start justify-between gap-3">
                   <p className="font-medium">
                     Khảo sát {formatDateTime(s.surveyed_at ?? s.created_at)}
@@ -436,7 +436,7 @@ function SurveyForm({
     <form
       onSubmit={submit}
       noValidate
-      className="rounded-lg border border-border bg-surface p-4 shadow-card"
+      className="rounded-card bg-surface p-4"
     >
       <p className="mb-4 font-medium">{title}</p>
       <div className="grid gap-4 sm:grid-cols-3">

@@ -98,7 +98,7 @@ export function SiteBoardPage() {
           {summary.map((s) => (
             <div
               key={s.label}
-              className="rounded-lg border border-border bg-surface px-3 py-2 shadow-card sm:px-4 sm:py-3"
+              className="rounded-card bg-surface px-3 py-2 shadow-card sm:px-4 sm:py-3"
             >
               <dt className="text-xs text-fg-subtle sm:text-sm">{s.label}</dt>
               <dd

@@ -131,7 +131,7 @@ export function AuditLogPage() {
             {(audit.data ?? []).length === 0 ? (
               <EmptyState message="Chưa có thao tác nào được ghi nhận. Hiện chưa có nghiệp vụ nào ghi vào bảng này — lịch sử sửa đổi đang nằm ở bảng lịch sử riêng của từng loại hồ sơ, xem tab Lịch sử trên màn hình Chi tiết." />
             ) : (
-              <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
+              <div className="overflow-x-auto rounded-card bg-surface">
                 <table className="w-full min-w-[680px] border-collapse">
                   <thead>
                     <tr className="border-b border-border text-left text-xs text-fg-subtle">
@@ -164,7 +164,7 @@ export function AuditLogPage() {
             {(sensitive.data ?? []).length === 0 ? (
               <EmptyState message="Chưa có lượt truy cập dữ liệu nhạy cảm nào được ghi nhận." />
             ) : (
-              <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
+              <div className="overflow-x-auto rounded-card bg-surface">
                 <table className="w-full min-w-[620px] border-collapse">
                   <thead>
                     <tr className="border-b border-border text-left text-xs text-fg-subtle">

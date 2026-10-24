@@ -131,7 +131,7 @@ export function OpportunityCreatePage() {
             { label: 'Tạo mới' },
           ]}
         />
-        <div className="max-w-2xl rounded-lg border border-border bg-surface p-6 shadow-card">
+        <div className="max-w-2xl rounded-card bg-surface p-6">
           <p className="font-medium">Chọn pháp nhân trước khi tạo cơ hội.</p>
           <p className="mt-1 text-fg-subtle">
             Cơ hội thuộc về một pháp nhân cụ thể vì nó dẫn tới hợp đồng của đúng công ty đó. Chọn
@@ -153,7 +153,7 @@ export function OpportunityCreatePage() {
             { label: 'Tạo mới' },
           ]}
         />
-        <div className="max-w-2xl rounded-lg border border-border bg-surface p-6 shadow-card">
+        <div className="max-w-2xl rounded-card bg-surface p-6">
           <p className="font-medium">Vai trò hiện tại không có quyền tạo cơ hội kinh doanh.</p>
           <p className="mt-1 text-fg-subtle">Liên hệ quản lý trực tiếp nếu cần được cấp quyền.</p>
         </div>
@@ -177,7 +177,7 @@ export function OpportunityCreatePage() {
       {noCustomers ? (
         // Nêu rõ việc cần làm trước, thay vì để biểu mẫu có ô chọn rỗng không giải thích
         // (Content Guidelines 4.7).
-        <div className="max-w-2xl rounded-lg border border-border bg-surface p-6 shadow-card">
+        <div className="max-w-2xl rounded-card bg-surface p-6">
           <p className="font-medium">Chưa có khách hàng nào trong hệ thống.</p>
           <p className="mt-1 text-fg-subtle">
             Cơ hội kinh doanh luôn gắn với một khách hàng. Tạo hồ sơ khách hàng trước để không phải
@@ -191,7 +191,7 @@ export function OpportunityCreatePage() {
         <form
           onSubmit={handleSubmit}
           noValidate
-          className="max-w-2xl rounded-lg border border-border bg-surface p-6 shadow-card"
+          className="max-w-2xl rounded-card bg-surface p-6"
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Khách hàng" required className="sm:col-span-2">

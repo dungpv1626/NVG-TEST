@@ -91,7 +91,7 @@ export function ContactLogPanel({
 
 function LogItem({ log }: { log: ContactLogRecord }) {
   return (
-    <li className="rounded-lg border border-border bg-surface p-3">
+    <li className="rounded-card bg-surface p-3">
       <p className="text-xs text-fg-subtle">
         {formatDateTime(log.contacted_at)} · {CONTACT_CHANNEL_LABELS[log.channel]} ·{' '}
         {log.author?.full_name ?? 'Không rõ'}
@@ -171,7 +171,7 @@ function NewLogForm({ subject }: { subject: ContactSubject }) {
     <form
       onSubmit={submit}
       noValidate
-      className="space-y-3 rounded-lg border border-border bg-surface p-4"
+      className="space-y-3 rounded-card bg-surface p-4"
       aria-label="Ghi lần liên hệ"
     >
       <p className="font-semibold">Ghi lần liên hệ</p>

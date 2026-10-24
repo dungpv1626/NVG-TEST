@@ -109,7 +109,7 @@ export function BidDocumentsPanel({
           {(documents ?? []).map((doc) => (
             <li
               key={doc.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface p-3"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-card bg-surface p-3"
             >
               <div className="min-w-0">
                 <p className="font-medium">{doc.name}</p>
@@ -148,7 +148,7 @@ export function BidDocumentsPanel({
       {!readOnly && !submittedAt && (
         <form
           onSubmit={addDocument}
-          className="rounded-lg border border-border bg-surface p-4 shadow-card"
+          className="rounded-card bg-surface p-4"
         >
           <p className="mb-3 font-medium">Thêm đầu mục hồ sơ</p>
           <div className="grid gap-3 sm:grid-cols-3">

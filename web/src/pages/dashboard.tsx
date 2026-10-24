@@ -854,7 +854,7 @@ function QuickActions() {
  */
 function DataCompletenessNote() {
   return (
-    <section className="mt-6 flex items-start gap-3.5 rounded-lg border border-border bg-surface p-4">
+    <section className="mt-6 flex items-start gap-3.5 rounded-card bg-surface p-4">
       <span className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-brand-subtle text-brand-forest">
         <Info className="size-4" aria-hidden />
       </span>

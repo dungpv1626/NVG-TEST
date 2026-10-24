@@ -296,7 +296,7 @@ export function ShowcaseDetailPage() {
           </div>
         )}
 
-        <aside className="space-y-3 rounded-lg border border-border bg-surface p-4">
+        <aside className="space-y-3 rounded-card bg-surface p-4">
           <dl className="space-y-2">
             {item.sample_code && <Row label="Mã mẫu" value={item.sample_code} />}
             <Row label="Thông số" value={specLine(item)} />

@@ -30,7 +30,7 @@ export function KpiCard({
   return (
     <div
       className={cn(
-        'flex min-h-40 flex-col gap-3 rounded-lg border border-border bg-surface p-4',
+        'flex min-h-40 flex-col gap-3 rounded-card bg-surface p-5',
         className,
       )}
     >

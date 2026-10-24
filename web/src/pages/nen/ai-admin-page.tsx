@@ -148,7 +148,7 @@ export function AiAdminPage() {
       />
       <NenNav />
 
-      <section className="mb-6 rounded-lg border border-border bg-surface p-4 shadow-card">
+      <section className="mb-6 rounded-card bg-surface p-4">
         <h2 className="font-semibold">Chức năng</h2>
         <p className="mt-1 text-fg-subtle">
           Máy chỉ viết nháp — người phụ trách sửa, Ban Giám đốc duyệt. Bật chạy thật chỉ khi chủ dự
@@ -214,7 +214,7 @@ export function AiAdminPage() {
         </ConfirmDialog>
       )}
 
-      <section className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
+      <section className="overflow-x-auto rounded-card bg-surface">
         <h2 className="px-4 pt-4 font-semibold">Số lượt và chi phí 6 tháng gần nhất</h2>
         {calls.isLoading ? (
           <TableSkeleton rows={3} columns={6} />

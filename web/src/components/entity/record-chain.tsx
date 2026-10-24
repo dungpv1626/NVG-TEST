@@ -7,9 +7,7 @@
  * trả hồ sơ người dùng được xem; chuỗi chỉ có một mắt xích (chính hồ sơ này) thì không vẽ.
  */
 
-import { Fragment } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
 import {
   BIDDING_STAGE_META,
   CONTRACT_STAGE_META,
@@ -19,6 +17,7 @@ import {
 } from '@nvg/shared';
 import { useRecordChain, type ChainKind, type ChainRecord } from '@/hooks/use-record-chain';
 import { cn } from '@/lib/utils';
+import { DetailAside } from './detail-aside';
 
 const KIND: Record<
   ChainKind,
@@ -37,22 +36,28 @@ export function RecordChain({ kind, id }: { kind: ChainKind; id: string }) {
   if (chain.length < 2) return null;
 
   return (
-    <nav aria-label="Chuỗi hồ sơ" className="mb-4 lg:mb-6">
-      <ol className="flex flex-wrap items-stretch gap-1.5 text-sm">
-        {chain.map((r, i) => (
-          <Fragment key={`${r.kind}-${r.id}`}>
-            {i > 0 && (
-              <li aria-hidden className="flex items-center text-fg-subtle">
-                <ChevronRight className="size-4" />
-              </li>
-            )}
-            <li>
+    // v2: thẻ «Chuỗi hồ sơ» dọc, mỗi hồ sơ một chấm trên đường nối; sang cột phải trang chi tiết.
+    <DetailAside place="chain">
+      <nav aria-label="Chuỗi hồ sơ" className="mb-4 rounded-card bg-surface p-4 lg:mb-5 xl:mb-0">
+        <h2 className="mb-2 text-xs font-semibold text-ink-subtle">Chuỗi hồ sơ</h2>
+        <ol className="relative space-y-2 before:absolute before:top-2 before:bottom-2 before:left-[5px] before:w-px before:bg-border">
+          {chain.map((r) => (
+            <li key={`${r.kind}-${r.id}`} className="relative flex gap-3">
+              <span
+                aria-hidden
+                className={cn(
+                  'relative mt-1.5 size-[11px] shrink-0 rounded-full border-2',
+                  r.kind === kind && r.id === id
+                    ? 'border-shell bg-shell'
+                    : 'border-brand bg-surface',
+                )}
+              />
               <ChainLink record={r} current={r.kind === kind && r.id === id} />
             </li>
-          </Fragment>
-        ))}
-      </ol>
-    </nav>
+          ))}
+        </ol>
+      </nav>
+    </DetailAside>
   );
 }
 
@@ -61,15 +66,15 @@ function ChainLink({ record, current }: { record: ChainRecord; current: boolean 
   const stage = meta.stages[record.stage]?.label ?? record.stage;
   const body = (
     <>
-      <span className="block text-xs text-fg-subtle">{meta.label}</span>
-      <span className="block font-mono text-xs">{record.code}</span>
-      <span className="block text-xs">{stage}</span>
+      <span className="block text-xs text-ink-subtle">
+        {meta.label} · <span className="font-mono">{record.code}</span>
+      </span>
+      <span className="block text-xs">{current ? `${stage} — đang xem` : stage}</span>
     </>
   );
-  const box = 'block rounded-sm border px-2.5 py-1.5';
   if (current) {
     return (
-      <span aria-current="page" className={cn(box, 'border-brand bg-brand-subtle')}>
+      <span aria-current="page" className="block min-w-0 font-semibold">
         {body}
       </span>
     );
@@ -78,7 +83,7 @@ function ChainLink({ record, current }: { record: ChainRecord; current: boolean 
     <Link
       to={`${meta.route}/${record.id}`}
       title={record.title}
-      className={cn(box, 'border-border bg-surface hover:bg-surface-hover')}
+      className="block min-w-0 rounded-sm text-brand hover:underline"
     >
       {body}
     </Link>

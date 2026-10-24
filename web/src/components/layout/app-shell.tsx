@@ -69,13 +69,14 @@ export function PageHeader({
             className={cn(
               'text-pretty',
               size === 'hero'
-                ? 'text-(length:--text-page-title) leading-(--text-page-title--line-height) font-extrabold tracking-tight'
-                : 'text-xl font-semibold',
+                ? 'text-title font-extrabold'
+                : // v2: tiêu đề trang 28/700, chữ hơi khít (DESIGN_SYSTEM.md §8).
+                  'text-title font-bold',
             )}
           >
             {title}
           </h1>
-          {description && <p className="mt-1 text-fg-subtle">{description}</p>}
+          {description && <p className="mt-1 text-ink-subtle">{description}</p>}
         </div>
         {(actions || help) && (
           <div className="flex flex-wrap items-center gap-2 sm:shrink-0">

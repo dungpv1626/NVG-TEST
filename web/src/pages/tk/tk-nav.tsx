@@ -15,17 +15,17 @@ const ITEMS = [
 
 export function TkNav() {
   return (
-    <nav className="mb-4 flex gap-1 border-b border-border" aria-label="Màn hình trong phân hệ">
+    <nav className="mb-4 flex gap-1.5 overflow-x-auto" aria-label="Màn hình trong phân hệ">
       {ITEMS.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
           className={({ isActive }) =>
             cn(
-              '-mb-px whitespace-nowrap border-b-2 px-3 py-2',
+              'flex h-8 shrink-0 whitespace-nowrap items-center rounded-full px-3.5',
               isActive
-                ? 'border-brand font-semibold text-brand'
-                : 'border-transparent text-fg-subtle hover:text-fg',
+                ? 'bg-shell font-semibold text-fg-inverse'
+                : 'text-ink-subtle hover:bg-pill hover:text-ink',
             )
           }
         >

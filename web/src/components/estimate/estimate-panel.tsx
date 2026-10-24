@@ -145,7 +145,7 @@ export function EstimatePanel({
         </p>
       )}
 
-      <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
+      <div className="rounded-card bg-surface p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -225,7 +225,7 @@ export function EstimatePanel({
       </div>
 
       {/* Cấu thành giá vốn — Mẫu D. Không hiện cho tới khi người dùng chủ động mở. */}
-      <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
+      <div className="rounded-card bg-surface p-4">
         {!showCosts ? (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -333,7 +333,7 @@ export function EstimatePanel({
       </div>
 
       {(estimates ?? []).length > 1 && (
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
+        <div className="rounded-card bg-surface p-4">
           <p className="mb-2 font-medium">Các phiên bản trước</p>
           <ul className="space-y-1">
             {(estimates ?? [])

@@ -149,7 +149,7 @@ export function AccountingPeriodPage() {
       {canCreate && !scope.isAggregate && (
         <form
           onSubmit={(e) => void submit(e)}
-          className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface p-4"
+          className="mb-4 flex flex-wrap items-end gap-3 rounded-card bg-surface p-4"
         >
           <Field label="Mở kỳ mới" hint="Dạng năm-tháng, ví dụ 2026-08.">
             <Input name="period_code" required placeholder="2026-08" maxLength={7} />
@@ -174,7 +174,7 @@ export function AccountingPeriodPage() {
           return (
             <li
               key={period.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-3"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-card bg-surface px-4 py-3"
             >
               <div>
                 <p className="flex items-center gap-2 font-medium">

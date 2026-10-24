@@ -214,7 +214,7 @@ export function RequestItemPanel({
           {isFormOpen && (
             <form
               onSubmit={(e) => void submit(e)}
-              className="space-y-4 rounded-lg border border-border bg-surface-sunken p-4"
+              className="space-y-4 rounded-card bg-surface-sunken p-4"
             >
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Field label="Mã vật tư" hint="Dùng chung bộ mã với đơn giá dự toán và kho.">

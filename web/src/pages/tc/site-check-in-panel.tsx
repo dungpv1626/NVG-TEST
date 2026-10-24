@@ -154,7 +154,7 @@ export function SiteCheckInPanel({
       )}
 
       {!readOnly && !draft && (
-        <div className="rounded-lg border border-border bg-surface p-4">
+        <div className="rounded-card bg-surface p-4">
           <Button
             type="button"
             variant="primary"
@@ -173,7 +173,7 @@ export function SiteCheckInPanel({
       )}
 
       {!readOnly && draft && (
-        <div className="space-y-3 rounded-lg border border-border bg-surface p-4">
+        <div className="space-y-3 rounded-card bg-surface p-4">
           <img
             src={draft.previewUrl}
             alt="Ảnh điểm danh vừa chụp"
@@ -282,7 +282,7 @@ function CheckInList({ checkIns }: { checkIns: SiteCheckIn[] }) {
               return (
                 <li
                   key={c.id}
-                  className="flex gap-3 rounded-lg border border-border bg-surface p-3"
+                  className="flex gap-3 rounded-card bg-surface p-3"
                 >
                   {url ? (
                     <a href={url} target="_blank" rel="noreferrer" className="shrink-0">

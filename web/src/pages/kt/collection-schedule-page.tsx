@@ -143,7 +143,7 @@ export function CollectionSchedulePage() {
           {rows.map((r) => (
             <li
               key={r.term_id}
-              className="rounded-lg border border-border bg-surface p-4 shadow-card"
+              className="rounded-card bg-surface p-4"
             >
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <p className="font-medium">{r.description}</p>

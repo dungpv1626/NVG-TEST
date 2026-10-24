@@ -153,7 +153,7 @@ export function ParameterPage() {
       )}
 
       {!isLoading && !error && (data ?? []).length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
+        <div className="overflow-x-auto rounded-card bg-surface">
           <table className="w-full min-w-[720px] border-collapse">
             <thead>
               <tr className="border-b border-border text-left text-xs text-fg-subtle">
@@ -224,7 +224,7 @@ export function ParameterPage() {
         <form
           ref={editFormRef}
           onSubmit={submit}
-          className="mt-4 rounded-lg border border-border bg-surface p-4 shadow-card"
+          className="mt-4 rounded-card bg-surface p-4"
         >
           <h2 className="font-semibold">{editing.label}</h2>
           <p className="mt-1 text-fg-subtle">

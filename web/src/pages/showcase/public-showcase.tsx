@@ -86,7 +86,7 @@ export function PublicShowcasePage() {
         {!data ? (
           <p className="text-fg-subtle">Đang mở bộ mẫu…</p>
         ) : data.status !== 'ok' ? (
-          <div className="rounded-lg border border-border bg-surface p-6 text-center">
+          <div className="rounded-card bg-surface p-6 text-center">
             <p className="text-lg font-semibold">
               {data.status === 'expired'
                 ? 'Link xem mẫu đã hết hạn'
@@ -134,7 +134,7 @@ function PublicItemCard({ item }: { item: PublicItem }) {
   const [active, setActive] = useState<string | undefined>(first?.id);
   const shown = item.media.find((m) => m.id === active) ?? first;
   return (
-    <li className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
+    <li className="overflow-hidden rounded-card bg-surface">
       <CoverImage
         src={shown?.url ?? undefined}
         alt={shown?.caption ?? item.title}

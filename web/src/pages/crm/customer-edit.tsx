@@ -190,7 +190,7 @@ export function CustomerEditPage() {
       <form
         onSubmit={handleSubmit}
         noValidate
-        className="max-w-2xl rounded-lg border border-border bg-surface p-6 shadow-card"
+        className="max-w-2xl rounded-card bg-surface p-6"
       >
         {/* Mã hồ sơ hiển thị để đối chiếu, KHÔNG cho sửa — nó là căn cứ truy ngược của mọi
             hồ sơ liên quan (Backend Schema 2.3). */}

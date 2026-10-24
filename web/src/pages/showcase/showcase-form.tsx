@@ -136,7 +136,7 @@ function ShowcaseForm({ item }: { item: ShowcaseItem | null }) {
       <form
         onSubmit={(e) => void submit(e)}
         noValidate
-        className="max-w-3xl rounded-lg border border-border bg-surface p-6 shadow-card"
+        className="max-w-3xl rounded-card bg-surface p-6"
       >
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Tên mẫu" required className="sm:col-span-2">

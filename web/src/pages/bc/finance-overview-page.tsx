@@ -106,7 +106,7 @@ function CompanyBreakdown({
     .filter((r) => r.t.activeDays > 0);
   if (rows.length === 0) return null;
   return (
-    <section aria-label="Theo pháp nhân" className="rounded-lg border border-border bg-surface p-4">
+    <section aria-label="Theo pháp nhân" className="rounded-card bg-surface p-4">
       <h2 className="text-md font-bold">Theo pháp nhân</h2>
       <p className="mt-0.5 text-xs text-fg-subtle">Trong kỳ đang chọn.</p>
       <div className="mt-3 overflow-x-auto">

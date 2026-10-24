@@ -160,7 +160,7 @@ export function StockMovementPage() {
       {isFormOpen && canEdit && (
         <form
           onSubmit={(e) => void submit(e)}
-          className="mb-4 space-y-4 rounded-lg border border-border bg-surface p-4"
+          className="mb-4 space-y-4 rounded-card bg-surface p-4"
         >
           {formError && (
             <p
@@ -350,7 +350,7 @@ export function StockMovementPage() {
       ) : (
         <ul className="space-y-2">
           {(movements ?? []).map((m) => (
-            <li key={m.id} className="rounded-lg border border-border bg-surface px-4 py-3">
+            <li key={m.id} className="rounded-card bg-surface px-4 py-3">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="font-medium">
                   {STOCK_MOVEMENT_TYPE_LABELS[m.movement_type]} · {m.code ?? EM_DASH}

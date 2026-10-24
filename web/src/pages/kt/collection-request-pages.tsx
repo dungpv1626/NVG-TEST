@@ -133,7 +133,7 @@ export function CollectionRequestListPage() {
       ) : (
         <ul className="space-y-3">
           {rows.map((r) => (
-            <li key={r.id} className="rounded-lg border border-border bg-surface p-4 shadow-card">
+            <li key={r.id} className="rounded-card bg-surface p-4">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <Link
                   to={`/kt/de-nghi-thu/${r.id}`}
@@ -354,7 +354,7 @@ export function CollectionRequestDetailPage() {
         </p>
       )}
 
-      <section className="mb-4 grid gap-4 rounded-lg border border-border bg-surface p-4 sm:grid-cols-2">
+      <section className="mb-4 grid gap-4 rounded-card bg-surface p-4 sm:grid-cols-2">
         <p className="sm:col-span-2 text-sm text-fg-subtle">
           {r.contract && (
             <>
@@ -437,7 +437,7 @@ export function CollectionRequestDetailPage() {
         </div>
       </section>
 
-      <section className="mb-4 rounded-lg border border-border bg-surface p-4">
+      <section className="mb-4 rounded-card bg-surface p-4">
         <p className="font-medium">Bản đã ký / đóng dấu</p>
         <p className="mt-1 text-sm text-fg-subtle">
           In đề nghị, ký đóng dấu, gửi chủ đầu tư; quét bản giấy để lưu cùng hồ sơ.

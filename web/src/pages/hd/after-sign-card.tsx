@@ -270,7 +270,7 @@ export function AfterSignCard({
   });
 
   return (
-    <section id="sau-khi-ky" className="mb-4 rounded-lg border border-border bg-surface p-4">
+    <section id="sau-khi-ky" className="mb-4 rounded-card bg-surface p-4">
       <p className="font-medium">Sau khi ký — việc còn lại</p>
       {isResponsible && (
         <p className="mt-1 text-sm text-fg-subtle">

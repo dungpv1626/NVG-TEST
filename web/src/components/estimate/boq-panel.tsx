@@ -104,7 +104,7 @@ export function BoqPanel({
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <div className="overflow-x-auto rounded-card bg-surface">
           <table className="w-full min-w-[640px] border-collapse text-left">
             <thead>
               <tr className="border-b border-border text-fg-subtle">
@@ -145,7 +145,7 @@ export function BoqPanel({
       {!readOnly && (
         <form
           onSubmit={addItem}
-          className="rounded-lg border border-border bg-surface p-4 shadow-card"
+          className="rounded-card bg-surface p-4"
         >
           <p className="mb-3 font-medium">Thêm hạng mục</p>
           <div className="grid gap-3 sm:grid-cols-5">

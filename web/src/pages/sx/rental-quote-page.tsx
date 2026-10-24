@@ -153,7 +153,7 @@ export function RentalQuotePage() {
             </Field>
           </div>
 
-          <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
+          <ul className="divide-y divide-border rounded-card bg-surface">
             {(stock ?? []).map((s) => {
               const line = quote.lines.find((l) => l.materialId === s.material_id);
               const rate = rates?.[s.material_id] ?? null;
@@ -206,7 +206,7 @@ export function RentalQuotePage() {
             })}
           </ul>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface-sunken p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-card bg-surface-sunken p-3">
             <p className="font-medium">
               Tổng tiền thuê:{' '}
               {quote.total === null ? (

@@ -474,7 +474,7 @@ export function ContractDetailPage() {
 
                 {/* HD-03: giá trị, phát sinh, đã thu, còn phải thu — bốn con số phải nằm
                     cạnh nhau, vì câu hỏi thường gặp nhất là "còn phải thu bao nhiêu". */}
-                <section className="mt-4 rounded-lg border border-border bg-surface-sunken p-4">
+                <section className="mt-4 rounded-card bg-surface-sunken p-4">
                   <p className="mb-3 font-medium">Giá trị và công nợ</p>
                   <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-4">
                     <div>

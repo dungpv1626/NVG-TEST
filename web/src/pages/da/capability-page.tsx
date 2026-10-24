@@ -70,7 +70,7 @@ export function CapabilityPage() {
             {(experience ?? []).length === 0 ? (
               <EmptyState message="Chưa có hợp đồng đã ký hay công trình mẫu đã xác nhận." />
             ) : (
-              <ul className="mt-2 divide-y divide-border rounded-lg border border-border bg-surface">
+              <ul className="mt-2 divide-y divide-border rounded-card bg-surface">
                 {(experience ?? []).map((x) => (
                   <li key={`${x.source}-${x.source_id}`} className="p-3 text-sm">
                     <p className="font-medium">{x.title}</p>
@@ -95,7 +95,7 @@ export function CapabilityPage() {
             {(people ?? []).length === 0 ? (
               <EmptyState message="Chưa có nhân sự nào có chứng chỉ hành nghề trong hồ sơ Nhân sự." />
             ) : (
-              <ul className="mt-2 divide-y divide-border rounded-lg border border-border bg-surface">
+              <ul className="mt-2 divide-y divide-border rounded-card bg-surface">
                 {(people ?? []).map((p, i) => (
                   <li key={`${p.employee_id}-${i}`} className="p-3 text-sm">
                     <div className="flex flex-wrap justify-between gap-2">

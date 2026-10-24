@@ -94,7 +94,7 @@ export function CashForecastPage() {
         <ErrorState message={toUserMessage(error)} onRetry={() => void refetch()} />
       ) : forecast ? (
         <>
-          <section className="mb-4 rounded-lg border border-border bg-surface p-4">
+          <section className="mb-4 rounded-card bg-surface p-4">
             {forecast.openingToday !== null ? (
               <p>
                 Số dư ước tính hôm nay:{' '}

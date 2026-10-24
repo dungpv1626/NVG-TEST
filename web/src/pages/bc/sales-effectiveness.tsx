@@ -248,7 +248,7 @@ function SourceSection({ rows }: { rows: ReturnType<typeof summarizeOpportunitie
     );
   }
   return (
-    <section className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
+    <section className="overflow-x-auto rounded-card bg-surface">
       <table className="w-full min-w-[40rem] border-collapse">
         <caption className="sr-only">Cơ hội gộp theo nguồn khách</caption>
         <thead>
@@ -315,7 +315,7 @@ function LeadFunnelSection({ rows }: { rows: LeadFunnelRow[] }) {
   const list = [...bySource.values()].sort((a, b) => b.lead_count - a.lead_count);
   if (list.length === 0) return null;
   return (
-    <section className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
+    <section className="overflow-x-auto rounded-card bg-surface">
       <h2 className="px-3 pt-3 font-semibold">Phễu từ đầu mối</h2>
       <table className="w-full min-w-[40rem] border-collapse">
         <caption className="sr-only">
@@ -367,7 +367,7 @@ function LeadFunnelSection({ rows }: { rows: LeadFunnelRow[] }) {
 function FunnelSection({ rows }: { rows: ReturnType<typeof summarizeOpportunityFunnel> }) {
   const max = Math.max(1, ...rows.map((r) => r.count));
   return (
-    <section className="rounded-lg border border-border bg-surface p-4 shadow-card">
+    <section className="rounded-card bg-surface p-4">
       <h2 className="mb-3 font-medium">Phễu bán hàng — theo giai đoạn hiện tại</h2>
       <p className="mb-4 text-xs text-fg-subtle">
         Đếm theo giai đoạn cơ hội đang đứng hôm nay, không phải tỷ lệ chuyển đổi luỹ tiến qua lịch
@@ -399,7 +399,7 @@ function BiddingSection({ summary }: { summary: ReturnType<typeof summarizeBiddi
     );
   }
   return (
-    <section className="rounded-lg border border-border bg-surface p-4 shadow-card">
+    <section className="rounded-card bg-surface p-4">
       <h2 className="mb-3 font-medium">Tỷ lệ trúng thầu và nguyên nhân trượt thầu</h2>
       <dl className="mb-4 grid gap-x-8 gap-y-3 sm:grid-cols-3">
         <div>
@@ -477,7 +477,7 @@ function CompanyBreakdownSection({ rows }: { rows: CompanyBreakdownRow[] }) {
   if (rows.every((r) => r.total === 0 && r.bidding.won + r.bidding.lost === 0)) return null;
 
   return (
-    <section className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
+    <section className="overflow-x-auto rounded-card bg-surface">
       <h2 className="border-b border-border px-3 py-2.5 font-medium">Theo pháp nhân</h2>
       <table className="w-full min-w-[36rem] border-collapse">
         <caption className="sr-only">Hiệu quả kinh doanh gộp theo pháp nhân</caption>

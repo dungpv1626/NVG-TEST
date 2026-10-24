@@ -188,7 +188,7 @@ export function ComplaintDetailPage() {
                   ]}
                 />
 
-                <div className="rounded-lg border border-border bg-surface-sunken p-3">
+                <div className="rounded-card bg-surface-sunken p-3">
                   <p className="mb-1 font-medium">Nội dung khách phản ánh</p>
                   <p className="whitespace-pre-wrap">{complaint.content}</p>
                 </div>

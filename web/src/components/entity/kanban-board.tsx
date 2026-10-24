@@ -91,8 +91,8 @@ export function KanbanBoard({
         {columns.map((c) => (
           <div key={c.id} className="w-64 shrink-0 space-y-2">
             <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-24 rounded-lg" />
-            <Skeleton className="h-24 rounded-lg" />
+            <Skeleton className="h-24 rounded-kanban" />
+            <Skeleton className="h-24 rounded-kanban" />
           </div>
         ))}
       </div>
@@ -103,7 +103,7 @@ export function KanbanBoard({
 
   if (list.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-surface">
+      <div className="rounded-card bg-surface">
         <EmptyState message={emptyMessage} action={emptyAction} />
       </div>
     );
@@ -154,11 +154,12 @@ export function KanbanBoard({
             onDragLeave={() => setDropTarget((t) => (t === column.id ? null : t))}
             onDrop={(e) => void handleDrop(e, column.id)}
             className={cn(
-              'w-64 shrink-0 rounded-lg border p-2',
+              // v2 (`NvgBoard`): cột 196–256px nền `board-col` bo 18, thẻ trắng bo 14.
+              'w-64 shrink-0 rounded-card border p-2.5',
               'transition-colors duration-(--motion-fast) ease-(--ease-out)',
               dropTarget === column.id
-                ? 'border-brand border-dashed bg-brand-subtle'
-                : 'border-border bg-surface-sunken',
+                ? 'border-shell border-dashed bg-pill'
+                : 'border-transparent bg-board-col',
               blockedReason && 'opacity-50',
             )}
           >
@@ -193,16 +194,16 @@ export function KanbanBoard({
                     }}
                     onDragEnd={() => setDraggingId(null)}
                     className={cn(
-                      'rounded-lg border border-border bg-surface p-2.5 shadow-raised',
+                      'rounded-kanban bg-surface p-3',
                       'transition-[box-shadow,opacity] duration-(--motion-fast) ease-(--ease-out)',
-                      'hover:shadow-card',
+                      'hover:ring-1 hover:ring-border-strong',
                       canMove && !column.isTerminal && 'cursor-grab active:cursor-grabbing',
                       // Thẻ đang kéo mờ đi để thấy rõ cột nào là đích thả bên dưới.
                       draggingId === card.id && 'opacity-50',
                     )}
                   >
                     <Link to={card.detailPath} className="block">
-                      <span className="line-clamp-2 font-medium text-fg underline-offset-2 hover:text-brand hover:underline">
+                      <span className="line-clamp-2 font-semibold text-ink underline-offset-2 hover:underline">
                         {card.title}
                       </span>
                     </Link>

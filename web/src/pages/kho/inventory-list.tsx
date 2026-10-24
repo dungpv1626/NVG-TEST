@@ -176,7 +176,7 @@ export function InventoryListPage() {
           {/* Điện thoại (Kho đứng ở kho): mỗi dòng tồn một thẻ, ô đặt mức ngay trong thẻ. */}
           <ul className="space-y-2 sm:hidden">
             {rows.map(({ row, alerts }) => (
-              <li key={row.id} className="rounded-lg border border-border bg-surface px-3 py-2">
+              <li key={row.id} className="rounded-card bg-surface px-3 py-2">
                 <div className="flex items-start justify-between gap-2">
                   <span className="min-w-0">
                     <span className="block font-medium">{row.material?.name ?? EM_DASH}</span>
@@ -202,7 +202,7 @@ export function InventoryListPage() {
             ))}
           </ul>
 
-          <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface sm:block">
+          <div className="hidden overflow-x-auto rounded-card bg-surface sm:block">
             <table className="w-full min-w-[52rem] text-left">
               <thead className="border-b border-border text-fg-subtle">
                 <tr>

@@ -7,7 +7,7 @@
  * thay vì chép chuỗi lớp.
  */
 export const FIELD_BOX =
-  'h-10 rounded-sm border border-border-strong bg-surface px-3 text-fg hover:border-fg-subtle disabled:cursor-not-allowed disabled:opacity-60';
+  'h-11 rounded-field border border-border-strong bg-surface px-3 text-fg hover:border-fg-subtle disabled:cursor-not-allowed disabled:opacity-60';
 
 export const TEXTAREA_BOX =
-  'w-full rounded-sm border border-border-strong bg-surface px-3 py-2 text-fg placeholder:text-fg-subtle hover:border-fg-subtle';
+  'w-full rounded-field border border-border-strong bg-surface px-3 py-2 text-fg placeholder:text-fg-subtle hover:border-fg-subtle';

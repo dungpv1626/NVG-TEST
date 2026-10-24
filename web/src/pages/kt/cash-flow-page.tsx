@@ -122,7 +122,7 @@ export function CashFlowPage() {
       {isFormOpen && (
         <form
           onSubmit={(e) => void submitPlan(e)}
-          className="mb-4 grid gap-4 rounded-lg border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-3"
+          className="mb-4 grid gap-4 rounded-card bg-surface p-4 sm:grid-cols-2 lg:grid-cols-3"
         >
           <Field label="Kỳ kế hoạch" required>
             <select
@@ -182,7 +182,7 @@ export function CashFlowPage() {
           return (
             <section
               key={row.company_id}
-              className="mb-4 rounded-lg border border-border bg-surface p-4"
+              className="mb-4 rounded-card bg-surface p-4"
             >
               <h2 className="mb-3 font-semibold">
                 {row.company_name} ({row.company_code})
@@ -221,7 +221,7 @@ export function CashFlowPage() {
         })}
 
       {(plans ?? []).length > 0 && (
-        <section className="rounded-lg border border-border bg-surface p-4">
+        <section className="rounded-card bg-surface p-4">
           <h2 className="mb-3 font-semibold">Kế hoạch đã lập</h2>
           <ul className="space-y-2">
             {(plans ?? []).map((plan) => (

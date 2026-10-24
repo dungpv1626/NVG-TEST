@@ -31,7 +31,7 @@ function niceGridStep(maxDimM: number): number {
 
 function Frame({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn('rounded-lg border border-border bg-surface p-3', className)}>
+    <div className={cn('rounded-card bg-surface p-3', className)}>
       <p className="mb-2 font-semibold">Phác họa thửa đất</p>
       {children}
     </div>

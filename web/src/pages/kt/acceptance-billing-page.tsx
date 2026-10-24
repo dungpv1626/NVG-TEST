@@ -107,7 +107,7 @@ export function AcceptanceBillingPage() {
       ) : (
         <ul className="space-y-3">
           {rows.map((r) => (
-            <li key={r.id} className="rounded-lg border border-border bg-surface p-4 shadow-card">
+            <li key={r.id} className="rounded-card bg-surface p-4">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <p className="font-medium">{r.stage_name}</p>
                 {/* Hướng tiền bằng chữ, không bằng màu trạng thái (CGD 6.8, 6 màu chỉ cho trạng thái). */}

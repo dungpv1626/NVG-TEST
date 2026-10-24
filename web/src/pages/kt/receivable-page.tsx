@@ -199,7 +199,7 @@ export function ReceivablePage() {
       */}
       <div className="mb-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
         {aging.rows.map((row) => (
-          <div key={row.code} className="rounded-lg border border-border bg-surface px-3 py-2">
+          <div key={row.code} className="rounded-card bg-surface px-3 py-2">
             <p className="text-fg-subtle">{row.label}</p>
             <p className="tabular-nums font-semibold">{formatCurrency(row.total)}</p>
             <p className="text-fg-subtle">
@@ -212,7 +212,7 @@ export function ReceivablePage() {
       {isFormOpen && (
         <form
           onSubmit={(e) => void submitNew(e)}
-          className="mb-4 grid gap-4 rounded-lg border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-3"
+          className="mb-4 grid gap-4 rounded-card bg-surface p-4 sm:grid-cols-2 lg:grid-cols-3"
         >
           <Field label="Diễn giải" required className="lg:col-span-3">
             <Input
@@ -261,7 +261,7 @@ export function ReceivablePage() {
       {settleFor && (
         <form
           onSubmit={(e) => void submitSettlement(e)}
-          className="mb-4 grid gap-4 rounded-lg border border-border bg-surface p-4 sm:grid-cols-4"
+          className="mb-4 grid gap-4 rounded-card bg-surface p-4 sm:grid-cols-4"
         >
           <Field label={direction === 'phai_thu' ? 'Ngày thu' : 'Ngày trả'} required>
             <DateInput name="settled_date" required />

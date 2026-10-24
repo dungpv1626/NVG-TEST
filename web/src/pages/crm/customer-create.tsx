@@ -125,7 +125,7 @@ export function CustomerCreatePage() {
       <form
         onSubmit={handleSubmit}
         noValidate
-        className="max-w-2xl rounded-lg border border-border bg-surface p-6 shadow-card"
+        className="max-w-2xl rounded-card bg-surface p-6"
       >
         <CustomerFields value={form} onChange={update} />
 

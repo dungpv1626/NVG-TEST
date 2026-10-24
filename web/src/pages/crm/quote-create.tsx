@@ -140,7 +140,7 @@ export function QuoteCreatePage() {
     return (
       <>
         <PageHeader title="Lập báo giá" breadcrumbs={breadcrumbs} />
-        <div className="max-w-2xl rounded-lg border border-border bg-surface p-6 shadow-card">
+        <div className="max-w-2xl rounded-card bg-surface p-6">
           <p className="font-medium">{blockedReason}</p>
           <p className="mt-1 text-fg-subtle">
             Liên hệ người chịu trách nhiệm cơ hội nếu cần bổ sung báo giá.
@@ -160,7 +160,7 @@ export function QuoteCreatePage() {
       <form
         onSubmit={handleSubmit}
         noValidate
-        className="max-w-2xl rounded-lg border border-border bg-surface p-6 shadow-card"
+        className="max-w-2xl rounded-card bg-surface p-6"
       >
         {nextVersion > 1 && (
           <p className="mb-4 rounded-sm bg-surface-sunken px-3 py-2 text-fg-subtle">

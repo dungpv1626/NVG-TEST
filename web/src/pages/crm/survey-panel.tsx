@@ -329,7 +329,7 @@ function SurveyCard({
   const siteForm = surveySiteForm(companyCode);
 
   return (
-    <li className="rounded-lg border border-border bg-surface p-4">
+    <li className="rounded-card bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2">
           {done ? (

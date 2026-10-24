@@ -49,7 +49,7 @@ export function DraftSitePhotos({ itemId, mediaCount }: { itemId: string; mediaC
   }
 
   return (
-    <section className="space-y-3 rounded-lg border border-border bg-surface p-4">
+    <section className="space-y-3 rounded-card bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold">Ảnh từ công trình</h2>
         <Button

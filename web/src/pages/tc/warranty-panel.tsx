@@ -111,7 +111,7 @@ export function WarrantyPanel({
         <form
           onSubmit={addItem}
           noValidate
-          className="rounded-lg border border-border bg-surface p-4 shadow-card"
+          className="rounded-card bg-surface p-4"
         >
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Hạng mục" required>
@@ -164,7 +164,7 @@ export function WarrantyPanel({
             const itemClaims = (claims ?? []).filter((c) => c.warranty_id === w.id);
 
             return (
-              <li key={w.id} className="rounded-lg border border-border bg-surface p-4 shadow-card">
+              <li key={w.id} className="rounded-card bg-surface p-4">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <p className="font-medium">{w.item}</p>
                   <StatusLozenge status={WARRANTY_STATUS_META[w.status].statusGroup} />

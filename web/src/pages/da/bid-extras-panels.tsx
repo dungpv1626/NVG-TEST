@@ -91,7 +91,7 @@ export function BidCapabilityPanel({
         {(linked ?? []).length === 0 ? (
           <EmptyState message="Chưa gắn giấy tờ năng lực nào. Chọn ở danh sách bên dưới." />
         ) : (
-          <ul className="mt-2 divide-y divide-border rounded-lg border border-border bg-surface">
+          <ul className="mt-2 divide-y divide-border rounded-card bg-surface">
             {(linked ?? []).map((l) => (
               <li key={l.link_id} className="flex flex-wrap items-center justify-between gap-2 p-3">
                 <div>
@@ -146,7 +146,7 @@ export function BidCapabilityPanel({
           {available.length === 0 ? (
             <EmptyState message="Kho không còn giấy tờ nào chưa gắn. Thêm ở trang Hồ sơ năng lực." />
           ) : (
-            <ul className="mt-2 divide-y divide-border rounded-lg border border-border bg-surface">
+            <ul className="mt-2 divide-y divide-border rounded-card bg-surface">
               {available.map((d) => (
                 <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
                   <div>
@@ -227,7 +227,7 @@ export function BidClarificationPanel({
               const overdue =
                 !r.answer && r.due_date !== null && r.due_date < toNvgDateInput(new Date());
               return (
-                <li key={r.id} className="rounded-lg border border-border bg-surface p-3">
+                <li key={r.id} className="rounded-card bg-surface p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-medium">
                       Vòng {r.round_no} —{' '}
@@ -294,7 +294,7 @@ export function BidClarificationPanel({
         )}
 
         {canEdit && (
-          <div className="grid gap-3 rounded-lg border border-border bg-surface-sunken p-3 sm:grid-cols-3">
+          <div className="grid gap-3 rounded-card bg-surface-sunken p-3 sm:grid-cols-3">
             <Field label="Chiều hỏi">
               <select
                 className="h-10 w-full rounded-sm border border-border bg-surface px-2 sm:h-9"
@@ -354,7 +354,7 @@ export function BidClarificationPanel({
         <h3 className="font-medium">Hạn nộp và gia hạn</h3>
         <p>Hạn nộp hiện tại: {deadline ? formatDate(deadline) : 'Chưa đặt'}</p>
         {canExtend && (
-          <div className="grid gap-3 rounded-lg border border-border bg-surface-sunken p-3 sm:grid-cols-3">
+          <div className="grid gap-3 rounded-card bg-surface-sunken p-3 sm:grid-cols-3">
             <Field label="Hạn nộp mới" required>
               <DateInput value={ext.date} onChange={(v) => setExt((x) => ({ ...x, date: v }))} />
             </Field>
@@ -456,7 +456,7 @@ export function BidGuaranteePanel({
             {(guarantees ?? []).map((x) => {
               const expired = !x.released_at && x.expiry_date < today;
               return (
-                <li key={x.id} className="rounded-lg border border-border bg-surface p-3">
+                <li key={x.id} className="rounded-card bg-surface p-3">
                   <div className="flex flex-wrap justify-between gap-2">
                     <span className="font-medium">
                       {formatCurrency(x.amount)} — {x.bank_name}
@@ -510,7 +510,7 @@ export function BidGuaranteePanel({
           </ul>
         )}
         {canEdit && (
-          <div className="grid gap-3 rounded-lg border border-border bg-surface-sunken p-3 sm:grid-cols-3">
+          <div className="grid gap-3 rounded-card bg-surface-sunken p-3 sm:grid-cols-3">
             <Field label="Số tiền bảo lãnh" required>
               <MoneyInput value={g.amount} onChange={(v) => setG((x) => ({ ...x, amount: v }))} />
             </Field>

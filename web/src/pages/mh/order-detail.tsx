@@ -179,14 +179,14 @@ export function PurchaseOrderDetailPage() {
                   lại số liệu đã có.
                 </p>
                 <ul className="space-y-2">
-                  <li className="rounded-lg border border-border bg-surface px-4 py-3">
+                  <li className="rounded-card bg-surface px-4 py-3">
                     <p className="font-medium">Đơn đặt hàng {order.code ?? EM_DASH}</p>
                     <p className="text-fg-subtle">
                       Giá trị {formatCurrency(order.total_value)}
                       {order.contract_number ? ` · Hợp đồng mua bán ${order.contract_number}` : ''}
                     </p>
                   </li>
-                  <li className="rounded-lg border border-border bg-surface px-4 py-3">
+                  <li className="rounded-card bg-surface px-4 py-3">
                     <p className="font-medium">Báo giá đã chọn</p>
                     <p className="text-fg-subtle">
                       {order.quotation_id ? (
@@ -204,7 +204,7 @@ export function PurchaseOrderDetailPage() {
                   {(deliveries ?? []).map((delivery) => (
                     <li
                       key={delivery.id}
-                      className="rounded-lg border border-border bg-surface px-4 py-3"
+                      className="rounded-card bg-surface px-4 py-3"
                     >
                       <p className="font-medium">
                         Phiếu giao nhận {delivery.code ?? EM_DASH} ·{' '}
@@ -221,7 +221,7 @@ export function PurchaseOrderDetailPage() {
                   ))}
                 </ul>
                 {order.stage === 'da_giao_du' && (
-                  <p className="rounded-lg border border-border bg-surface-sunken px-4 py-3">
+                  <p className="rounded-card bg-surface-sunken px-4 py-3">
                     Đơn hàng đã nhận đủ. Kế toán đã nhận thông báo để lập đề nghị thanh toán.
                   </p>
                 )}
@@ -235,7 +235,7 @@ export function PurchaseOrderDetailPage() {
                         {(payments ?? []).map((p) => (
                           <li
                             key={p.id}
-                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-4 py-3"
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-card bg-surface px-4 py-3"
                           >
                             <div>
                               <p className="font-medium">{p.code ?? 'Đề nghị chi'}</p>

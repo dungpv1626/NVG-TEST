@@ -86,11 +86,11 @@ export function ConfirmDialog({
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
         className={cn(
-          'w-full max-w-md rounded-lg border border-border bg-surface p-4 shadow-overlay',
+          'w-full max-w-md rounded-card bg-surface p-5 shadow-overlay',
           className,
         )}
       >
-        <h2 id="confirm-dialog-title" className="text-base font-semibold">
+        <h2 id="confirm-dialog-title" className="text-md font-semibold">
           {title}
         </h2>
         <div className="mt-2 text-sm opacity-80">{children}</div>

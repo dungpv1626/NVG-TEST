@@ -257,14 +257,14 @@ export function EntityTable<T extends EntityRow>({
   const toolbar = (
     <div className="mb-3 flex flex-wrap items-center gap-2">
       <div className="relative min-w-56 flex-1">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-fg-subtle" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-subtle" />
         <input
           type="search"
           value={query}
           onChange={(e) => setParam('q', e.target.value)}
           placeholder={searchPlaceholder}
           className={cn(
-            'h-10 w-full rounded-sm border border-border-strong bg-surface pl-8 pr-3 sm:h-8',
+            'h-10 w-full rounded-full border border-border bg-surface pl-9 pr-3 sm:h-9',
             'placeholder:text-fg-subtle',
             'transition-[border-color] duration-(--motion-fast) ease-(--ease-out)',
             'hover:border-fg-subtle',
@@ -280,7 +280,7 @@ export function EntityTable<T extends EntityRow>({
             value={statusFilter ?? ''}
             onChange={(e) => setParam(STATUS_FILTER_PARAM, e.target.value)}
             className={cn(
-              'h-10 cursor-pointer rounded-sm border border-border-strong bg-surface px-2 sm:h-8',
+              'h-10 cursor-pointer rounded-full border border-border bg-surface px-3 sm:h-9',
               'transition-[border-color] duration-(--motion-fast) ease-(--ease-out)',
               'hover:border-fg-subtle',
             )}
@@ -299,9 +299,9 @@ export function EntityTable<T extends EntityRow>({
           type="button"
           onClick={() => setParam(PERIOD_FILTER_PARAM, '')}
           className={cn(
-            'h-10 cursor-pointer rounded-sm border border-brand bg-brand-subtle px-3',
-            'font-medium text-brand sm:h-8',
-            'transition-colors duration-(--motion-fast) ease-(--ease-out) hover:bg-brand/10',
+            'h-10 cursor-pointer rounded-full bg-shell px-4',
+            'font-semibold text-fg-inverse sm:h-9',
+            'transition-colors duration-(--motion-fast) ease-(--ease-out) hover:bg-shell-hover',
           )}
         >
           {DASHBOARD_PERIOD_LABELS[periodFilter]} — bỏ lọc kỳ
@@ -343,7 +343,7 @@ export function EntityTable<T extends EntityRow>({
     return (
       <>
         {toolbar}
-        <div className="rounded-lg border border-border bg-surface">
+        <div className="rounded-card bg-surface">
           <EmptyState
             message={
               isFiltering
@@ -369,10 +369,10 @@ export function EntityTable<T extends EntityRow>({
             <li
               key={row.id}
               className={cn(
-                'rounded-lg border border-border bg-surface p-3 shadow-raised',
+                'rounded-card border border-transparent bg-surface p-4',
                 'transition-[border-color,box-shadow] duration-(--motion-fast) ease-(--ease-out)',
                 'active:bg-surface-hover',
-                isSelected && 'border-brand bg-brand-subtle',
+                isSelected && 'border-shell bg-pill',
               )}
             >
               <div className="flex items-start gap-3">
@@ -395,20 +395,20 @@ export function EntityTable<T extends EntityRow>({
                   <div className="flex items-start justify-between gap-2">
                     <Link
                       to={detailPath(row)}
-                      className="min-w-0 font-medium text-brand hover:underline"
+                      className="min-w-0 font-semibold text-ink hover:underline"
                     >
                       {row.title}
                     </Link>
                     {/* Trạng thái luôn kèm chữ, không chỉ dựa vào màu (Content Guidelines 6.8). */}
                     {showRecordColumns && <StatusLozenge status={row.status} />}
                   </div>
-                  <div className="mt-0.5 font-mono text-xs text-fg-subtle">{row.code}</div>
+                  <div className="mt-0.5 font-mono text-xs text-ink-subtle">{row.code}</div>
 
                   {displayColumns.length > 0 && (
                     <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
                       {displayColumns.map((c) => (
                         <div key={c.key} className="min-w-0">
-                          <dt className="text-fg-subtle">{c.header}</dt>
+                          <dt className="text-ink-subtle">{c.header}</dt>
                           <dd className={cn('truncate', c.numeric && 'tabular-nums')}>
                             {c.render(row)}
                           </dd>
@@ -444,15 +444,15 @@ export function EntityTable<T extends EntityRow>({
           không còn tên cột thì người dùng phải cuộn ngược lên để biết cột nào là gì. */}
       <div
         className={cn(
-          'hidden max-h-[calc(100dvh-16rem)] overflow-auto rounded-lg',
-          'border border-border bg-surface shadow-raised sm:block',
+          'hidden max-h-[calc(100dvh-16rem)] overflow-auto rounded-card',
+          'bg-surface sm:block',
         )}
       >
         <table className="w-full min-w-[720px] border-collapse text-left">
-          <thead className="sticky top-0 z-10 bg-surface shadow-sticky">
-            <tr className="border-b border-border-strong text-xs uppercase tracking-wide text-fg-subtle">
+          <thead className="sticky top-0 z-10 bg-surface">
+            <tr className="border-b border-border text-xs font-semibold whitespace-nowrap text-ink-subtle">
               {selection && (
-                <th className="w-10 px-4 py-2.5">
+                <th className="w-10 px-5 py-3">
                   <input
                     type="checkbox"
                     aria-label="Chọn tất cả"
@@ -463,11 +463,11 @@ export function EntityTable<T extends EntityRow>({
                   />
                 </th>
               )}
-              <th className="px-4 py-2.5 font-medium">Mã / Tên</th>
+              <th className="px-5 py-3 font-medium">Mã / Tên</th>
               {displayColumns.map((c) => (
                 <th
                   key={c.key}
-                  className={cn('px-4 py-2.5 font-medium', c.numeric && 'text-right')}
+                  className={cn('px-5 py-3 font-medium', c.numeric && 'text-right')}
                 >
                   {c.header}
                 </th>
@@ -475,9 +475,9 @@ export function EntityTable<T extends EntityRow>({
               {/* Ba cột cố định — Webapp Flow 1.3. */}
               {showRecordColumns && (
                 <>
-                  <th className="px-4 py-2.5 font-medium">Người chịu trách nhiệm</th>
-                  <th className="px-4 py-2.5 font-medium">Trạng thái</th>
-                  <th className="px-4 py-2.5 font-medium">Thời hạn</th>
+                  <th className="px-5 py-3 font-medium">Người chịu trách nhiệm</th>
+                  <th className="px-5 py-3 font-medium">Trạng thái</th>
+                  <th className="px-5 py-3 font-medium">Thời hạn</th>
                 </>
               )}
             </tr>
@@ -489,14 +489,14 @@ export function EntityTable<T extends EntityRow>({
                 <tr
                   key={row.id}
                   className={cn(
-                    'border-b border-border last:border-b-0',
+                    'border-b border-line-soft last:border-b-0',
                     'transition-colors duration-(--motion-fast) ease-(--ease-out)',
-                    'hover:bg-surface-hover',
-                    isSelected && 'bg-brand-subtle',
+                    'hover:bg-canvas',
+                    isSelected && 'bg-pill',
                   )}
                 >
                   {selection && (
-                    <td className="px-4 py-3">
+                    <td className="px-5 py-3">
                       <input
                         type="checkbox"
                         aria-label={`Chọn ${row.code}`}
@@ -511,34 +511,34 @@ export function EntityTable<T extends EntityRow>({
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3">
+                  <td className="px-5 py-3">
                     <Link
                       to={detailPath(row)}
-                      className="font-medium text-fg underline-offset-2 hover:text-brand hover:underline"
+                      className="font-semibold text-ink underline-offset-2 hover:underline"
                     >
                       {row.title}
                     </Link>
-                    <div className="text-xs text-fg-subtle">{row.code}</div>
+                    <div className="text-xs text-ink-subtle">{row.code}</div>
                   </td>
                   {displayColumns.map((c) => (
                     <td
                       key={c.key}
-                      className={cn('px-4 py-3', c.numeric && 'text-right tabular-nums')}
+                      className={cn('px-5 py-3', c.numeric && 'text-right tabular-nums')}
                     >
                       {c.render(row)}
                     </td>
                   ))}
                   {showRecordColumns && (
                     <>
-                      <td className="px-4 py-3">
+                      <td className="px-5 py-3">
                         {row.responsiblePerson ?? (
                           <span className="text-fg-subtle">Chưa phân công</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-5 py-3">
                         <StatusLozenge status={row.status} />
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-5 py-3">
                         {row.deadline && row.status !== 'completed' ? (
                           <span
                             className={cn(

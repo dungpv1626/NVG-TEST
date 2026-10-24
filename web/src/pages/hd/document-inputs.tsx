@@ -222,7 +222,7 @@ export function DocInputsSection({
   return (
     <section
       id="noi-dung-van-ban"
-      className="scroll-mt-48 rounded-lg border border-border bg-surface p-4 shadow-card"
+      className="scroll-mt-48 rounded-card bg-surface p-4"
     >
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="font-medium">Nội dung riêng của văn bản</h3>

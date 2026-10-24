@@ -330,7 +330,7 @@ export function RentalAgreementDetailPage() {
               {isReturnFormOpen && (
                 <form
                   onSubmit={(e) => void submitReturn(e)}
-                  className="space-y-4 rounded-lg border border-border bg-surface p-4"
+                  className="space-y-4 rounded-card bg-surface p-4"
                 >
                   <h2 className="text-sm font-semibold">Thu hồi giàn giáo</h2>
                   {returnError && (

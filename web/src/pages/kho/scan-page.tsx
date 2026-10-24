@@ -89,7 +89,7 @@ export function StockScanPage() {
 
       {material && (
         <div className="space-y-3">
-          <section className="rounded-lg border border-border bg-surface p-4">
+          <section className="rounded-card bg-surface p-4">
             <p className="font-mono text-fg-subtle">{material.material_code}</p>
             <p className="text-lg font-semibold">{material.name}</p>
             {material.specification && <p className="text-fg-subtle">{material.specification}</p>}
@@ -109,7 +109,7 @@ export function StockScanPage() {
               return (
                 <li
                   key={row.warehouse_id}
-                  className="rounded-lg border border-border bg-surface px-4 py-3"
+                  className="rounded-card bg-surface px-4 py-3"
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <p className="font-medium">{row.warehouse_name}</p>

@@ -154,7 +154,7 @@ export function ApprovalInbox({
 
   if (list.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-surface">
+      <div className="rounded-card bg-surface">
         {/* Trạng thái rỗng mang tính tích cực (Content Guidelines 4.7). */}
         <EmptyState message="Không có việc nào cần xử lý. Mọi thứ đã được cập nhật." />
       </div>
@@ -224,7 +224,7 @@ export function ApprovalInbox({
       {selected && (
         <div
           className={cn(
-            'min-w-0 flex-1 rounded-lg border border-border bg-surface p-4 shadow-card',
+            'min-w-0 flex-1 rounded-card bg-surface p-4',
             'transition-shadow duration-(--motion-base) ease-(--ease-out)',
             !openedOnMobile && 'hidden lg:block',
           )}

@@ -251,14 +251,14 @@ function StocktakeDetail({
       )}
 
       {status === 'khop_so' && (
-        <p className="rounded-lg border border-border bg-surface-sunken px-4 py-3">
+        <p className="rounded-card bg-surface-sunken px-4 py-3">
           Đợt kiểm kê đã đóng, số đếm khớp sổ ở mọi vật tư. <strong>Sổ kho giữ nguyên</strong> và
           kho đã mở lại nhập xuất.
         </p>
       )}
 
       {status === 'cho_duyet' && (
-        <p className="rounded-lg border border-border bg-surface-sunken px-4 py-3">
+        <p className="rounded-card bg-surface-sunken px-4 py-3">
           Biên bản đang chờ phê duyệt. <strong>Sổ kho chưa đổi</strong> — con số chính thức vẫn là
           số ở cột "Sổ kho" cho tới khi biên bản được duyệt.
         </p>
@@ -369,7 +369,7 @@ export function StocktakePage() {
             const meta = stocktakeStatusMeta(st.status);
             const isOpen = openId === st.id;
             return (
-              <li key={st.id} className="rounded-lg border border-border bg-surface px-4 py-3">
+              <li key={st.id} className="rounded-card bg-surface px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="font-medium">

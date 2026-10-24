@@ -289,7 +289,7 @@ export function TermsPanel({
         return (
           <section
             key={type}
-            className="rounded-lg border border-border bg-surface p-4 shadow-card"
+            className="rounded-card bg-surface p-4"
           >
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <p className="font-medium">{CONTRACT_TERM_TYPE_LABELS[type]}</p>

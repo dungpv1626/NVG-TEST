@@ -224,7 +224,7 @@ export function PurchaseRequestDetailPage() {
                   {(orders ?? []).map((o) => (
                     <li
                       key={o.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-4 py-3"
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-card bg-surface px-4 py-3"
                     >
                       <div>
                         <p className="font-medium">{o.code ?? 'Đơn đặt hàng'}</p>

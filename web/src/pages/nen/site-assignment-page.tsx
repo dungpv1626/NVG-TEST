@@ -133,7 +133,7 @@ export function SiteAssignmentPage() {
       {showForm && (
         <form
           onSubmit={addAssignment}
-          className="mb-4 rounded-lg border border-border bg-surface p-4 shadow-card"
+          className="mb-4 rounded-card bg-surface p-4"
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Người được phân công" required>
@@ -209,7 +209,7 @@ export function SiteAssignmentPage() {
       )}
 
       {!isLoading && !error && rows.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
+        <div className="overflow-x-auto rounded-card bg-surface">
           <table className="w-full min-w-[720px] border-collapse">
             <thead>
               <tr className="border-b border-border text-left text-xs text-fg-subtle">

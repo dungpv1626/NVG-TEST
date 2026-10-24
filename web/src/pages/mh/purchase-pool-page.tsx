@@ -89,7 +89,7 @@ function PoolGroupCard({ group, canWork }: { group: PoolGroup; canWork: boolean 
   const late = deadline.startsWith('Quá hạn');
 
   return (
-    <li className="rounded-lg border border-border bg-surface">
+    <li className="rounded-card bg-surface">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

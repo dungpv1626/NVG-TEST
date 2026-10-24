@@ -122,7 +122,7 @@ export function ProductionOrderListPage() {
       {isFormOpen && canEdit && (
         <form
           onSubmit={(e) => void submit(e)}
-          className="mb-4 space-y-4 rounded-lg border border-border bg-surface p-4"
+          className="mb-4 space-y-4 rounded-card bg-surface p-4"
         >
           {formError && (
             <p

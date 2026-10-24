@@ -118,7 +118,7 @@ export function MaterialListPage() {
         <form
           onSubmit={(e) => void submit(e)}
           onChange={(e) => suggest(e.currentTarget)}
-          className="mb-4 space-y-4 rounded-lg border border-border bg-surface p-4"
+          className="mb-4 space-y-4 rounded-card bg-surface p-4"
         >
           {formError && (
             <p
@@ -208,7 +208,7 @@ export function MaterialListPage() {
       ) : rows.length === 0 ? (
         <EmptyState message="Chưa có vật tư nào trong danh mục. Thêm vật tư trước khi lập phiếu nhập — hàng chỉ vào kho khi mã đã có trong danh mục." />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <div className="overflow-x-auto rounded-card bg-surface">
           <table className="w-full min-w-[44rem] text-left">
             <thead className="border-b border-border text-fg-subtle">
               <tr>
@@ -313,7 +313,7 @@ export function WarehouseListPage() {
       {isFormOpen && canCreate && (
         <form
           onSubmit={(e) => void submit(e)}
-          className="mb-4 space-y-4 rounded-lg border border-border bg-surface p-4"
+          className="mb-4 space-y-4 rounded-card bg-surface p-4"
         >
           {formError && (
             <p
@@ -381,7 +381,7 @@ export function WarehouseListPage() {
       ) : (
         <ul className="space-y-2">
           {(data ?? []).map((w) => (
-            <li key={w.id} className="rounded-lg border border-border bg-surface px-4 py-3">
+            <li key={w.id} className="rounded-card bg-surface px-4 py-3">
               <p className="font-medium">
                 {w.name} <span className="font-mono text-xs text-fg-subtle">{w.code}</span>
               </p>

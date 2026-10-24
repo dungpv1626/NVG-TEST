@@ -52,7 +52,7 @@ export function AiDesignPage() {
   const editPath = `/tk/du-an/${project.id}`;
   const inputs = (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface-subtle p-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-card bg-surface-subtle p-3">
         <p className="mr-auto text-fg-subtle">
           Đầu bài và khảo sát của hồ sơ thiết kế — chỉ xem ở đây. Sửa hoặc xác nhận ở hồ sơ thiết
           kế; AI Design đọc bản đầu bài đã xác nhận mới nhất.

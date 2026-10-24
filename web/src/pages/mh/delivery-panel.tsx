@@ -138,7 +138,7 @@ export function DeliveryPanel({
         </p>
       )}
 
-      <section className="rounded-lg border border-border bg-surface-sunken p-4">
+      <section className="rounded-card bg-surface-sunken p-4">
         <p className="font-medium">
           Đã nhận đủ {progress.completeLines} / {progress.lines} mặt hàng
         </p>
@@ -209,7 +209,7 @@ export function DeliveryPanel({
               return (
                 <li
                   key={delivery.id}
-                  className="rounded-lg border border-border bg-surface px-4 py-3"
+                  className="rounded-card bg-surface px-4 py-3"
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <p className="font-medium">
@@ -287,7 +287,7 @@ export function DeliveryPanel({
           {isFormOpen && (
             <form
               onSubmit={(e) => void submit(e)}
-              className="space-y-4 rounded-lg border border-border bg-surface-sunken p-4"
+              className="space-y-4 rounded-card bg-surface-sunken p-4"
             >
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Field label="Ngày nhận" required>
@@ -317,7 +317,7 @@ export function DeliveryPanel({
                 {lines.map((line) => (
                   <fieldset
                     key={line.id}
-                    className="rounded-lg border border-border bg-surface p-3"
+                    className="rounded-card bg-surface p-3"
                     disabled={remaining(line) <= 0}
                   >
                     <legend className="px-1 font-medium">

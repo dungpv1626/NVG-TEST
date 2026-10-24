@@ -81,7 +81,7 @@ export function DisciplinePanel({
         </p>
       )}
 
-      <section className="rounded-lg border border-border bg-surface p-4 shadow-card">
+      <section className="rounded-card bg-surface p-4">
         <p className="mb-3 font-medium">Kiểm tra đồng bộ giữa các bộ môn</p>
 
         {blocking.length === 0 && warnings.length === 0 ? (
@@ -120,7 +120,7 @@ export function DisciplinePanel({
           return (
             <section
               key={discipline}
-              className="rounded-lg border border-border bg-surface p-4 shadow-card"
+              className="rounded-card bg-surface p-4"
             >
               <div className="mb-3 flex items-center gap-2">
                 <p className="font-medium">{DESIGN_DISCIPLINE_LABELS[discipline]}</p>

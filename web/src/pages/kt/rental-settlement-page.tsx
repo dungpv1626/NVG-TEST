@@ -97,7 +97,7 @@ function SettlementCard({
       : null;
 
   return (
-    <li className="rounded-lg border border-border bg-surface px-4 py-3">
+    <li className="rounded-card bg-surface px-4 py-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-medium">{row.customer?.name ?? '—'}</p>

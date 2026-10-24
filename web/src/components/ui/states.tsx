@@ -85,7 +85,7 @@ export function BlockedNotice({
   action?: ReactNode;
 }) {
   return (
-    <div className="max-w-2xl rounded-lg border border-border bg-surface p-6">
+    <div className="max-w-2xl rounded-card bg-surface p-6">
       <p className="font-medium">{title}</p>
       <p className="mt-1 text-fg-subtle">{detail}</p>
       {action && <div className="mt-4">{action}</div>}
@@ -95,20 +95,20 @@ export function BlockedNotice({
 
 /** Khối xám cơ bản. Không dùng trực tiếp — dùng các skeleton có hình dạng bên dưới. */
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-sm bg-surface-hover', className)} />;
+  return <div className={cn('animate-pulse rounded-sm bg-pill', className)} />;
 }
 
 /** Skeleton hình dạng BẢNG — khớp bố cục `EntityTable` để không nhảy layout khi có dữ liệu. */
 export function TableSkeleton({ rows = 8, columns = 5 }: { rows?: number; columns?: number }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-surface">
-      <div className="flex gap-4 border-b border-border px-4 py-2.5">
+    <div className="overflow-hidden rounded-card bg-surface">
+      <div className="flex gap-4 border-b border-border px-5 py-3">
         {Array.from({ length: columns }).map((_, i) => (
           <Skeleton key={i} className={cn('h-4', i === 0 ? 'w-40' : 'w-24')} />
         ))}
       </div>
       {Array.from({ length: rows }).map((_, r) => (
-        <div key={r} className="flex gap-4 border-b border-border px-4 py-3 last:border-b-0">
+        <div key={r} className="flex gap-4 border-b border-line-soft px-5 py-3 last:border-b-0">
           {Array.from({ length: columns }).map((_, c) => (
             <Skeleton key={c} className={cn('h-4', c === 0 ? 'w-40' : 'w-24')} />
           ))}
@@ -128,7 +128,7 @@ export function CardGridSkeleton({ count = 6 }: { count?: number }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: count }).map((_, i) => (
-        <Skeleton key={i} className="min-h-40 rounded-lg" />
+        <Skeleton key={i} className="min-h-40 rounded-card" />
       ))}
     </div>
   );

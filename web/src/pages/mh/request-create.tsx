@@ -97,7 +97,7 @@ export function PurchaseRequestCreatePage() {
 
       <form
         onSubmit={(e) => void submit(e)}
-        className="max-w-3xl space-y-4 rounded-lg border border-border bg-surface p-4"
+        className="max-w-3xl space-y-4 rounded-card bg-surface p-4"
       >
         {formError && (
           <p role="alert" className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">

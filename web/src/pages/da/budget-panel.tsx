@@ -52,7 +52,7 @@ export function BudgetPanel({
         này để điều hành công trình.
       </p>
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      <div className="overflow-x-auto rounded-card bg-surface">
         <table className="w-full min-w-[640px] border-collapse text-left">
           <thead>
             <tr className="border-b border-border text-fg-subtle">

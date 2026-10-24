@@ -104,7 +104,7 @@ export function SignedScanPanel({
   const now = Date.now();
 
   return (
-    <section id="ban-da-ky" className="mb-4 rounded-lg border border-border bg-surface p-4">
+    <section id="ban-da-ky" className="mb-4 rounded-card bg-surface p-4">
       {prompt.dialog}
       {scanning && (
         <DocumentScanner

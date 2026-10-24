@@ -206,7 +206,7 @@ export function VersionPanel({
           <form
             onSubmit={addVersion}
             noValidate
-            className="rounded-lg border border-border bg-surface p-4 shadow-card"
+            className="rounded-card bg-surface p-4"
           >
             <p className="mb-4 font-medium">
               {revisionOnly ? 'Thêm bản điều chỉnh' : 'Thêm phiên bản mới'}
@@ -445,7 +445,7 @@ function VersionCard({
   }
 
   return (
-    <li className="rounded-lg border border-border bg-surface p-4 shadow-card">
+    <li className="rounded-card bg-surface p-4">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-medium">
           {DESIGN_DISCIPLINE_LABELS[version.discipline]} — phiên bản {version.version}

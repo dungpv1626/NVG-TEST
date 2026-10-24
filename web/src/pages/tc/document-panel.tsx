@@ -168,7 +168,7 @@ export function SiteDocumentPanel({
             const superseded = doc.versions.filter((v) => !v.is_current_version);
 
             return (
-              <li key={doc.id} className="rounded-lg border border-border bg-surface p-3">
+              <li key={doc.id} className="rounded-card bg-surface p-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="flex items-center gap-2 font-medium">
@@ -229,7 +229,7 @@ export function SiteDocumentPanel({
       {editing && (
         <form
           onSubmit={submit}
-          className="rounded-lg border border-border bg-surface p-4 shadow-card"
+          className="rounded-card bg-surface p-4"
         >
           <p className="mb-3 font-medium">
             {existing ? `Phát hành bản mới — ${existing.title}` : 'Thêm hồ sơ của công trình'}

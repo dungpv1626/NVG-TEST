@@ -16,30 +16,32 @@ const buttonVariants = cva(
   // `cursor-pointer` và `active:scale` là hai thứ nhỏ nhưng quyết định cảm giác "bấm được".
   // Thu nhẹ khi nhấn cho phản hồi tức thì — quan trọng trên màn hình cảm ứng ngoài công trường,
   // nơi không có con trỏ chuột báo trước là ngón tay đang ở trên nút nào.
-  'inline-flex cursor-pointer select-none items-center justify-center gap-2 rounded-sm ' +
+  'inline-flex cursor-pointer select-none items-center justify-center gap-2 rounded-full ' +
     'font-medium whitespace-nowrap [&_svg]:size-4 [&_svg]:shrink-0 ' +
     'transition-[background-color,border-color,color,box-shadow,transform] ' +
     'duration-(--motion-fast) ease-(--ease-out) active:scale-[0.98] ' +
     // Nút khoá chuyển hẳn sang xám: nút chính mờ mà vẫn xanh trông như bấm được (anh Dũng chạy
     // thử 20/10/2026 tưởng «Chuyển sang Báo giá» đang mở).
-    'disabled:pointer-events-none disabled:border-border disabled:bg-surface-sunken disabled:text-fg-subtle disabled:shadow-none disabled:active:scale-100',
+    // v2 (DESIGN_SYSTEM.md §8): nút khoá nền xám `border-strong` chữ trắng; lý do khoá vẫn ghi bằng chữ dưới nút.
+    'disabled:pointer-events-none disabled:border-transparent disabled:bg-border-strong disabled:text-fg-inverse disabled:shadow-none disabled:active:scale-100',
   {
     variants: {
       variant: {
         /** Hành động chính — chỉ MỘT trên mỗi màn hình. */
-        primary: 'bg-brand text-fg-inverse hover:bg-brand-hover',
+        primary: 'bg-shell font-semibold text-fg-inverse hover:bg-shell-hover',
         secondary:
-          'border border-border-strong bg-surface text-fg ' +
-          'hover:border-brand-hover hover:bg-surface-hover',
-        subtle: 'text-fg-subtle hover:bg-surface-hover hover:text-fg',
+          'border border-border-strong bg-surface text-ink ' +
+          'hover:border-shell hover:bg-pill',
+        subtle: 'text-ink-subtle hover:bg-pill hover:text-ink',
         /** Hành động không thể hoàn tác — luôn kèm hộp thoại xác nhận (Content Guidelines 4.5). */
         danger: 'bg-status-overdue text-fg-inverse hover:brightness-95',
         link: 'text-brand underline-offset-4 hover:underline',
       },
       size: {
-        sm: 'h-7 px-2 text-xs',
-        md: 'h-8 px-3',
-        lg: 'h-10 px-4',
+        // v2: nút 40px (md); điện thoại dùng `lg` cho nút chính dính đáy.
+        sm: 'h-8 px-3 text-xs',
+        md: 'h-10 px-4',
+        lg: 'h-12 px-5',
       },
     },
     defaultVariants: { variant: 'secondary', size: 'md' },

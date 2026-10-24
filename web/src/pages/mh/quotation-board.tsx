@@ -153,7 +153,7 @@ export function QuotationBoardTable({
           {fileError}
         </p>
       )}
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      <div className="overflow-x-auto rounded-card bg-surface">
         <table
           className="w-full border-collapse text-left"
           style={{ minWidth: `${14 + quotes.length * 12}rem` }}
@@ -309,7 +309,7 @@ export function QuotationBoardTable({
         .map((q) => (
           <p
             key={q.quotation_id}
-            className="rounded-lg border border-border bg-surface-sunken px-4 py-3"
+            className="rounded-card bg-surface-sunken px-4 py-3"
           >
             <span className="font-medium">Căn cứ chọn {q.supplier_name}: </span>
             {q.selection_reason}

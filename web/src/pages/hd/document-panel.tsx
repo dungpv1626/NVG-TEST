@@ -199,7 +199,7 @@ function InfoSection({
   }
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-4 shadow-card">
+    <section className="rounded-card bg-surface p-4">
       <h3 className="font-medium">Thông tin in lên văn bản</h3>
       <p className="mt-1 text-sm text-fg-subtle">
         Giá trị, đối tác và điều khoản lấy từ hồ sơ. Các ô dưới đây hồ sơ chưa có.
@@ -380,7 +380,7 @@ function FillSection({
 
   if (candidates.length === 0) {
     return (
-      <section className="rounded-lg border border-border bg-surface p-4 shadow-card">
+      <section className="rounded-card bg-surface p-4">
         <h3 className="font-medium">Lập văn bản từ mẫu</h3>
         <p className="mt-2">
           Chưa có mẫu «{CONTRACT_TYPE_LABELS[contract.type]}» đang dùng cho pháp nhân này.
@@ -517,7 +517,7 @@ function FillSection({
   }
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-4 shadow-card">
+    <section className="rounded-card bg-surface p-4">
       {promptDialog.dialog}
       <h3 className="font-medium">Lập văn bản từ mẫu</h3>
       <div className="mt-3 flex flex-wrap items-end gap-3">
@@ -634,7 +634,7 @@ function VersionsSection({
   }
 
   return (
-    <section className="rounded-lg border border-border bg-surface p-4 shadow-card">
+    <section className="rounded-card bg-surface p-4">
       <h3 className="font-medium">Các phiên bản đã lưu</h3>
       {error && (
         <p role="alert" className="mt-2 text-status-overdue">

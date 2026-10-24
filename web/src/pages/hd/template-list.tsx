@@ -117,7 +117,7 @@ export function ContractTemplatePage() {
           onRetry={() => void templates.refetch()}
         />
       ) : (templates.data ?? []).length === 0 ? (
-        <div className="rounded-lg border border-border bg-surface">
+        <div className="rounded-card bg-surface">
           <EmptyState
             icon={<FileText className="size-6" />}
             message={
@@ -135,7 +135,7 @@ export function ContractTemplatePage() {
           />
         </div>
       ) : (
-        <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
+        <ul className="divide-y divide-border rounded-card bg-surface">
           {templates.data!.map((t) => (
             <li key={t.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">
               <FileText className="size-5 text-fg-subtle" aria-hidden />
@@ -267,7 +267,7 @@ function UploadForm({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <section className="mb-4 rounded-lg border border-border bg-surface p-4 shadow-card">
+    <section className="mb-4 rounded-card bg-surface p-4">
       <h2 className="font-medium">Tải mẫu lên</h2>
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Field label="Tệp Word (.docx)" required className="sm:col-span-2 lg:col-span-3">
@@ -382,7 +382,7 @@ function UploadForm({ onDone }: { onDone: () => void }) {
 function PlaceholderGuide() {
   const groups = Object.keys(TEMPLATE_FIELD_GROUP_LABELS) as TemplateFieldGroup[];
   return (
-    <details className="mt-6 rounded-lg border border-border bg-surface p-4">
+    <details className="mt-6 rounded-card bg-surface p-4">
       <summary className="cursor-pointer font-medium">Cách viết chỗ trống</summary>
       <div className="mt-3 space-y-1 text-sm">
         <p>
@@ -481,7 +481,7 @@ function CompanyCard({ company, canEdit }: { company: CompanyContractInfo; canEd
   }
 
   return (
-    <article className="rounded-lg border border-border bg-surface p-4">
+    <article className="rounded-card bg-surface p-4">
       <p className="font-medium">{company.legal_name}</p>
       {editing ? (
         <div className="mt-2 space-y-2">

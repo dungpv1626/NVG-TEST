@@ -159,7 +159,7 @@ export function DesignShowcasePage() {
         title="Trạng thái rỗng"
         note="Tình trạng + gợi ý bước tiếp theo. Không để trang trắng."
       >
-        <div className="rounded-lg border border-border bg-surface">
+        <div className="rounded-card bg-surface">
           <EmptyState
             message="Chưa có gói thầu nào. Gói thầu được lập từ một cơ hội đã qua bước Khảo sát."
             action={<Button variant="secondary">Tạo gói thầu</Button>}
@@ -171,7 +171,7 @@ export function DesignShowcasePage() {
         title="Trạng thái lỗi"
         note="Nói bằng ngôn ngữ nghiệp vụ và nêu việc cần làm. Chi tiết kỹ thuật chỉ ghi log, không đưa ra màn hình."
       >
-        <div className="rounded-lg border border-border bg-surface">
+        <div className="rounded-card bg-surface">
           <ErrorState
             message="Không tải được danh sách. Kiểm tra kết nối mạng rồi thử lại."
             onRetry={() => {}}

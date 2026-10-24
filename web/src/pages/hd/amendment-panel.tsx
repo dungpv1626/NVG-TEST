@@ -125,7 +125,7 @@ export function AmendmentPanel({
           <form
             onSubmit={submit}
             noValidate
-            className="rounded-lg border border-border bg-surface p-4 shadow-card"
+            className="rounded-card bg-surface p-4"
           >
             <p className="mb-4 font-medium">Đề xuất phát sinh ngoài hợp đồng</p>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -348,7 +348,7 @@ function AmendmentCard({ amendment, readOnly }: { amendment: AmendmentRecord; re
   })();
 
   return (
-    <li className="rounded-lg border border-border bg-surface p-4 shadow-card">
+    <li className="rounded-card bg-surface p-4">
       {promptDialog.dialog}
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-medium">{amendment.title}</span>

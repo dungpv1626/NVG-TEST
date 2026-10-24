@@ -179,7 +179,7 @@ export function ProductionOrderDetailPage() {
                 {canEdit && (
                   <form
                     onSubmit={(e) => void submitConsumption(e)}
-                    className="mt-3 grid gap-3 rounded-lg border border-border bg-surface p-3 sm:grid-cols-2 lg:grid-cols-4"
+                    className="mt-3 grid gap-3 rounded-card bg-surface p-3 sm:grid-cols-2 lg:grid-cols-4"
                   >
                     {consumptionError && (
                       <p

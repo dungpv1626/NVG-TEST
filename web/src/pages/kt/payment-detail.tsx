@@ -303,7 +303,7 @@ export function PaymentRequestDetailPage() {
       {isPayFormOpen && (
         <form
           onSubmit={(e) => void pay(e)}
-          className="mb-4 grid gap-4 rounded-lg border border-border bg-surface p-4 sm:grid-cols-3"
+          className="mb-4 grid gap-4 rounded-card bg-surface p-4 sm:grid-cols-3"
         >
           <Field label="Ngày chi" required>
             <DateInput name="paid_date" required />
@@ -351,7 +351,7 @@ export function PaymentRequestDetailPage() {
           ) : (
             <ul className="space-y-2">
               {(steps ?? []).map((step) => (
-                <li key={step.id} className="rounded-lg border border-border bg-surface px-4 py-3">
+                <li key={step.id} className="rounded-card bg-surface px-4 py-3">
                   <p className="font-medium">
                     {PAYMENT_CHECK_STEP_LABELS[step.step]} ·{' '}
                     {step.decision === 'approved' ? 'Đã xác nhận' : 'Trả lại'}
@@ -465,7 +465,7 @@ export function PaymentRequestDetailPage() {
                     group.records.map((record) => (
                       <li
                         key={`${group.title}-${record.label}`}
-                        className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-3"
+                        className="flex items-center justify-between rounded-card bg-surface px-4 py-3"
                       >
                         <div>
                           <p className="font-medium">{record.label}</p>

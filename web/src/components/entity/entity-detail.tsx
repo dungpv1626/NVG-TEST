@@ -21,9 +21,10 @@
  */
 
 import { History } from 'lucide-react';
-import { useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { formatDeadline, type StatusGroup } from '@nvg/shared';
+import { DetailAsideContext, useWideDetail } from '@/components/entity/detail-aside';
 import { useDetailTabs } from '@/components/entity/use-detail-tabs';
 import { Breadcrumb, type Crumb } from '@/components/layout/breadcrumb';
 import { Button } from '@/components/ui/button';
@@ -128,6 +129,25 @@ export function EntityDetail({
 
   const { active, selectTab, onTabKeyDown } = useDetailTabs(allTabs, defaultTab);
 
+  // Cột phải v2 (330px, từ xl): thẻ «Bước tiếp theo» + «Chuỗi hồ sơ» (cổng từ `DetailAside`) và hồ
+  // sơ liên quan. Dưới xl không có cột này — các khối ấy nằm ngay trong cột chính.
+  const wide = useWideDetail();
+  const [asideUsers, setAsideUsers] = useState(0);
+  const [nextEl, setNextEl] = useState<HTMLDivElement | null>(null);
+  const [chainEl, setChainEl] = useState<HTMLDivElement | null>(null);
+  const register = useCallback(() => {
+    setAsideUsers((n) => n + 1);
+    return () => setAsideUsers((n) => n - 1);
+  }, []);
+  const showAside = wide && (related.length > 0 || asideUsers > 0);
+  const asideSlot = useMemo(
+    () => ({
+      targets: showAside ? { next: nextEl, chain: chainEl } : { next: null, chain: null },
+      register,
+    }),
+    [showAside, nextEl, chainEl, register],
+  );
+
   // Cột dính bên dưới header (vd bản xem trước hợp đồng) cần biết header cao bao nhiêu — chiều
   // cao đổi theo bề rộng, mức thu phóng, số dòng tiêu đề. Đặt cứng một con số thì lệch trên máy
   // khác (anh Dũng 21/10/2026). Hai biến CSS: `--detail-sticky-top` (mốc `top` trong <main>) và
@@ -165,124 +185,129 @@ export function EntityDetail({
   return (
     // Có gì đứng TRƯỚC khung này (dải bước duyệt, thông báo lỗi, «Đề nghị bị từ chối…») thì
     // bù đúng phần margin âm của header — nếu không header kéo lên đè mất nửa dưới thứ đó.
-    <div
-      ref={wrapRef}
-      className="flex gap-6 [&:not(:first-child)]:pt-4 lg:[&:not(:first-child)]:pt-6"
-    >
-      <div className="min-w-0 flex-1">
-        {/* Header cố định khi cuộn (Webapp Flow 4.3) — CHỈ trên máy tính. Trên điện thoại, tên,
+    <DetailAsideContext.Provider value={asideSlot}>
+      <div
+        ref={wrapRef}
+        className="flex gap-4 [&:not(:first-child)]:pt-4 lg:[&:not(:first-child)]:pt-6"
+      >
+        <div className="min-w-0 flex-1">
+          {/* Header cố định khi cuộn (Webapp Flow 4.3) — CHỈ trên máy tính. Trên điện thoại, tên,
             nút và thanh tab dính lại chiếm gần nửa màn hình (ảnh chụp hướng dẫn 30/09/2026), chỗ
             còn lại cho ô nhập nhật ký chỉ vài dòng; ở đó header cuộn đi cùng nội dung. */}
-        {/* Margin âm phải khớp ĐÚNG padding của <main> (p-4, lg:p-6): lệch một nấc là
+          {/* Margin âm phải khớp ĐÚNG padding của <main> (p-4, lg:p-6): lệch một nấc là
             header thò ra ngoài mép và cả trang cuộn ngang được. `top` cũng âm đúng bằng padding
             trên: `sticky` tính mốc từ mép TRONG phần đệm của <main>, nên `top-0` để hở 24px phía
             trên và nội dung cuộn qua lộ ra ở khe đó (ảnh chụp hướng dẫn 30/09/2026). */}
-        <div
-          ref={headerRef}
-          className={cn(
-            'z-10 mb-4 bg-surface lg:sticky lg:-top-6',
-            '-mx-4 -mt-4 px-4 pt-4',
-            'lg:-mx-6 lg:-mt-6 lg:mb-6 lg:px-6 lg:pt-6',
-          )}
-        >
-          <Breadcrumb items={effectiveBreadcrumbs} />
-          <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="truncate text-xl font-semibold">{title}</h1>
-              <div className="mt-1 flex flex-wrap items-center gap-3 text-fg-subtle">
-                <span className="font-mono text-xs">{code}</span>
-                {statusLabel ? (
-                  <StatusWithLabel status={status} label={statusLabel} />
-                ) : (
-                  <StatusLozenge status={status} />
-                )}
-                <span>
-                  Người chịu trách nhiệm:{' '}
-                  <span className="text-fg">{responsiblePerson ?? 'Chưa phân công'}</span>
-                </span>
-                {/* Hồ sơ đã xong thì thời hạn không còn là việc phải làm — «Còn 5 ngày» trên một
-                    đơn đã giao đủ đọc như còn nợ việc. */}
-                {deadline && status !== 'completed' && (
-                  <span className={cn(status === 'overdue' && 'font-medium text-status-overdue')}>
-                    {formatDeadline(deadline)}
+          <div
+            ref={headerRef}
+            className={cn(
+              // v2: header nằm trên nền nội dung (canvas). Margin âm khớp padding của <main> (px-4 pt-2,
+              // lg:px-6) — lệch một nấc là header thò ra ngoài mép.
+              'z-10 mb-4 bg-canvas lg:sticky lg:-top-2',
+              '-mx-4 -mt-2 px-4 pt-2',
+              'lg:-mx-6 lg:mb-5 lg:px-6',
+            )}
+          >
+            <Breadcrumb items={effectiveBreadcrumbs} />
+            <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="text-title font-bold text-pretty">{title}</h1>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-ink-subtle">
+                  <span className="font-mono text-xs">{code}</span>
+                  {statusLabel ? (
+                    <StatusWithLabel status={status} label={statusLabel} />
+                  ) : (
+                    <StatusLozenge status={status} />
+                  )}
+                  <span>
+                    Người chịu trách nhiệm:{' '}
+                    <span className="text-ink">{responsiblePerson ?? 'Chưa phân công'}</span>
                   </span>
-                )}
+                  {/* Hồ sơ đã xong thì thời hạn không còn là việc phải làm — «Còn 5 ngày» trên một
+                    đơn đã giao đủ đọc như còn nợ việc. */}
+                  {deadline && status !== 'completed' && (
+                    <span className={cn(status === 'overdue' && 'font-medium text-status-overdue')}>
+                      {formatDeadline(deadline)}
+                    </span>
+                  )}
+                </div>
               </div>
+              {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
             </div>
-            {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
-          </div>
 
-          {/* Viền dưới đặt trên chính thanh tab để gạch chân tab đang chọn khớp đúng
+            {/* Viền dưới đặt trên chính thanh tab để gạch chân tab đang chọn khớp đúng
               đường viền — không dùng margin âm, vì nó tràn xuống che nội dung bên dưới. */}
-          {/* Dùng đúng mẫu ARIA cho bộ tab: `tablist` / `tab` / `tabpanel`.
+            {/* Dùng đúng mẫu ARIA cho bộ tab: `tablist` / `tab` / `tabpanel`.
               Trước đây đây chỉ là một dãy nút, nên trình đọc màn hình đọc ra "nút Điều khoản"
               mà không cho biết đang có mấy tab, đang ở tab thứ mấy — người dùng bàn phím không
               có cách nào nắm được cấu trúc màn hình (Content Guidelines 6.8). */}
-          <nav
-            role="tablist"
-            className="mt-3 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border"
-            aria-label="Nội dung hồ sơ"
+            <nav
+              role="tablist"
+              className="mt-3 flex gap-1 overflow-x-auto overflow-y-hidden pb-1"
+              aria-label="Nội dung hồ sơ"
+            >
+              {allTabs.map((tab) => {
+                const isActive = tab.id === active?.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    id={`tab-${tab.id}`}
+                    aria-selected={isActive}
+                    aria-controls={`panel-${tab.id}`}
+                    // Roving tabindex: cả bộ tab chỉ chiếm MỘT chặng Tab, đúng mẫu ARIA. Không có
+                    // nó thì màn hình 6 tab bắt người dùng bàn phím bấm Tab sáu lần mới tới nội dung.
+                    tabIndex={isActive ? 0 : -1}
+                    onKeyDown={onTabKeyDown}
+                    onClick={() => selectTab(tab.id)}
+                    className={cn(
+                      // v2: tab dạng viên — đang chọn là viên trắng trên nền nội dung.
+                      'flex h-9 shrink-0 items-center gap-1.5 rounded-full px-4',
+                      isActive
+                        ? 'bg-surface font-semibold text-ink'
+                        : 'text-ink-subtle hover:bg-pill hover:text-ink',
+                    )}
+                  >
+                    {tab.id === 'lich-su' && <History className="size-4" />}
+                    {tab.label}
+                    {tab.badge !== undefined && tab.badge > 0 && (
+                      <span className="rounded-full bg-pill px-1.5 text-xs">{tab.badge}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          {progress}
+
+          <div
+            role="tabpanel"
+            id={`panel-${active?.id ?? ''}`}
+            aria-labelledby={`tab-${active?.id ?? ''}`}
           >
-            {allTabs.map((tab) => {
-              const isActive = tab.id === active?.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  role="tab"
-                  id={`tab-${tab.id}`}
-                  aria-selected={isActive}
-                  aria-controls={`panel-${tab.id}`}
-                  // Roving tabindex: cả bộ tab chỉ chiếm MỘT chặng Tab, đúng mẫu ARIA. Không có
-                  // nó thì màn hình 6 tab bắt người dùng bàn phím bấm Tab sáu lần mới tới nội dung.
-                  tabIndex={isActive ? 0 : -1}
-                  onKeyDown={onTabKeyDown}
-                  onClick={() => selectTab(tab.id)}
-                  className={cn(
-                    'flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 -mb-px',
-                    isActive
-                      ? 'border-brand font-semibold text-brand'
-                      : 'border-transparent text-fg-subtle hover:text-fg',
-                  )}
-                >
-                  {tab.id === 'lich-su' && <History className="size-4" />}
-                  {tab.label}
-                  {tab.badge !== undefined && tab.badge > 0 && (
-                    <span className="rounded-full bg-surface-sunken px-1.5 text-xs">
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
+            {active?.content}
+          </div>
+
+          {related.length > 0 && !showAside && (
+            <section className="mt-6 space-y-4" aria-label="Hồ sơ liên quan">
+              <RelatedGroups related={related} from={fromForRelated} />
+            </section>
+          )}
         </div>
 
-        {progress}
-
-        <div
-          role="tabpanel"
-          id={`panel-${active?.id ?? ''}`}
-          aria-labelledby={`tab-${active?.id ?? ''}`}
-        >
-          {active?.content}
-        </div>
-
-        {related.length > 0 && (
-          <section className="mt-6 space-y-4 xl:hidden" aria-label="Hồ sơ liên quan">
-            <RelatedGroups related={related} from={fromForRelated} />
-          </section>
+        {showAside && (
+          <aside className="w-[330px] shrink-0" aria-label="Bước tiếp theo và hồ sơ liên quan">
+            <div className="sticky top-(--detail-sticky-top) space-y-4">
+              <div ref={setNextEl} className="empty:hidden" />
+              <div ref={setChainEl} className="empty:hidden" />
+              {related.length > 0 && <RelatedGroups related={related} from={fromForRelated} />}
+            </div>
+          </aside>
         )}
       </div>
-
-      {related.length > 0 && (
-        <aside className="hidden w-72 shrink-0 xl:block" aria-label="Hồ sơ liên quan">
-          <div className="sticky top-24 space-y-4">
-            <RelatedGroups related={related} from={fromForRelated} />
-          </div>
-        </aside>
-      )}
-    </div>
+    </DetailAsideContext.Provider>
   );
 }
 
@@ -307,11 +332,9 @@ export function RelatedGroups({
           key={group.title}
           // `min-w-0`: tên hồ sơ dài dùng `truncate` (không xuống dòng); thiếu nó thì ô lưới cột phải
           // giãn theo chữ và cả trang có thanh cuộn ngang (08/10/2026, tên cơ hội NVO dài 70 ký tự).
-          className="min-w-0 rounded-lg border border-border bg-surface p-3 shadow-card"
+          className="min-w-0 rounded-card bg-surface p-4"
         >
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-subtle">
-            {group.title}
-          </h2>
+          <h2 className="mb-2 text-xs font-semibold text-ink-subtle">{group.title}</h2>
           <dl className="space-y-2">
             {group.records.map((r) => (
               <div key={r.label}>
@@ -325,7 +348,7 @@ export function RelatedGroups({
                     <Link
                       to={r.to}
                       state={{ from }}
-                      className="truncate text-brand hover:underline"
+                      className="truncate font-medium text-brand hover:underline"
                     >
                       {r.value}
                     </Link>

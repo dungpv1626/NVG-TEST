@@ -152,7 +152,7 @@ export function AnomaliesPage() {
               {rows.map((r, i) => (
                 <li
                   key={`${r.kind}-${r.entity_id}-${i}`}
-                  className="rounded-lg border border-border bg-surface p-3"
+                  className="rounded-card bg-surface p-3"
                 >
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                     <span className="text-xs text-fg-subtle">{label(r.kind)}</span>

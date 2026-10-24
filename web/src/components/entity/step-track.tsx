@@ -13,6 +13,7 @@
 import { CheckCircle2, Circle, CircleDot } from 'lucide-react';
 import { stepWindow, type Flow } from '@nvg/shared';
 import { cn } from '@/lib/utils';
+import { DetailAside } from './detail-aside';
 
 export interface StepRequirement {
   label: string;
@@ -42,38 +43,92 @@ export function StepTrack<S extends string>({
   const position = w.isExit ? null : `Bước ${index + 1} trên ${flow.main.length}`;
   const nextStep = w.next ? flow.steps[w.next] : null;
 
-  return (
+  const nextCard = (
+    // Thẻ tối «Bước tiếp theo» (v2) — sang cột phải của trang chi tiết khi màn hình đủ rộng.
     <section
-      aria-label="Tiến trình hồ sơ"
-      className="mb-4 rounded-md border border-border bg-surface p-3 lg:mb-6"
+      aria-label="Bước tiếp theo"
+      className="mb-4 rounded-card-dark bg-shell-card p-5 text-fg-inverse lg:mb-5 xl:mb-0"
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="font-semibold">
-          {w.isExit ? `Đã rẽ nhánh: ${step.label}` : `Đang ở: ${step.label}`}
-        </p>
-        {position && <span className="text-xs text-fg-subtle">{position}</span>}
-      </div>
+      <p className="text-xs font-semibold text-shell-fg-subtle">
+        {nextStep ? 'Bước tiếp theo' : w.isExit ? 'Đã rẽ nhánh' : 'Bước cuối'}
+      </p>
+      <h2 className="mt-1 text-md font-semibold">
+        {nextStep && w.next ? nextStep.label : step.label}
+      </h2>
+      {nextStep?.auto && <p className="mt-0.5 text-shell-fg">{nextStep.auto}</p>}
 
-      {/* Đường chính — ẩn trên điện thoại, chỉ giữ phần chữ bên dưới. */}
-      <ol aria-label="Các bước của hồ sơ" className="mt-3 hidden gap-2 sm:flex">
-        {flow.main.map((stage) => {
-          const state = w.done.includes(stage) ? 'done' : stage === current ? 'current' : 'todo';
-          return (
-            <li key={stage} className="min-w-0 flex-1">
+      <dl className="mt-3 space-y-2">
+        <div>
+          <dt className="text-xs text-shell-fg-subtle">Đang làm</dt>
+          <dd className="text-shell-fg">
+            {holder && <span className="font-semibold text-fg-inverse">{holder}: </span>}
+            {step.owner}
+          </dd>
+        </div>
+        {w.after && (
+          <div>
+            <dt className="text-xs text-shell-fg-subtle">Sau đó</dt>
+            <dd className="text-shell-fg">{flow.steps[w.after].label}</dd>
+          </div>
+        )}
+        {!w.isExit && w.last !== current && (
+          <div>
+            <dt className="text-xs text-shell-fg-subtle">Bước cuối</dt>
+            <dd className="text-shell-fg">{flow.steps[w.last].label}</dd>
+          </div>
+        )}
+      </dl>
+
+      {/* Điều kiện để qua bước — trên nền sáng bên trong thẻ tối, để nút «làm ngay» của từng điều
+          kiện giữ đúng kiểu của nó. */}
+      {nextStep && nextRequirements.length > 0 && (
+        <ul className="mt-3 space-y-1.5 rounded-field bg-surface p-3 text-ink">
+          {nextRequirements.map((r) => (
+            <li key={r.label} className="flex items-start gap-2 text-xs">
               <span
-                aria-hidden
                 className={cn(
-                  'block h-1 rounded-full',
-                  state === 'done' && 'bg-brand',
-                  state === 'current' && 'bg-brand-mint',
-                  state === 'todo' && 'bg-border',
+                  'shrink-0 rounded-full px-2 font-semibold',
+                  r.met ? 'bg-pill text-shell' : 'bg-brand-accent text-ink',
                 )}
-              />
-              <span
+              >
+                {r.met ? 'Đạt' : 'Cần'}
+              </span>
+              <span className={cn(r.met && 'text-ink-subtle')}>
+                {r.label}
+                {!r.met && r.action && <> {r.action}</>}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+
+  return (
+    <>
+      <section aria-label="Tiến trình hồ sơ" className="mb-4 lg:mb-5">
+        {/* Điện thoại: một dòng tóm tắt thay cho dải bước. */}
+        <p className="font-semibold sm:hidden">
+          {w.isExit ? `Đã rẽ nhánh: ${step.label}` : `Đang ở: ${step.label}`}
+          {position && <span className="font-normal text-ink-subtle"> · {position}</span>}
+        </p>
+
+        {/* Thanh bước dạng viên (v2): xong = viên nhạt có dấu tích, đang ở = viên rừng, chưa tới = chữ. */}
+        <ol
+          aria-label="Các bước của hồ sơ"
+          className="hidden gap-1 overflow-x-auto rounded-full bg-surface p-1 sm:flex"
+        >
+          {flow.main.map((stage) => {
+            const state = w.done.includes(stage) ? 'done' : stage === current ? 'current' : 'todo';
+            return (
+              <li
+                key={stage}
+                aria-current={state === 'current' ? 'step' : undefined}
                 className={cn(
-                  'mt-1.5 flex items-center gap-1 text-xs',
-                  state === 'todo' ? 'text-fg-subtle' : 'text-fg',
-                  state === 'current' && 'font-semibold',
+                  'flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-3',
+                  state === 'done' && 'bg-pill text-ink',
+                  state === 'current' && 'bg-shell font-semibold text-fg-inverse',
+                  state === 'todo' && 'text-ink-subtle',
                 )}
               >
                 {state === 'done' && <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />}
@@ -83,65 +138,16 @@ export function StepTrack<S extends string>({
                 <span className="sr-only">
                   {state === 'done' ? ' — đã xong' : state === 'current' ? ' — đang ở đây' : ''}
                 </span>
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-
-      <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="text-xs text-fg-subtle">Đang làm</dt>
-          <dd>
-            {holder && <span className="font-medium">{holder}: </span>}
-            {step.owner}
-          </dd>
-        </div>
-
-        {nextStep && w.next && (
-          <div>
-            <dt className="text-xs text-fg-subtle">Tiếp theo</dt>
-            <dd>
-              <span className="font-medium">{nextStep.label}</span>
-              {nextStep.auto && <span className="text-fg-subtle"> — {nextStep.auto}</span>}
-              {nextRequirements.length > 0 && (
-                <ul className="mt-1 space-y-0.5">
-                  {nextRequirements.map((r) => (
-                    <li key={r.label} className="flex items-start gap-1.5 text-xs">
-                      <span
-                        className={cn(
-                          'shrink-0 font-medium',
-                          r.met ? 'text-status-completed' : 'text-status-pending',
-                        )}
-                      >
-                        {r.met ? 'Đạt' : 'Cần'}
-                      </span>
-                      <span className={cn(r.met && 'text-fg-subtle')}>
-                        {r.label}
-                        {!r.met && r.action && <> {r.action}</>}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </dd>
-          </div>
+              </li>
+            );
+          })}
+        </ol>
+        {w.isExit && (
+          <p className="mt-2 hidden font-semibold sm:block">Đã rẽ nhánh: {step.label}</p>
         )}
+      </section>
 
-        {w.after && (
-          <div>
-            <dt className="text-xs text-fg-subtle">Sau đó</dt>
-            <dd>{flow.steps[w.after].label}</dd>
-          </div>
-        )}
-
-        {!w.isExit && w.last !== current && (
-          <div>
-            <dt className="text-xs text-fg-subtle">Bước cuối</dt>
-            <dd>{flow.steps[w.last].label}</dd>
-          </div>
-        )}
-      </dl>
-    </section>
+      <DetailAside place="next">{nextCard}</DetailAside>
+    </>
   );
 }

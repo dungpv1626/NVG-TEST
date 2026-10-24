@@ -41,7 +41,7 @@ export function MetricTile({
         ? ArrowUpRight
         : ArrowDownRight;
   return (
-    <div className="flex flex-col gap-1 rounded-lg border border-border bg-surface p-4">
+    <div className="flex flex-col gap-1 rounded-card bg-surface p-4">
       <p className="text-xs font-medium text-fg-subtle">{title}</p>
       {hasData ? (
         <>

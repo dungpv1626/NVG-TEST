@@ -132,7 +132,7 @@ export function UnitPriceListPage() {
       {showForm && (
         <form
           onSubmit={addPrice}
-          className="mb-4 rounded-lg border border-border bg-surface p-4 shadow-card"
+          className="mb-4 rounded-card bg-surface p-4"
         >
           <div className="grid gap-3 sm:grid-cols-4">
             <Field label="Mã vật tư / công việc" required>

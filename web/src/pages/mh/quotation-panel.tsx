@@ -66,7 +66,7 @@ export function QuotationPanel({
   if (error) {
     // Không phải lỗi kỹ thuật: ranh giới NEN-07 đang làm đúng việc của nó.
     return (
-      <div className="rounded-lg border border-border bg-surface-sunken p-4">
+      <div className="rounded-card bg-surface-sunken p-4">
         <p className="font-medium">Bảng so giá không mở cho vai trò hiện tại</p>
         <p className="mt-1 text-fg-subtle">
           Báo giá của các nhà cung cấp là nội dung thương thảo, chỉ Ban Giám đốc, Tài chính, Dự án –
@@ -159,7 +159,7 @@ function QuotationForm({
   const existing = board.quotations.find((q) => q.supplier_id === supplierId);
 
   return (
-    <div className="space-y-4 rounded-lg border border-border bg-surface-sunken p-4">
+    <div className="space-y-4 rounded-card bg-surface-sunken p-4">
       <Field label="Nhà cung cấp" required>
         <select
           value={supplierId}

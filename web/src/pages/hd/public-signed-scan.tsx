@@ -89,7 +89,7 @@ function PdfPages({ url }: { url: string }) {
           <img
             src={src}
             alt={`Trang ${i + 1}`}
-            className="w-full rounded-lg border border-border bg-surface shadow-card"
+            className="w-full rounded-card bg-surface"
           />
         </li>
       ))}
@@ -131,7 +131,7 @@ export function PublicSignedScanPage() {
         {!data ? (
           <p className="text-fg-subtle">Đang mở bản hợp đồng…</p>
         ) : data.status !== 'ok' || !data.url ? (
-          <div className="rounded-lg border border-border bg-surface p-6 text-center">
+          <div className="rounded-card bg-surface p-6 text-center">
             <p className="text-lg font-semibold">
               {data.status === 'expired'
                 ? 'Link xem hợp đồng đã hết hạn'
@@ -175,7 +175,7 @@ export function PublicSignedScanPage() {
               <img
                 src={data.url}
                 alt="Bản hợp đồng đã ký"
-                className="mt-4 w-full rounded-lg border border-border bg-surface"
+                className="mt-4 w-full rounded-card bg-surface"
               />
             ) : (
               <PdfPages url={data.url} />

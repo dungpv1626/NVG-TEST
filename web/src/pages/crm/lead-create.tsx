@@ -139,7 +139,7 @@ export function LeadCreatePage() {
       <form
         onSubmit={handleSubmit}
         noValidate
-        className="max-w-2xl rounded-lg border border-border bg-surface p-6 shadow-card"
+        className="max-w-2xl rounded-card bg-surface p-6"
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Tên người liên hệ / doanh nghiệp" required className="sm:col-span-2">

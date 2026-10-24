@@ -548,7 +548,7 @@ export function BriefPanel({
           <section
             key={step.section.id}
             id={`brief-section-${step.section.id}`}
-            className="rounded-lg border border-border bg-surface p-4 shadow-card lg:p-6"
+            className="rounded-card bg-surface p-4 lg:p-6"
           >
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-3">
               <div className="min-w-0">
@@ -613,7 +613,7 @@ export function BriefPanel({
               lại chỉ có ở bước cuối. Người dùng nhận đúng câu «Vui lòng nêu nguyên nhân» kèm
               một màn hình không có chỗ nào nêu được: một ngõ cụt kín. */}
           {needsNewVersion && (
-            <section className="rounded-lg border border-border bg-surface p-4 shadow-card">
+            <section className="rounded-card bg-surface p-4">
               <h3 className="font-semibold">Nguyên nhân điều chỉnh</h3>
               <p className="mt-0.5 text-fg-subtle">
                 Bản đang hiệu lực đã được xác nhận, nên lần lưu này lập phiên bản mới.
@@ -636,7 +636,7 @@ export function BriefPanel({
               để mất dữ liệu đã gõ. */}
           {/* Dính đáy vùng cuộn (07/10/2026): nút «Tiếp / Lưu» luôn trong tầm mắt, không phải cuộn hết
               một bước dài mới bấm được. */}
-          <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface/95 p-3 shadow-card backdrop-blur">
+          <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center gap-2 rounded-card bg-surface/95 p-3 shadow-card backdrop-blur">
             {index > 0 && (
               <Button variant="secondary" onClick={() => goTo(steps[index - 1]!.section.id)}>
                 <ChevronLeft className="size-4" />
@@ -754,7 +754,7 @@ export function BriefPanel({
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="space-y-4">
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
+        <div className="rounded-card bg-surface p-4">
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <p className="flex items-center gap-1 font-medium">
               Đầu bài đang hiệu lực — phiên bản {current.version}
@@ -875,7 +875,7 @@ export function BriefPanel({
         </div>
 
         {history.length > 0 && (
-          <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
+          <div className="rounded-card bg-surface p-4">
             <p className="mb-3 flex items-center gap-2 font-medium">
               <History className="size-4 text-fg-subtle" />
               Các phiên bản trước ({history.length})
@@ -965,7 +965,7 @@ function StepBar({
   return (
     <nav
       aria-label="Các bước của đầu bài"
-      className="rounded-lg border border-border bg-surface p-3 shadow-card"
+      className="rounded-card bg-surface p-3"
     >
       <div className="flex flex-wrap gap-x-6 gap-y-2">
         {parts.map((part) => {
@@ -1154,7 +1154,7 @@ function CompletenessPanel({
 
   return (
     <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-      <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
+      <div className="rounded-card bg-surface p-4">
         <p className="font-medium">Mức độ đầy đủ</p>
         <p className={`mt-1 text-2xl font-semibold text-status-${tone}`}>{percent}%</p>
         <div
@@ -1185,13 +1185,13 @@ function CompletenessPanel({
           phần lớn là câu «(tùy chọn)» — danh sách đòi điền thứ ô nhập nói được bỏ trống). Câu tùy
           chọn chưa trả lời gấp riêng bên dưới: chúng vẫn kéo điểm xuống, nên vẫn phải thấy được. */}
       {requiredMissing.length > 0 && (
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
+        <div className="rounded-card bg-surface p-4">
           <p className="font-medium">Còn thiếu ({requiredMissing.length})</p>
           <MissingList items={requiredMissing} onJump={onJump} />
         </div>
       )}
       {optionalMissing.length > 0 && (
-        <details className="rounded-lg border border-border bg-surface p-4 shadow-card">
+        <details className="rounded-card bg-surface p-4">
           <summary className="cursor-pointer font-medium select-none">
             Câu tùy chọn chưa trả lời ({optionalMissing.length})
           </summary>
@@ -1203,7 +1203,7 @@ function CompletenessPanel({
       )}
 
       {issues.length > 0 && (
-        <div className="rounded-lg border border-border bg-surface p-4 shadow-card">
+        <div className="rounded-card bg-surface p-4">
           <p className="font-medium">Chỗ chưa nhất quán ({issues.length})</p>
           <ul className="mt-2 space-y-2">
             {/* Một mã có thể lặp theo từng tầng (`dien_tich_vuot_san_xay_duoc`) — khoá kèm vị trí. */}

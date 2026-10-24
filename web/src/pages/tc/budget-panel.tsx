@@ -72,7 +72,7 @@ export function BudgetPanel({ siteId }: { siteId: string }) {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border border-border bg-surface-sunken p-4">
+      <section className="rounded-card bg-surface-sunken p-4">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <p className="font-medium">Toàn công trình</p>
           <HealthBadge health={total.health} />
@@ -101,7 +101,7 @@ export function BudgetPanel({ siteId }: { siteId: string }) {
         </p>
       </section>
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
+      <div className="overflow-x-auto rounded-card bg-surface">
         <table className="w-full min-w-[40rem] border-collapse">
           <caption className="sr-only">
             Ngân sách so với chi phí thực tế theo từng mã chi phí

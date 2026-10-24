@@ -67,7 +67,7 @@ export function RfiCard({
 }) {
   const canAnswer = useCanAnswerRfi(rfi.route);
   return (
-    <li className="space-y-3 rounded-lg border border-border bg-surface p-4">
+    <li className="space-y-3 rounded-card bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           {linkTitle ? (
@@ -286,7 +286,7 @@ export function RfiCreateForm({
     <form
       onSubmit={submit}
       noValidate
-      className="space-y-4 rounded-lg border border-border bg-surface p-4 shadow-card"
+      className="space-y-4 rounded-card bg-surface p-4"
     >
       <p className="font-medium">Gửi yêu cầu làm rõ</p>
       <Field label="Gửi tới" required>

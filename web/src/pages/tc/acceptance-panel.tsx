@@ -238,7 +238,7 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
         <form
           onSubmit={submit}
           noValidate
-          className="rounded-lg border border-border bg-surface p-4 shadow-card"
+          className="rounded-card bg-surface p-4"
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <Field
@@ -387,7 +387,7 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
       ) : (
         <ul className="space-y-3">
           {(records ?? []).map((r) => (
-            <li key={r.id} className="rounded-lg border border-border bg-surface p-4 shadow-card">
+            <li key={r.id} className="rounded-card bg-surface p-4">
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <p className="font-medium">{r.stage_name}</p>
                 <StatusLozenge status={ACCEPTANCE_STATUS_META[r.status].statusGroup} />

@@ -212,7 +212,7 @@ export function ProfitLossReportPage() {
         <div className="space-y-4">
           <ReportFreshness dataUpdatedAt={dataUpdatedAt} />
 
-          <section className="rounded-lg border border-border bg-surface-sunken p-4">
+          <section className="rounded-card bg-surface-sunken p-4">
             <p className="mb-3 font-medium">Toàn danh mục ({data.length} công trình)</p>
             <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-5">
               <div>
@@ -242,7 +242,7 @@ export function ProfitLossReportPage() {
             </dl>
           </section>
 
-          <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
+          <div className="overflow-x-auto rounded-card bg-surface">
             <table className="w-full min-w-[64rem] border-collapse">
               <caption className="sr-only">Lãi/lỗ theo từng công trình</caption>
               <thead>

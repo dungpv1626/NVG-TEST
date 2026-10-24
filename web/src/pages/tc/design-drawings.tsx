@@ -21,7 +21,7 @@ export function SiteDesignDrawings({ siteId }: { siteId: string }) {
   return (
     <section
       aria-labelledby="ban-ve-thiet-ke"
-      className="mb-6 rounded-lg border border-border bg-surface p-4 shadow-card"
+      className="mb-6 rounded-card bg-surface p-4"
     >
       <h3 id="ban-ve-thiet-ke" className="font-medium">
         Bản vẽ thiết kế {rows[0] ? `— hồ sơ ${rows[0].design_code}` : ''}

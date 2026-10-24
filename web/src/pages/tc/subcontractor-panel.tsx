@@ -122,7 +122,7 @@ export function SubcontractorPanel({
         <form
           onSubmit={submit}
           noValidate
-          className="rounded-lg border border-border bg-surface p-4 shadow-card"
+          className="rounded-card bg-surface p-4"
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Tên tổ đội / nhà thầu phụ" required>
@@ -229,7 +229,7 @@ export function SubcontractorPanel({
       ) : (
         <ul className="space-y-3">
           {(crews ?? []).map((c) => (
-            <li key={c.id} className="rounded-lg border border-border bg-surface p-4 shadow-card">
+            <li key={c.id} className="rounded-card bg-surface p-4">
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <p className="font-medium">{c.name}</p>
                 <StatusLozenge status={SUBCONTRACTOR_STATUS_META[c.status].statusGroup} />

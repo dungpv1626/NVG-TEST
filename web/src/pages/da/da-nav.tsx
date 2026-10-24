@@ -14,7 +14,7 @@ const ITEMS = [
 export function DaNav() {
   return (
     <nav
-      className="mb-4 flex gap-1 overflow-x-auto border-b border-border"
+      className="mb-4 flex gap-1.5 overflow-x-auto"
       aria-label="Màn hình trong phân hệ"
     >
       {ITEMS.map((item) => (
@@ -23,10 +23,10 @@ export function DaNav() {
           to={item.to}
           className={({ isActive }) =>
             cn(
-              '-mb-px shrink-0 whitespace-nowrap border-b-2 px-3 py-2',
+              'flex h-8 shrink-0 whitespace-nowrap items-center rounded-full px-3.5',
               isActive
-                ? 'border-brand font-semibold text-brand'
-                : 'border-transparent text-fg-subtle hover:text-fg',
+                ? 'bg-shell font-semibold text-fg-inverse'
+                : 'text-ink-subtle hover:bg-pill hover:text-ink',
             )
           }
         >

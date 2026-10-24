@@ -150,7 +150,7 @@ export function CustomerDetailPage() {
                 {customerOpportunities.map((o) => {
                   const meta = OPPORTUNITY_STAGE_META[o.stage];
                   return (
-                    <li key={o.id} className="rounded-lg border border-border bg-surface p-3">
+                    <li key={o.id} className="rounded-card bg-surface p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <Link
                           to={`/crm/co-hoi/${o.id}`}
@@ -195,7 +195,7 @@ export function CustomerDetailPage() {
             ) : (
               <ul className="space-y-2">
                 {(complaints ?? []).map((c) => (
-                  <li key={c.id} className="rounded-lg border border-border bg-surface p-3">
+                  <li key={c.id} className="rounded-card bg-surface p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <Link
                         to={`/crm/khieu-nai/${c.id}`}

@@ -84,7 +84,7 @@ function LedgerAsOf({ rows }: { rows: ScaffoldingLedgerRow[] }) {
         return (
           <li
             key={`${row.scaffolding_asset_id}-${row.condition}-${row.location_type}-${row.rental_agreement_code ?? ''}`}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-4 py-3"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-card bg-surface px-4 py-3"
           >
             <div>
               <p className="font-medium">
@@ -230,7 +230,7 @@ export function ScaffoldingPage() {
       )}
 
       <section className="mb-4 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-lg border border-border bg-surface-sunken p-4">
+        <div className="rounded-card bg-surface-sunken p-4">
           <p className="text-xs text-fg-subtle">Cho thuê được</p>
           <p className={KPI_VALUE_CLASS}>{formatNumber(totals.usable)}</p>
           <p className="mt-1 text-xs text-fg-subtle">
@@ -238,7 +238,7 @@ export function ScaffoldingPage() {
             khách.
           </p>
         </div>
-        <div className="rounded-lg border border-border bg-surface-sunken p-4">
+        <div className="rounded-card bg-surface-sunken p-4">
           <p className="text-xs text-fg-subtle">Hỏng chờ sửa và chờ thanh lý</p>
           <p className={KPI_VALUE_CLASS}>{formatNumber(totals.unusable)}</p>
           <p className="mt-1 text-xs text-fg-subtle">
@@ -267,7 +267,7 @@ export function ScaffoldingPage() {
             const isOpen = openId === asset.id;
             const usable = isUsableScaffolding(asset.condition);
             return (
-              <li key={asset.id} className="rounded-lg border border-border bg-surface px-4 py-3">
+              <li key={asset.id} className="rounded-card bg-surface px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="font-medium">

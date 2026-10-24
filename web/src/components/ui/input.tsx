@@ -71,7 +71,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         className={cn(
           // Viền dùng `border-strong`: viền mảnh quá thì ô nhập trông như một dòng chữ thường,
           // người dùng không nhận ra là chỗ gõ được cho tới khi thử bấm vào.
-          'h-9 w-full rounded-sm border border-border-strong bg-surface',
+          'h-11 w-full rounded-field border border-border-strong bg-surface',
           'px-3 text-fg placeholder:text-fg-subtle',
           'transition-[border-color,box-shadow] duration-(--motion-fast) ease-(--ease-out)',
           'hover:border-fg-subtle',

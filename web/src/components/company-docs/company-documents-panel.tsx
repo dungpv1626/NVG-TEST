@@ -132,7 +132,7 @@ export function CompanyDocumentsPanel({
       ) : (data ?? []).length === 0 ? (
         <EmptyState message={emptyMessage} />
       ) : (
-        <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
+        <ul className="divide-y divide-border rounded-card bg-surface">
           {(data ?? []).map((d) => (
             <li key={d.id} className="p-3 sm:p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
@@ -251,7 +251,7 @@ function AddDocumentForm({
     <form
       onSubmit={submit}
       noValidate
-      className="grid gap-4 rounded-lg border border-border bg-surface p-4 shadow-card sm:grid-cols-2 lg:grid-cols-3"
+      className="grid gap-4 rounded-card bg-surface p-4 sm:grid-cols-2 lg:grid-cols-3"
     >
       <Field label="Loại giấy tờ" required>
         <select

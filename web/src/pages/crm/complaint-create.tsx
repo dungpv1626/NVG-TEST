@@ -177,7 +177,7 @@ export function ComplaintCreatePage() {
         <form
           onSubmit={handleSubmit}
           noValidate
-          className="max-w-2xl rounded-lg border border-border bg-surface p-6 shadow-card"
+          className="max-w-2xl rounded-card bg-surface p-6"
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Khách hàng" required className="sm:col-span-2">
