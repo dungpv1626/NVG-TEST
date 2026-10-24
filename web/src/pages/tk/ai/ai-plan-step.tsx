@@ -938,7 +938,10 @@ function PlanDetail({
       <Fold title="Về phương án này">
         <p className="flex items-center gap-2 font-medium">
           <Sparkles className="size-4" aria-hidden />
-          {review.generator.provider} · {review.generator.model}
+          {/* Phương án dựng từ câu trả lời ĐÃ GHI (T170, chỉ máy phát triển) — nói rõ, không giả là lượt mới. */}
+          {review.generator.provider === 'replay'
+            ? `Phát lại lượt ${review.generator.model.replace(/^replay:/, '')}`
+            : `${review.generator.provider} · ${review.generator.model}`}
           {resampledLabel(review.generator)}
         </p>
         <p className="mt-2">{review.rationale}</p>

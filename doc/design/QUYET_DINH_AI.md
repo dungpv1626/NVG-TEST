@@ -4374,3 +4374,40 @@ lọt lòng 2,13 m cho mức 2,15 m — mức `minExtent` của ô thang chỉ t
 `ai-live-46d6eff3.test.ts` (gỡ bước quay lui thì đỏ). THU5: tầng 1 thu gọn xếp được ở mọi vòng có tầng trên hỏng, nhưng tầng
 trên vẫn hỏng — `4a25b460` tầng 3 phòng ngủ cạnh thang cần 2,5 + 2,7 m trên 5 m, `b1859741` / `4eade9b1` tầng 4 là lỗi bản
 phác của mô hình. Không vòng ghi nào của THU5 qua cổng nên không lưu phương án phát lại nào.
+
+### T170 — Phát lại một lượt đã ghi qua đường thật, chỉ máy phát triển (24/10/2026, anh Dũng: việc 1 của mục 2b)
+
+**Vì sao.** Phát lại 46d6eff3 vòng 1 qua cổng 70,2 điểm (T169) mới chỉ có trong phép thử; anh Dũng cần thấy một mặt
+bằng THẬT đi đủ bốn bước trên giao diện mà không tốn thêm tiền mô hình.
+
+**Đã làm.**
+- Tuyến `POST /design/ai/plan/replay` chỉ có khi `AI_REPLAY` đúng là `'1'` (đặt tay ở `.dev.vars`, không khai trong
+  `wrangler.jsonc`); vắng thì 404. Thân `{ projectId, replayOf (8 hex), digest, outputs (1–5 câu trả lời thô theo vòng),
+  textRoute }`. Dùng CHUNG hàng rào với `POST /plan/runs` (`preparePlanStart`: quyền ghi, đầu bài đã xác nhận + qua
+  cổng, không lượt nào đang chạy, dựng digest dưới phiên người bấm) và lệnh mở lượt (`launchPlanRun`); bỏ kiểm tuyến /
+  khoá. Một phương án, không trần chi phí, gói quy tắc mặc định.
+- Hàng rào trung thực: digest của hồ sơ phải TRÙNG digest của lượt ghi theo nghĩa (`ai/replay-digest.ts` — khoá vắng ≡
+  `null`, mảng rỗng ≡ `null`, còn lại khớp đúng kể cả thứ tự mảng); khác thì 409 «Đầu bài của hồ sơ khác đầu bài của lượt
+  ghi — không phát lại được.» kèm danh sách đường dẫn khác. Phát lại một câu trả lời lên đầu bài khác là bịa phương án.
+- Workflow: `params.replay = { of, outputs }` → `llm/replay.ts` `ReplayTextClient` thay `textClientFor` (không dựng client
+  nhà cung cấp nào). Client dựng lại cho TỪNG vòng (`planClientFor`, câu vòng n = phần tử n − 1) vì Workflow chạy lại
+  `run()` khi tiếp tục — bộ đếm sống qua bước sẽ lệch vòng. Hết câu thì `LlmCallFailed` không thử lại «Hết câu trả lời đã
+  ghi của lượt <id> — phát lại dừng, không gọi mô hình.». Câu trả lời thô đi qua đúng đường thật (hợp đồng, `tidyHouse`,
+  bộ xếp, cổng, điểm). Chỉ nhận giai đoạn `plan`, không nhận lượt sửa.
+- Dấu vết: nhật ký `design_ai_call` ghi nhà cung cấp `replay`, model `replay:<id>`, token 0, `cost_usd` rỗng (không giá);
+  `generator.provider/model` của artifact mặt bằng + danh mục phòng mang đúng hai giá trị ấy (nằm trong nội dung băm); bước
+  ghi artifact mang `replay_of` trong params (vào `params_hash` của cạnh lineage); kết quả `design_ai_run` có `replayOf`.
+  Màn hình «Về phương án này» đọc «Phát lại lượt 46d6eff3». Không đổi hợp đồng nào.
+
+**Ranh giới.** Không gọi mạng, không khoá. Một phương án phát lại vẫn là ĐỀ XUẤT như mọi phương án AI; nó chỉ chứng minh mã
+hiện tại làm gì với câu trả lời đã có, không chứng minh mô hình sẽ trả lại câu ấy.
+
+**Sau lượt chạy đầu (24/10/2026).**
+- Hết câu ghi = hết lượt sửa (`lastRound`, `workflows/ai-design-steps.ts`): vòng 1 của 46d6eff3 qua cổng nhưng còn câu nhắc
+  (hai phòng ngủ không cửa sổ, ban công lệch), nên luồng thật xin vòng 2. Các vòng 2–5 đã ghi là câu mô hình trả lời câu
+  nhắc của mã CŨ — đưa vào là không trung thực. Phát lại chỉ gửi vòng 1 và lưu bản đã xếp như lượt thật dừng ở trần sửa.
+- Kết quả trên máy: hồ sơ thử `NVO-TK-2026-PL01` (đầu bài dựng lại từ digest đã ghi, `backup/ai-phat-lai/`), phương án
+  70,2 điểm nhưng DƯỚI ngưỡng vì hai nhóm (Mặt thoáng, Dựng được) dưới sàn nhóm T96.
+- Màn hình từng ghi «Đạt ngưỡng 60» cho bản bộ xếp đã đánh dấu dưới ngưỡng: chip điểm chỉ so tổng, bỏ qua sàn nhóm. Tuyến
+  đọc phương án nay trả `belowGroups`; chip ghi «Dưới sàn nhóm …». Dòng chi phí của lượt phát lại nói «không gọi mô hình,
+  không tốn tiền» thay vì «có lượt chưa có giá».

@@ -658,6 +658,8 @@ export interface AiPlanReview {
   score: AiPlanScoreView | null;
   /** Ngưỡng nhận của luồng tự động, % (T53). Vắng ở Worker cũ; `null` = không có ngưỡng. */
   acceptPercent?: number | null;
+  /** Mã nhóm dưới sàn nhóm (T96): có thì phương án DƯỚI ngưỡng dù tổng vượt. Vắng ở Worker cũ. */
+  belowGroups?: string[];
   /** Sửa được bằng ô yêu cầu không — cần cây chia đã lưu (T53). */
   editable?: boolean;
 }

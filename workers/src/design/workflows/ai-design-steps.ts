@@ -42,6 +42,12 @@ import type { RoutePricing } from '../llm/router';
 import type { ReasoningEffort, StructuredCallOptions, TextModelClient } from '../llm/text-client';
 import type { RulePack } from '../rules/rule-pack';
 import {
+  replayClientForRound,
+  replayModel,
+  REPLAY_PROVIDER,
+  type ReplaySource,
+} from '../llm/replay';
+import {
   recordAiCall,
   type AiCallOutcome,
   type AiCallScope,
@@ -74,6 +80,7 @@ import {
   type PlanContext,
   type PlanVariant,
   type RetryKind,
+  houseRevisionsMax,
 } from '../ai/plan';
 import { groupsBelowFloor } from '../ai/plan-score';
 import type { AiPrompts } from '../ai/prompts';
@@ -172,6 +179,42 @@ export interface AiDesignParams {
    * không phải chỗ để mang vài megabyte ảnh.
    */
   anchors?: Array<{ kind: 'elevation' | 'roof_plan'; uri: string; sha256: string; bytes: number }>;
+  /**
+   * PHÁT LẠI một lượt đã ghi (T170, chỉ máy phát triển — cờ `AI_REPLAY=1`): mọi lời gọi mô hình của lượt này
+   * trả câu trả lời thô đã ghi thay cho nhà cung cấp (`llm/replay.ts`). Không gọi mạng, không tính tiền; phương
+   * án lưu ra mang `generator.provider = 'replay'`, `model = 'replay:<of>'` và `replay_of` trong params bước ghi.
+   */
+  replay?: ReplaySource | null;
+}
+
+/**
+ * Client chữ của vòng `round` — client thật, hoặc client phát lại khi `params.replay` có mặt (T170).
+ * Dựng lại cho TỪNG vòng: Workflow chạy lại `run()` khi tiếp tục, bộ đếm sống qua các bước sẽ lệch vòng.
+ */
+export function planClientFor(
+  params: Pick<AiDesignParams, 'replay'>,
+  round: number,
+  live: TextModelClient,
+): TextModelClient {
+  return params.replay ? replayClientForRound(params.replay, round) : live;
+}
+
+/** Nhà cung cấp / model / giá của nhật ký khi phát lại — không tuyến sửa, không giá (T170). */
+export function replayDeps(source: ReplaySource): Pick<PlanStepDeps, 'provider' | 'model'> & {
+  pricing?: undefined;
+  revise?: undefined;
+} {
+  return {
+    provider: REPLAY_PROVIDER,
+    model: replayModel(source.of),
+    pricing: undefined,
+    revise: undefined,
+  };
+}
+
+/** `replay_of` cho params bước ghi artifact — vắng khi không phát lại. */
+function replayOf(params: AiDesignParams): { replay_of?: string } {
+  return params.replay ? { replay_of: params.replay.of } : {};
 }
 
 export interface PlanStepDeps {
@@ -650,7 +693,12 @@ export async function writePlan(
     // Cùng bước sinh với chương trình không gian của AI; lineage (trỏ đầu bài, mặt bằng trỏ nó) và
     // `params.variant` phân biệt bản dựng từ ý định mặt bằng.
     step: 'ai_program_propose',
-    params: { route: params.textRoute, prompt_version: deps.prompts.version, variant: variant.id },
+    params: {
+      route: params.textRoute,
+      prompt_version: deps.prompts.version,
+      variant: variant.id,
+      ...replayOf(params),
+    },
     setHead: false,
   });
   final.payload = {
@@ -672,6 +720,7 @@ export async function writePlan(
       prompt_version: deps.prompts.version,
       variant: variant.id,
       strategy: variant.strategy,
+      ...replayOf(params),
     },
     setHead: false,
   });
@@ -1092,4 +1141,14 @@ export async function applyEditStep(
 function editRound(plan: AiFloorPlan): number {
   const match = /· sửa (\d+)$/.exec(plan.variant_label ?? '');
   return match ? Number(match[1]) : 0;
+}
+
+/**
+ * Vòng cuối của một phương án: hết lượt sửa (`houseRevisionsMax`), hoặc — lượt PHÁT LẠI (T170) — hết câu trả lời
+ * đã ghi. Phát lại coi «hết câu ghi» như «hết lượt sửa»: lưu bản tốt nhất đã xếp được kèm điểm và câu nhắc còn lại,
+ * đúng như lượt thật dừng ở trần sửa — không bịa câu trả lời cho vòng sau, cũng không vứt bản đã qua cổng.
+ */
+export function lastRound(params: AiDesignParams, round: number): boolean {
+  if (round > houseRevisionsMax(params.pipeline)) return true;
+  return !!params.replay && round >= params.replay.outputs.length;
 }

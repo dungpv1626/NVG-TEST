@@ -26,18 +26,24 @@ export function scoreSummary(review: AiPlanReview): {
   percent: number | null;
   threshold: number | null;
   passed: boolean | null;
+  /** Tên các nhóm dưới sàn nhóm (T96) — lý do «dưới ngưỡng» khi tổng điểm đã vượt. */
+  weakGroups: string[];
 } {
   const percent =
     review.score && review.score.scoredWeight > 0
       ? (review.score.points / review.score.scoredWeight) * 100
       : null;
   const threshold = review.acceptPercent ?? null;
-  const passed = percent !== null && threshold !== null ? percent >= threshold : null;
-  return { percent, threshold, passed };
+  const weakGroups = (review.belowGroups ?? []).map(
+    (code) => review.score?.groups.find((group) => group.code === code)?.vi ?? code,
+  );
+  const passed =
+    percent !== null && threshold !== null ? percent >= threshold && weakGroups.length === 0 : null;
+  return { percent, threshold, passed, weakGroups };
 }
 
 export function ScoreChip({ review }: { review: AiPlanReview }): React.ReactElement | null {
-  const { percent, threshold, passed } = scoreSummary(review);
+  const { percent, threshold, passed, weakGroups } = scoreSummary(review);
   if (percent === null) return <Chip tone="mute">Chưa có điểm</Chip>;
   return (
     <Chip tone={passed === false ? 'am' : passed ? 'gr' : 'mute'}>
@@ -45,7 +51,10 @@ export function ScoreChip({ review }: { review: AiPlanReview }): React.ReactElem
       {threshold !== null &&
         (passed
           ? ` · Đạt ngưỡng ${formatNumber(threshold)}`
-          : ` · Dưới ngưỡng ${formatNumber(threshold)}`)}
+          : percent >= threshold && weakGroups.length > 0
+            ? // Tổng vượt mà nhóm dưới sàn: nói đúng lý do, không để người đọc thấy 70 > 60 mà khó hiểu.
+              ` · Dưới sàn nhóm ${weakGroups.join(', ')}`
+            : ` · Dưới ngưỡng ${formatNumber(threshold)}`)}
     </Chip>
   );
 }

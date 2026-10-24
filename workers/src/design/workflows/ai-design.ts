@@ -61,6 +61,8 @@ import {
   houseStepLabel,
   proposeHouse,
   infeasibleBrief,
+  planClientFor,
+  replayDeps,
   writePlan,
   writeStepId,
   type AiDesignParams,
@@ -73,6 +75,7 @@ import {
   type LevelLiveHooks,
   type WriteOutcome,
   type WriteResult,
+  lastRound,
 } from './ai-design-steps';
 import {
   AiPlanRejected,
@@ -108,6 +111,7 @@ import {
 } from './ai-facade-steps';
 import { mandatoryRules } from '../ai/mandatory-data';
 import { costUsd } from '../ai/call-log';
+import { ReplayTextClient } from '../llm/replay';
 import { costCapDecision, costCapMessage, type CostCapStop } from '../ai/cost-cap';
 
 /** Lượt sửa theo yêu cầu kỹ sư gọi mô hình tối đa bấy nhiêu lần: một lần, cộng một lần kèm lý do cổng. */
@@ -183,7 +187,16 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       return this.runPerspective(step, params, repo);
     }
 
-    const client = textClientFor(this.env, params.textRoute);
+    // Phát lại (T170) chỉ cho lượt KHAI MỚI mặt bằng — tuyến phát lại không mở giai đoạn nào khác.
+    if (params.replay && (params.stage !== 'plan' || params.edit)) {
+      const message = 'Phát lại chỉ dùng cho lượt xếp mặt bằng.';
+      await finishRun(repo.db, params.runId, { status: 'failed', error: message });
+      throw new NonRetryableError(message);
+    }
+    // Phát lại: KHÔNG dựng client nhà cung cấp nào — không khoá, không mạng (T170).
+    const client = params.replay
+      ? new ReplayTextClient(params.replay)
+      : textClientFor(this.env, params.textRoute);
     if (!client) {
       // Khoá biến mất giữa lúc khởi động và lúc Workflow nhận việc: thử lại không đổi được gì.
       const message = 'Chưa cấu hình khoá API cho model đã chọn.';
@@ -234,6 +247,8 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       model: publicRoute?.model ?? 'unknown',
       promptStore: createArtifactStore(this.env),
       ...reviseOf(router, params.textRoute),
+      // Phát lại: nhật ký ghi nhà cung cấp `replay`, model `replay:<mã>`, không giá, không tuyến sửa (T170).
+      ...(params.replay ? replayDeps(params.replay) : {}),
     };
 
     if (params.stage === 'facade') {
@@ -320,7 +335,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       }
     });
 
-    const result = { plans, failed };
+    const result = { plans, failed, ...(params.replay ? { replayOf: params.replay.of } : {}) };
     await finishRun(repo.db, params.runId, {
       // Không phương án nào xếp được thì lượt chạy là HỎNG, dù từng bước đã chạy hết: màn hình
       // phải nói thất bại, không phải «xong» với danh sách rỗng.
@@ -347,12 +362,14 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
     const publicRoute = router.publicRoutes().find((route) => route.route === params.textRoute);
     const board = new LivePlanBoard(
       {
-        model: publicRoute?.model ?? params.textRoute,
+        model: params.replay
+          ? `replay:${params.replay.of}`
+          : (publicRoute?.model ?? params.textRoute),
         route: params.textRoute,
         effort: params.reasoningEffort ?? null,
       },
-      publicRoute?.pricing,
-      router.isBilled(router.providerOf(params.textRoute) ?? ''),
+      params.replay ? undefined : publicRoute?.pricing,
+      params.replay ? false : router.isBilled(router.providerOf(params.textRoute) ?? ''),
     );
     let ticking = false;
     const tick = async () => {
@@ -739,7 +756,8 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
         once(
           () =>
             proposeHouse(
-              deps,
+              // Phát lại: client của đúng vòng này (T170) — không giữ bộ đếm qua các bước.
+              { ...deps, client: planClientFor(params, round, deps.client) },
               params,
               variant,
               round,
@@ -774,7 +792,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
           failedLevels: [...failedLevels],
         });
         // Đạt ngưỡng, hết lượt sửa, hoặc không có dòng nào để gửi mô hình → ghi bản tốt nhất.
-        if (arranged.retry === 'none' || round > houseRevisionsMax(params.pipeline)) {
+        if (arranged.retry === 'none' || lastRound(params, round)) {
           return this.writeBest(step, deps, params, variant, best, calls.length);
         }
         previous = arranged;
@@ -797,7 +815,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       // Mô hình trả lại y nguyên phần đang hỏng (`'unchanged'`), hoặc trả lại một câu đã chấm ở vòng trước
       // (`repeated`): gọi nữa là cùng lời dẫn, cùng kết quả.
       if (
-        round > houseRevisionsMax(params.pipeline) ||
+        lastRound(params, round) ||
         arranged.retry === 'none' ||
         arranged.retry === 'unchanged' ||
         repeated

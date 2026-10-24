@@ -65,7 +65,7 @@ import { checkPlan } from './plan-check';
 import { houseRevisionsMax } from './plan';
 import { parseCostCap, readRunCostCap, RUN_COST_CAP_KEY } from './cost-cap';
 import { planQuality } from './plan-quality-data';
-import { scoreForScreen } from './plan-score';
+import { groupsBelowFloor, scoreForScreen } from './plan-score';
 import { AiProgramRejected, generateAiProgram, type AiProgramRound } from './program';
 import { REASONING_EFFORTS, type ReasoningEffort } from '../llm/text-client';
 import { createRenderStore, renderKey, RenderStoreError } from '../render-store';
@@ -84,8 +84,10 @@ import {
 } from './runs';
 import { editStepSpecs, planStepSpecs, type AiDesignParams } from '../workflows/ai-design-steps';
 import { selectedRulePack, type AiRulePackChoice } from './rule-packs';
+import { handlePlanReplay, type RouteError } from './replay-route';
 import { reviewPlanRooms, reviewProgramAreas } from './rule-warnings';
 import type {
+  AiBriefDigest,
   AiFloorPlan,
   AiPlanSheetImage,
   AiSpaceProgram,
@@ -1372,6 +1374,7 @@ aiApp.get('/plan/:projectId/review', async (c) => {
     });
   }
 
+  const screenScore = plan.score ? scoreForScreen(plan.score, planQuality()) : null;
   return c.json({
     artifactId: artifact.id,
     createdAt: artifact.createdAt,
@@ -1391,13 +1394,181 @@ aiApp.get('/plan/:projectId/review', async (c) => {
     warnings: review.warnings,
     checkedRules: review.checked,
     uncheckedRules: review.unchecked,
-    score: plan.score ? scoreForScreen(plan.score, planQuality()) : null,
+    score: screenScore,
     // T53: ngưỡng nhận của luồng tự động, và phương án này có sửa bằng ô yêu cầu được không.
     acceptPercent: planQuality().acceptPercent,
+    // Nhóm dưới sàn nhóm (T96) — tổng vượt ngưỡng mà một nhóm dưới sàn thì phương án vẫn DƯỚI ngưỡng.
+    // Thiếu trường này màn hình từng ghi «Đạt ngưỡng 60» cho bản bộ xếp đã đánh dấu dưới ngưỡng (24/10/2026).
+    belowGroups:
+      screenScore && planQuality().acceptPercent !== null
+        ? groupsBelowFloor(
+            screenScore,
+            planQuality().acceptGroupFloorPercent,
+            planQuality().acceptGroupFloors,
+          )
+        : [],
     editable: plan.levels.every((level) => level.tree),
     edit: plan.generator.edit ?? null,
   });
 });
+
+/** Mọi thứ hai tuyến khởi động lượt mặt bằng (thật và phát lại) cùng cần, đã qua hàng rào. */
+interface PlanStart {
+  repo: ArtifactRepository;
+  runScope: {
+    tenantId: string;
+    companyId: string;
+    projectId: string;
+    discipline: typeof DISCIPLINE;
+    actorId: string | null;
+  };
+  briefRef: string;
+  digest: AiBriefDigest;
+}
+
+/**
+ * Hàng rào CHUNG của lượt mặt bằng — dùng cho cả `POST /plan/runs` lẫn tuyến phát lại (T170): luồng chạy
+ * nền có mặt, quyền ghi hồ sơ, đầu bài đã xác nhận và qua cổng, không lượt mặt bằng nào đang chạy; rồi dựng
+ * đầu bài lược danh tính dưới phiên người bấm.
+ */
+async function preparePlanStart(
+  env: DesignEnv,
+  token: string,
+  projectId: string,
+  /** Kiểm thêm sau quyền, trước đầu bài — `POST /plan/runs` kiểm tuyến model ở đây. */
+  afterAuth?: () => RouteError | null,
+): Promise<RouteError | { ok: PlanStart }> {
+  if (!env.AI_DESIGN_PIPELINE) {
+    return {
+      error: {
+        body: {
+          error:
+            'Chưa cấu hình luồng chạy nền của nhánh AI. Workflow chỉ chạy trong runtime Workers — dùng `wrangler dev` thay vì gọi trực tiếp.',
+          retryable: false,
+        },
+        status: 503,
+      },
+    };
+  }
+
+  const db = await asUser(env, token);
+  const scope = await projectScope(db, projectId);
+  if (!scope) return { error: { body: { error: PROJECT_NOT_VISIBLE }, status: 404 } };
+  const denied = await denyUnlessWritable(db, scope.tenantId, projectId);
+  if (denied) return { error: { body: { error: denied.error }, status: denied.status } };
+
+  const extra = afterAuth?.();
+  if (extra) return extra;
+
+  // Đầu vào của mặt bằng là ĐẦU BÀI + KHẢO SÁT, không phải chương trình không gian (T45, Haan
+  // 15/09/2026: «tạm bỏ qua thông tin từ chương trình không gian»). Cùng cổng với bước chương trình:
+  // đầu bài tự mâu thuẫn ở mức nghiêm trọng thì không tốn một lượt gọi nào (T41).
+  const repo = new ArtifactRepository(env);
+  const brief = await repo.head(projectId, DISCIPLINE, 'design_brief');
+  if (!brief) {
+    return {
+      error: {
+        body: {
+          error:
+            'Chưa có đầu bài đã xác nhận. Hoàn tất và xác nhận đầu bài trước khi xếp mặt bằng.',
+        },
+        status: 409,
+      },
+    };
+  }
+  const gate = gateLayer2(brief.payload, await readCompletenessThreshold(repo.db, scope.tenantId));
+  if (!gate.allowed) return { error: { body: { error: gate.message }, status: 409 } };
+
+  // Một giai đoạn chỉ một lượt chạy: hai lượt song song đúc ra hai bộ phương án cho cùng một
+  // bước và nhân đôi tiền cho cùng một câu hỏi.
+  const running = await activeRun(repo.db, projectId, 'plan');
+  if (running) {
+    return {
+      error: {
+        body: {
+          error: 'Đang có một lượt xếp mặt bằng chạy dở. Chờ lượt đó xong rồi chạy lại.',
+          runId: running.id,
+        },
+        status: 409,
+      },
+    };
+  }
+
+  // Đầu bài đã lược danh tính dựng ở ĐÂY, dưới phiên người bấm: dựng nó phải đọc tên và điện
+  // thoại khách hàng để lược đi, và Workflow chỉ có khoá `service_role` (vượt RLS).
+  const digest = anonymiseForAi(await aiDigestInputs(db, projectId, brief.payload as DesignBrief));
+
+  return {
+    ok: {
+      repo,
+      runScope: {
+        tenantId: scope.tenantId,
+        companyId: scope.companyId,
+        projectId,
+        discipline: DISCIPLINE,
+        actorId: scope.actorId,
+      },
+      briefRef: brief.id,
+      digest,
+    },
+  };
+}
+
+/** Phần params do từng tuyến tự đặt — phần còn lại `launchPlanRun` dựng từ `PlanStart`. */
+type PlanRunOptions = Pick<
+  AiDesignParams,
+  'textRoute' | 'reasoningEffort' | 'rulePacks' | 'costCapUsd' | 'replay'
+>;
+
+/** Mở dòng tiến độ + instance Workflow cho lượt mặt bằng; mở hỏng thì chốt dòng tiến độ lại. */
+async function launchPlanRun(
+  env: DesignEnv,
+  start: PlanStart,
+  variants: AiDesignParams['variants'],
+  options: PlanRunOptions,
+): Promise<string> {
+  const pipeline = env.AI_DESIGN_PIPELINE;
+  // `preparePlanStart` đã chặn khi vắng — kiểm lại để kiểu biết, không ép.
+  if (!pipeline) throw new Error('Chưa cấu hình luồng chạy nền của nhánh AI.');
+  const run = await createRun(start.repo.db, start.runScope, {
+    stage: 'plan',
+    steps: planStepSpecs(variants),
+  });
+  const params: AiDesignParams = {
+    runId: run.id,
+    ...start.runScope,
+    stage: 'plan',
+    ...options,
+    ...(env.AI_PROMPT_PIPELINE === 'v5' || env.AI_PROMPT_PIPELINE === 'v6'
+      ? { geometry: 'rect' as const }
+      : {}),
+    ...(env.AI_PROMPT_PIPELINE === 'v6' ? { pipeline: 'v6' as const } : {}),
+    briefRef: start.briefRef,
+    digest: start.digest,
+    variants,
+  };
+
+  try {
+    const instanceId = instanceIdOf(await pipeline.create({ params }));
+    await attachWorkflow(start.repo.db, run.id, instanceId);
+  } catch (error) {
+    // Dòng tiến độ đã mở mà instance không mở được: chốt nó lại ngay, nếu không màn hình sẽ
+    // hiện một lượt chạy «đang chờ» vĩnh viễn và chặn luôn lượt sau (điều kiện 409 ở trên).
+    await finishRun(start.repo.db, run.id, {
+      status: 'failed',
+      error: 'Không mở được luồng chạy nền. Thử lại sau.',
+    });
+    throw error;
+  }
+  return run.id;
+}
+
+/** `count` phương án đầu của danh mục chiến lược — một chỗ cho tuyến thật và tuyến phát lại. */
+function planVariants(count: number): AiDesignParams['variants'] {
+  return aiPrompts()
+    .floorLevel.strategies.slice(0, count)
+    .map((item) => ({ id: item.id, label: item.label, strategy: item.strategy }));
+}
 
 /**
  * Khởi động lượt xếp mặt bằng — một tới ba phương án, chạy nền qua Workflow.
@@ -1423,6 +1594,7 @@ aiApp.post('/plan/runs', async (c) => {
   };
   if (!body.projectId) return c.json({ error: 'Thiếu mã hồ sơ thiết kế.' }, 400);
   if (!body.route) return c.json({ error: 'Chưa chọn model AI.' }, 400);
+  const route = body.route;
   const planEffort = (REASONING_EFFORTS as readonly string[]).includes(body.reasoningEffort ?? '')
     ? (body.reasoningEffort as ReasoningEffort)
     : null;
@@ -1430,69 +1602,33 @@ aiApp.post('/plan/runs', async (c) => {
     return c.json({ error: 'Mức suy nghĩ không hợp lệ — chọn Thấp, Vừa hoặc Cao.' }, 400);
   }
 
-  if (!c.env.AI_DESIGN_PIPELINE) {
-    return c.json(
-      {
-        error:
-          'Chưa cấu hình luồng chạy nền của nhánh AI. Workflow chỉ chạy trong runtime Workers — dùng `wrangler dev` thay vì gọi trực tiếp.',
-        retryable: false,
-      },
-      503,
-    );
-  }
-
   const choice: AiRulePackChoice = {
     standards: body.rulePacks?.standards === true,
     experience: body.rulePacks?.experience === true,
   };
 
-  const db = await asUser(c.env, token);
-  const scope = await projectScope(db, body.projectId);
-  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
-  const denied = await denyUnlessWritable(db, scope.tenantId, body.projectId);
-  if (denied) return c.json({ error: denied.error }, denied.status);
-
-  const router = modelRouter(c.env);
-  if (!isSelectableRoute(aiModelCatalogue(router), 'text', body.route)) {
-    return c.json(
-      {
-        error: 'Model đã chọn không dùng được lúc này. Chọn model khác trong danh sách đang bật.',
-      },
-      409,
-    );
-  }
-  if (!textClientFor(c.env, body.route)) {
-    return c.json({ error: 'Chưa cấu hình khoá API cho model đã chọn.' }, 503);
-  }
-
-  // Đầu vào của mặt bằng là ĐẦU BÀI + KHẢO SÁT, không phải chương trình không gian (T45, Haan
-  // 15/09/2026: «tạm bỏ qua thông tin từ chương trình không gian»). Cùng cổng với bước chương trình:
-  // đầu bài tự mâu thuẫn ở mức nghiêm trọng thì không tốn một lượt gọi nào (T41).
-  const repo = new ArtifactRepository(c.env);
-  const brief = await repo.head(body.projectId, DISCIPLINE, 'design_brief');
-  if (!brief) {
-    return c.json(
-      {
-        error: 'Chưa có đầu bài đã xác nhận. Hoàn tất và xác nhận đầu bài trước khi xếp mặt bằng.',
-      },
-      409,
-    );
-  }
-  const gate = gateLayer2(brief.payload, await readCompletenessThreshold(repo.db, scope.tenantId));
-  if (!gate.allowed) return c.json({ error: gate.message }, 409);
-
-  // Một giai đoạn chỉ một lượt chạy: hai lượt song song đúc ra hai bộ phương án cho cùng một
-  // bước và nhân đôi tiền cho cùng một câu hỏi.
-  const running = await activeRun(repo.db, body.projectId, 'plan');
-  if (running) {
-    return c.json(
-      {
-        error: 'Đang có một lượt xếp mặt bằng chạy dở. Chờ lượt đó xong rồi chạy lại.',
-        runId: running.id,
-      },
-      409,
-    );
-  }
+  const prepared = await preparePlanStart(c.env, token, body.projectId, () => {
+    const router = modelRouter(c.env);
+    if (!isSelectableRoute(aiModelCatalogue(router), 'text', route)) {
+      return {
+        error: {
+          body: {
+            error:
+              'Model đã chọn không dùng được lúc này. Chọn model khác trong danh sách đang bật.',
+          },
+          status: 409,
+        },
+      };
+    }
+    if (!textClientFor(c.env, route)) {
+      return {
+        error: { body: { error: 'Chưa cấu hình khoá API cho model đã chọn.' }, status: 503 },
+      };
+    }
+    return null;
+  });
+  if ('error' in prepared) return c.json(prepared.error.body, prepared.error.status);
+  const start = prepared.ok;
 
   const strategies = aiPrompts().floorLevel.strategies;
   // `Math.round(NaN)` là NaN, và `slice(0, NaN)` trả mảng RỖNG: một thân lời gọi hỏng sẽ mở một
@@ -1503,65 +1639,52 @@ aiApp.post('/plan/runs', async (c) => {
   const count = Number.isFinite(requested)
     ? Math.max(1, Math.min(strategies.length, Math.round(requested)))
     : 1;
-  const variants = strategies.slice(0, count).map((item) => ({
-    id: item.id,
-    label: item.label,
-    strategy: item.strategy,
-  }));
+  const variants = planVariants(count);
 
-  // Đầu bài đã lược danh tính dựng ở ĐÂY, dưới phiên người bấm: dựng nó phải đọc tên và điện
-  // thoại khách hàng để lược đi, và Workflow chỉ có khoá `service_role` (vượt RLS).
-  const digest = anonymiseForAi(
-    await aiDigestInputs(db, body.projectId, brief.payload as DesignBrief),
-  );
-
-  const runScope = {
-    tenantId: scope.tenantId,
-    companyId: scope.companyId,
-    projectId: body.projectId,
-    discipline: DISCIPLINE,
-    actorId: scope.actorId,
-  };
-  const run = await createRun(repo.db, runScope, {
-    stage: 'plan',
-    steps: planStepSpecs(variants),
-  });
-
-  const params: AiDesignParams = {
-    runId: run.id,
-    ...runScope,
-    stage: 'plan',
-    textRoute: body.route,
+  const runId = await launchPlanRun(c.env, start, variants, {
+    textRoute: route,
     reasoningEffort: planEffort,
-    ...(c.env.AI_PROMPT_PIPELINE === 'v5' || c.env.AI_PROMPT_PIPELINE === 'v6'
-      ? { geometry: 'rect' as const }
-      : {}),
-    ...(c.env.AI_PROMPT_PIPELINE === 'v6' ? { pipeline: 'v6' as const } : {}),
-    briefRef: brief.id,
-    digest,
     rulePacks: choice,
     // Mức chi phí của lượt (T164) — chốt lúc bấm, vòng lặp Workflow đọc từ đây.
-    costCapUsd: await readRunCostCap(repo.db, scope.tenantId),
-    variants,
-  };
+    costCapUsd: await readRunCostCap(start.repo.db, start.runScope.tenantId),
+  });
 
-  try {
-    const instanceId = instanceIdOf(await c.env.AI_DESIGN_PIPELINE.create({ params }));
-    await attachWorkflow(repo.db, run.id, instanceId);
-  } catch (error) {
-    // Dòng tiến độ đã mở mà instance không mở được: chốt nó lại ngay, nếu không màn hình sẽ
-    // hiện một lượt chạy «đang chờ» vĩnh viễn và chặn luôn lượt sau (điều kiện 409 ở trên).
-    await finishRun(repo.db, run.id, {
-      status: 'failed',
-      error: 'Không mở được luồng chạy nền. Thử lại sau.',
-    });
-    throw error;
-  }
+  return c.json({ runId, variants: variants.map((v) => ({ id: v.id, label: v.label })) }, 202);
+});
 
-  return c.json(
-    { runId: run.id, variants: variants.map((v) => ({ id: v.id, label: v.label })) },
-    202,
-  );
+/**
+ * PHÁT LẠI một lượt mặt bằng đã ghi — CHỈ máy phát triển (T170, cờ `AI_REPLAY=1`; vắng thì 404).
+ *
+ * Câu trả lời thô của mô hình (đã ghi ở `ai_calls/<id>.json`) đi qua đúng đường thật — kiểm hợp đồng, bộ
+ * xếp, cổng, chấm điểm, ghi artifact — mà KHÔNG gọi mô hình nào. Cùng hàng rào với `POST /plan/runs`, trừ
+ * kiểm tuyến model / khoá (không cần khoá); đầu bài của hồ sơ phải trùng đầu bài của lượt ghi. Thân tuyến ở
+ * `replay-route.ts`.
+ */
+aiApp.post('/plan/replay', async (c) => {
+  if (c.env.AI_REPLAY !== '1') return c.json({ error: 'Không tìm thấy.' }, 404);
+  const token = bearer(c.req.header('Authorization'));
+  const raw: unknown = await c.req.json().catch(() => null);
+  let start: PlanStart | null = null;
+  const result = await handlePlanReplay(c.env, token, raw, {
+    prepare: async (projectId) => {
+      const prepared = await preparePlanStart(c.env, token ?? '', projectId);
+      if ('ok' in prepared) start = prepared.ok;
+      return prepared;
+    },
+    launch: async (replay, textRoute) => {
+      if (!start) throw new Error('Phát lại: chưa qua hàng rào lượt mặt bằng.');
+      const variants = planVariants(1);
+      const runId = await launchPlanRun(c.env, start, variants, {
+        textRoute,
+        reasoningEffort: null,
+        rulePacks: { standards: false, experience: false },
+        costCapUsd: null,
+        replay,
+      });
+      return { runId, variants: variants.map((v) => ({ id: v.id, label: v.label })) };
+    },
+  });
+  return c.json(result.body, result.status);
 });
 
 /** Trần chữ yêu cầu sửa — khớp `generator.edit.instruction` của `ai-floor-plan`. */

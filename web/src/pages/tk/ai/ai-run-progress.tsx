@@ -155,9 +155,12 @@ export function AiRunProgress({
               : `≈ ${formatUsd(runningCost)}`
             : calls.rows.length === 0
               ? 'chưa có lượt gọi nào'
-              : calls.cost === null
-                ? 'có lượt chưa có giá'
-                : `≈ ${formatUsd(calls.cost)}`}
+              : // Lượt phát lại (T170, chỉ ở máy phát triển): không gọi mô hình nào — nói thẳng thay vì «chưa có giá».
+                calls.rows.every((call) => call.provider === 'replay')
+                ? 'phát lại câu trả lời đã ghi — không gọi mô hình, không tốn tiền'
+                : calls.cost === null
+                  ? 'có lượt chưa có giá'
+                  : `≈ ${formatUsd(calls.cost)}`}
         </span>
         {running && liveCost !== null && <span> · ước tính khi đang chạy</span>}
       </p>

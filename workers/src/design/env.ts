@@ -82,6 +82,12 @@ export interface DesignEnv {
   AI_PROMPT_PIPELINE?: string;
 
   /**
+   * `'1'` = mở tuyến PHÁT LẠI `POST /design/ai/plan/replay` (T170) — CHỈ máy phát triển, đặt tay trong
+   * `.dev.vars`. Vắng / giá trị khác thì tuyến trả 404. KHÔNG khai trong `wrangler.jsonc`.
+   */
+  AI_REPLAY?: string;
+
+  /**
    * Images binding của Cloudflare — thu nhỏ ảnh do mô hình vẽ thành bản xem trước WebP cho ảnh bìa
    * thẻ (`ai/image-preview.ts`, 08/10/2026). Vắng thì tuyến ảnh trả ảnh gốc.
    */
