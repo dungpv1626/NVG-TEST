@@ -4297,3 +4297,20 @@ qua ngay vòng 3 (bản phác 15 ô), nhưng cũng dừng ở cùng lỗi bản 
 nhắc nào nói tới, vì khi tầng 1 hỏng thì tầng trên chỉ được SOÁT bản phác (`sketch_prechecked`: lối vào, sàn đầu bài),
 không soát phòng không chữ nhật / thiếu phòng / đầu bước ra của thang — việc nên làm tiếp: soát thêm ba lỗi ấy ngay khi
 tầng dưới hỏng, để một lượt sửa gỡ cả nhà.
+
+### T167 — Tầng 1 hỏng thì tầng trên vẫn được soát phòng THIẾU trên bản phác (24/10/2026, mạch B, anh Dũng đồng ý)
+
+**Vì sao.** Lượt thật 4eade9b1 (THU5): tầng 4 thiếu WC ngay từ lời gọi 1, nhưng tầng 1 hỏng nên tầng trên chỉ được soát
+lối vào và sàn đầu bài (`precheckOnly`, T92) — mô hình chỉ nghe về WC ở lời gọi 5, khi đã hết lượt.
+
+**Đã làm.** `arrange/index.ts#sketchShapeIssues`: khi chỉ soát (`precheckOnly`), thêm `sketch_room_missing` — phòng của
+tầng không có ô nào trên bản phác, cùng phép kiểm `sketchTrees` vẫn làm khi tầng được xếp thật. Không thêm luật, không đổi
+đường xếp thật. Cân nhắc rồi KHÔNG làm:
+- phòng không chữ nhật: bộ nắn tự gỡ phần lớn — tầng 2 của chính lượt 4eade9b1 có hành lang chữ L vẫn qua khi được xếp; báo
+  sớm là bắt mô hình vẽ lại tầng đang đạt (thử trên phát lại: câu nhắc lời gọi 2 thêm ba dòng «không chữ nhật» cho tầng 2–4);
+- đầu bước ra của thang: phụ thuộc chiều thang tầng 1 đã dựng — tầng 1 hỏng thì không có, đoán là bịa.
+
+**Đo.** Độ chính xác: trong mọi vòng ghi, 9 / 9 tầng có bản phác thiếu phòng đều hỏng khi được xếp thật (tầng 1 đã qua).
+Phát lại 226 vòng ngữ cảnh Workflow, đối chứng 605ec3d: 10 / 226 vòng ra mặt bằng ở cả hai; 8 vòng của 5 lượt (182665ea,
+4eade9b1, f1a88ac1, fdd486b1) thêm `sketch_room_missing` cho tầng trên ngay vòng tầng 1 hỏng, không vòng nào đổi gì khác.
+4eade9b1: câu nhắc lời gọi 2 nay có «Storey 4: … leaves out wc5» (trước: lời gọi 5).

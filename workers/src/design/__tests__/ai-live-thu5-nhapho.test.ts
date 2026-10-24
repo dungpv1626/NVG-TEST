@@ -207,6 +207,14 @@ describe('phát lại 4eade9b1 — phòng lồi không được ăn cột của 
     );
   });
 
+  it('tầng 1 hỏng thì tầng trên vẫn được soát phòng THIẾU trên bản phác: WC tầng 4 nói ngay từ lời gọi 2 (T167)', async () => {
+    const { prompts: sent } = await replayLoop('4eade9b1');
+    // Trước T167 câu này chỉ tới ở lời gọi 5, sau khi tầng 1 qua — lượt hết tiền trước khi mô hình sửa được.
+    expect(sent[1]).toContain('Storey 4: The sketch of this storey leaves out wc5');
+    // Phòng không chữ nhật KHÔNG báo sớm: hành lang chữ L tầng 2 vẫn qua khi được xếp thật (vòng 4).
+    expect(sent[1]).not.toMatch(/Storey 2: In the sketch, these rooms are not one rectangle/);
+  });
+
   it('vòng 1: thiếu bề NGANG thang thì câu nói bề ngang, không nói «theo chiều đi lên»', () => {
     const run = loadRun('4eade9b1');
     const input = thu5Input(run);
