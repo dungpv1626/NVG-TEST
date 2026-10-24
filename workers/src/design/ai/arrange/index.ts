@@ -162,6 +162,11 @@ export interface ArrangeInput {
   splitClosets?: boolean;
   /** Lấy ứng viên xếp hạng thứ n (0 = tốt nhất; quá số ứng viên thì lấy cái cuối) — bước quay lui tầng 1 (T113). */
   rankSkip?: number;
+  /**
+   * Tầng 1: ô thang bản phác vẽ dư bề ngang / chiều dài thì thu về cạnh tối thiểu (T169, `SketchTreeInput.tightCores`) —
+   * lớp gọi chỉ bật khi quay lui vì tầng trên hỏng.
+   */
+  stairTight?: boolean;
   /** Tầng 1: cạnh ô thang xếp cuối khi chọn lối vào (T161, `DoorsInput.stairEntryAvoid`). */
   stairEntryAvoid?: StairSide;
   openFaces: readonly Face[];
@@ -2087,6 +2092,7 @@ function sketchStage(
     maxAspect: (id) => env.leafById.get(id)?.aspectHard ?? null,
     ensuiteOf: (id) => env.leafById.get(id)?.parent ?? null,
     fixedCore: (id) => coreLeaf(input, intent, id),
+    ...(input.stairTight && input.level === 1 ? { tightCores: stairLeafSet(input, intent) } : {}),
     ...(input.trace ? { trace: input.trace } : {}),
   });
   if (drawn.issues.length) {
@@ -2154,6 +2160,15 @@ function sketchStage(
   };
 }
 
+/** Lá ô thang bộ của tầng (T169). */
+function stairLeafSet(input: ArrangeInput, intent: LevelIntent): Set<string> {
+  return new Set(
+    intent.leaves
+      .filter((leaf) => leaf.types.some((type) => input.stairTypes.includes(type)))
+      .map((leaf) => leaf.id),
+  );
+}
+
 /** Lá là ô lõi — thang bộ hay thang máy (T166): nắn phòng lồi trên bản phác không lấy ô của nó tới mức hụt. */
 function coreLeaf(input: ArrangeInput, intent: LevelIntent, id: string): boolean {
   const leaf = intent.leaves.find((item) => item.id === id);
@@ -2185,6 +2200,7 @@ function treesOfStacked(
     maxAspect: (id) => env.leafById.get(id)?.aspectHard ?? null,
     ensuiteOf: (id) => env.leafById.get(id)?.parent ?? null,
     fixedCore: (id) => coreLeaf(input, intent, id),
+    ...(input.stairTight && input.level === 1 ? { tightCores: stairLeafSet(input, intent) } : {}),
     ...(input.trace ? { trace: input.trace } : {}),
   }).trees;
 }
