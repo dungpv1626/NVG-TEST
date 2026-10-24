@@ -30,6 +30,12 @@ vi.mock('@/components/layout/module-nav', async (original) => {
   };
 });
 
+vi.mock('@/lib/auth', () => ({
+  useAuth: () => ({ profile: { fullName: 'Bùi Văn Thi', jobTitle: 'Tổng Giám đốc' } }),
+}));
+vi.mock('@/hooks/use-approvals', () => ({ usePendingApprovals: () => ({ data: [{}, {}] }) }));
+vi.mock('@/hooks/use-leads', () => ({ useMyFollowups: () => ({ data: [{}] }) }));
+
 const { Sidebar } = await import('../sidebar');
 
 describe('Thanh điều hướng trái', () => {
@@ -83,5 +89,19 @@ describe('Thanh điều hướng trái', () => {
       'aria-current',
       'page',
     );
+  });
+
+  it('nhóm theo nghiệp vụ: chỉ hiện nhóm còn mục được xem', () => {
+    renderWithApp(<Sidebar />);
+    expect(screen.getByRole('group', { name: 'Của tôi' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Kinh doanh' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Nội bộ' })).toBeInTheDocument();
+    // Không xem được TC / MH / KHO / SX → nhóm Triển khai ẩn hẳn, kể cả nhãn.
+    expect(screen.queryByRole('group', { name: 'Triển khai' })).not.toBeInTheDocument();
+  });
+
+  it('Việc cần làm đếm cùng số với thanh trên (phê duyệt + chăm sóc khách)', () => {
+    renderWithApp(<Sidebar />);
+    expect(screen.getByRole('link', { name: /Việc cần làm/ })).toHaveTextContent('3');
   });
 });

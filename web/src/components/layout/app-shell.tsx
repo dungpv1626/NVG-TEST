@@ -26,7 +26,6 @@ import type { SectionGuide } from '@/lib/help-texts';
 import { BottomNav } from './bottom-nav';
 import { OfflineBar, PwaPrompts } from './pwa-status';
 import { Sidebar } from './sidebar';
-import { useTkScope } from './tk-chrome';
 import { TopBar } from './top-bar';
 
 export interface PageHeaderProps {
@@ -91,26 +90,26 @@ export function PageHeader({
 
 // Chế độ tối đã gỡ khỏi toàn ứng dụng (doc/MOC_CAI_TIEN_UX.md, vấn đề 2) — chỉ còn một bảng màu.
 export function AppShell() {
-  const tk = useTkScope();
-
   return (
+    // Giao diện v2 (DESIGN_SYSTEM.md §8): khung xanh rừng bao ngoài, sidebar nằm thẳng trên khung,
+    // bảng nội dung nền ám xanh bo 24 đặt bên phải. Từ lg trở lên khung chừa 14px trên / phải /
+    // dưới, trái 0 (sidebar tự có lề). Dưới lg không có sidebar: bảng nội dung tràn hết màn hình,
+    // thanh tab nằm dưới.
+    //
     // `100dvh` chứ không `100vh`: trên trình duyệt di động, `100vh` tính cả phần thanh địa
     // chỉ tự ẩn/hiện, nên đáy màn hình bị đẩy xuống dưới vùng nhìn thấy và thanh điều hướng
     // dưới nằm ngoài màn hình.
-    //
-    // Trong phạm vi Thiết kế thì bỏ khe hở và bo góc của bố cục "panel nổi": bản mẫu §5.1 xếp
-    // ba vùng sát nhau, phân cách bằng đúng một đường viền.
-    <div
-      className={cn(
-        'flex h-[100dvh] overflow-hidden bg-surface-sunken text-fg',
-        !tk && 'lg:gap-3 lg:p-3',
-      )}
-    >
+    <div className="flex h-[100dvh] overflow-hidden bg-shell text-ink lg:py-3.5 lg:pr-3.5">
       <Sidebar />
-      <div className={cn('flex min-w-0 flex-1 flex-col overflow-hidden', !tk && 'lg:gap-3')}>
+      <div
+        className={cn(
+          'flex min-w-0 flex-1 flex-col overflow-hidden bg-canvas',
+          'lg:rounded-canvas',
+        )}
+      >
         <TopBar />
         <OfflineBar />
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <main className="flex-1 overflow-y-auto px-4 pt-2 pb-4 lg:px-6 lg:pb-6">
           {/* Màn hình tải theo nhu cầu — trong lúc tải gói, hiện khung xám đúng hình dạng
               nội dung chứ không phải vòng xoay toàn màn hình (Webapp Flow 6.7). Khung
               ứng dụng và thanh điều hướng vẫn đứng yên. */}

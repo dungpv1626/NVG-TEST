@@ -42,18 +42,18 @@ export function CompanySwitcher({
   const selected = options.find((o) => o.id === selectedCompanyId) ?? options[0];
 
   /**
-   * Thanh điều hướng của Module Thiết kế tối ở CẢ hai chế độ (bản mẫu §4.3), nên bộ chọn đặt
-   * trong đó không đọc được token dùng chung: ở chế độ SÁNG chúng trả về màu của nền trắng và
-   * nút ra một mảng trắng nằm giữa thanh tối. Bảng màu `--color-navdark-*` chỉ có một giá trị,
-   * đúng thứ cần ở đây.
+   * Sidebar v2 nằm trên khung xanh rừng (DESIGN_SYSTEM.md §8), nên bộ chọn đặt trong đó không
+   * đọc được token dùng chung — chúng là màu của nền trắng, nút ra một mảng trắng giữa thanh tối.
+   * Dùng bộ `--color-shell-*`.
    *
    * Bảng xổ xuống KHÔNG áp bảng màu này: nó được cổng ra ngoài `<body>`, tức nằm trên nền
    * trang chứ không trên thanh điều hướng.
    */
   const trigger = onDark
-    ? 'border-navdark-line bg-navdark-btn text-navdark-fg-strong hover:bg-navdark-hover'
+    ? 'border-shell-line bg-shell-line text-fg-inverse hover:bg-shell-active'
     : 'border-border bg-surface-sunken hover:bg-surface-hover';
-  const triggerIcon = onDark ? 'text-navdark-fg' : 'text-fg-subtle';
+  const triggerIcon = onDark ? 'text-shell-fg-subtle' : 'text-fg-subtle';
+  const subText = onDark ? 'text-shell-fg-subtle' : 'text-fg-subtle';
 
   if (!selected) return null;
 
@@ -65,7 +65,7 @@ export function CompanySwitcher({
         <span
           className={cn(
             'flex items-center gap-1.5 px-1 font-semibold',
-            onDark && 'text-navdark-fg-strong',
+            onDark && 'text-fg-inverse',
           )}
           title={`${selected.name} — ${selected.roles.join(' · ')}`}
         >
@@ -75,11 +75,17 @@ export function CompanySwitcher({
       );
     }
     return (
-      <div className={cn('flex items-center gap-2 rounded-md border px-2 py-2', trigger)}>
+      <div
+        className={cn(
+          'flex items-center gap-2 rounded-md border px-2 py-2',
+          onDark && 'rounded-lg',
+          trigger,
+        )}
+      >
         <Building2 className={cn('size-5', triggerIcon)} />
         <div className="min-w-0">
           <div className="truncate font-semibold">{selected.name}</div>
-          <div className="truncate text-xs text-fg-subtle">{selected.roles.join(' · ')}</div>
+          <div className={cn('truncate text-xs', subText)}>{selected.roles.join(' · ')}</div>
         </div>
       </div>
     );
@@ -93,6 +99,7 @@ export function CompanySwitcher({
           // bấm được, nên khối này trông y hệt một tiêu đề và người dùng không tìm ra chỗ đổi
           // pháp nhân — trong khi Bảng điều khiển vẫn bảo họ "chọn một pháp nhân ở thanh bên".
           'flex items-center gap-2 rounded-md border text-left',
+          onDark && 'rounded-lg',
           trigger,
           // Vùng bấm tối thiểu 40px trên di động, 32px trên máy tính có chuột (Content
           // Guidelines 6.8) — compact chỉ hiện dưới `lg:` (top-bar.tsx), đúng nơi ngón tay cần
@@ -109,7 +116,7 @@ export function CompanySwitcher({
         ) : (
           <div className="min-w-0 flex-1">
             <div className="truncate font-semibold">{selected.name}</div>
-            <div className="truncate text-xs text-fg-subtle">{selected.roles.join(' · ')}</div>
+            <div className={cn('truncate text-xs', subText)}>{selected.roles.join(' · ')}</div>
           </div>
         )}
         <ChevronsUpDown className={cn('size-4 shrink-0', triggerIcon)} />

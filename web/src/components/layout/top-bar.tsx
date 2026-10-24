@@ -271,16 +271,9 @@ export function TopBar() {
   return (
     <header
       className={cn(
-        'flex shrink-0 items-center border-b border-border',
-        tk
-          ? // Bản mẫu §5.3: cao 60px, sát mép, đệm ngang 24px, chỉ một đường viền dưới.
-            'h-15 gap-4 bg-tk-bg px-6'
-          : cn(
-              'h-12 gap-3 bg-surface px-4',
-              // Panel nổi bo góc từ lg: trở lên (thay thanh full-bleed) — DESIGN_SYSTEM.md.
-              // Dưới lg: giữ nguyên thanh full-bleed cũ, vì bản demo chỉ thiết kế cho desktop.
-              'lg:rounded-lg lg:border',
-            ),
+        // v2: thanh trên nằm TRONG bảng nội dung (nền ám xanh), không viền, không nền riêng.
+        'flex shrink-0 items-center',
+        tk ? 'h-15 gap-4 px-6' : 'h-14 gap-3 px-4 lg:px-6',
       )}
     >
       {/* Pháp nhân đang chọn — trên máy tính nằm ở sidebar, ở điện thoại sidebar ẩn nên

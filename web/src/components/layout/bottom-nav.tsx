@@ -15,29 +15,36 @@
  * (Content Guidelines 6.8).
  */
 
-import { LayoutGrid, X } from 'lucide-react';
+import { CheckSquare, LayoutGrid, ListChecks, Menu, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { MODULES, type ModuleCode } from '@nvg/shared';
+import { usePendingApprovals } from '@/hooks/use-approvals';
+import { useMyFollowups } from '@/hooks/use-leads';
+import { useDefaultRoute } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { useBottomBarSlot } from './bottom-bar-slot';
-import {
-  MODULE_ICONS,
-  splitBottomNav,
-  useActiveModule,
-  useModuleRoutes,
-  useVisibleModules,
-} from './module-nav';
+import { MODULE_ICONS, useActiveModule, useModuleRoutes, useVisibleModules } from './module-nav';
 
 const ITEM_CLASS =
-  'flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[11px]';
+  'flex min-h-14 flex-1 flex-col items-center justify-center gap-1 px-1 py-1.5 text-[11px]';
 
+/**
+ * Thanh tab v2 (`NvgTabbar`): đúng 4 ô — Hôm nay · phân hệ đang mở · Việc cần làm · Thêm. Ô thứ
+ * hai đổi theo phân hệ người dùng đang ở (chưa ở phân hệ nào thì là phân hệ đầu tiên được xem),
+ * mọi phân hệ khác nằm trong bảng «Thêm». Ô đang chọn: viên nền nhạt quanh biểu tượng.
+ */
 export function BottomNav() {
   const visible = useVisibleModules();
   const moduleRoutes = useModuleRoutes();
   const activeModule = useActiveModule();
+  const homeRoute = useDefaultRoute();
   const [sheetOpen, setSheetOpen] = useState(false);
   const location = useLocation();
+  // Cùng hai truy vấn với thanh trên / sidebar — một con số ở mọi nơi.
+  const { data: pending } = usePendingApprovals();
+  const { data: followups } = useMyFollowups(0);
+  const todoCount = (pending?.length ?? 0) + (followups?.length ?? 0);
 
   // Chuyển trang thì đóng bảng — nếu không, bảng che mất chính màn hình vừa mở.
   useEffect(() => setSheetOpen(false), [location.pathname]);
@@ -52,7 +59,6 @@ export function BottomNav() {
     return () => window.removeEventListener('keydown', onKey);
   }, [sheetOpen]);
 
-  const { primary, rest } = splitBottomNav(visible);
   // Màn hình đang khai thao tác riêng (trang công trường) thì thanh này nhường chỗ: vẽ thao tác
   // của màn hình + MỘT nút «Phân hệ» mở bảng đầy đủ — một thanh, không hai (bottom-bar-slot.ts).
   const screenActions = useBottomBarSlot((s) => s.actions);
@@ -79,7 +85,7 @@ export function BottomNav() {
             type="button"
             onClick={() => setSheetOpen(true)}
             aria-expanded={sheetOpen}
-            className={cn(ITEM_CLASS, 'rounded-md text-fg-subtle hover:bg-surface-hover')}
+            className={cn(ITEM_CLASS, 'rounded-md text-ink-subtle hover:bg-surface-hover')}
           >
             <LayoutGrid className="size-5 shrink-0" />
             <span>Phân hệ</span>
@@ -89,58 +95,103 @@ export function BottomNav() {
     );
   }
 
+  const current: ModuleCode | undefined =
+    activeModule && visible.includes(activeModule) ? activeModule : visible[0];
+  // Trang đầu của nhiều vai trò nằm TRONG một phân hệ (Kinh doanh → /crm/co-hoi): khi đó ô phân hệ
+  // sáng, không phải «Hôm nay» — một mục đang chọn, không hai.
+  const onHome = location.pathname === homeRoute && !activeModule;
+  const onTodo = location.pathname.startsWith('/viec-can-lam');
+
   return (
     <>
-      {sheetOpen && rest.length > 0 && (
-        <MoreSheet rest={rest} activeModule={activeModule} onClose={() => setSheetOpen(false)} />
+      {sheetOpen && (
+        <MoreSheet rest={visible} activeModule={activeModule} onClose={() => setSheetOpen(false)} />
       )}
 
       <nav
         aria-label="Điều hướng chính"
         className={cn(
-          'flex shrink-0 border-t border-border bg-surface lg:hidden',
+          'grid shrink-0 grid-cols-4 border-t border-line-soft bg-surface lg:hidden',
           // Chừa chỗ cho vạch Home của iPhone — thiếu dòng này thì mục cuối bị vạch đè lên.
           'pb-[env(safe-area-inset-bottom)]',
         )}
       >
-        {primary.map((code) => {
-          const Icon = MODULE_ICONS[code];
-          const meta = MODULES[code];
-          return (
-            <NavLink
-              key={code}
-              to={moduleRoutes[code]}
-              aria-current={activeModule === code ? 'page' : undefined}
-              className={cn(
-                ITEM_CLASS,
-                'text-fg-subtle',
-                activeModule === code && 'font-semibold text-brand',
-              )}
-            >
-              <Icon className="size-5 shrink-0" />
-              {/* Icon LUÔN kèm chữ — icon một mình là câu đố (Content Guidelines 6.6). */}
-              <span className="max-w-full truncate">{meta.shortLabel}</span>
-            </NavLink>
-          );
-        })}
-
-        {rest.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setSheetOpen(true)}
-            aria-expanded={sheetOpen}
-            className={cn(ITEM_CLASS, 'text-fg-subtle')}
-          >
-            <LayoutGrid className="size-5 shrink-0" />
-            <span>Thêm</span>
-          </button>
+        <TabLink to="/" label="Hôm nay" Icon={ListChecks} active={onHome} />
+        {current && (
+          <TabLink
+            to={moduleRoutes[current]}
+            label={MODULES[current].shortLabel}
+            Icon={MODULE_ICONS[current]}
+            active={activeModule === current}
+          />
         )}
+        <TabLink
+          to="/viec-can-lam"
+          label="Việc cần làm"
+          Icon={CheckSquare}
+          active={onTodo}
+          badge={todoCount || undefined}
+        />
+        <button
+          type="button"
+          onClick={() => setSheetOpen(true)}
+          aria-expanded={sheetOpen}
+          className={cn(ITEM_CLASS, 'text-ink-subtle')}
+        >
+          <TabIcon Icon={Menu} active={false} />
+          <span>Thêm</span>
+        </button>
       </nav>
     </>
   );
 }
 
-/** Bảng đầy đủ: các module không đủ chỗ trên thanh dưới. */
+function TabIcon({ Icon, active, badge }: { Icon: LucideIcon; active: boolean; badge?: number }) {
+  return (
+    <span
+      className={cn(
+        'relative grid h-6.5 w-11 place-items-center rounded-full',
+        active && 'bg-pill',
+      )}
+    >
+      <Icon className="size-5 shrink-0" aria-hidden />
+      {badge ? (
+        <span className="absolute -top-1 right-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-brand-accent px-1 text-2xs font-bold text-ink">
+          {badge}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function TabLink({
+  to,
+  label,
+  Icon,
+  active,
+  badge,
+}: {
+  to: string;
+  label: string;
+  Icon: LucideIcon;
+  active: boolean;
+  badge?: number;
+}) {
+  return (
+    // `Link`, không `NavLink`: NavLink tự đặt `aria-current` theo đường dẫn của chính nó (xem sidebar.tsx).
+    <Link
+      to={to}
+      aria-current={active ? 'page' : undefined}
+      className={cn(ITEM_CLASS, active ? 'font-bold text-shell' : 'text-ink-subtle')}
+    >
+      <TabIcon Icon={Icon} active={active} badge={badge} />
+      {/* Icon LUÔN kèm chữ — icon một mình là câu đố (Content Guidelines 6.6). */}
+      <span className="max-w-full truncate">{label}</span>
+    </Link>
+  );
+}
+
+/** Bảng «Thêm»: mọi phân hệ người dùng được xem. */
 function MoreSheet({
   rest,
   activeModule,

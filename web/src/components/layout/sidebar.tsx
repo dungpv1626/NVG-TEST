@@ -1,35 +1,35 @@
 /**
- * Sidebar — vùng 1 của App Shell (Webapp Flow Mục 2.1).
+ * Sidebar — vùng 1 của App Shell (Webapp Flow Mục 2.1), giao diện v2
+ * (`design_handoff_nvg_v2/design/NvgSidebar.dc.html`, DESIGN_SYSTEM.md §8).
  *
  * CHỈ hiện từ khổ máy tính bảng ngang trở lên. Trên điện thoại, điều hướng chuyển sang
  * thanh dưới (`bottom-nav.tsx`) — Webapp Flow 4.8 cấm thu nhỏ bố cục máy tính rồi bắt
  * người dùng bấm vào các mục li ti.
  *
- * Danh sách module và thứ tự lấy từ `module-nav.ts`, dùng chung với thanh dưới.
+ * ── Nhóm theo nghiệp vụ (v2) ────────────────────────────────────────────────────────────
+ * Bốn nhóm «Của tôi · Kinh doanh · Triển khai · Nội bộ» (`NAV_GROUPS`). Mục không có quyền
+ * xem thì ẩn hẳn; nhóm không còn mục nào thì ẩn cả nhãn nhóm. Trang con của phân hệ KHÔNG nằm
+ * ở đây mà ở thanh viên trên đầu nội dung.
+ *
+ * «Việc hôm nay» của bản thiết kế chưa có trang riêng: việc chăm sóc khách hôm nay đang nằm
+ * chung trang Việc cần làm (`/viec-can-lam`), nên «Của tôi» chỉ có mục đó — chờ chủ dự án
+ * quyết tách trang hay không.
  *
  * ── Thu gọn được (06/09/2026) ────────────────────────────────────────────────────────────
- * Thanh có hai bề rộng: **240px** mở và **80px** thu. Thu gọn trả lại 160px cho vùng nội
- * dung — đáng kể ở những màn hình rộng thật sự cần chỗ: bản vẽ, bảng dự toán nhiều cột, lưới
- * thẻ của Trang dự án thiết kế.
+ * Hai bề rộng: **248px** mở và **80px** thu. Thu gọn thì mỗi mục xếp DỌC (biểu tượng trên, nhãn
+ * ngắn dưới), không bỏ hẳn chữ; tên đọc được của liên kết vẫn là nhãn đầy đủ (`aria-label`).
+ * Mọi `shortLabel` là một phần của `label` (WCAG 2.5.3) — có test canh.
  *
- * Ở trạng thái thu, mỗi mục xếp DỌC (biểu tượng trên, nhãn ngắn dưới) chứ không bỏ hẳn chữ.
- * Một cột toàn biểu tượng bắt người dùng học 12 hình mới, và `title` chỉ hiện sau khi rê chuột
- * đứng yên — vô dụng khi họ đang quét mắt tìm chỗ cần bấm.
- *
- * Nhãn ngắn là chữ NHÌN THẤY, còn tên đọc được của liên kết vẫn là nhãn đầy đủ (`aria-label`).
- * Mọi `shortLabel` đều là một phần của `label` nên không phạm WCAG 2.5.3 — có test canh.
- *
- * ⚠️ Dùng `Link`, KHÔNG dùng `NavLink`. `NavLink` tự tính trạng thái hoạt động theo đường dẫn
- * của chính nó và **ghi đè `aria-current` ta truyền vào** — nên có những đường dẫn mà mục vẫn
- * sáng pill nền mint (ta tô theo `useActiveModule`) nhưng `aria-current` bị bỏ trống. Khi đó
- * màu là cách DUY NHẤT nói cho biết đang ở đâu, đúng thứ Content Guidelines 6.8 cấm, và người
- * dùng bàn phím mất hẳn mốc định vị. Một nguồn sự thật: `useActiveModule()`.
+ * ⚠️ Dùng `Link`, KHÔNG dùng `NavLink`: `NavLink` ghi đè `aria-current` ta truyền vào, để màu
+ * thành cách duy nhất báo vị trí. Một nguồn sự thật: `useActiveModule()`.
  */
 
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { CheckSquare, Gauge, PanelLeftClose, PanelLeftOpen, type LucideIcon } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
-import { Gauge } from 'lucide-react';
-import { MODULES } from '@nvg/shared';
+import { MODULES, type ModuleCode } from '@nvg/shared';
+import { usePendingApprovals } from '@/hooks/use-approvals';
+import { useMyFollowups } from '@/hooks/use-leads';
+import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from './brand-logo';
 import { CompanySwitcher } from './company-switcher';
@@ -40,8 +40,25 @@ import {
   useShowExecOverview,
   useVisibleModules,
 } from './module-nav';
-import { useTkScope } from './tk-chrome';
 import { useSidebarCollapsed } from './use-sidebar-collapsed';
+
+/** Ba nhóm phân hệ của bản v2, theo thứ tự nghiệp vụ. Nhóm «Của tôi» dựng riêng ở dưới. */
+export const NAV_GROUPS: readonly { title: string; modules: readonly ModuleCode[] }[] = [
+  { title: 'Kinh doanh', modules: ['CRM', 'DA', 'TK', 'HD'] },
+  { title: 'Triển khai', modules: ['TC', 'MH', 'KHO', 'SX'] },
+  { title: 'Nội bộ', modules: ['KT', 'NS', 'BC', 'NEN'] },
+];
+
+interface NavItem {
+  key: string;
+  to: string;
+  label: string;
+  shortLabel: string;
+  description?: string;
+  Icon: LucideIcon;
+  active: boolean;
+  badge?: number;
+}
 
 export function Sidebar() {
   const visible = useVisibleModules();
@@ -50,55 +67,83 @@ export function Sidebar() {
   const { collapsed, toggle } = useSidebarCollapsed();
   const canSeeExec = useShowExecOverview();
   const { pathname } = useLocation();
-  // Trong Module Thiết kế, thanh này mặc bảng màu tối CỐ ĐỊNH của bản mẫu (§4.3) — tối ở cả
-  // chế độ sáng lẫn tối, đúng như bản mẫu ghi là chủ ý. Nên nó KHÔNG dùng `--color-tk-*`
-  // (bộ đó đổi theo chế độ) mà dùng bộ `--color-navdark-*` chỉ có một giá trị.
-  const tk = useTkScope();
+  const { profile } = useAuth();
+  // Cùng hai truy vấn với nút «Việc cần làm» trên thanh trên — hai con số không được lệch nhau.
+  const { data: pending } = usePendingApprovals();
+  const { data: followups } = useMyFollowups(0);
+  const todoCount = (pending?.length ?? 0) + (followups?.length ?? 0);
+
+  const mine: NavItem[] = [
+    // Tổng quan điều hành (0169) — chỉ lãnh đạo và Kiểm soát nội bộ (CLAUDE.md 5.4).
+    ...(canSeeExec
+      ? [
+          {
+            key: 'exec',
+            to: '/tong-quan',
+            label: 'Tổng quan điều hành',
+            shortLabel: 'Điều hành',
+            description: 'Cảnh báo toàn hệ thống cho lãnh đạo',
+            Icon: Gauge,
+            active: pathname === '/tong-quan' || pathname.startsWith('/tong-quan/'),
+          },
+        ]
+      : []),
+    {
+      key: 'todo',
+      to: '/viec-can-lam',
+      label: 'Việc cần làm',
+      shortLabel: 'Việc',
+      description: 'Hồ sơ chờ phê duyệt và việc chăm sóc khách hôm nay',
+      Icon: CheckSquare,
+      active: pathname === '/viec-can-lam' || pathname.startsWith('/viec-can-lam/'),
+      badge: todoCount || undefined,
+    },
+  ];
+
+  const groups = [
+    { title: 'Của tôi', items: mine },
+    ...NAV_GROUPS.map((g) => ({
+      title: g.title,
+      items: g.modules
+        .filter((code) => visible.includes(code))
+        .map<NavItem>((code) => ({
+          key: code,
+          to: moduleRoutes[code],
+          label: MODULES[code].label,
+          shortLabel: MODULES[code].shortLabel,
+          description: MODULES[code].description,
+          Icon: MODULE_ICONS[code],
+          active: activeModule === code,
+        })),
+    })),
+  ].filter((g) => g.items.length > 0);
 
   return (
     <aside
       className={cn(
-        'hidden shrink-0 flex-col self-stretch overflow-hidden border',
-        tk
-          ? // Bản mẫu §5.1: ba vùng sát nhau, chỉ một đường viền phải ngăn cách.
-            'border-transparent border-r-navdark-line bg-navdark-bg lg:flex lg:h-[100dvh]'
-          : cn(
-              'rounded-xl border-border bg-surface',
-              // Panel nổi trên nền trũng (thay thanh full-bleed cũ) — DESIGN_SYSTEM.md.
-              'lg:sticky lg:top-3 lg:flex lg:h-[calc(100dvh-1.5rem)]',
-            ),
+        'hidden shrink-0 flex-col self-stretch overflow-hidden text-fg-inverse',
+        'lg:flex lg:h-[calc(100dvh-1.75rem)]',
         'transition-[width] duration-(--motion-base) ease-(--ease-out)',
-        collapsed ? 'w-20' : 'w-60',
+        collapsed ? 'w-20 px-2' : 'w-62 pr-3 pl-4',
       )}
     >
-      {/* Logo Nhà Việt Group (Bước 0b). Nền tối của Module Thiết kế và khi thu gọn chỉ còn ba ô
-          màu: bản có chữ đen nằm trên nền trắng, đặt lên nền tối thì chữ biến mất. */}
+      {/* Logo: trên nền tối chỉ dùng ba ô màu — bản có chữ đen nằm trên nền trắng. */}
       <Link
         to="/"
         aria-label="Nhà Việt Group — về trang đầu"
         className={cn(
-          'flex shrink-0 items-center border-b',
-          tk ? 'border-navdark-line' : 'border-border',
-          collapsed ? 'justify-center px-2 py-3' : 'px-4 py-3',
+          'flex h-14 shrink-0 items-center gap-2.5 border-b border-shell-line',
+          collapsed && 'justify-center',
         )}
       >
-        {collapsed || tk ? (
-          <BrandLogo variant="mark" className={collapsed ? 'w-14' : 'w-20'} />
-        ) : (
-          <BrandLogo variant="compact" className="w-32" />
-        )}
+        <BrandLogo variant="mark" className={collapsed ? 'w-12' : 'w-16'} />
+        {!collapsed && <span className="text-md font-bold whitespace-nowrap">Nhà Việt Group</span>}
       </Link>
-      <div
-        className={cn(
-          'flex items-center gap-1 border-b p-2',
-          tk ? 'border-navdark-line' : 'border-border',
-          collapsed && 'flex-col',
-        )}
-      >
-        {/* Thu gọn thì bộ chọn pháp nhân dùng lại dạng `compact` sẵn có của thanh trên —
-            không dựng dạng thứ ba cho cùng một điều khiển. */}
+
+      <div className={cn('mt-3 flex items-center gap-1', collapsed && 'flex-col')}>
+        {/* Thu gọn thì bộ chọn pháp nhân dùng lại dạng `compact` — không dựng dạng thứ ba. */}
         <div className={cn('min-w-0', collapsed ? 'w-full' : 'flex-1')}>
-          <CompanySwitcher compact={collapsed} onDark={tk} />
+          <CompanySwitcher compact={collapsed} onDark />
         </div>
         <button
           type="button"
@@ -108,11 +153,9 @@ export function Sidebar() {
           title={collapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
           aria-label={collapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
           className={cn(
-            'grid size-10 shrink-0 place-items-center rounded-md',
+            'grid size-10 shrink-0 place-items-center rounded-full text-shell-fg',
             'transition-colors duration-(--motion-fast) ease-(--ease-out)',
-            tk
-              ? 'border border-navdark-line bg-navdark-btn text-navdark-fg hover:text-navdark-fg-strong'
-              : 'text-fg-subtle hover:bg-surface-hover hover:text-brand-forest',
+            'hover:bg-shell-active hover:text-fg-inverse',
           )}
         >
           {collapsed ? (
@@ -125,104 +168,87 @@ export function Sidebar() {
 
       <nav
         id="dieu-huong-chinh"
-        className="flex-1 overflow-y-auto p-2"
+        className="mt-3 flex flex-1 flex-col gap-3 overflow-y-auto"
         aria-label="Điều hướng chính"
       >
-        <ul className="space-y-0.5">
-          {/* Tổng quan điều hành (0169) — không phải phân hệ nên không nằm trong `MODULES`;
-              chỉ lãnh đạo và Kiểm soát nội bộ thấy (ẩn hẳn với vai trò khác, CLAUDE.md 5.4). */}
-          {canSeeExec && (
-            <li>
-              <Link
-                to="/tong-quan"
-                aria-current={pathname === '/tong-quan' ? 'page' : undefined}
-                aria-label={collapsed ? 'Tổng quan điều hành' : undefined}
-                title={collapsed ? 'Tổng quan điều hành' : 'Cảnh báo toàn hệ thống cho lãnh đạo'}
-                className={cn(
-                  'flex rounded-md',
-                  'transition-colors duration-(--motion-fast) ease-(--ease-out)',
-                  tk
-                    ? 'text-navdark-fg hover:bg-navdark-hover hover:text-navdark-fg-strong'
-                    : 'text-fg-subtle hover:bg-surface-hover hover:text-brand-forest',
-                  collapsed
-                    ? 'flex-col items-center gap-1 px-1 py-2 text-center'
-                    : 'items-center gap-2 py-2 pr-2 pl-3',
-                  pathname === '/tong-quan' &&
-                    (tk
-                      ? 'bg-navdark-sel font-semibold text-navdark-sel-fg hover:bg-navdark-sel hover:text-navdark-sel-fg'
-                      : 'bg-brand-subtle font-bold text-brand-forest hover:bg-brand-subtle'),
-                )}
-              >
-                <Gauge className="size-5 shrink-0" aria-hidden />
-                <span className={cn(collapsed ? 'w-full text-2xs' : 'truncate')}>
-                  {collapsed ? 'Điều hành' : 'Tổng quan điều hành'}
-                </span>
-              </Link>
-            </li>
-          )}
-          {visible.map((code) => {
-            const Icon = MODULE_ICONS[code];
-            const meta = MODULES[code];
-            const isActive = activeModule === code;
-            return (
-              <li key={code}>
-                <Link
-                  to={moduleRoutes[code]}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={cn(
-                    'flex rounded-md',
-                    'transition-colors duration-(--motion-fast) ease-(--ease-out)',
-                    tk
-                      ? 'text-navdark-fg hover:bg-navdark-hover hover:text-navdark-fg-strong'
-                      : 'text-fg-subtle hover:bg-surface-hover hover:text-brand-forest',
-                    collapsed
-                      ? 'flex-col items-center gap-1 px-1 py-2 text-center'
-                      : 'items-center gap-2 py-2 pr-2 pl-3',
-                    // Mục đang hoạt động tô đậm (Webapp Flow 2.1) — một trong ba lớp
-                    // định vị "luôn biết mình đang ở đâu" (Webapp Flow 6.2). Sáng theo
-                    // MODULE, không theo đúng một đường dẫn: mọi màn hình trong CRM đều
-                    // phải làm mục "Khách hàng & Cơ hội" sáng lên.
-                    //
-                    // Pill nền mint khi active (thay thanh chỉ mục cam an toàn cũ) — theo
-                    // bản demo "dashboard soft light style" (DESIGN_SYSTEM.md).
-                    isActive &&
-                      (tk
-                        ? 'bg-navdark-sel font-semibold text-navdark-sel-fg hover:bg-navdark-sel hover:text-navdark-sel-fg'
-                        : 'bg-brand-subtle font-bold text-brand-forest hover:bg-brand-subtle'),
-                  )}
-                  // Tên đọc được luôn là nhãn ĐẦY ĐỦ, kể cả khi trên màn hình chỉ thấy nhãn
-                  // ngắn — người dùng trình đọc màn hình không có gì để "nhìn cho rõ hơn".
-                  aria-label={collapsed ? meta.label : undefined}
-                  title={collapsed ? meta.label : meta.description}
-                >
-                  {/* 20px, không phải 24px mặc định của thư viện biểu tượng: ở trạng thái thu
-                      gọn biểu tượng đứng trên nhãn 10px, để 24px thì cột nặng đầu và chữ đọc
-                      như phần phụ. Bản mẫu §5.2 để 19px. */}
-                  <Icon className="size-5 shrink-0" aria-hidden />
-                  {/* Thu gọn thì CHO XUỐNG DÒNG, không cắt cụt: "Khách …" không nói được mục
-                      đó là gì, còn "Khách hàng" xuống hai dòng thì vẫn đọc được. */}
-                  <span className={cn(collapsed ? 'w-full text-2xs' : 'truncate')}>
-                    {collapsed ? meta.shortLabel : meta.label}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        {groups.map((group) => (
+          <div key={group.title} role="group" aria-label={group.title}>
+            {!collapsed && (
+              <div className="px-1.5 pb-1 text-group font-semibold text-shell-fg-subtle">
+                {group.title}
+              </div>
+            )}
+            <ul className="space-y-px">
+              {group.items.map((item) => (
+                <li key={item.key}>
+                  <SidebarLink item={item} collapsed={collapsed} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
 
-      {/* Thu gọn thì bỏ dòng chân: 76px không đủ cho "Hệ thống Quản trị NVG", và cắt cụt tên
-          hệ thống thì thà không hiện. */}
-      {!collapsed && (
-        <div
-          className={cn(
-            'border-t px-3 py-2.5 text-xs',
-            tk ? 'border-navdark-line text-navdark-fg' : 'border-border text-fg-subtle',
-          )}
-        >
-          Hệ thống Quản trị NVG
+      {/* Người đang đăng nhập — tên và chức danh. Menu tài khoản (đổi mật khẩu, đăng xuất) vẫn ở
+          thanh trên, không chép thêm một bản. */}
+      {!collapsed && profile && (
+        <div className="flex shrink-0 items-center gap-2.5 border-t border-shell-line py-2.5">
+          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-meter font-bold text-shell">
+            {profile.fullName?.trim().split(/\s+/).at(-1)?.[0] ?? '?'}
+          </span>
+          <div className="min-w-0">
+            <div className="truncate font-semibold">{profile.fullName}</div>
+            {profile.jobTitle && (
+              <div className="truncate text-xs text-shell-fg-subtle">{profile.jobTitle}</div>
+            )}
+          </div>
         </div>
       )}
     </aside>
+  );
+}
+
+function SidebarLink({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
+  const { Icon } = item;
+  return (
+    <Link
+      to={item.to}
+      aria-current={item.active ? 'page' : undefined}
+      // Tên đọc được luôn là nhãn ĐẦY ĐỦ, kể cả khi trên màn hình chỉ thấy nhãn ngắn.
+      aria-label={collapsed ? item.label : undefined}
+      title={collapsed ? item.label : item.description}
+      className={cn(
+        'flex rounded-full',
+        'transition-colors duration-(--motion-fast) ease-(--ease-out)',
+        item.active ? 'bg-shell-active font-semibold' : 'text-shell-fg hover:bg-shell-line',
+        collapsed
+          ? 'flex-col items-center gap-1 rounded-card px-1 py-2 text-center'
+          : 'h-9 items-center gap-2.5 px-1.5',
+      )}
+    >
+      {/* Mục đang chọn: biểu tượng trên nền tròn trắng (v2). */}
+      <span
+        className={cn(
+          'relative grid size-6.5 shrink-0 place-items-center rounded-full',
+          item.active ? 'bg-surface text-shell' : 'bg-shell-line',
+        )}
+      >
+        <Icon className="size-3.5" aria-hidden />
+        {collapsed && item.badge ? (
+          <span className="absolute -top-1 -right-1.5 min-w-4 rounded-full bg-brand-accent px-1 text-2xs font-bold text-ink">
+            {item.badge}
+          </span>
+        ) : null}
+      </span>
+      {/* Thu gọn thì CHO XUỐNG DÒNG, không cắt cụt. */}
+      <span className={cn(collapsed ? 'w-full text-2xs' : 'min-w-0 flex-1 truncate')}>
+        {collapsed ? item.shortLabel : item.label}
+      </span>
+      {!collapsed && item.badge ? (
+        <span className="rounded-full bg-brand-accent px-1.5 text-xs font-bold text-ink">
+          {item.badge}
+        </span>
+      ) : null}
+    </Link>
   );
 }

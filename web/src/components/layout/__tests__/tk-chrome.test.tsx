@@ -35,6 +35,7 @@ vi.mock('@/lib/auth', () => ({
     profile: { fullName: 'Đỗ Văn K', jobTitle: 'Kiến trúc sư', assignments: [] },
     signOut: vi.fn(),
   }),
+  useDefaultRoute: () => '/dashboard',
 }));
 vi.mock('@/hooks/use-approvals', () => ({ usePendingApprovals: () => ({ data: [] }) }));
 vi.mock('@/hooks/use-notifications', () => ({
