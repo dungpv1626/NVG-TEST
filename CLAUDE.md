@@ -638,7 +638,7 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 | 3   | Khảo sát chốt bằng máy (CRM + TK), đính kèm dùng chung, ghi âm → Whisper → Gemini tóm tắt (vấn đề 6, 8)                                              | **Phần CRM xong trong Đợt 1**; phần TK ở Đợt 5               |
 | 3b  | Điểm danh theo tổ, kiểm bán kính GPS (chỉ cảnh báo), báo cáo có mặt, đề xuất chấm công                                                               | Chưa làm — nay là Đợt 2 (2C) của kế hoạch tổng               |
 | 4   | Mẫu hợp đồng `.docx` có chỗ trống, tự điền, xem trước, xuất (vấn đề 5)                                                                               | **Xong vòng đầu** — chờ Haan kiểm                            |
-| 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                                                       | **Xong trên máy (5B, T162)** — chờ anh Dũng chạy thử         |
+| 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                                                       | **Giao diện xong + sửa A/B (T163–T169)**; 6 lượt thật chưa ra mặt bằng — xem 9.3 |
 | Đ1  | Đợt 1 Kinh doanh (kế hoạch tổng): 1A–1H + bổ sung 18/10 (AI thật, đính kèm, in, phiếu riêng)                                                         | **Xong trên máy** — chờ anh Dũng chạy thử                    |
 | Đ2  | Đợt 2 Thi công (NVO trước): 2A mốc, 2B nhật ký giọng nói, 2D biên bản ký hai bên, 2E bảng theo dõi, 2F phiếu bảo hành, 2G mẫu nháp (0182, 0190–0194) | **Xong trên máy** trừ 2C (chờ câu 6) và mốc NVC (chờ câu 15) |
 | Đ3  | Đợt 3 Tài chính: 3A đợt thu gắn mốc, 3B đề nghị thu tiền, 3C dòng tiền tuần, 3D lãi / lỗ quản trị, 3E bất thường KSNB (0195–0199)                  | **Xong trên máy** — anh Dũng chưa chạy thử                   |
@@ -646,6 +646,7 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 | Đ5  | Đợt 5: 5A TK ghi âm + vòng ý kiến, 5B AI Design 4 bước, 5C-1/5/9 đấu thầu, 5D NVS, 5E nhắc HĐLĐ, 5F hành chính (0205–0209)                         | **Xong phần không bị chặn**; còn 5C khác (câu 14, 19), bảng công (câu 6) |
 | HĐ  | Soạn hợp đồng bằng máy + bộ mẫu ba pháp nhân + ký không cần sếp vào app + bộ quét bản đã ký (0185–0189)                                              | **Xong trên máy** — anh Dũng đã chạy thử trọn tới bản quét   |
 | 0b  | Bộ nhận diện theo logo NVG                                                                                                                           | **Xong vòng đầu** — chờ duyệt ảnh                            |
+| V2  | Giao diện v2 (`design_handoff_nvg_v2/`): token, khung, sidebar 4 nhóm, thanh tab 4 ô, khuôn chung, đăng nhập, Việc hôm nay, Phê duyệt 3 ô (0221) | **Xong, đã gộp `cai-tien-ux`** — anh Dũng duyệt + giao toàn quyền 24/10/2026 |
 | PH  | Phát hành bản demo mới                                                                                                                               | **Chuẩn bị xong, CỐ Ý CHƯA deploy** (xem 9.3)                |
 
 **GĐ1 đã có trong mã** (migration 0155–0166; 0160–0166 là vòng rà chuỗi bước bằng đúng vai sau phản hồi chủ dự án):
@@ -981,6 +982,36 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   (mục 1 điền tay trên giao diện, 6 mục còn lại từ `db/src/demo/nvo-dau-bai.json`, xác nhận trên giao diện). Hai lượt «Xếp mặt
   bằng» (GPT-5.6 Terra, 1 phương án) đều HỎNG — 10 lần gọi mô hình, ≈ 0,74 USD, ~9 phút, 0 phương án. Ảnh + báo cáo lượt 1:
   `backup/ai-that/` (kịch bản `backup/ai-that/*.cjs`). Danh sách chỗ khó dùng ở «Bước tiếp theo» 2b.
+- **Giao diện v2 — xong và đã gộp (24/10/2026, commit a7149ff → 6035a00, `design_handoff_nvg_v2/` không commit):**
+  - Bước 1 token (DESIGN_SYSTEM.md §8, 10 cặp tương phản trong `design-rules.test.ts`); bước 2 khung xanh rừng + bảng nội
+    dung `canvas` bo 24, sidebar 4 nhóm (Của tôi · Kinh doanh · Triển khai · Nội bộ, ẩn theo quyền), thanh tab điện thoại 4 ô
+    (Hôm nay · phân hệ · Phê duyệt · Thêm); bước 3 khuôn chung — nút / ô nhập / tiêu đề 28, thanh trang con dạng viên, danh
+    sách thẻ trắng, trang chi tiết có cột phải (`detail-aside.tsx`: thẻ tối «Bước tiếp theo» từ `StepTrack` + «Chuỗi hồ sơ»
+    dọc từ `RecordChain`, cổng sang cột phải từ xl), Kanban, ô chỉ số, trạng thái, hộp thoại, `ui/form-page.tsx`
+    (`FormLayout` «Sau khi lưu» + `FormSection` đánh số); bước 4 từng phân hệ — đăng nhập hai nửa, thanh trang con xuống
+    dưới tiêu đề ở 48 trang, 152 ô chọn / ô nhiều dòng tự dựng theo kiểu ô nhập v2, ~200 thẻ đổi kiểu thẻ v2, bỏ bóng thẻ,
+    `--color-fg` / `--color-fg-subtle` mang giá trị `ink` / `ink-subtle`, biểu mẫu «Sau khi lưu» ở Tạo cơ hội, Đầu mối, Báo
+    giá, Khiếu nại, Gói thầu, Hồ sơ thiết kế, Đề nghị mua, Đề nghị thanh toán.
+  - Trang mới: `/viec-hom-nay` (`pages/phe-duyet/today-page.tsx`: khách cần liên hệ, chờ tôi duyệt, tôi đã gửi còn chờ),
+    `/viec-can-lam/:id` (mở đúng một hồ sơ chờ duyệt). Trang Phê duyệt có ba ô «Chờ tôi duyệt · Tôi đã gửi · Đã xử lý»
+    (`?o=`), dữ liệu từ 0221 `my_approval_box(p_box)` (SECURITY INVOKER, 90 ngày, phép thử `db/.../hop-thu-v2.test.ts`).
+  - Ảnh đối chiếu 1440 / 390 px: `backup/v2-buoc2/`, `v2-buoc3/`, `v2-buoc4/` (kịch bản `backup/v2-buoc4/sweep*.cjs`).
+- **AI Design — giao diện (A) và bộ xếp (B), 23–24/10/2026, T163–T169, không tốn tiền AI:**
+  - A (T163): lý do hỏng của lượt CHÍNH (`workflows/plan-main-rejection.ts`, `pages/tk/ai/plan-failure.ts`) kèm gợi ý sửa đầu
+    bài; ước tính chi phí lần đầu theo bảng giá; hộp hỏi lại trước khi xếp; ô mật độ cảnh báo < 1 %; «Còn thiếu» chỉ đếm
+    câu bắt buộc; xác nhận đầu bài có hộp hỏi lại; lưu nháp ở lại biểu mẫu; một kiểu «Bước X trên Y»; nhãn bậc mô hình;
+    dải bước «Đang chạy / Hỏng»; câu tùy chọn gấp lại.
+  - T164 (anh Dũng chốt): trần chi phí CHẶN thật — `design_setting.ai_run_cost_cap_usd` (0219, migration để trống, demo
+    0,5, máy hiện 0,8), `ai/cost-cap.ts`, dừng trước lời gọi sửa có thể vượt; Worker chặn xác nhận đầu bài dưới ngưỡng /
+    còn mâu thuẫn nghiêm trọng (`brief/gate.ts#briefConfirmBlock`); màn hình hiện lý do hỏng chính.
+  - B: T165 nhà phố có ô tô — gara làm lối vào trong lời dẫn, câu nhắc «hàng bản phác quá hẹp»
+    (`sketch_row_too_narrow`); báo cáo `.md` có câu trả lời mô hình (đã lưu từ 15/09 ở `ai_calls/<id>.json`). T166 nắn bản
+    phác không ăn cạnh tối thiểu của ô thang. T167 tầng 1 hỏng thì vẫn soát phòng thiếu ở tầng trên. T168 tầng chỉ dựng được
+    nhờ chia lại thì lỗi ban công là hệ quả, không đổ cho mô hình; bỏ câu «đầu thang bị chặn» khi bản phác có lối đi. T169
+    tầng trên hỏng thì xếp lại tầng 1 với ô thang thu về cạnh tối thiểu (+1 vòng qua cổng trong phát lại 234 vòng).
+    Fixture lượt thật: `workers/src/design/__tests__/fixtures/ai-run-*.json`.
+  - 6 lượt «Xếp mặt bằng» THẬT trên `NVO-TK-2026-THU5` (GPT-5.6 Terra): ≈ 2,15 USD, 0 phương án. Trang giải thích cho
+    anh Dũng (4 bước + bảng các lượt): https://claude.ai/artifact/9J6st5KDMr9qTXsQ6JQEdt (ảnh `backup/ai-giai-thich/`).
 - Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
@@ -997,7 +1028,8 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Nhật ký giọng nói (0190)              | Xong trên máy, chạy thử bằng `chihuytruong.nvo@…` ở khung điện thoại với AI giả lập. Máy xếp mục (`ai.site_log_enabled`) để TẮT — chưa duyệt chi phí; tắt thì vẫn chép chữ thật và đưa nguyên lời vào ô Nội dung                                                                                                                                                                |
 | Đợt 2 Thi công (0190–0194)            | Xong trên máy, anh Dũng CHƯA chạy thử (dữ liệu thử `NVO-CT-2026-0901`, `-0902`): nhật ký giọng nói, bảng theo dõi Trưởng phòng, biên bản ký hai bên → Kế toán, phiếu bảo hành, mẫu nháp khi bàn giao. Mỗi phần có phép thử CSDL + đột biến đã đo đỏ và chạy thử bằng đúng vai trên trình duyệt. Cả bộ `db` 644/649 (5 đỏ sẵn: `env-guard`, `kb-room-area-stats` khi chạy chung) |
 | Đợt 3 / 4 / 5 (0195–0209)             | Xong trên máy (mỗi phần có phép thử CSDL + đột biến đo đỏ, chạy thử bằng đúng vai); anh Dũng CHƯA chạy thử. Dữ liệu thử hậu tố THU3 / THU4 / THU5. Số chờ NVG đã có giá trị DEMO (kịch bản `mac-dinh`) |
-| AI Design 4 bước (5B)                 | Giao diện xong; chạy THẬT trên nhà phố 5 × 18 m: bộ xếp KHÔNG ra mặt bằng sau 2 lượt (≈ 0,74 USD). Mặt ngoài / Bộ kết quả / so phương án chưa kiểm được trên dữ liệu thật |
+| AI Design 4 bước (5B)                 | Giao diện + sửa T163–T169 xong. 6 lượt thật trên nhà phố 5 × 18 m (≈ 2,15 USD) chưa ra mặt bằng: lượt 4 qua tầng 1–3; lượt 6 mô hình trả lại bản phác y nguyên nên máy dừng sau 2 lời gọi. Phát lại: lượt biệt thự 15 × 20 m `46d6eff3` vòng 1 QUA cổng 70,2 điểm với mã mới — chưa lưu. Mặt ngoài / Bộ kết quả chưa kiểm được trên dữ liệu thật |
+| Giao diện v2                          | Xong mọi phân hệ, đã gộp `cai-tien-ux`. Web 738/755 (17 đỏ sẵn của Node 24). Chưa làm: thanh trên điện thoại nền xanh rừng, thông báo nhỏ có «Hoàn tác», `FormLayout` cho biểu mẫu còn lại |
 | Bộ mẫu hợp đồng                       | Bản DỰ THẢO (anh Dũng gửi, dùng như chính thức) — chờ pháp chế NVG rà; bảng hỏi mục 6 trong tệp «00_Huong_dan» từng bộ chờ NVG trả lời. Tài khoản ngân hàng ba công ty là số DEMO                                                                                                                                                                                               |
 | AI trên máy                           | **Chạy THẬT**: Whisper (Workers AI) + Gemini 2.5 Flash trả phí — `workers/.dev.vars` `AI_FAKE=` rỗng, công tắc `ai.transcribe_enabled` / `ai.survey_summary_enabled` = 1 ở CSDL máy. Muốn quay về giả lập: `AI_FAKE=1`                                                                                                                                                          |
 | Bản demo cũ `nvg.tests99.workers.dev` | Vẫn chạy bản trước GĐ1, CSDL `awaiwegmuykhctnysvou` — ở tài khoản khác, máy này KHÔNG vào được                                                                                                                                                                                                                                                                                  |
@@ -1051,9 +1083,14 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    đầu từng vai trò không đổi. Route trong bản thiết kế mà app chưa có (vd `/tc/cong-trinh/mo`, `/hd/hop-dong/soan`,
    `/kho/phieu`, `/lam-ro/:id`) KHÔNG tự tạo. Còn có thể làm thêm: thanh trên điện thoại nền xanh rừng như bản
    thiết kế; thông báo nhỏ có «Hoàn tác»; gắn `FormLayout` cho các biểu mẫu còn lại.
-2b. **AI Design — sửa theo lượt chạy thật (A, B đã làm; T163–T168):** 5 lượt thật THU5 ≈ 1,94 USD, chưa ra phương án;
-   trần chi phí 0219 (`ai_run_cost_cap_usd`, máy đang 0,8 USD). Đang làm T169: ô thang tầng 1 dựng 3,4 m thay vì
-   ~2,4 m làm tầng trên mất 1 m bề ngang. Danh sách chỗ khó dùng ban đầu (đã làm hết):
+2b. **AI Design — việc tiếp theo (chờ anh Dũng đồng ý thứ tự, đề xuất 1 → 2):**
+   1. Lưu phương án biệt thự `46d6eff3` (qua cổng 70,2 điểm khi phát lại) bằng đường «phát lại câu trả lời đã ghi»: không
+      gọi AI, `replay_of` trong params/lineage, chỉ chạy ở dev — để anh Dũng thấy đủ 4 bước trên giao diện.
+   2. Khung nhà ống do chương trình dựng: lô hẹp mà mô hình đặt phòng cạnh thang (không bao giờ vừa 5 m) thì tự xếp kiểu
+      nhà ống (thang giữa, phòng trước / sau, hành lang cạnh thang), giữ ý đồ phòng của mô hình — mở rộng T102 `skeleton`.
+   3. Sau đó mới xin chạy thật thêm (mỗi lượt 0,2–0,5 USD, trần 0,8). Thử mô hình khác: chưa khuyên.
+   Phát lại / đo bộ xếp: một lượt vitest một lúc, `--pool=forks --poolOptions.forks.maxForks=1` (máy 8 GB).
+   Danh sách chỗ khó dùng ban đầu của lượt 23/10 (đã làm hết, T163):
    - (A) giao diện, không tốn AI: hỏng thì hiện LÝ DO tiếng Việt của lượt có lỗi chính (không phải lượt cuối) + gợi ý sửa
      đầu bài; báo cáo `.md` lưu cả câu trả lời của mô hình; trần chi phí / hỏi trước khi gọi lại nhiều lượt, ước tính lần đầu từ
      bảng giá; ô mật độ xây dựng < 1 thì cảnh báo («0,9 là 0,9 % — có phải 90 %?»; gõ 0.9 đang lưu 0,009); câu «(tùy chọn)»
@@ -1184,6 +1221,14 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Làm song song nhiều đợt bằng worktree riêng: mỗi mạch một dải số migration, áp tay bằng psql, phép thử CSDL qua khoá chung; gộp xong chạy lại `db:migrate` chuẩn | Anh Dũng yêu cầu làm song song Đợt 3 / 4 / 5. CSDL máy dùng chung: drizzle bỏ qua migration số nhỏ khi số lớn đã áp, và `global-teardown` xoá dữ liệu thử của mạch khác |
 | Số DEMO cho tham số NVG chưa quyết nằm ở bộ nạp dữ liệu demo (`mac-dinh`), KHÔNG ở migration / seed | Anh Dũng: «tự lấy demo mặc định»; bản vận hành vẫn phải dùng số NVG tự đặt (5.2) — migration giữ trống, demo nạp khi chủ động |
 | Chạy AI Design thật: dừng sau 2 lượt hỏng, báo cáo thay vì thử tiếp | Mỗi lượt hỏng vẫn tốn 0,28–0,46 USD; lỗi lặp lại ở bộ xếp, chạy thêm không cho thêm thông tin |
+| Giao diện v2: chỉ THÊM token trước (bước 1) rồi mới đổi khung; sửa thẳng các khung dùng chung thay vì dựng bộ thứ hai | Anh Dũng duyệt từng bước, cuối cùng giao toàn quyền (24/10/2026). Sửa khung chung thì ~120 màn đổi cùng lúc, logic / quyền / route giữ nguyên |
+| Giữ ba chỗ lệch bản v2: nền nhãn trạng thái cũ, ô nhập luôn trong thẻ trắng, nút khoá vẫn ghi lý do bằng chữ | Đo tương phản: nhãn Hoàn thành v2 4,22:1 (< 4,5), viền ô nhập trên nền ám xanh 2,89:1 (< 3) |
+| Tổng quan điều hành giữ «mỗi công ty một khung», không gộp số cả tập đoàn như màn 1.2 | Chủ dự án đã thử và bỏ cách gộp số; số tập đoàn chưa loại giao dịch nội bộ (QĐ-6) |
+| Route bản thiết kế có mà app chưa có thì KHÔNG tự tạo; nhãn nhóm sidebar viết thường | Anh Dũng dặn «không chắc route thì hỏi»; CLAUDE.md 4.4 cấm IN HOA |
+| Tách «Việc hôm nay» và «Phê duyệt»; Phê duyệt có «Tôi đã gửi / Đã xử lý»; trang riêng `/viec-can-lam/:id`; trang đầu vai trò không đổi | Anh Dũng nhờ gợi ý rồi đồng ý (24/10/2026). Người gửi hay phải gọi điện hỏi hồ sơ đang ở ai; link một hồ sơ để gửi / mở từ thông báo |
+| Trần chi phí AI Design CHẶN thật (không chỉ hỏi); khoá «Xác nhận đầu bài» dưới ngưỡng ở cả Worker; hiện lý do hỏng chính trên màn hình (T164) | Hai lượt đầu tốn 0,74 USD không ra gì; đầu bài thiếu làm hỏng bộ xếp mà lượt hỏng vẫn tốn tiền; người dùng cần biết sửa đầu bài hay chạy lại |
+| Giữ phòng khách 16 m² của đầu bài thử, không hạ 13 m² | Phát lại cho thấy 16 m² vừa — thiếu chỗ là do chương trình lấn ô thang (T166); hạ đầu bài sẽ che mất lỗi thật |
+| Đo mọi sửa bộ xếp bằng phát lại toàn bộ vòng đã ghi (đối chứng tắt thay đổi); không lợi thì gỡ; chỉ lưu phương án phát lại khi thật sự qua cổng | Không làm giả kết quả; một sửa giúp ca này có thể làm hỏng ca khác (T169 bỏ một điều kiện vì mất chính vòng 46d6eff3) |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)
@@ -1281,6 +1326,11 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   xoá rồi chạy lại.
 - Thử AI Design thật: Playwright bấm nút trên `/tk/ai-design/<hồ sơ>` (nút «Xếp mặt bằng» phải `exact: true`, vì nhãn bước
   cũng chứa chữ ấy); một lượt 3–6 phút; chi phí xem ở `design_ai_call`, báo cáo tải bằng nút «Tải báo cáo (.md)».
+- 24/10/2026: máy 8 GB hết RAM (VS Code ~4 GB + WSL ~4 GB + nhiều lượt vitest song song) → Docker / WSL treo, đăng nhập kẹt
+  «Đang đăng nhập…». Chỉ khởi động lại Windows mới gỡ (Start → Restart, KHÔNG Shut down — khởi động nhanh giữ máy ảo
+  treo; kiểm bằng `(Get-CimInstance Win32_OperatingSystem).LastBootUpTime`). Mạch con chạy phép thử phải
+  `--pool=forks --poolOptions.forks.maxForks=1`.
+- Đổi nhánh git khi Worker `wrangler dev` đang chạy = Worker nạp mã nhánh mới giữa chừng — đừng đổi nhánh khi đang có lượt AI.
 - Thử nhanh trên máy: «AB» `bd36f4d6-857f-49ff-a94d-f69c3cbf499c`, «Ok» `ad60f61f-6b09-47d4-9823-a92366659fb2`,
   công trình NVO `NVO-CT-2026-0901` (`a705ba2b-885f-4b9f-a971-b12364e7e4fd`). Khách thử «Dũng đen» trùng số với đầu mối
   NVC-DM-2026-0043 — để lại có chủ đích (chưa xoá).
