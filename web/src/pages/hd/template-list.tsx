@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { FIELD_BOX } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
+import { showToast } from '@/components/ui/toast';
 import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states';
 import {
   TEMPLATE_BUCKET,
@@ -139,7 +140,9 @@ export function ContractTemplatePage() {
           {templates.data!.map((t) => (
             <li key={t.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">
               <FileText className="size-5 text-fg-subtle" aria-hidden />
-              <div className="min-w-0 flex-1">
+              {/* `basis-60`: trên điện thoại khối chữ chiếm cả dòng, các nút xuống dòng dưới —
+                  thiếu nó thì tên mẫu bị bóp thành cột một chữ (ảnh backup/v2-them). */}
+              <div className="min-w-0 flex-1 basis-60">
                 <p className="font-medium">{t.title}</p>
                 <p className="text-sm text-fg-subtle">
                   {t.company?.short_name ?? ''} · {CONTRACT_TYPE_LABELS[t.contract_type]} ·{' '}
@@ -164,11 +167,21 @@ export function ContractTemplatePage() {
                   type="button"
                   className="text-fg-subtle underline-offset-2 hover:underline"
                   disabled={setActive.isPending}
-                  onClick={() =>
+                  onClick={() => {
+                    const isActive = !t.is_active;
                     void setActive
-                      .mutateAsync({ id: t.id, isActive: !t.is_active })
-                      .catch((e: unknown) => setError(toUserMessage(e, 'edit')))
-                  }
+                      .mutateAsync({ id: t.id, isActive })
+                      .then(() =>
+                        showToast({
+                          message: `${isActive ? 'Đã dùng lại' : 'Đã ngừng dùng'} mẫu «${t.title}»`,
+                          onUndo: () =>
+                            setActive
+                              .mutateAsync({ id: t.id, isActive: !isActive })
+                              .catch((e: unknown) => setError(toUserMessage(e, 'edit'))),
+                        }),
+                      )
+                      .catch((e: unknown) => setError(toUserMessage(e, 'edit')));
+                  }}
                 >
                   {t.is_active ? 'Ngừng dùng' : 'Dùng lại'}
                 </button>

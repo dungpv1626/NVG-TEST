@@ -17,6 +17,7 @@ import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
+import { FormLayout, FormSection } from '@/components/ui/form-page';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
 import { ErrorState } from '@/components/ui/states';
@@ -94,102 +95,107 @@ export function EmployeeCreatePage() {
 
       {pageError && <ErrorState message={pageError} />}
 
-      <form onSubmit={submit} className="max-w-3xl space-y-6">
-        <section className="grid gap-4 sm:grid-cols-2">
-          <Field label="Họ và tên" required>
-            <Input
-              id="full_name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-              maxLength={128}
-            />
-          </Field>
+      <form onSubmit={submit}>
+        {/* «Sau khi lưu» chỉ nói việc hệ thống thật sự làm: mã cấp ở trigger `employees_assign_code`
+            (0147), lượt nhập lương / căn cước ghi `sensitive_access_logs` (0091), rồi mở Chi tiết. */}
+        <FormLayout
+          afterSave={[
+            'Hệ thống cấp mã hồ sơ theo pháp nhân và năm, ví dụ NVC-NS-2026-0001.',
+            'Lượt nhập lương và số căn cước được ghi vào nhật ký dữ liệu nhạy cảm.',
+            'Mở thẳng hồ sơ vừa tạo. Lương và căn cước không hiện lại — muốn xem phải bấm nút riêng, mỗi lượt xem đều ghi nhật ký.',
+          ]}
+        >
+          <FormSection n={1} title="Công việc và liên hệ">
+            <Field label="Họ và tên" required>
+              <Input
+                id="full_name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+                maxLength={128}
+              />
+            </Field>
 
-          <Field label="Chức danh" required>
-            <Input
-              id="position"
-              value={position}
-              onChange={(e) => setPosition(e.target.value)}
-              required
-              maxLength={128}
-            />
-          </Field>
+            <Field label="Chức danh" required>
+              <Input
+                id="position"
+                value={position}
+                onChange={(e) => setPosition(e.target.value)}
+                required
+                maxLength={128}
+              />
+            </Field>
 
-          <Field
-            label="Khối làm việc"
-            hint="Khối quyết định cách chấm công, không phải phòng ban."
-            required
-          >
-            <select
-              id="block"
-              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
-              value={block}
-              onChange={(e) => setBlock(e.target.value as WorkBlock)}
+            <Field
+              label="Khối làm việc"
+              hint="Khối quyết định cách chấm công, không phải phòng ban."
+              required
             >
-              {WORK_BLOCKS.map((b) => (
-                <option key={b} value={b}>
-                  {WORK_BLOCK_LABELS[b]}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          {block === 'cong_truong' ? (
-            <Field label="Công trường">
               <select
-                id="site"
+                id="block"
                 className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
-                value={siteId}
-                onChange={(e) => setSiteId(e.target.value)}
+                value={block}
+                onChange={(e) => setBlock(e.target.value as WorkBlock)}
               >
-                <option value="">Chưa phân công</option>
-                {(sites ?? []).map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
+                {WORK_BLOCKS.map((b) => (
+                  <option key={b} value={b}>
+                    {WORK_BLOCK_LABELS[b]}
                   </option>
                 ))}
               </select>
             </Field>
-          ) : (
-            <Field label="Phòng ban">
+
+            {block === 'cong_truong' ? (
+              <Field label="Công trường">
+                <select
+                  id="site"
+                  className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
+                  value={siteId}
+                  onChange={(e) => setSiteId(e.target.value)}
+                >
+                  <option value="">Chưa phân công</option>
+                  {(sites ?? []).map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : (
+              <Field label="Phòng ban">
+                <Input
+                  id="department"
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  maxLength={128}
+                />
+              </Field>
+            )}
+
+            <Field label="Ngày vào làm">
+              <DateInput value={hireDate} onChange={setHireDate} />
+            </Field>
+
+            <Field label="Hết hạn thử việc" hint="Hệ thống nhắc đánh giá trước ngày này.">
+              <DateInput value={probationEnd} onChange={setProbationEnd} />
+            </Field>
+
+            <Field label="Điện thoại">
               <Input
-                id="department"
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                maxLength={128}
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                inputMode="tel"
+                maxLength={32}
               />
             </Field>
-          )}
+          </FormSection>
 
-          <Field label="Ngày vào làm">
-            <DateInput value={hireDate} onChange={setHireDate} />
-          </Field>
-
-          <Field label="Hết hạn thử việc" hint="Hệ thống nhắc đánh giá trước ngày này.">
-            <DateInput value={probationEnd} onChange={setProbationEnd} />
-          </Field>
-
-          <Field label="Điện thoại">
-            <Input
-              id="phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              inputMode="tel"
-              maxLength={32}
-            />
-          </Field>
-        </section>
-
-        <section className="space-y-4 rounded border border-border bg-surface-sunken p-4">
-          <div>
-            <h2 className="font-semibold">Thông tin hạn chế</h2>
-            <p className="mt-1 text-fg-subtle">
-              Chỉ vai trò được phép mới xem lại được, và mỗi lượt xem đều được ghi nhật ký.
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
+          <FormSection
+            n={2}
+            title="Thông tin hạn chế"
+            description="Chỉ vai trò được phép mới xem lại được, và mỗi lượt xem đều được ghi nhật ký."
+          >
             <Field label="Số căn cước">
               <Input
                 id="id_number"
@@ -218,17 +224,17 @@ export function EmployeeCreatePage() {
             <Field label="Mức lương thỏa thuận">
               <MoneyInput value={baseSalary} onChange={setBaseSalary} />
             </Field>
-          </div>
-        </section>
+          </FormSection>
 
-        <div className="flex gap-2">
-          <Button type="submit" variant="primary" disabled={create.isPending}>
-            {create.isPending ? 'Đang lưu…' : 'Lưu hồ sơ'}
-          </Button>
-          <Button type="button" variant="secondary" onClick={() => navigate('/ns/nhan-su')}>
-            Hủy
-          </Button>
-        </div>
+          <div className="flex gap-2">
+            <Button type="submit" variant="primary" disabled={create.isPending}>
+              {create.isPending ? 'Đang lưu…' : 'Lưu hồ sơ'}
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => navigate('/ns/nhan-su')}>
+              Hủy
+            </Button>
+          </div>
+        </FormLayout>
       </form>
     </>
   );

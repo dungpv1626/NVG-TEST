@@ -1029,7 +1029,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Đợt 2 Thi công (0190–0194)            | Xong trên máy, anh Dũng CHƯA chạy thử (dữ liệu thử `NVO-CT-2026-0901`, `-0902`): nhật ký giọng nói, bảng theo dõi Trưởng phòng, biên bản ký hai bên → Kế toán, phiếu bảo hành, mẫu nháp khi bàn giao. Mỗi phần có phép thử CSDL + đột biến đã đo đỏ và chạy thử bằng đúng vai trên trình duyệt. Cả bộ `db` 644/649 (5 đỏ sẵn: `env-guard`, `kb-room-area-stats` khi chạy chung) |
 | Đợt 3 / 4 / 5 (0195–0209)             | Xong trên máy (mỗi phần có phép thử CSDL + đột biến đo đỏ, chạy thử bằng đúng vai); anh Dũng CHƯA chạy thử. Dữ liệu thử hậu tố THU3 / THU4 / THU5. Số chờ NVG đã có giá trị DEMO (kịch bản `mac-dinh`) |
 | AI Design 4 bước (5B)                 | Giao diện + sửa T163–T169 xong. 6 lượt thật trên nhà phố 5 × 18 m (≈ 2,15 USD) chưa ra mặt bằng: lượt 4 qua tầng 1–3; lượt 6 mô hình trả lại bản phác y nguyên nên máy dừng sau 2 lời gọi. Phát lại: lượt biệt thự 15 × 20 m `46d6eff3` vòng 1 QUA cổng 70,2 điểm với mã mới — chưa lưu. Mặt ngoài / Bộ kết quả chưa kiểm được trên dữ liệu thật |
-| Giao diện v2                          | Xong mọi phân hệ, đã gộp `cai-tien-ux`. Web 738/755 (17 đỏ sẵn của Node 24). Chưa làm: thanh trên điện thoại nền xanh rừng, thông báo nhỏ có «Hoàn tác», `FormLayout` cho biểu mẫu còn lại |
+| Giao diện v2                          | Xong mọi phân hệ, đã gộp `cai-tien-ux`. Web 738/755 (17 đỏ sẵn của Node 24). Làm thêm 24/10: thanh trên điện thoại nền xanh rừng, thông báo «Hoàn tác» (`ui/toast.tsx`), `FormLayout` cho Khách hàng / Nhân sự / Mẫu công trình — ảnh `backup/v2-them/` |
 | Bộ mẫu hợp đồng                       | Bản DỰ THẢO (anh Dũng gửi, dùng như chính thức) — chờ pháp chế NVG rà; bảng hỏi mục 6 trong tệp «00_Huong_dan» từng bộ chờ NVG trả lời. Tài khoản ngân hàng ba công ty là số DEMO                                                                                                                                                                                               |
 | AI trên máy                           | **Chạy THẬT**: Whisper (Workers AI) + Gemini 2.5 Flash trả phí — `workers/.dev.vars` `AI_FAKE=` rỗng, công tắc `ai.transcribe_enabled` / `ai.survey_summary_enabled` = 1 ở CSDL máy. Muốn quay về giả lập: `AI_FAKE=1`                                                                                                                                                          |
 | Bản demo cũ `nvg.tests99.workers.dev` | Vẫn chạy bản trước GĐ1, CSDL `awaiwegmuykhctnysvou` — ở tài khoản khác, máy này KHÔNG vào được                                                                                                                                                                                                                                                                                  |
@@ -1081,8 +1081,11 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    (Việc hôm nay), `/viec-can-lam/:id` (một phê duyệt), Phê duyệt có ô «Tôi đã gửi / Đã xử lý» (0221
    `my_approval_box`). Giữ có chủ đích: Tổng quan điều hành mỗi công ty một khung (không gộp số tập đoàn); trang
    đầu từng vai trò không đổi. Route trong bản thiết kế mà app chưa có (vd `/tc/cong-trinh/mo`, `/hd/hop-dong/soan`,
-   `/kho/phieu`, `/lam-ro/:id`) KHÔNG tự tạo. Còn có thể làm thêm: thanh trên điện thoại nền xanh rừng như bản
-   thiết kế; thông báo nhỏ có «Hoàn tác»; gắn `FormLayout` cho các biểu mẫu còn lại.
+   `/kho/phieu`, `/lam-ro/:id`) KHÔNG tự tạo. Làm thêm 24/10: thanh trên điện thoại nền xanh rừng; thông báo nhỏ có «Hoàn tác»
+   (`components/ui/toast.tsx`, khung đặt ở `AppShell`) gắn ở xoá dòng điều khoản hợp đồng (ghi xoá khi hết 6 giây —
+   chính sách sửa `contract_terms` bỏ qua dòng đã xoá mềm nên không khôi phục sau được), «Ngừng dùng / Dùng lại» mẫu
+   hợp đồng, «Đánh dấu tất cả đã đọc»; `FormLayout` cho Khách hàng, Nhân sự, Mẫu công trình. Các trang còn lại có ô
+   nhập là danh sách kèm khối nhập nhanh (Phiếu kho, Nhà cung cấp…) — không phải biểu mẫu toàn trang, giữ nguyên.
 2b. **AI Design — việc tiếp theo (chờ anh Dũng đồng ý thứ tự, đề xuất 1 → 2):**
    1. Lưu phương án biệt thự `46d6eff3` (qua cổng 70,2 điểm khi phát lại) bằng đường «phát lại câu trả lời đã ghi»: không
       gọi AI, `replay_of` trong params/lineage, chỉ chạy ở dev — để anh Dũng thấy đủ 4 bước trên giao diện.

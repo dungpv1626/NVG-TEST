@@ -19,7 +19,7 @@ const state = vi.hoisted(() => ({
 }));
 
 const markReadMock = vi.hoisted(() => vi.fn());
-const markAllReadMock = vi.hoisted(() => vi.fn());
+const markAllReadMock = vi.hoisted(() => vi.fn(() => Promise.resolve(['n1'])));
 
 vi.mock('@/lib/auth', () => ({
   useAuth: () => ({
@@ -41,7 +41,8 @@ vi.mock('@/hooks/use-notifications', () => ({
   useNotifications: () => ({ data: state.notifications }),
   useUnreadNotificationCount: () => ({ data: state.unreadCount }),
   useMarkNotificationRead: () => ({ mutate: markReadMock }),
-  useMarkAllNotificationsRead: () => ({ mutate: markAllReadMock }),
+  useMarkAllNotificationsRead: () => ({ mutateAsync: markAllReadMock }),
+  useMarkNotificationsUnread: () => ({ mutateAsync: vi.fn() }),
 }));
 vi.mock('@/hooks/use-live-updates', () => ({ useLiveUpdates: () => undefined }));
 

@@ -12,6 +12,7 @@ import { SHOWCASE_KINDS, SHOWCASE_KIND_LABELS, type ShowcaseKind } from '@nvg/sh
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { FormLayout, FormSection } from '@/components/ui/form-page';
 import { Input } from '@/components/ui/input';
 import { BlockedNotice, CardGridSkeleton } from '@/components/ui/states';
 import { toUserMessage } from '@/hooks/use-error-message';
@@ -133,127 +134,150 @@ function ShowcaseForm({ item }: { item: ShowcaseItem | null }) {
         title={item ? 'Sửa mẫu công trình' : 'Thêm mẫu công trình'}
         breadcrumbs={crumbs}
       />
-      <form
-        onSubmit={(e) => void submit(e)}
-        noValidate
-        className="max-w-3xl rounded-card bg-surface p-6"
-      >
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Tên mẫu" required className="sm:col-span-2">
-            <Input value={f.title} onChange={(e) => set('title', e.target.value)} autoFocus />
-          </Field>
-          <Field label="Mã mẫu" optional hint="Ví dụ NV0203 — giữ mã trên website">
-            <Input value={f.sampleCode} onChange={(e) => set('sampleCode', e.target.value)} />
-          </Field>
-          <Field label="Loại hình" required>
-            <select
-              value={f.kind}
-              onChange={(e) => set('kind', e.target.value)}
-              className={SELECT_CLASS}
+      <form onSubmit={(e) => void submit(e)} noValidate>
+        {/* «Sau khi lưu» chỉ khi thêm mới: mẫu lập tay mang trạng thái mặc định 'da_xac_nhan'
+            (0194) nên cả công ty xem được ngay (`showcase_items_select`), rồi mở trang mẫu để
+            thêm ảnh (navigate trong submit). Lưu ý lấy từ ghi chú đầu tệp. */}
+        <FormLayout
+          afterSave={
+            item
+              ? undefined
+              : [
+                  'Mẫu vào thư viện ngay — mọi người trong công ty xem được.',
+                  'Mở trang mẫu vừa lưu để thêm ảnh.',
+                ]
+          }
+          tips={{
+            title: 'Lưu ý',
+            items: [
+              'Bộ lọc mẫu tương tự dựa vào thông số — nhập số thật, ô nào không có thì để trống, đừng ước.',
+              'Không ghi giá, không ghi tên chủ nhà; khu vực chỉ ghi quận / tỉnh.',
+            ],
+          }}
+        >
+          <FormSection n={1} title="Thông tin mẫu">
+            <Field label="Tên mẫu" required className="sm:col-span-2">
+              <Input value={f.title} onChange={(e) => set('title', e.target.value)} autoFocus />
+            </Field>
+            <Field label="Mã mẫu" optional hint="Ví dụ NV0203 — giữ mã trên website">
+              <Input value={f.sampleCode} onChange={(e) => set('sampleCode', e.target.value)} />
+            </Field>
+            <Field label="Loại hình" required>
+              <select
+                value={f.kind}
+                onChange={(e) => set('kind', e.target.value)}
+                className={SELECT_CLASS}
+              >
+                {SHOWCASE_KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {SHOWCASE_KIND_LABELS[k]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Phong cách" optional>
+              <Input
+                value={f.style}
+                placeholder="Hiện đại, tân cổ điển, mái Nhật…"
+                onChange={(e) => set('style', e.target.value)}
+              />
+            </Field>
+            <Field label="Khu vực" optional hint="Chỉ quận / tỉnh — không ghi địa chỉ nhà">
+              <Input value={f.locationArea} onChange={(e) => set('locationArea', e.target.value)} />
+            </Field>
+            <Field label="Năm hoàn thành" optional>
+              <Input
+                value={f.completedYear}
+                inputMode="numeric"
+                onChange={(e) => set('completedYear', e.target.value)}
+              />
+            </Field>
+          </FormSection>
+
+          <FormSection n={2} title="Thông số">
+            <Field label="Số tầng" optional>
+              <Input
+                value={f.floors}
+                inputMode="numeric"
+                onChange={(e) => set('floors', e.target.value)}
+              />
+            </Field>
+            <Field label="Số phòng ngủ" optional>
+              <Input
+                value={f.bedrooms}
+                inputMode="numeric"
+                onChange={(e) => set('bedrooms', e.target.value)}
+              />
+            </Field>
+            <Field label="Diện tích đất (m²)" optional>
+              <Input
+                value={f.landArea}
+                inputMode="decimal"
+                onChange={(e) => set('landArea', e.target.value)}
+              />
+            </Field>
+            <Field label="Mặt tiền (m)" optional>
+              <Input
+                value={f.frontage}
+                inputMode="decimal"
+                onChange={(e) => set('frontage', e.target.value)}
+              />
+            </Field>
+            <Field label="Chiều sâu (m)" optional>
+              <Input
+                value={f.depth}
+                inputMode="decimal"
+                onChange={(e) => set('depth', e.target.value)}
+              />
+            </Field>
+            <Field label="Diện tích xây dựng (m²)" optional hint="Nhà xưởng">
+              <Input
+                value={f.buildingArea}
+                inputMode="decimal"
+                onChange={(e) => set('buildingArea', e.target.value)}
+              />
+            </Field>
+            <Field label="Khẩu độ (m)" optional hint="Nhà xưởng">
+              <Input
+                value={f.span}
+                inputMode="decimal"
+                onChange={(e) => set('span', e.target.value)}
+              />
+            </Field>
+          </FormSection>
+
+          <FormSection n={3} title="Mô tả" columns={1}>
+            <Field label="Mô tả" optional>
+              <textarea
+                value={f.description}
+                onChange={(e) => set('description', e.target.value)}
+                rows={4}
+                placeholder="Điểm nổi bật của công trình — không ghi giá, không ghi tên chủ nhà"
+                className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
+              />
+            </Field>
+          </FormSection>
+          {error && (
+            <p
+              role="alert"
+              className="rounded-field bg-status-overdue-bg px-3 py-2 text-status-overdue"
             >
-              {SHOWCASE_KINDS.map((k) => (
-                <option key={k} value={k}>
-                  {SHOWCASE_KIND_LABELS[k]}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Phong cách" optional>
-            <Input
-              value={f.style}
-              placeholder="Hiện đại, tân cổ điển, mái Nhật…"
-              onChange={(e) => set('style', e.target.value)}
-            />
-          </Field>
-          <Field label="Khu vực" optional hint="Chỉ quận / tỉnh — không ghi địa chỉ nhà">
-            <Input value={f.locationArea} onChange={(e) => set('locationArea', e.target.value)} />
-          </Field>
-          <Field label="Số tầng" optional>
-            <Input
-              value={f.floors}
-              inputMode="numeric"
-              onChange={(e) => set('floors', e.target.value)}
-            />
-          </Field>
-          <Field label="Số phòng ngủ" optional>
-            <Input
-              value={f.bedrooms}
-              inputMode="numeric"
-              onChange={(e) => set('bedrooms', e.target.value)}
-            />
-          </Field>
-          <Field label="Năm hoàn thành" optional>
-            <Input
-              value={f.completedYear}
-              inputMode="numeric"
-              onChange={(e) => set('completedYear', e.target.value)}
-            />
-          </Field>
-          <Field label="Diện tích đất (m²)" optional>
-            <Input
-              value={f.landArea}
-              inputMode="decimal"
-              onChange={(e) => set('landArea', e.target.value)}
-            />
-          </Field>
-          <Field label="Mặt tiền (m)" optional>
-            <Input
-              value={f.frontage}
-              inputMode="decimal"
-              onChange={(e) => set('frontage', e.target.value)}
-            />
-          </Field>
-          <Field label="Chiều sâu (m)" optional>
-            <Input
-              value={f.depth}
-              inputMode="decimal"
-              onChange={(e) => set('depth', e.target.value)}
-            />
-          </Field>
-          <Field label="Diện tích xây dựng (m²)" optional hint="Nhà xưởng">
-            <Input
-              value={f.buildingArea}
-              inputMode="decimal"
-              onChange={(e) => set('buildingArea', e.target.value)}
-            />
-          </Field>
-          <Field label="Khẩu độ (m)" optional hint="Nhà xưởng">
-            <Input
-              value={f.span}
-              inputMode="decimal"
-              onChange={(e) => set('span', e.target.value)}
-            />
-          </Field>
-          <Field label="Mô tả" optional className="sm:col-span-3">
-            <textarea
-              value={f.description}
-              onChange={(e) => set('description', e.target.value)}
-              rows={4}
-              placeholder="Điểm nổi bật của công trình — không ghi giá, không ghi tên chủ nhà"
-              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2 placeholder:text-fg-subtle"
-            />
-          </Field>
-        </div>
-        {error && (
-          <p
-            role="alert"
-            className="mt-4 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
-          >
-            {error}
-          </p>
-        )}
-        <div className="mt-6 flex gap-2">
-          <Button type="submit" variant="primary" disabled={save.isPending}>
-            {save.isPending ? 'Đang lưu…' : item ? 'Lưu thay đổi' : 'Lưu mẫu và thêm ảnh'}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => void navigate(item ? `/mau-cong-trinh/${item.id}` : '/mau-cong-trinh')}
-          >
-            Huỷ
-          </Button>
-        </div>
+              {error}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button type="submit" variant="primary" disabled={save.isPending}>
+              {save.isPending ? 'Đang lưu…' : item ? 'Lưu thay đổi' : 'Lưu mẫu và thêm ảnh'}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void navigate(item ? `/mau-cong-trinh/${item.id}` : '/mau-cong-trinh')}
+            >
+              Huỷ
+            </Button>
+          </div>
+        </FormLayout>
       </form>
     </>
   );

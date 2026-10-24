@@ -12,12 +12,15 @@ import { useNavigate } from 'react-router-dom';
 import { formatDateTime } from '@nvg/shared';
 import {
   useMarkAllNotificationsRead,
+  useMarkNotificationsUnread,
   useMarkNotificationRead,
   useNotifications,
   useUnreadNotificationCount,
 } from '@/hooks/use-notifications';
 import { useLiveUpdates } from '@/hooks/use-live-updates';
+import { showToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
+import { ON_SHELL_ICON } from './on-shell';
 
 export function NotificationBell() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -32,6 +35,7 @@ export function NotificationBell() {
   const { data: unreadCount } = useUnreadNotificationCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
+  const markUnread = useMarkNotificationsUnread();
 
   const rows = data ?? [];
   const hasUnread = (unreadCount ?? 0) > 0;
@@ -63,6 +67,7 @@ export function NotificationBell() {
         className={cn(
           'relative flex size-10 items-center justify-center rounded-md sm:size-8',
           'text-fg-subtle hover:bg-surface-muted hover:text-fg',
+          ON_SHELL_ICON,
         )}
       >
         <Bell className="size-4" />
@@ -93,7 +98,18 @@ export function NotificationBell() {
             {hasUnread && (
               <button
                 type="button"
-                onClick={() => markAllRead.mutate()}
+                onClick={() =>
+                  void markAllRead
+                    .mutateAsync()
+                    .then((ids) =>
+                      showToast({
+                        message: `Đã đánh dấu ${ids.length} thông báo là đã đọc`,
+                        onUndo: () => markUnread.mutateAsync(ids),
+                      }),
+                    )
+                    // Lỗi đánh dấu đã đọc không chặn việc gì — như bản trước (`mutate()` im lặng).
+                    .catch(() => undefined)
+                }
                 className="text-xs text-brand hover:underline"
               >
                 Đánh dấu tất cả đã đọc

@@ -101,12 +101,33 @@ export function useMarkNotificationRead() {
 export function useMarkAllNotificationsRead() {
   const queryClient = useQueryClient();
 
-  return useMutation<void, Error, void>({
+  // Trả id các thông báo vừa đánh dấu — để «Hoàn tác» chỉ trả lại đúng những thông báo đó,
+  // không đụng thông báo đã đọc từ trước.
+  return useMutation<string[], Error, void>({
     mutationFn: async () => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('notifications')
         .update({ read_at: new Date().toISOString() })
-        .is('read_at', null);
+        .is('read_at', null)
+        .select('id');
+      if (error) throw error;
+      return (data ?? []).map((row: { id: string }) => row.id);
+    },
+    onSuccess: () => invalidateNotificationQueries(queryClient),
+  });
+}
+
+/** Trả các thông báo về «chưa đọc» — thao tác ngược của «Đánh dấu tất cả đã đọc». */
+export function useMarkNotificationsUnread() {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, string[]>({
+    mutationFn: async (ids) => {
+      if (ids.length === 0) return;
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read_at: null })
+        .in('id', ids);
       if (error) throw error;
     },
     onSuccess: () => invalidateNotificationQueries(queryClient),

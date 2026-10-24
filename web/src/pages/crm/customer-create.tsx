@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { BUTTONS, ERRORS } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
+import { FormLayout } from '@/components/ui/form-page';
 import { BlockedNotice } from '@/components/ui/states';
 import { useCreateEntity } from '@/hooks/use-entity';
 import { useContactDuplicates } from '@/hooks/use-leads';
@@ -122,32 +123,37 @@ export function CustomerCreatePage() {
     <>
       <PageHeader title="Tạo khách hàng mới" breadcrumbs={BREADCRUMBS} />
 
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        className="max-w-2xl rounded-card bg-surface p-6"
-      >
-        <CustomerFields value={form} onChange={update} />
+      <form onSubmit={handleSubmit} noValidate>
+        {/* «Sau khi lưu» chỉ nói việc hệ thống thật sự làm (handleSubmit, migration 0132). */}
+        <FormLayout
+          afterSave={[
+            'Hệ thống cấp mã dạng KH-00001 — khách hàng dùng chung cả ba pháp nhân nên mã không mang tên pháp nhân.',
+            'Người tạo là người chịu trách nhiệm hồ sơ; chuyển cho người khác ở màn hình Sửa.',
+            'Mở thẳng hồ sơ khách hàng vừa tạo.',
+          ]}
+        >
+          <CustomerFields value={form} onChange={update} />
 
-        {error && (
-          <p
-            role="alert"
-            className="mt-4 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
-          >
-            {error}
-          </p>
-        )}
+          {error && (
+            <p
+              role="alert"
+              className="rounded-field bg-status-overdue-bg px-3 py-2 text-status-overdue"
+            >
+              {error}
+            </p>
+          )}
 
-        <div className="mt-6 flex items-center gap-2">
-          {/* Hành động chính DUY NHẤT của màn hình (Content Guidelines 6.3). */}
-          <Button type="submit" variant="primary" disabled={createCustomer.isPending}>
-            {createCustomer.isPending ? 'Đang lưu…' : BUTTONS.save}
-          </Button>
-          {/* Nút Hủy KHÔNG đặt cạnh nút có tác động phá hủy (Content Guidelines 4.5). */}
-          <Button type="button" variant="subtle" onClick={handleCancel}>
-            {BUTTONS.cancel}
-          </Button>
-        </div>
+          <div className="flex items-center gap-2">
+            {/* Hành động chính DUY NHẤT của màn hình (Content Guidelines 6.3). */}
+            <Button type="submit" variant="primary" disabled={createCustomer.isPending}>
+              {createCustomer.isPending ? 'Đang lưu…' : BUTTONS.save}
+            </Button>
+            {/* Nút Hủy KHÔNG đặt cạnh nút có tác động phá hủy (Content Guidelines 4.5). */}
+            <Button type="button" variant="subtle" onClick={handleCancel}>
+              {BUTTONS.cancel}
+            </Button>
+          </div>
+        </FormLayout>
       </form>
     </>
   );

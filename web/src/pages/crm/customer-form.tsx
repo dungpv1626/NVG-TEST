@@ -8,6 +8,7 @@
  */
 
 import { Field } from '@/components/ui/field';
+import { FormSection } from '@/components/ui/form-page';
 import { Input } from '@/components/ui/input';
 import type { ActiveUser } from '@/hooks/use-active-users';
 import { useContactDuplicates } from '@/hooks/use-leads';
@@ -106,120 +107,128 @@ export function CustomerFields({
   const hits = (duplicates.data ?? []).filter(
     (d) => !(d.kind === 'customer' && d.id === customerId),
   );
+  // Trả về các mục đánh số của khuôn biểu mẫu v2; `FormLayout` bọc ngoài nằm ở từng trang vì
+  // «Sau khi lưu» chỉ đúng với màn hình Tạo mới.
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <Field label="Tên khách hàng" required className="sm:col-span-2">
-        <Input value={value.name} onChange={(e) => onChange('name', e.target.value)} autoFocus />
-      </Field>
+    <>
+      <FormSection n={1} title="Khách hàng và người liên hệ">
+        <Field label="Tên khách hàng" required className="sm:col-span-2">
+          <Input value={value.name} onChange={(e) => onChange('name', e.target.value)} autoFocus />
+        </Field>
 
-      <Field label="Người liên hệ">
-        <Input
-          value={value.contactPerson}
-          onChange={(e) => onChange('contactPerson', e.target.value)}
-        />
-      </Field>
+        <Field label="Người liên hệ">
+          <Input
+            value={value.contactPerson}
+            onChange={(e) => onChange('contactPerson', e.target.value)}
+          />
+        </Field>
 
-      <Field
-        label="Người đại diện ký hợp đồng"
-        hint="Doanh nghiệp: người ký, có thể khác người liên hệ."
-      >
-        <Input
-          value={value.representativeName}
-          onChange={(e) => onChange('representativeName', e.target.value)}
-        />
-      </Field>
-
-      <Field label="Chức vụ người đại diện">
-        <Input
-          value={value.representativeTitle}
-          onChange={(e) => onChange('representativeTitle', e.target.value)}
-        />
-      </Field>
-
-      <Field label="Điện thoại">
-        <Input
-          value={value.phone}
-          onChange={(e) => onChange('phone', e.target.value)}
-          inputMode="tel"
-        />
-      </Field>
-
-      <ContactDuplicatesNotice
-        hits={hits}
-        footer={
-          hits.some((d) => d.kind === 'customer')
-            ? 'Khách hàng là hồ sơ dùng chung cả ba pháp nhân — mở khách hàng trên thay vì tạo thêm một hồ sơ.'
-            : hits.length > 0
-              ? 'Số này đang là đầu mối — chuyển đầu mối đó thành cơ hội để giữ nhật ký chăm sóc.'
-              : null
-        }
-      />
-
-      <Field label="Email">
-        <Input
-          type="email"
-          value={value.email}
-          onChange={(e) => onChange('email', e.target.value)}
-        />
-      </Field>
-
-      <Field label="Nguồn khách">
-        <select
-          value={value.source}
-          onChange={(e) => onChange('source', e.target.value)}
-          className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
+        <Field
+          label="Người đại diện ký hợp đồng"
+          hint="Doanh nghiệp: người ký, có thể khác người liên hệ."
         >
-          <option value="">Chưa xác định</option>
-          {SOURCES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-      </Field>
+          <Input
+            value={value.representativeName}
+            onChange={(e) => onChange('representativeName', e.target.value)}
+          />
+        </Field>
 
-      <Field label="Mã số thuế">
-        <Input value={value.taxCode} onChange={(e) => onChange('taxCode', e.target.value)} />
-      </Field>
+        <Field label="Chức vụ người đại diện">
+          <Input
+            value={value.representativeTitle}
+            onChange={(e) => onChange('representativeTitle', e.target.value)}
+          />
+        </Field>
 
-      {responsibleOptions && (
-        <Field label="Người chịu trách nhiệm" hint={responsibleHint}>
+        <Field label="Điện thoại">
+          <Input
+            value={value.phone}
+            onChange={(e) => onChange('phone', e.target.value)}
+            inputMode="tel"
+          />
+        </Field>
+
+        <ContactDuplicatesNotice
+          hits={hits}
+          footer={
+            hits.some((d) => d.kind === 'customer')
+              ? 'Khách hàng là hồ sơ dùng chung cả ba pháp nhân — mở khách hàng trên thay vì tạo thêm một hồ sơ.'
+              : hits.length > 0
+                ? 'Số này đang là đầu mối — chuyển đầu mối đó thành cơ hội để giữ nhật ký chăm sóc.'
+                : null
+          }
+        />
+
+        <Field label="Email">
+          <Input
+            type="email"
+            value={value.email}
+            onChange={(e) => onChange('email', e.target.value)}
+          />
+        </Field>
+      </FormSection>
+
+      <FormSection n={2} title="Nguồn, mã số thuế và địa chỉ">
+        <Field label="Nguồn khách">
           <select
-            value={value.responsibleUserId}
-            onChange={(e) => onChange('responsibleUserId', e.target.value)}
+            value={value.source}
+            onChange={(e) => onChange('source', e.target.value)}
             className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
           >
-            <option value="">Chưa phân công</option>
-            {responsibleOptions.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.full_name}
+            <option value="">Chưa xác định</option>
+            {SOURCES.map((s) => (
+              <option key={s} value={s}>
+                {s}
               </option>
             ))}
           </select>
         </Field>
-      )}
 
-      <Field label="Địa chỉ" className="sm:col-span-2">
-        <Input value={value.address} onChange={(e) => onChange('address', e.target.value)} />
-      </Field>
+        <Field label="Mã số thuế">
+          <Input value={value.taxCode} onChange={(e) => onChange('taxCode', e.target.value)} />
+        </Field>
 
-      <Field label="Nhu cầu" className="sm:col-span-2">
-        <textarea
-          value={value.needs}
-          onChange={(e) => onChange('needs', e.target.value)}
-          rows={3}
-          className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
-        />
-      </Field>
+        {responsibleOptions && (
+          <Field label="Người chịu trách nhiệm" hint={responsibleHint}>
+            <select
+              value={value.responsibleUserId}
+              onChange={(e) => onChange('responsibleUserId', e.target.value)}
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
+            >
+              <option value="">Chưa phân công</option>
+              {responsibleOptions.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.full_name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
 
-      <Field label="Ghi chú" className="sm:col-span-2">
-        <textarea
-          value={value.notes}
-          onChange={(e) => onChange('notes', e.target.value)}
-          rows={3}
-          className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
-        />
-      </Field>
-    </div>
+        <Field label="Địa chỉ" className="sm:col-span-2">
+          <Input value={value.address} onChange={(e) => onChange('address', e.target.value)} />
+        </Field>
+      </FormSection>
+
+      <FormSection n={3} title="Nhu cầu và ghi chú" columns={1}>
+        <Field label="Nhu cầu">
+          <textarea
+            value={value.needs}
+            onChange={(e) => onChange('needs', e.target.value)}
+            rows={3}
+            className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
+          />
+        </Field>
+
+        <Field label="Ghi chú">
+          <textarea
+            value={value.notes}
+            onChange={(e) => onChange('notes', e.target.value)}
+            rows={3}
+            className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
+          />
+        </Field>
+      </FormSection>
+    </>
   );
 }

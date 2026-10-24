@@ -17,6 +17,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { BUTTONS, ERRORS } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
+import { FormLayout } from '@/components/ui/form-page';
 import { BlockedNotice, CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import { useActiveUsers } from '@/hooks/use-active-users';
 import { useEntityDetail, useUpdateEntity } from '@/hooks/use-entity';
@@ -187,47 +188,46 @@ export function CustomerEditPage() {
     <>
       <PageHeader title={`Sửa hồ sơ ${data.name}`} breadcrumbs={breadcrumbs} />
 
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        className="max-w-2xl rounded-card bg-surface p-6"
-      >
-        {/* Mã hồ sơ hiển thị để đối chiếu, KHÔNG cho sửa — nó là căn cứ truy ngược của mọi
+      <form onSubmit={handleSubmit} noValidate>
+        {/* Không có «Sau khi lưu»: sửa hồ sơ chỉ ghi đè các trường rồi về trang chi tiết. */}
+        <FormLayout>
+          {/* Mã hồ sơ hiển thị để đối chiếu, KHÔNG cho sửa — nó là căn cứ truy ngược của mọi
             hồ sơ liên quan (Backend Schema 2.3). */}
-        <p className="mb-4 text-fg-subtle">
-          Mã hồ sơ <span className="font-mono text-fg">{data.code}</span> — do hệ thống cấp, không
-          thay đổi được.
-        </p>
-
-        <CustomerFields
-          value={form}
-          onChange={update}
-          responsibleOptions={users ?? []}
-          customerId={id}
-          responsibleHint={
-            handingOver
-              ? 'Sau khi lưu, chỉ người chịu trách nhiệm mới và quản lý trực tiếp sửa được hồ sơ này.'
-              : undefined
-          }
-        />
-
-        {saveError && (
-          <p
-            role="alert"
-            className="mt-4 rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue"
-          >
-            {saveError}
+          <p className="text-fg-subtle">
+            Mã hồ sơ <span className="font-mono text-fg">{data.code}</span> — do hệ thống cấp, không
+            thay đổi được.
           </p>
-        )}
 
-        <div className="mt-6 flex items-center gap-2">
-          <Button type="submit" variant="primary" disabled={updateCustomer.isPending}>
-            {updateCustomer.isPending ? 'Đang lưu…' : BUTTONS.save}
-          </Button>
-          <Button type="button" variant="subtle" onClick={handleCancel}>
-            {BUTTONS.cancel}
-          </Button>
-        </div>
+          <CustomerFields
+            value={form}
+            onChange={update}
+            responsibleOptions={users ?? []}
+            customerId={id}
+            responsibleHint={
+              handingOver
+                ? 'Sau khi lưu, chỉ người chịu trách nhiệm mới và quản lý trực tiếp sửa được hồ sơ này.'
+                : undefined
+            }
+          />
+
+          {saveError && (
+            <p
+              role="alert"
+              className="rounded-field bg-status-overdue-bg px-3 py-2 text-status-overdue"
+            >
+              {saveError}
+            </p>
+          )}
+
+          <div className="flex items-center gap-2">
+            <Button type="submit" variant="primary" disabled={updateCustomer.isPending}>
+              {updateCustomer.isPending ? 'Đang lưu…' : BUTTONS.save}
+            </Button>
+            <Button type="button" variant="subtle" onClick={handleCancel}>
+              {BUTTONS.cancel}
+            </Button>
+          </div>
+        </FormLayout>
       </form>
     </>
   );

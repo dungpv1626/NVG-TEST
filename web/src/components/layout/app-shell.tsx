@@ -19,6 +19,7 @@
 import { Suspense, type ReactNode } from 'react';
 import { Outlet } from 'react-router-dom';
 import { CardGridSkeleton } from '@/components/ui/states';
+import { Toaster } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import { Breadcrumb, type Crumb } from './breadcrumb';
 import { SectionHelp } from '@/components/ui/section-help';
@@ -94,8 +95,9 @@ export function AppShell() {
   return (
     // Giao diện v2 (DESIGN_SYSTEM.md §8): khung xanh rừng bao ngoài, sidebar nằm thẳng trên khung,
     // bảng nội dung nền ám xanh bo 24 đặt bên phải. Từ lg trở lên khung chừa 14px trên / phải /
-    // dưới, trái 0 (sidebar tự có lề). Dưới lg không có sidebar: bảng nội dung tràn hết màn hình,
-    // thanh tab nằm dưới.
+    // dưới, trái 0 (sidebar tự có lề). Dưới lg không có sidebar: thanh trên nằm thẳng trên khung
+    // xanh rừng, bảng nội dung bo hai góc trên ngay dưới nó, thanh tab nằm dưới (bản điện thoại
+    // của handoff v2).
     //
     // `100dvh` chứ không `100vh`: trên trình duyệt di động, `100vh` tính cả phần thanh địa
     // chỉ tự ẩn/hiện, nên đáy màn hình bị đẩy xuống dưới vùng nhìn thấy và thanh điều hướng
@@ -104,13 +106,18 @@ export function AppShell() {
       <Sidebar />
       <div
         className={cn(
-          'flex min-w-0 flex-1 flex-col overflow-hidden bg-canvas',
+          'flex min-w-0 flex-1 flex-col overflow-hidden lg:bg-canvas',
           'lg:rounded-canvas',
         )}
       >
         <TopBar />
         <OfflineBar />
-        <main className="flex-1 overflow-y-auto px-4 pt-2 pb-4 lg:px-6 lg:pb-6">
+        <main
+          className={cn(
+            'flex-1 overflow-y-auto bg-canvas px-4 pt-4 pb-4 lg:px-6 lg:pt-2 lg:pb-6',
+            'max-lg:rounded-t-canvas',
+          )}
+        >
           {/* Màn hình tải theo nhu cầu — trong lúc tải gói, hiện khung xám đúng hình dạng
               nội dung chứ không phải vòng xoay toàn màn hình (Webapp Flow 6.7). Khung
               ứng dụng và thanh điều hướng vẫn đứng yên. */}
@@ -121,6 +128,7 @@ export function AppShell() {
         <BottomNav />
       </div>
       <PwaPrompts />
+      <Toaster />
     </div>
   );
 }

@@ -34,6 +34,7 @@ import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
+import { showToast } from '@/components/ui/toast';
 import {
   useContractTerms,
   useDeleteContractTerm,
@@ -152,7 +153,9 @@ export function TermsPanel({
   const [editing, setEditing] = useState<{ type: ContractTermType; id: string | null } | null>(
     null,
   );
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  // Dòng vừa bấm Xoá: ẩn ngay, ghi xoá thật khi thông báo «Hoàn tác» hết hạn (ui/toast.tsx).
+  // Không xoá ngay rồi khôi phục được: chính sách sửa `contract_terms` bỏ qua dòng đã xoá mềm.
+  const [pendingDelete, setPendingDelete] = useState<ReadonlySet<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   // Người dùng đã tự gõ số tiền thì đổi tỷ lệ không đè lên nữa.
@@ -160,6 +163,7 @@ export function TermsPanel({
 
   const byType = new Map<ContractTermType, ContractTermRecord[]>();
   for (const term of terms ?? []) {
+    if (pendingDelete.has(term.id)) continue;
     const list = byType.get(term.term_type) ?? [];
     list.push(term);
     byType.set(term.term_type, list);
@@ -176,7 +180,6 @@ export function TermsPanel({
     });
     setAmountTouched(isRecord && from.amount != null);
     setError(null);
-    setConfirmDelete(null);
     setEditing({ type, id: isRecord ? from.id : null });
   }
 
@@ -247,14 +250,27 @@ export function TermsPanel({
     }
   }
 
-  async function remove(id: string) {
+  function remove(term: ContractTermRecord) {
     setError(null);
-    try {
-      await deleteTerm.mutateAsync(id);
-      setConfirmDelete(null);
-    } catch (e) {
-      setError(toUserMessage(e, 'edit'));
-    }
+    const unhide = () =>
+      setPendingDelete((prev) => {
+        const next = new Set(prev);
+        next.delete(term.id);
+        return next;
+      });
+    setPendingDelete((prev) => new Set(prev).add(term.id));
+    showToast({
+      message: `Đã xoá dòng «${CONTRACT_TERM_TYPE_LABELS[term.term_type]}»`,
+      onUndo: unhide,
+      onExpire: () =>
+        deleteTerm
+          .mutateAsync(term.id)
+          // Thành công thì để id trong tập ẩn: bỏ ra ngay sẽ hiện lại dòng tới khi tải lại xong.
+          .catch((e: unknown) => {
+            unhide();
+            setError(toUserMessage(e, 'edit'));
+          }),
+    });
   }
 
   async function toggleCompleted(term: ContractTermRecord) {
@@ -381,34 +397,14 @@ export function TermsPanel({
                         >
                           Sửa
                         </button>
-                        {confirmDelete === term.id ? (
-                          <span className="inline-flex items-center gap-2">
-                            Xoá dòng này?
-                            <button
-                              type="button"
-                              className="font-medium text-status-overdue underline-offset-2 hover:underline"
-                              disabled={deleteTerm.isPending}
-                              onClick={() => void remove(term.id)}
-                            >
-                              Xoá
-                            </button>
-                            <button
-                              type="button"
-                              className="text-fg-subtle underline-offset-2 hover:underline"
-                              onClick={() => setConfirmDelete(null)}
-                            >
-                              Không
-                            </button>
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            className="text-fg-subtle underline-offset-2 hover:underline"
-                            onClick={() => setConfirmDelete(term.id)}
-                          >
-                            Xoá
-                          </button>
-                        )}
+                        {/* Không hỏi lại: xoá có «Hoàn tác» trong 6 giây (ui/toast.tsx). */}
+                        <button
+                          type="button"
+                          className="text-fg-subtle underline-offset-2 hover:underline"
+                          onClick={() => remove(term)}
+                        >
+                          Xoá
+                        </button>
                         {spec.due &&
                           (term.completed_at ? (
                             <span className="inline-flex items-center gap-1 text-status-completed">

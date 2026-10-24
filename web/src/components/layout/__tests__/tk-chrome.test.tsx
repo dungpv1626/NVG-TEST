@@ -42,7 +42,8 @@ vi.mock('@/hooks/use-notifications', () => ({
   useNotifications: () => ({ data: [] }),
   useUnreadNotificationCount: () => ({ data: 0 }),
   useMarkNotificationRead: () => ({ mutate: vi.fn() }),
-  useMarkAllNotificationsRead: () => ({ mutate: vi.fn() }),
+  useMarkAllNotificationsRead: () => ({ mutateAsync: vi.fn(() => Promise.resolve([])) }),
+  useMarkNotificationsUnread: () => ({ mutateAsync: vi.fn() }),
 }));
 
 const { AppShell } = await import('../app-shell');

@@ -22,6 +22,7 @@ import { BrandLogo } from './brand-logo';
 import { ChangePasswordDialog } from './change-password-dialog';
 import { CompanySwitcher } from './company-switcher';
 import { NotificationBell } from './notification-bell';
+import { ON_SHELL_ICON } from './on-shell';
 import { useTkScope } from './tk-chrome';
 
 /** Nhãn tiếng Việt trong nhóm module — bổ sung cho tên module khi một module có nhiều loại
@@ -121,7 +122,7 @@ function GlobalSearchBox({ tk }: { tk: boolean }) {
         role="combobox"
         aria-expanded={showPanel}
         aria-controls="global-search-results"
-        placeholder={narrow ? 'Tìm kiếm…' : hint}
+        placeholder={narrow ? 'Tìm…' : hint}
         aria-label={hint}
         value={rawQuery}
         onChange={(e) => {
@@ -134,7 +135,9 @@ function GlobalSearchBox({ tk }: { tk: boolean }) {
         }}
         className={cn(
           'w-full rounded-md border border-border',
-          'bg-surface-muted pl-8',
+          'bg-surface-muted pl-8 text-fg',
+          // Dưới lg ô nằm trên thanh xanh rừng: nền trắng, bỏ viền (viền xám trên nền tối là vệt bẩn).
+          'max-lg:border-transparent max-lg:bg-surface',
           'placeholder:text-fg-subtle',
           tk ? 'h-9 pr-20' : 'h-10 pr-3 sm:h-8',
         )}
@@ -221,6 +224,7 @@ function IconButton({
   const className = cn(
     'relative flex size-10 items-center justify-center rounded-md sm:size-8',
     'text-fg-subtle hover:bg-surface-muted hover:text-fg',
+    ON_SHELL_ICON,
   );
 
   const badge = (
@@ -272,8 +276,9 @@ export function TopBar() {
     <header
       className={cn(
         // v2: thanh trên nằm TRONG bảng nội dung (nền ám xanh), không viền, không nền riêng.
-        'flex shrink-0 items-center',
-        tk ? 'h-15 gap-4 px-6' : 'h-14 gap-3 px-4 lg:px-6',
+        // Dưới lg thanh nằm trên khung xanh rừng (xem app-shell.tsx) nên chữ đổi sang sáng.
+        'flex shrink-0 items-center max-lg:text-fg-inverse',
+        tk ? 'h-15 gap-4 px-6' : 'h-14 gap-2 px-4 sm:gap-3 lg:px-6',
       )}
     >
       {/* Pháp nhân đang chọn — trên máy tính nằm ở sidebar, ở điện thoại sidebar ẩn nên
@@ -291,7 +296,7 @@ export function TopBar() {
         <BrandLogo variant="mark" className="w-12" />
       </Link>
       <div className="shrink-0 lg:hidden">
-        <CompanySwitcher compact />
+        <CompanySwitcher compact onDark />
       </div>
 
       {/* Tìm kiếm toàn hệ thống — Webapp Flow 5.3.
@@ -318,7 +323,7 @@ export function TopBar() {
               // 6.8) — cùng quy tắc với IconButton ở trên, nhưng đo bằng min-h/min-w vì nút
               // này còn chứa chữ tên nên không cố định thành hình vuông như IconButton.
               'ml-1 flex min-h-10 items-center gap-2 rounded-sm px-2 py-1 sm:min-h-8',
-              'hover:bg-surface-hover',
+              'hover:bg-surface-hover max-lg:hover:bg-shell-active',
             )}
             aria-label="Menu tài khoản"
           >
@@ -326,6 +331,8 @@ export function TopBar() {
               className={cn(
                 'flex size-6 items-center justify-center rounded-full',
                 'bg-brand-forest text-xs font-semibold text-brand-mint',
+                // Nền forest lẫn vào thanh xanh rừng — đảo màu khi nằm trên khung.
+                'max-lg:bg-brand-mint max-lg:text-brand-forest',
               )}
             >
               {profile?.fullName?.trim().split(/\s+/).at(-1)?.[0] ?? '?'}
