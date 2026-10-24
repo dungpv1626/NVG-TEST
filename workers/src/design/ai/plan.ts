@@ -324,6 +324,8 @@ export interface PlanContextInput {
   rankSkip?: number;
   /** Tầng 1: cạnh ô thang xếp cuối khi chọn lối vào — bước quay lui của `evaluateHouse` (T161). */
   stairEntryAvoid?: StairSide;
+  /** Tầng 1: thu ô thang bản phác vẽ dư về cạnh tối thiểu — chỉ cho bước quay lui của `evaluateHouse` (T169). */
+  stairTight?: boolean;
   /**
    * Cỡ ô bản phác, m. Vắng = `sketchGridOf` (ô ~1 m cho mô hình đếm). Lược đồ hình chữ nhật (bàn giao v5,
    * cách A) đổi rect của mô hình ra lưới mịn hơn để không làm tròn mất WC 1,5 m hay hành lang 1,3 m.
@@ -3427,6 +3429,7 @@ export function arrangeFor(
     ...(input.splitClosets ? { splitClosets: true } : {}),
     ...(input.rankSkip ? { rankSkip: input.rankSkip } : {}),
     ...(input.stairEntryAvoid ? { stairEntryAvoid: input.stairEntryAvoid } : {}),
+    ...(input.stairTight ? { stairTight: true } : {}),
     openFaces: context.openFaces,
     accessFaces: context.accessFaces,
     entrances: context.entrances,
@@ -4696,6 +4699,30 @@ export function evaluateHouse(
       input.trace?.(
         `▷ thang tầng 1 vào từ cạnh khác (${groundUp} → ${altUp}): tầng trên ${altRun.failed ? 'vẫn hỏng' : 'qua'}`,
       );
+      if (!altRun.failed) {
+        chosenGround = { result: alt, done: altDone };
+        upperRun = altRun;
+      }
+    }
+  }
+  // Ô thang tầng 1 bản phác vẽ dư (T169, lượt thật 4a25b460: 3 ô = 3,4 m theo tim trong khi thang chữ U cần 2,4 m) là
+  // mốc của mọi tầng — tầng trên hỏng vì thiếu bề ngang cạnh thang thì thử tầng 1 với ô thang thu về cạnh tối thiểu, phần
+  // dư trả cho phòng kề. Chỉ nhận khi MỌI tầng trên xếp được, như hai cách quay lui khác (kiểm cả nhà vẫn chạy sau).
+  if (upperRun.failed && upper.length) {
+    const alt = arrangeFor(
+      { ...input, stairTight: true },
+      context,
+      programBeforeGround,
+      ground!,
+      groundIntentUsed,
+      null,
+      minimums,
+      sketches.get(ground!),
+    );
+    const altDone = arrangedLevel(alt);
+    if (altDone && JSON.stringify(altDone.level.rooms) !== JSON.stringify(groundDone.level.rooms)) {
+      const altRun = upperFrom(alt, altDone);
+      input.trace?.(`▷ ô thang tầng 1 thu gọn: tầng trên ${altRun.failed ? 'vẫn hỏng' : 'qua'}`);
       if (!altRun.failed) {
         chosenGround = { result: alt, done: altDone };
         upperRun = altRun;

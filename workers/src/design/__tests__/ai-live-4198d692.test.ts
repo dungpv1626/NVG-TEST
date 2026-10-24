@@ -48,24 +48,22 @@ describe('phát lại lượt chạy thật 4198d692 — ba vòng cuối đã d�
   const round3 = failed(mergeRevision(round2.evaluation.renamed!, answer(3)));
   const round4 = failed(mergeRevision(round3.evaluation.renamed!, answer(4)));
 
-  it('vòng 3: một lỗi lối vào trên bản phác; vòng 4: cây đã dựng, chỉ `bedroom_5` hụt sàn đầu bài', () => {
+  it('vòng 3: một lỗi lối vào trên bản phác; vòng 4: cả nhà dựng được, chỉ còn lỗi ban công mặt sau của bản phác', () => {
     expect(round3.rejections.map((r) => r.level)).toEqual([2]);
     expect(round3.rejections[0]!.codes).toEqual(['sketch_room_no_access']);
-    expect(round4.rejections.map((r) => r.level)).toEqual([2]);
-    // `bedroom_3` 14,92 / 15 m² (hụt 0,5 %) nằm trong dung sai 3 % của cổng (T82) — không còn là lỗi;
-    // `bedroom_5` 15,67 / 17 (hụt 8 %) vẫn là lỗi thật.
-    expect(round4.rejections[0]!.codes).toEqual(['arrange_room_below_brief_area']);
-    expect(round4.rejections[0]!.messages[0]).toContain('"bedroom_5" ở tầng 2 chỉ được 15.67 m²');
-    expect(round4.rejections[0]!.messages.join(' ')).not.toContain('"bedroom_3"');
+    // Trước T169 vòng 4 hỏng ở tầng 2 (`bedroom_5` 15,67 / 17 m²). Quay lui ô thang tầng 1 thu gọn (T169) cho tầng 2 đủ
+    // bề ngang: tầng 2 dựng được, lỗi kế tiếp là lỗi thật của bản phác — ban công mặt sau vẽ dọc mép trái, chỉ chạm mặt
+    // sau ở góc.
+    expect(round4.rejections.map((r) => r.level)).toEqual([0]);
+    expect(round4.rejections[0]!.messages.join(' ')).toContain('cần một ban công chạy dọc mặt sau');
   });
 
-  it('vòng 4 đi xa hơn vòng 3 → là gốc cho lượt sau, dù nhiều lỗi hơn; câu nhắc nói số ô cần vẽ thêm', () => {
+  it('vòng 4 đi xa hơn vòng 3 → là gốc cho lượt sau; câu nhắc nói lỗi ban công mặt sau (T169)', () => {
     const picked = revisionBase(round3, round4, prompts);
     expect(picked.best).toBe(round4);
     expect(picked.next).toBe(round4);
     const hint = round4.hints.join('\n');
-    expect(hint).toMatch(/"bedroom_5" came out at 15\.67 m² from \d+ sketch cells/);
-    expect(hint).not.toMatch(/"bedroom_3"/);
+    expect(hint).toMatch(/Draw a separate balcony with its long side along the back edge/);
     // Chiều ngược lại vẫn đúng: từ vòng 4 mà lùi về lỗi bản phác là tệ đi.
     expect(revisionBase(round4, round3, prompts).best).toBe(round4);
   });

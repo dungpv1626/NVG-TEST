@@ -4350,3 +4350,27 @@ không còn câu giếng trời. Không vòng ghi nào của THU5 qua cổng —
 
 Còn mở (chưa làm): ô thang tầng 1 dựng rộng 3,4 m (`phac-dien-tich` thắng nhờ điểm) trong khi thang U chỉ cần 2,4 m — mọi
 tầng trên mất 1 m bề ngang cạnh thang; muốn sửa phải để chọn phương án tầng 1 biết tầng trên.
+
+### T169 — Ô thang tầng 1 thu về cạnh tối thiểu khi tầng trên hỏng (24/10/2026, mạch B, anh Dũng đồng ý)
+
+**Vì sao.** T168 thấy ô thang tầng 1 của THU5 dựng rộng 3,4 m theo tim (bản phác 3 ô, cách căn vách theo diện tích
+thắng nhờ điểm) trong khi thang chữ U cần ~2,4 m; ô thang tầng 1 là mốc của mọi tầng, nên tầng trên mất ~1 m bề ngang cạnh
+thang. Bộ xếp tầng 1 chọn theo điểm của RIÊNG tầng 1, không biết tầng trên.
+
+**Đã làm.** Thêm một bước quay lui (cùng họ với T113 / T161): tầng trên hỏng thì xếp lại tầng 1 với `stairTight` — mỗi
+cây bản phác thu ô thang về cạnh tối thiểu (`minExtent` + hai mô-đun cho nửa vách ngăn đầu trong), giữ cạnh trên hình bao,
+phần dư trả cho phòng kề (`arrange/sketch.ts#tighten`, dời đúng nhát cắt bằng `pinLeaf`). Chỉ nhận khi MỌI tầng trên xếp
+được (kiểm cả nhà vẫn chạy sau); không đổi cách chọn tầng 1 khi tầng trên đã qua, không thêm luật, không đổi điểm. Thử
+thêm điều kiện «tầng trên không tầng nào phải chia lại» thì mất chính vòng 46d6eff3 — gỡ. Lần đầu chỉ chừa `minExtent` thì thang ra
+lọt lòng 2,13 m cho mức 2,15 m — mức `minExtent` của ô thang chỉ tính một bề dày tường bao.
+
+**Đo.** Phát lại 234 vòng (58 lượt), đối chứng 8ca695e:
+- ngữ cảnh Workflow: 10 → **11** vòng ra mặt bằng — `46d6eff3` vòng 1 (biệt thự 15 × 20 m, 2 tầng) qua cả nhà, 70,2 điểm
+  (ngưỡng 60); không vòng nào khác đổi;
+- ngữ cảnh mặc định của phép thử: 26 → **27** (`4eade9b1` vòng 4 qua — chỉ ở ngữ cảnh này, thang mô hình cũ); 10 vòng
+  khác lùi lỗi về sau (hỏng ở một tầng → mọi tầng dựng được, hỏng ở kiểm cả nhà), không vòng nào tệ đi. `4198d692` vòng 4
+  (phép thử `ai-live-4198d692`) nay dựng được tầng 2 và dừng ở lỗi thật của bản phác (ban công mặt sau vẽ dọc mép trái)
+  thay cho «phòng ngủ hụt 15,67 / 17 m²» — phép thử đổi theo. Phép thử
+`ai-live-46d6eff3.test.ts` (gỡ bước quay lui thì đỏ). THU5: tầng 1 thu gọn xếp được ở mọi vòng có tầng trên hỏng, nhưng tầng
+trên vẫn hỏng — `4a25b460` tầng 3 phòng ngủ cạnh thang cần 2,5 + 2,7 m trên 5 m, `b1859741` / `4eade9b1` tầng 4 là lỗi bản
+phác của mô hình. Không vòng ghi nào của THU5 qua cổng nên không lưu phương án phát lại nào.

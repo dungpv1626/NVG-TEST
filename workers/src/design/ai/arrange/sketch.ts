@@ -283,6 +283,11 @@ export interface SketchTreeInput {
    * không lá nào được giữ.
    */
   fixedCore?: (leafId: string) => boolean;
+  /**
+   * Lá ô thang tầng 1 thu về đúng cạnh tối thiểu (`minExtent`) theo chiều nó vẽ dư, phần dư trả cho phòng kề (T169) — chỉ
+   * khi lớp gọi quay lui vì tầng trên hỏng: ô thang tầng 1 là mốc của mọi tầng, rộng dư thì tầng trên mất bề ngang.
+   */
+  tightCores?: ReadonlySet<string>;
   /** Dòng gỡ lỗi — chỉ phép thử dùng. */
   trace?: (line: string) => void;
 }
@@ -424,7 +429,7 @@ export function sketchTrees(input: SketchTreeInput): SketchTrees {
   for (const mode of SIZING_MODES) {
     const sized = place(root, footprint, mode, input);
     if (!sized) continue;
-    const placed = repair(sized, input);
+    const placed = tighten(repair(sized, input), input);
     const signature = JSON.stringify(placed);
     if (seen.has(signature)) continue;
     seen.add(signature);
@@ -1282,6 +1287,42 @@ function shortfall(root: Placed, input: SketchTreeInput): Shortfall {
     }
   }
   return { total, worst };
+}
+
+/** Thu ô lõi về cạnh tối thiểu (`SketchTreeInput.tightCores`, T169); giữ cạnh nằm trên hình bao, dời cạnh trong. */
+function tighten(root: Placed, input: SketchTreeInput): Placed {
+  if (!input.tightCores?.size) return root;
+  const f = input.sketch.footprint;
+  let current = root;
+  for (const id of input.tightCores) {
+    const leaf = leaves(current).find((item) => item.id === id);
+    if (!leaf) continue;
+    const r = leaf.rect;
+    const box = { w: r.x1 - r.x0, h: r.y1 - r.y0 };
+    const target = { ...r };
+    for (const axis of ['x', 'y'] as const) {
+      // `minExtent` của ô thang chỉ chừa một bề dày tường bao; đầu trong còn nửa vách ngăn — chừa thêm hai mô-đun để lọt
+      // lòng vẫn đủ (đo trên 4a25b460: 240 cm theo tim ra 2,13 m lọt lòng cho mức 2,15 m).
+      const need = Math.max(input.minCell, input.minExtent?.(id, axis, box) ?? 0) + 2 * MODULE_CM;
+      const [lo, hi] = axis === 'x' ? (['x0', 'x1'] as const) : (['y0', 'y1'] as const);
+      const have = r[hi] - r[lo];
+      if (have <= need + MODULE_CM) continue;
+      // Cạnh trên hình bao (tường ngoài) giữ nguyên; không cạnh nào trên hình bao thì giữ cạnh thấp.
+      const edgeLo = axis === 'x' ? f.x0 : f.y0;
+      const edgeHi = axis === 'x' ? f.x1 : f.y1;
+      if (r[hi] === edgeHi && r[lo] !== edgeLo) target[lo] = snap(r[hi] - need);
+      else target[hi] = snap(r[lo] + need);
+    }
+    if (target.x0 === r.x0 && target.x1 === r.x1 && target.y0 === r.y0 && target.y1 === r.y1) {
+      continue;
+    }
+    const next = pinLeaf(current, id, target, input.minCell);
+    if (next) {
+      input.trace?.(`    ⇥ thu ô thang "${id}" ${extentText(r)} → ${extentText(target)}`);
+      current = next;
+    }
+  }
+  return current;
 }
 
 function extentText(rect: Rect): string {
