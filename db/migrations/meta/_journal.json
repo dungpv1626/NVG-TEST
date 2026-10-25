@@ -1499,6 +1499,13 @@
       "when": 1791670000000,
       "tag": "0222_van_ban_sua_trong_word",
       "breakpoints": true
+    },
+    {
+      "idx": 222,
+      "version": "7",
+      "when": 1791680000000,
+      "tag": "0223_nhan_soan_thay_hop_dong",
+      "breakpoints": true
     }
   ]
 }

@@ -213,6 +213,26 @@ export function useSubmitContractApproval() {
   });
 }
 
+/**
+ * Ban Giám đốc nhận soạn thay một hợp đồng còn Nháp (0223): trở thành người chịu trách nhiệm, người soạn trước được
+ * báo, có nhật ký. Chỉ người phê duyệt HD; sửa được đúng hợp đồng ấy (`auth_drafts_contract`).
+ */
+export function useTakeOverContract() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, { contractId: string; reason: string | null }>({
+    mutationFn: async ({ contractId, reason }) => {
+      const { error } = await supabase.rpc('take_over_contract', {
+        p_contract_id: contractId,
+        p_reason: reason,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['contracts'] });
+    },
+  });
+}
+
 /** Ghi nhận hợp đồng đã ký — chỉ sau khi phê duyệt nội bộ (HD-05). */
 export function useSignContract() {
   const queryClient = useQueryClient();

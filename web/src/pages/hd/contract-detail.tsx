@@ -34,6 +34,7 @@ import {
   useContract,
   useContractAmendments,
   useSubmitContractApproval,
+  useTakeOverContract,
   useUpdateContract,
 } from '@/hooks/use-contracts';
 import {
@@ -42,7 +43,7 @@ import {
   useSitesOfContract,
 } from '@/hooks/use-construction-sites';
 import { toUserMessage } from '@/hooks/use-error-message';
-import { useCan, useIsResponsible } from '@/lib/auth';
+import { useAuth, useCan, useIsResponsible } from '@/lib/auth';
 import { RecordChain } from '@/components/entity/record-chain';
 import { StepTrack } from '@/components/entity/step-track';
 import { WaitingOn } from '@/components/entity/waiting-on';
@@ -71,6 +72,8 @@ export function ContractDetailPage() {
 
   const { data, isLoading, error } = useContract(id);
   const isResponsible = useIsResponsible(data?.responsible_user_id);
+  const { profile } = useAuth();
+  const takeOver = useTakeOverContract();
   const { data: amendments } = useContractAmendments(id);
   const { data: sites } = useSitesOfContract(id);
   const { data: hasSite } = useContractHasSite(id);
@@ -131,7 +134,11 @@ export function ContractDetailPage() {
   const contract = data;
   const isDraft = contract.stage === 'nhap';
   const isClosed = contract.stage === 'hoan_thanh' || contract.stage === 'huy';
-  const canDraft = canEdit && isResponsible;
+  // Gương `auth_drafts_contract` (0223): quyền sửa HD, hoặc Ban Giám đốc đã NHẬN SOẠN THAY (là người chịu trách nhiệm).
+  const isMine = profile?.id != null && profile.id === contract.responsible_user_id;
+  const canDraft = isResponsible && (canEdit || (canApprove && isMine));
+  // Ban Giám đốc thấy hợp đồng người khác đang soạn: nhận soạn thay thay vì chỉ đọc (anh Dũng 25/10/2026).
+  const canTakeOver = isDraft && canApprove && !canDraft;
   const readOnly = !canDraft || isClosed;
   const beforeApproval = contract.stage === 'nhap' || contract.stage === 'cho_duyet';
   const canCancel = !isClosed && (canApprove || (beforeApproval && canDraft));
@@ -237,6 +244,19 @@ export function ContractDetailPage() {
     setSigning(true);
   }
 
+  async function takeOverDrafting() {
+    const reason = await promptDialog.ask({
+      title: 'Nhận soạn thay hợp đồng này?',
+      label: `Lý do (gửi kèm thông báo cho ${contract.responsible?.full_name ?? 'người đang soạn'}) — có thể để trống`,
+      confirmLabel: 'Nhận soạn thay',
+      required: false,
+    });
+    if (reason === null) return;
+    void run(() =>
+      takeOver.mutateAsync({ contractId: contract.id, reason: reason.trim() || null }),
+    );
+  }
+
   async function cancel() {
     const reason = await promptDialog.ask({
       title: 'Hủy hợp đồng?',
@@ -249,6 +269,7 @@ export function ContractDetailPage() {
   }
 
   const hasAnyAction =
+    canTakeOver ||
     (isDraft && canDraft) ||
     (contract.stage === 'da_duyet' && (canApprove || canDraft)) ||
     canOpenSite ||
@@ -257,6 +278,15 @@ export function ContractDetailPage() {
 
   const actions = !hasAnyAction ? undefined : (
     <>
+      {canTakeOver && (
+        <Button
+          variant="secondary"
+          disabled={takeOver.isPending}
+          onClick={() => void takeOverDrafting()}
+        >
+          Nhận soạn thay
+        </Button>
+      )}
       {isDraft && canDraft && (
         <Button
           variant="primary"

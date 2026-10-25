@@ -143,7 +143,7 @@ export function DocumentPanel({
               : contract.stage === 'da_duyet'
                 ? 'Hợp đồng đã được phê duyệt theo văn bản dưới đây — tải về để in và ký. Không lập thêm bản mới.'
                 : 'Hợp đồng đã ký — văn bản đã khoá. Thay đổi sau ký đi qua tab Phát sinh.'
-            : `${contract.responsible?.full_name ?? 'Người chịu trách nhiệm'} đang soạn văn bản này — chỉ người chịu trách nhiệm sửa được khi hợp đồng còn Nháp. Văn bản dưới đây dựng theo dữ liệu hiện có.`}
+            : `${contract.responsible?.full_name ?? 'Người chịu trách nhiệm'} đang soạn văn bản này — chỉ người chịu trách nhiệm sửa được khi hợp đồng còn Nháp (Ban Giám đốc nhận soạn thay được bằng nút ở đầu trang). Văn bản dưới đây dựng theo dữ liệu hiện có.`}
         </span>
       </p>
     );
