@@ -87,7 +87,9 @@ import {
 } from './ai-cost-estimate';
 import { costCeiling, type CostEstimate } from './run-cost-estimate';
 import { formatUsd } from './ai-usage';
-import { AiPlanCompare, DeductionList, ScoreChip } from './ai-plan-compare';
+import { AiPlanCompare, ScoreChip } from './ai-plan-compare';
+import { PlanVerdict, planVerdict } from './ai-plan-verdict';
+import { openWorkspaceTab, SplitWorkspace } from '@/components/ui/split-workspace';
 import { PlanEditPanel } from './ai-plan-edit';
 import { failureViews, type FailedVariant } from './plan-failure';
 
@@ -138,6 +140,11 @@ export function AiPlanStep({
   const editPlan = useEditAiPlan();
   // Lượt sửa vừa gửi — để ghi chú của nó (đã áp / chưa làm được) gắn đúng phương án nó đúc ra.
   const [editRunId, setEditRunId] = useState<string | null>(null);
+  /** Câu «Nhờ AI sửa» điền sẵn vào ô «Yêu cầu sửa» (25/10/2026). */
+  const [prefill, setPrefill] = useState<{ text: string; nonce: number } | null>(null);
+  useEffect(() => {
+    if (prefill) openWorkspaceTab('danh-gia');
+  }, [prefill]);
   // «Một phương án» (tờ vẽ đầy đủ) hay «So sánh» (các phương án đặt cạnh nhau) — Đợt 5B.
   const [view, setView] = useState<'mot' | 'so-sanh'>('mot');
   const cost = useCostEstimate('plan', ai.choice.route ?? null, ai.selected);
@@ -232,299 +239,349 @@ export function AiPlanStep({
   const failedCount = runResult?.failed.length ?? 0;
   const savedCount = runResult?.plans.length ?? 0;
 
-  // Hai cột (Haan, 07/10/2026 — tham khảo bố cục công cụ thiết kế AI): trái là thiết lập và MỘT
-  // nút chính, phải là bản vẽ. Trước đó là một cột dài, bản vẽ nằm dưới cả màn hình chữ.
-  return (
-    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(300px,360px)_minmax(0,1fr)]">
-      <div className="min-w-0 space-y-4">
-        <Panel title="Thiết lập mặt bằng">
-          {blocked ? (
+  const verdictInfo = review.data ? planVerdict(review.data) : null;
+  const canFix = !readOnly && review.data?.editable !== false;
+
+  const setup = (
+    <div className="space-y-4">
+      <Panel title="Xếp mặt bằng">
+        {blocked ? (
+          <p className="text-fg-subtle">
+            Chưa có đầu bài đã xác nhận. Hoàn tất và xác nhận đầu bài trước khi xếp mặt bằng.
+          </p>
+        ) : readOnly ? (
+          <p className="text-fg-subtle">Hồ sơ chỉ xem — không xếp phương án mới.</p>
+        ) : (
+          <div className="space-y-3">
             <p className="text-fg-subtle">
-              Chưa có đầu bài đã xác nhận. Hoàn tất và xác nhận đầu bài trước khi xếp mặt bằng.
+              AI chỉ dựa trên đầu bài và khảo sát: xếp phòng từng tầng; chương trình dựng tường, cửa
+              và chấm điểm. Mỗi phương án mất vài phút.
             </p>
-          ) : readOnly ? (
-            <p className="text-fg-subtle">Hồ sơ chỉ xem — không xếp phương án mới.</p>
-          ) : (
-            <div className="space-y-4">
-              {/* Model và mức suy nghĩ cùng một hàng, hai ô dạng viên (07/10/2026). */}
-              <div className="flex items-start gap-2 *:first:min-w-0 *:last:shrink-0">
-                <AiModePicker
-                  kind="text"
-                  choice={ai.choice}
-                  options={ai.options}
-                  onMode={ai.pickMode}
-                  onRoute={ai.pickRoute}
-                  allowSolver={false}
-                  disabled={running || start.isPending}
-                  recommended={ai.defaultRoute}
-                />
-                <ReasoningEffortPicker
-                  value={effort}
-                  onChange={setEffort}
-                  option={ai.selected}
-                  disabled={running || start.isPending}
+            {/* MỘT nút chính kèm chi phí (25/10/2026): kiến trúc sư không phải chọn model, mức suy nghĩ, gói
+                quy tắc — các ô ấy gấp trong «Tùy chọn nâng cao», mặc định là cấu hình của công ty. */}
+            <Button
+              variant="primary"
+              className="w-full"
+              onClick={() => setAskRun(true)}
+              disabled={running || start.isPending || !ai.choice.route}
+            >
+              {start.isPending
+                ? 'Đang gửi…'
+                : running
+                  ? 'Đang xếp…'
+                  : `Xếp mặt bằng${costOnButton(cost.estimate, Number(count))}`}
+            </Button>
+            <CostEstimateLine
+              estimate={cost.estimate}
+              loading={cost.loading}
+              units={Number(count)}
+              unitLabel="phương án"
+              option={ai.selected}
+            />
+            <details className="rounded-field border border-tk-line p-3">
+              <summary className="cursor-pointer text-sm font-medium select-none">
+                Tùy chọn nâng cao
+                <span className="font-normal text-fg-subtle">
+                  {' '}
+                  · {ai.selected?.short ?? ai.selected?.label ?? 'model của công ty'} · {count}{' '}
+                  phương án
+                </span>
+              </summary>
+              <div className="mt-3 space-y-4">
+                <div className="flex items-start gap-2 *:first:min-w-0 *:last:shrink-0">
+                  <AiModePicker
+                    kind="text"
+                    choice={ai.choice}
+                    options={ai.options}
+                    onMode={ai.pickMode}
+                    onRoute={ai.pickRoute}
+                    allowSolver={false}
+                    disabled={running || start.isPending}
+                    recommended={ai.defaultRoute}
+                  />
+                  <ReasoningEffortPicker
+                    value={effort}
+                    onChange={setEffort}
+                    option={ai.selected}
+                    disabled={running || start.isPending}
+                  />
+                </div>
+                <label className="block">
+                  <span className="mb-1 block text-fg-subtle">Số phương án</span>
+                  <SegmentedControl
+                    options={COUNTS}
+                    value={count}
+                    onChange={setCount}
+                    getLabel={(option) => option}
+                  />
+                </label>
+                <RulePackPicker value={packs} onChange={setPacks} disabled={running} />
+                <p className="text-fg-subtle">
+                  Phòng đầu bài có ghi diện tích tối thiểu thì phải đạt mức đó. Vẫn không xếp được
+                  sau bốn lần thì phương án không được vẽ.
+                </p>
+              </div>
+            </details>
+          </div>
+        )}
+        {start.isError && <p className="mt-3 text-status-overdue">{toUserMessage(start.error)}</p>}
+      </Panel>
+
+      {run.data && (
+        <AiRunProgress
+          projectId={projectId}
+          run={run.data}
+          purposePrefix="plan_house"
+          reportTitle="Báo cáo lượt xếp mặt bằng"
+          reportExtra={failedVariantsMarkdown(runResult?.failed ?? [])}
+          onRetry={readOnly ? undefined : () => setAskRun(true)}
+          retryDisabled={start.isPending || !ai.choice.route}
+          runningLabel="Đang xếp mặt bằng"
+          doneLabel={
+            failedCount > 0
+              ? `Xếp được ${savedCount}/${savedCount + failedCount} phương án`
+              : 'Đã xếp xong'
+          }
+          failedLabel="Chưa xếp được mặt bằng"
+        />
+      )}
+      {!running && (runResult?.failed.length ?? 0) > 0 && (
+        <PlanFailureReasons failed={runResult!.failed} roomLabels={state.roomLabels} />
+      )}
+      {entries.length > 0 && !running && (
+        <NextHint onClick={() => openWorkspaceTab('danh-gia')}>
+          Xem đánh giá và việc nên sửa
+        </NextHint>
+      )}
+    </div>
+  );
+
+  const chooser =
+    (view === 'mot' || entries.length < 2) && entries.length > 0 ? (
+      <div
+        role="group"
+        aria-label="Phương án"
+        className="flex flex-wrap items-center gap-2 rounded-lg border border-tk-line bg-tk-panel p-2"
+      >
+        {entries.map((entry) => {
+          const isOpen = entry.artifactId === selected;
+          const isHead = entry.artifactId === state.planHeadArtifactId;
+          const name = names.get(entry.artifactId)!;
+          return (
+            <div key={entry.artifactId} className="flex items-stretch">
+              <button
+                type="button"
+                aria-pressed={isOpen}
+                onClick={() => setSelected(entry.artifactId)}
+                className={cn(
+                  'group flex min-h-10 items-center gap-2 rounded-l-md border py-1.5 pr-3 pl-1.5 text-left',
+                  'transition-colors duration-(--motion-fast) ease-(--ease-out)',
+                  readOnly && 'rounded-r-md',
+                  isOpen
+                    ? 'border-tk-bl-line bg-tk-bl-bg font-medium'
+                    : 'border-transparent hover:bg-tk-hover',
+                )}
+              >
+                <PlanThumb projectId={projectId} artifactId={entry.artifactId} />
+                <span>
+                  <span className="block">{name}</span>
+                  <span className="block text-xs font-normal text-tk-t3">
+                    {formatDateTime(entry.createdAt)}
+                  </span>
+                </span>
+                {isHead && <Chip tone="gr">Dùng cho mặt đứng</Chip>}
+              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => setAskHide({ artifactId: entry.artifactId, name })}
+                  aria-label={`Xoá ${name} khỏi danh sách`}
+                  title="Xoá khỏi danh sách"
+                  className={cn(
+                    'rounded-r-md border border-l-0 px-2 text-fg-subtle hover:text-status-overdue',
+                    isOpen ? 'border-tk-bl-line bg-tk-bl-bg' : 'border-transparent',
+                  )}
+                >
+                  <X className="h-4 w-4" aria-hidden />
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    ) : null;
+
+  const detailProps = review.data
+    ? {
+        review: review.data,
+        name: names.get(review.data.artifactId) ?? 'Phương án',
+        level: currentLevel,
+        onLevel: setLevel,
+        sheet,
+        readOnly,
+        isHead: review.data.artifactId === state.planHeadArtifactId,
+        choosing: choose.isPending,
+        onChoose: () =>
+          void choose
+            .mutateAsync({ projectId, artifactId: review.data!.artifactId })
+            .catch(() => undefined),
+        chooseError: choose.isError ? toUserMessage(choose.error) : null,
+        downloadingDxf: dxf.isPending,
+        onDownloadDxf: () =>
+          void dxf
+            .mutateAsync({ projectId, artifactId: review.data!.artifactId })
+            .catch(() => undefined),
+        dxfError: dxf.isError ? toUserMessage(dxf.error) : null,
+        verdict: (
+          <PlanVerdict
+            review={review.data}
+            canFix={canFix}
+            onAskFix={(text) => setPrefill({ text, nonce: Date.now() })}
+          />
+        ),
+        editPanel: (
+          <PlanEditPanel
+            review={review.data}
+            level={currentLevel}
+            readOnly={readOnly}
+            disabled={running || !ai.choice.route}
+            pending={editPlan.isPending}
+            error={editPlan.isError ? toUserMessage(editPlan.error) : null}
+            notes={
+              editRunId !== null && editRunId === runId
+                ? (runResult?.plans.find((plan) => plan.artifactId === review.data!.artifactId)
+                    ?.notes ?? [])
+                : []
+            }
+            onSubmit={(instruction) => onEdit(review.data!.artifactId, instruction)}
+            route={ai.choice.route ?? null}
+            option={ai.selected}
+            prefill={prefill}
+          />
+        ),
+      }
+    : null;
+
+  const drawing = (
+    <div className="space-y-3">
+      {entries.length > 1 && (
+        <SegmentedControl
+          options={['mot', 'so-sanh'] as const}
+          value={view}
+          onChange={setView}
+          getLabel={(value) =>
+            value === 'mot' ? 'Xem một phương án' : `So sánh ${entries.length} phương án`
+          }
+        />
+      )}
+      {view === 'so-sanh' && entries.length > 1 && (
+        <AiPlanCompare
+          projectId={projectId}
+          entries={entries}
+          names={names}
+          packs={packs}
+          levelCount={levels.filter((item) => !item.roof).length}
+          planHeadArtifactId={state.planHeadArtifactId}
+          readOnly={readOnly}
+          choosing={choose.isPending}
+          onOpen={(artifactId) => {
+            setSelected(artifactId);
+            setView('mot');
+          }}
+          onChoose={(artifactId) =>
+            void choose.mutateAsync({ projectId, artifactId }).catch(() => undefined)
+          }
+        />
+      )}
+      {chooser}
+      {entries.length === 0 && !review.isLoading && (
+        <div className="grid min-h-[420px] place-items-center rounded-lg border border-dashed border-tk-line2 bg-tk-panel p-8 text-center">
+          <div className="max-w-sm">
+            <LayoutGrid className="mx-auto size-10 text-tk-t3" aria-hidden />
+            <p className="mt-3 font-medium">
+              {running ? 'AI đang xếp mặt bằng' : 'Chưa có phương án mặt bằng'}
+            </p>
+            <p className="mt-1 text-fg-subtle">
+              {running
+                ? 'Mỗi phương án mất vài phút. Bản vẽ hiện ở đây ngay khi xếp xong.'
+                : blocked
+                  ? 'Xác nhận đầu bài ở bước 1, rồi quay lại đây để xếp mặt bằng.'
+                  : 'Bấm «Xếp mặt bằng» ở ngăn bên trái.'}
+            </p>
+          </div>
+        </div>
+      )}
+      {(view === 'mot' || entries.length < 2) && review.isLoading && (
+        <Skeleton className="h-96 w-full" />
+      )}
+      {(view === 'mot' || entries.length < 2) && review.isError && (
+        <Panel title="Phương án">
+          <p className="text-status-overdue">{toUserMessage(review.error)}</p>
+        </Panel>
+      )}
+      {(view === 'mot' || entries.length < 2) && detailProps && (
+        <PlanDetail {...detailProps} part="sheet" />
+      )}
+    </div>
+  );
+
+  // Khung hai ngăn (anh Dũng 25/10/2026 — như tab Soạn hợp đồng): bản vẽ LUÔN ở ngăn phải; trái là các tab xếp,
+  // đánh giá, ảnh nội thất. Trước đó đánh giá và ô «Yêu cầu sửa» nằm dưới tờ vẽ — xem rồi phải cuộn xuống mới sửa.
+  return (
+    <div className="lg:h-[calc(100dvh-15rem)] lg:min-h-[560px]">
+      <SplitWorkspace
+        storageKey="ai-mat-bang"
+        defaultRatio={0.36}
+        className="lg:h-full"
+        tabs={[
+          { id: 'xep', label: 'Xếp mặt bằng', side: 'left', content: setup },
+          {
+            id: 'danh-gia',
+            label: 'Đánh giá',
+            side: 'left',
+            badge: verdictInfo
+              ? verdictInfo.passed
+                ? '✓'
+                : verdictInfo.items.length || undefined
+              : undefined,
+            content: detailProps ? (
+              <div className="space-y-4">
+                <PlanDetail {...detailProps} part="review" />
+              </div>
+            ) : (
+              <p className="text-fg-subtle">Chưa có phương án để đánh giá.</p>
+            ),
+          },
+          {
+            id: 'noi-that',
+            label: 'Ảnh nội thất',
+            side: 'left',
+            content: review.data ? (
+              <PlanImagePanel
+                projectId={projectId}
+                review={review.data}
+                level={currentLevel}
+                readOnly={readOnly}
+                disabled={running}
+              />
+            ) : (
+              <div className="space-y-2">
+                <p className="text-fg-subtle">
+                  Đã có bản vẽ mặt bằng của kỹ sư? Vẽ ảnh mặt bằng có nội thất từ bản tải lên.
+                </p>
+                <PlanImagePanel
+                  projectId={projectId}
+                  review={null}
+                  level={1}
+                  readOnly={readOnly}
+                  disabled={running}
                 />
               </div>
-              <label className="block">
-                <span className="mb-1 block text-fg-subtle">Số phương án</span>
-                <SegmentedControl
-                  options={COUNTS}
-                  value={count}
-                  onChange={setCount}
-                  getLabel={(option) => option}
-                />
-              </label>
-              <RulePackPicker value={packs} onChange={setPacks} disabled={running} />
-              <details className="text-fg-subtle">
-                <summary className="cursor-pointer select-none hover:text-fg">
-                  Cách AI xếp mặt bằng
-                </summary>
-                <p className="mt-2">
-                  AI chỉ dựa trên đầu bài và khảo sát: khai danh sách phòng từng tầng, diện tích mục
-                  tiêu, quan hệ giữa các phòng, cửa chính, và phác mỗi tầng trên lưới ô khoảng một
-                  mét. Chương trình kiểm theo đầu bài, nắn bản phác, căn vách, đặt cửa và dựng
-                  tường. Phòng đầu bài có ghi diện tích tối thiểu thì phải đạt mức đó. Vẫn không xếp
-                  được sau bốn lần thì phương án không được vẽ.
-                </p>
-              </details>
-              <Button
-                variant="primary"
-                className="w-full"
-                onClick={() => setAskRun(true)}
-                disabled={running || start.isPending || !ai.choice.route}
-              >
-                {start.isPending
-                  ? 'Đang gửi…'
-                  : running
-                    ? 'Đang xếp…'
-                    : `Xếp mặt bằng${costOnButton(cost.estimate, Number(count))}`}
-              </Button>
-              {/* Chi phí ước tính NGAY dưới nút tốn tiền (Đợt 5B): trung bình tiền thật các lượt trước
-                  bằng cùng mô hình; chưa có lượt nào thì «Chưa đủ dữ liệu», không bịa số. */}
-              <CostEstimateLine
-                estimate={cost.estimate}
-                loading={cost.loading}
-                units={Number(count)}
-                unitLabel="phương án"
-                option={ai.selected}
-              />
-            </div>
-          )}
-          {start.isError && (
-            <p className="mt-3 text-status-overdue">{toUserMessage(start.error)}</p>
-          )}
-        </Panel>
-
-        {run.data && (
-          <AiRunProgress
-            projectId={projectId}
-            run={run.data}
-            purposePrefix="plan_house"
-            reportTitle="Báo cáo lượt xếp mặt bằng"
-            reportExtra={failedVariantsMarkdown(runResult?.failed ?? [])}
-            onRetry={readOnly ? undefined : () => setAskRun(true)}
-            retryDisabled={start.isPending || !ai.choice.route}
-            runningLabel="Đang xếp mặt bằng"
-            doneLabel={
-              failedCount > 0
-                ? `Xếp được ${savedCount}/${savedCount + failedCount} phương án`
-                : 'Đã xếp xong'
-            }
-            failedLabel="Chưa xếp được mặt bằng"
-          />
-        )}
-        {!running && (runResult?.failed.length ?? 0) > 0 && (
-          <PlanFailureReasons failed={runResult!.failed} roomLabels={state.roomLabels} />
-        )}
-      </div>
-
-      <div className="min-w-0 space-y-4">
-        {entries.length > 1 && (
-          <SegmentedControl
-            options={['mot', 'so-sanh'] as const}
-            value={view}
-            onChange={setView}
-            getLabel={(value) =>
-              value === 'mot' ? 'Xem một phương án' : `So sánh ${entries.length} phương án`
-            }
-          />
-        )}
-
-        {view === 'so-sanh' && entries.length > 1 && (
-          <AiPlanCompare
-            projectId={projectId}
-            entries={entries}
-            names={names}
-            packs={packs}
-            levelCount={levels.filter((item) => !item.roof).length}
-            planHeadArtifactId={state.planHeadArtifactId}
-            readOnly={readOnly}
-            choosing={choose.isPending}
-            onOpen={(artifactId) => {
-              setSelected(artifactId);
-              setView('mot');
-            }}
-            onChoose={(artifactId) =>
-              void choose.mutateAsync({ projectId, artifactId }).catch(() => undefined)
-            }
-          />
-        )}
-
-        {(view === 'mot' || entries.length < 2) && entries.length > 0 && (
-          <div
-            role="group"
-            aria-label="Phương án"
-            className="flex flex-wrap items-center gap-2 rounded-lg border border-tk-line bg-tk-panel p-2"
-          >
-            {entries.map((entry) => {
-              const isOpen = entry.artifactId === selected;
-              const isHead = entry.artifactId === state.planHeadArtifactId;
-              const name = names.get(entry.artifactId)!;
-              return (
-                <div key={entry.artifactId} className="flex items-stretch">
-                  <button
-                    type="button"
-                    aria-pressed={isOpen}
-                    onClick={() => setSelected(entry.artifactId)}
-                    className={cn(
-                      'group flex min-h-10 items-center gap-2 rounded-l-md border py-1.5 pr-3 pl-1.5 text-left',
-                      'transition-colors duration-(--motion-fast) ease-(--ease-out)',
-                      readOnly && 'rounded-r-md',
-                      isOpen
-                        ? 'border-tk-bl-line bg-tk-bl-bg font-medium'
-                        : 'border-transparent hover:bg-tk-hover',
-                    )}
-                  >
-                    <PlanThumb projectId={projectId} artifactId={entry.artifactId} />
-                    <span>
-                      <span className="block">{name}</span>
-                      <span className="block text-xs font-normal text-tk-t3">
-                        {formatDateTime(entry.createdAt)}
-                      </span>
-                    </span>
-                    {isHead && <Chip tone="gr">Dùng cho mặt đứng</Chip>}
-                  </button>
-                  {!readOnly && (
-                    <button
-                      type="button"
-                      onClick={() => setAskHide({ artifactId: entry.artifactId, name })}
-                      aria-label={`Xoá ${name} khỏi danh sách`}
-                      title="Xoá khỏi danh sách"
-                      className={cn(
-                        'rounded-r-md border border-l-0 px-2 text-fg-subtle hover:text-status-overdue',
-                        isOpen ? 'border-tk-bl-line bg-tk-bl-bg' : 'border-transparent',
-                      )}
-                    >
-                      <X className="h-4 w-4" aria-hidden />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {entries.length === 0 && !review.isLoading && (
-          <div className="grid min-h-[420px] place-items-center rounded-lg border border-dashed border-tk-line2 bg-tk-panel p-8 text-center">
-            <div className="max-w-sm">
-              <LayoutGrid className="mx-auto size-10 text-tk-t3" aria-hidden />
-              <p className="mt-3 font-medium">
-                {running ? 'AI đang xếp mặt bằng' : 'Chưa có phương án mặt bằng'}
-              </p>
-              <p className="mt-1 text-fg-subtle">
-                {running
-                  ? 'Mỗi phương án mất vài phút. Bản vẽ hiện ở đây ngay khi xếp xong.'
-                  : blocked
-                    ? 'Xác nhận đầu bài ở bước 1, rồi quay lại đây để xếp mặt bằng.'
-                    : 'Chọn mô hình và số phương án ở cột bên trái, rồi bấm «Xếp mặt bằng».'}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Chưa có mặt bằng thì khối ảnh nội thất KHÔNG bày ra (lượt chạy thật 23/10/2026: cả một khối
-            chọn tệp, chọn model, nút vẽ nằm dưới «Chưa có phương án» làm người dùng tưởng phải làm nó
-            trước). Lối vẽ từ bản vẽ kỹ sư tải lên (T114 Đợt 4) vẫn còn, gấp sau một dòng. */}
-        {entries.length === 0 && !review.isLoading && !running && (
-          <details className="rounded-lg border border-tk-line bg-tk-panel p-3">
-            <summary className="cursor-pointer text-fg-subtle select-none hover:text-fg">
-              Đã có bản vẽ mặt bằng của kỹ sư? Vẽ ảnh mặt bằng có nội thất từ bản tải lên
-            </summary>
-            <div className="mt-3">
-              <PlanImagePanel
-                projectId={projectId}
-                review={null}
-                level={1}
-                readOnly={readOnly}
-                disabled={running}
-              />
-            </div>
-          </details>
-        )}
-
-        {(view === 'mot' || entries.length < 2) && review.isLoading && (
-          <Skeleton className="h-96 w-full" />
-        )}
-        {(view === 'mot' || entries.length < 2) && review.isError && (
-          <Panel title="Phương án">
-            <p className="text-status-overdue">{toUserMessage(review.error)}</p>
-          </Panel>
-        )}
-
-        {(view === 'mot' || entries.length < 2) && review.data && (
-          <PlanDetail
-            review={review.data}
-            name={names.get(review.data.artifactId) ?? 'Phương án'}
-            level={currentLevel}
-            onLevel={setLevel}
-            sheet={sheet}
-            readOnly={readOnly}
-            isHead={review.data.artifactId === state.planHeadArtifactId}
-            choosing={choose.isPending}
-            onChoose={() =>
-              void choose
-                .mutateAsync({ projectId, artifactId: review.data!.artifactId })
-                .catch(() => undefined)
-            }
-            chooseError={choose.isError ? toUserMessage(choose.error) : null}
-            downloadingDxf={dxf.isPending}
-            onDownloadDxf={() =>
-              void dxf
-                .mutateAsync({ projectId, artifactId: review.data!.artifactId })
-                .catch(() => undefined)
-            }
-            dxfError={dxf.isError ? toUserMessage(dxf.error) : null}
-            sheetImagePanel={
-              <PlanImagePanel
-                projectId={projectId}
-                review={review.data}
-                level={currentLevel}
-                readOnly={readOnly}
-                disabled={running}
-              />
-            }
-            editPanel={
-              <PlanEditPanel
-                review={review.data}
-                level={currentLevel}
-                readOnly={readOnly}
-                disabled={running || !ai.choice.route}
-                pending={editPlan.isPending}
-                error={editPlan.isError ? toUserMessage(editPlan.error) : null}
-                notes={
-                  editRunId !== null && editRunId === runId
-                    ? (runResult?.plans.find((plan) => plan.artifactId === review.data!.artifactId)
-                        ?.notes ?? [])
-                    : []
-                }
-                onSubmit={(instruction) => onEdit(review.data!.artifactId, instruction)}
-                route={ai.choice.route ?? null}
-                option={ai.selected}
-              />
-            }
-          />
-        )}
-      </div>
+            ),
+          },
+          { id: 'ban-ve', label: 'Bản vẽ', side: 'right', content: drawing },
+        ]}
+      />
 
       {askRun && (
         <ConfirmDialog
@@ -583,6 +640,17 @@ export function AiPlanStep({
           )}
         </ConfirmDialog>
       )}
+    </div>
+  );
+}
+
+/** Lời mời sang tab kế (thay cho việc phải tự mò tab). */
+function NextHint({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <div className="flex justify-end">
+      <Button variant="secondary" onClick={onClick}>
+        {children}
+      </Button>
     </div>
   );
 }
@@ -776,9 +844,17 @@ function PlanDetail({
   downloadingDxf,
   onDownloadDxf,
   dxfError,
-  sheetImagePanel,
   editPanel,
+  verdict,
+  part,
 }: {
+  /**
+   * Phần dựng (25/10/2026, khung hai ngăn): `sheet` = tờ vẽ (ngăn phải, luôn hiện); `review` = đánh giá, yêu cầu
+   * sửa và các mục gấp (tab «Đánh giá» bên trái).
+   */
+  part: 'sheet' | 'review';
+  /** Khối «Đánh giá» bằng lời (`PlanVerdict`) — thay cho «Ba lý do trừ điểm lớn nhất». */
+  verdict: React.ReactNode;
   review: AiPlanReview;
   /** Tên hiển thị «Phương án N». */
   name: string;
@@ -793,8 +869,6 @@ function PlanDetail({
   downloadingDxf: boolean;
   onDownloadDxf: () => void;
   dxfError: string | null;
-  /** Panel ảnh nội thất (T57) — mục gấp ngay dưới tờ vector. */
-  sheetImagePanel: React.ReactNode;
   /** Ô «Yêu cầu sửa» (T53, đặt lại ở Đợt 5B). */
   editPanel: React.ReactNode;
 }): React.ReactElement {
@@ -808,8 +882,8 @@ function PlanDetail({
   // Tờ vẽ đứng ĐẦU (Haan, 07/10/2026): người dùng đến bước này để xem bản vẽ. Phần giải thích,
   // ý định, lỗi và đối chiếu là các mục gấp bên dưới; lỗi chặn tự mở, và panel điểm vẫn đứng SAU
   // danh sách lỗi (T24).
-  return (
-    <>
+  if (part === 'sheet') {
+    return (
       <section className="rounded-lg border border-tk-line bg-tk-panel">
         <div className="flex flex-wrap items-center gap-3 border-b border-tk-line p-3">
           <div className="mr-auto flex min-w-0 flex-wrap items-center gap-2">
@@ -923,17 +997,15 @@ function PlanDetail({
           )}
         </div>
       </section>
+    );
+  }
 
-      {/* Ba lý do trừ điểm lớn nhất, đọc từ thước chấm ĐÃ LƯU trong phương án (Đợt 5B) — nói ngay
-          vì sao điểm thấp và nên sửa chỗ nào bằng ô «Yêu cầu sửa» bên dưới. */}
-      <Panel title="Ba lý do trừ điểm lớn nhất">
-        <DeductionList review={review} />
-      </Panel>
+  return (
+    <>
+      {/* Kết luận bằng lời + việc nên sửa (25/10/2026), ngay trên ô «Yêu cầu sửa» mà nút «Nhờ AI sửa» điền vào. */}
+      {verdict}
 
       {editPanel}
-
-      {/* Một khung, hai nguồn: tờ vector ở trên hoặc bản vẽ kỹ sư tải lên (07/10/2026). */}
-      {sheetImagePanel}
 
       <Fold title="Về phương án này">
         <p className="flex items-center gap-2 font-medium">

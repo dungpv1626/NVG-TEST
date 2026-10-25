@@ -10,12 +10,39 @@
  * được viết lại ngày 19/09/2026, và việc đó KHÔNG phải nới lỏng T22 — xem chú thích trong khối.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { cleanup, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithApp } from '@/test/render';
 
 const REF = `sha256:${'a'.repeat(64)}`;
+
+// Khung hai ngăn (25/10/2026): từ màn hình rộng, bản vẽ luôn ở ngăn phải, các tab xếp / đánh giá / ảnh nội thất ở
+// ngăn trái. Thiết lập chung của bộ thử giả lập điện thoại (`matchMedia` không khớp) — ở đây giả lập màn hình rộng.
+let wide: MockInstance | null = null;
+beforeEach(() => {
+  try {
+    for (const k of Object.keys(localStorage))
+      if (k.startsWith('split:')) localStorage.removeItem(k);
+  } catch {
+    // không có localStorage — bỏ qua
+  }
+  wide = vi.spyOn(window, 'matchMedia').mockImplementation(
+    (query: string) =>
+      ({
+        matches: true,
+        media: query,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }) as unknown as MediaQueryList,
+  );
+});
+afterEach(() => wide?.mockRestore());
+
+/** Mở một tab của ngăn trái (Xếp mặt bằng / Đánh giá / Ảnh nội thất). */
+async function openTab(name: RegExp): Promise<void> {
+  await userEvent.click(screen.getByRole('tab', { name }));
+}
 
 const state = vi.hoisted(() => ({
   review: null as unknown,
@@ -264,12 +291,13 @@ describe('Tờ mặt bằng — tờ SVG tất định là tờ CHÍNH (T22, 12/
     expect(screen.queryByText(/Ảnh gửi đi không mang khung tên/)).toBeNull();
   });
 
-  it('ô chọn model ghi rõ TÊN MÔ HÌNH, không chỉ nhãn của tuyến (19/09/2026)', () => {
+  it('ô chọn model ghi rõ TÊN MÔ HÌNH, không chỉ nhãn của tuyến (19/09/2026)', async () => {
     // Nhãn tuyến là chữ chung («GPT Image (OpenAI)») trong khi mỗi nhà cung cấp có nhiều mô hình
     // ảnh khác nhau về giá lẫn chất lượng, và nhật ký `design_ai_call` ghi theo TÊN MÔ HÌNH. Không
     // hiện tên ấy thì không đối chiếu được tấm ảnh trên màn hình với dòng tiền trong nhật ký.
     state.review = review();
     show();
+    await openTab(/Ảnh nội thất/);
     // Từ 07/10/2026 nút thu gọn chỉ còn tên ngắn (Haan, theo mẫu); tên model THẬT nằm ở `title`
     // của nút để vẫn đối chiếu được với nhật ký chi phí.
     expect(
@@ -285,6 +313,7 @@ describe('Tờ mặt bằng — tờ SVG tất định là tờ CHÍNH (T22, 12/
       ],
     });
     show();
+    await openTab(/Ảnh nội thất/);
     const panel = screen
       .getByRole('heading', { name: 'Ảnh mặt bằng có nội thất' })
       .closest('section')!;
@@ -298,6 +327,7 @@ describe('Tờ mặt bằng — tờ SVG tất định là tờ CHÍNH (T22, 12/
   it('nút vẽ ảnh nội thất gọi đúng phương án và đúng tầng đang xem (T57)', async () => {
     state.review = review();
     show();
+    await openTab(/Ảnh nội thất/);
     await userEvent.click(screen.getByRole('button', { name: /Vẽ ảnh nội thất tầng 1/i }));
     expect(state.drawSheetImage).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -315,17 +345,21 @@ describe('Tờ mặt bằng — tờ SVG tất định là tờ CHÍNH (T22, 12/
     expect(screen.queryByText(/Giá niêm yết/)).toBeNull();
   });
 
-  it('tấm ảnh KHÔNG thay tờ vector: nó ở panel riêng, dưới tờ vector (T22)', () => {
+  it('tấm ảnh KHÔNG thay tờ vector: nó ở tab riêng, tờ vector vẫn hiện ở ngăn bản vẽ (T22)', async () => {
     state.review = review();
     show();
+    await openTab(/Ảnh nội thất/);
     const sheet = screen.getByRole('img', { name: /Tờ mặt bằng Tầng 1/ });
     const panel = screen.getByRole('heading', { name: 'Ảnh mặt bằng có nội thất' });
-    expect(sheet.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(sheet).toBeVisible();
+    expect(panel).toBeVisible();
+    expect(sheet.closest('section')).not.toBe(panel.closest('section'));
   });
 
-  it('nói AI xếp phòng và chương trình dựng tường (T23) — không còn câu của lượt cứu hộ', () => {
+  it('nói AI xếp phòng và chương trình dựng tường (T23) — không còn câu của lượt cứu hộ', async () => {
     state.review = review();
     show();
+    await openTab(/Đánh giá/);
 
     // Câu này phải có mặt ở CẢ tờ vẽ và màn hình: tờ vẽ đi ra ngoài (in, gửi khách) còn màn hình
     // thì không, nên một chỗ là không đủ (CLAUDE.md 8.7 — nhãn do mã chèn, không tắt được).
@@ -367,6 +401,7 @@ describe('Một khung «Ảnh mặt bằng có nội thất», hai nguồn (07/1
     state.run = null;
     state.review = review();
     show();
+    await openTab(/Ảnh nội thất/);
     expect(screen.getAllByRole('heading', { name: 'Ảnh mặt bằng có nội thất' })).toHaveLength(1);
     expect(screen.getByRole('button', { name: /Vẽ ảnh nội thất tầng 1/i })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Bản vẽ kỹ sư tải lên' }));
@@ -374,7 +409,7 @@ describe('Một khung «Ảnh mặt bằng có nội thất», hai nguồn (07/1
     expect(screen.queryByRole('button', { name: /Vẽ ảnh nội thất tầng 1/i })).toBeNull();
   });
 
-  it('chưa có phương án AI: khung vẫn hiện, mở sẵn nguồn bản vẽ kỹ sư', () => {
+  it('chưa có phương án AI: khung vẫn hiện, mở sẵn nguồn bản vẽ kỹ sư', async () => {
     state.run = null;
     state.review = null;
     renderWithApp(
@@ -384,6 +419,7 @@ describe('Một khung «Ảnh mặt bằng có nội thất», hai nguồn (07/1
         state={{ ...designState, plans: [], planHeadArtifactId: null } as never}
       />,
     );
+    await openTab(/Ảnh nội thất/);
     expect(screen.getByRole('heading', { name: 'Ảnh mặt bằng có nội thất' })).toBeInTheDocument();
     expect(screen.getByText(/Tải mặt bằng một tầng/)).toBeInTheDocument();
   });
@@ -739,21 +775,23 @@ describe('Ý định bố cục của AI (T43, 14/09/2026)', () => {
     layout: 'intent',
   };
 
-  it('artifact dựng từ ý định: câu nhãn nói AI khai ý định, chương trình xếp phòng', () => {
+  it('artifact dựng từ ý định: câu nhãn nói AI khai ý định, chương trình xếp phòng', async () => {
     state.review = review({ generator: intentGenerator, levels: [intentLevel()] });
     show();
+    await openTab(/Đánh giá/);
     expect(
       screen.getByText(/AI khai ý định bố cục, chương trình xếp phòng và dựng tường/),
     ).toBeInTheDocument();
   });
 
-  it('panel ý định: vùng bằng chữ tiếng Việt, cửa chính, quan hệ, số cách xếp và độ khớp ý đồ', () => {
+  it('panel ý định: vùng bằng chữ tiếng Việt, cửa chính, quan hệ, số cách xếp và độ khớp ý đồ', async () => {
     state.review = review({
       generator: intentGenerator,
       levels: [intentLevel()],
       roomLabels: { garage: 'Để xe', living: 'Phòng khách', stair: 'Thang bộ' },
     });
     show();
+    await openTab(/Đánh giá/);
     expect(screen.getByRole('heading', { name: 'Ý định bố cục của AI' })).toBeInTheDocument();
     expect(screen.getByText('Khớp ý đồ 88%')).toBeInTheDocument();
     expect(screen.getByText(/dựng 24 cách xếp từ ý định này, 7 cách qua/)).toBeInTheDocument();
@@ -767,15 +805,17 @@ describe('Ý định bố cục của AI (T43, 14/09/2026)', () => {
     expect(screen.queryByText(/đã nới vùng/)).toBeNull();
   });
 
-  it('bộ giải đã nới vùng thì nói ra — tờ vẽ khác lời AI không được im lặng', () => {
+  it('bộ giải đã nới vùng thì nói ra — tờ vẽ khác lời AI không được im lặng', async () => {
     state.review = review({ generator: intentGenerator, levels: [intentLevel(1)] });
     show();
+    await openTab(/Đánh giá/);
     expect(screen.getByText(/đã nới vùng của một số phòng/)).toBeInTheDocument();
   });
 
-  it('artifact dựng theo cây (trước 14/09/2026) không có panel ý định, giữ câu nhãn cũ', () => {
+  it('artifact dựng theo cây (trước 14/09/2026) không có panel ý định, giữ câu nhãn cũ', async () => {
     state.review = review();
     show();
+    await openTab(/Đánh giá/);
     expect(screen.queryByRole('heading', { name: 'Ý định bố cục của AI' })).toBeNull();
     expect(screen.getByText(/AI xếp phòng, chương trình dựng tường/)).toBeInTheDocument();
   });
@@ -802,6 +842,7 @@ describe('Điểm, ngưỡng và bản sửa — sau khi gỡ ô yêu cầu sử
     state.edit.mockClear();
     state.review = review({ editable: true });
     show();
+    await openTab(/Đánh giá/);
     await userEvent.type(screen.getByLabelText(/Nội dung cần sửa/), 'bỏ vách gara');
     await userEvent.click(screen.getByRole('button', { name: /^Sửa lại/ }));
     expect(state.edit).toHaveBeenCalledWith(
@@ -821,7 +862,7 @@ describe('Điểm, ngưỡng và bản sửa — sau khi gỡ ô yêu cầu sử
     expect(screen.queryByLabelText(/Nội dung cần sửa/)).toBeNull();
   });
 
-  it('bản sửa cũ: vẫn hiện nguyên văn yêu cầu đã dùng để đúc nó', () => {
+  it('bản sửa cũ: vẫn hiện nguyên văn yêu cầu đã dùng để đúc nó', async () => {
     state.run = null;
     state.review = review({
       editable: true,
@@ -833,6 +874,7 @@ describe('Điểm, ngưỡng và bản sửa — sau khi gỡ ô yêu cầu sử
       },
     });
     show();
+    await openTab(/Đánh giá/);
     expect(screen.getByText('bỏ vách gara')).toBeInTheDocument();
   });
 });
@@ -1000,8 +1042,8 @@ describe('Chi phí ước tính trên nút (Đợt 5B)', () => {
   });
 });
 
-describe('Ba lý do trừ điểm lớn nhất (Đợt 5B)', () => {
-  it('nêu ba tiêu chí mất nhiều điểm nhất, lớn trước; tiêu chí không chấm được không tính', () => {
+describe('Đánh giá bằng lời (25/10/2026, thay «Ba lý do trừ điểm lớn nhất»)', () => {
+  it('nêu các tiêu chí mất điểm, lớn trước; không chấm được thì không tính; «Nhờ AI sửa» điền sẵn ô yêu cầu', async () => {
     state.run = null;
     const crit = (
       code: string,
@@ -1039,18 +1081,25 @@ describe('Ba lý do trừ điểm lớn nhất (Đợt 5B)', () => {
       },
     });
     show();
-    const panel = screen
-      .getByRole('heading', { name: 'Ba lý do trừ điểm lớn nhất' })
-      .closest('section')!;
+    await openTab(/Đánh giá/);
+    const panel = screen.getByRole('heading', { name: 'Đánh giá' }).closest('section')!;
     const items = within(panel).getAllByRole('listitem');
     expect(items.map((li) => li.textContent)).toEqual([
       expect.stringContaining('Tiêu chí mất nhiều nhất'),
       expect.stringContaining('Tiêu chí mất nhì'),
       expect.stringContaining('Tiêu chí mất vừa'),
+      expect.stringContaining('Tiêu chí mất ít'),
     ]);
-    expect(items[0]).toHaveTextContent('−8 điểm');
+    expect(items[0]).toHaveTextContent(/mất 8/);
     expect(items[0]).toHaveTextContent('Phòng khách (living_1)');
     expect(within(panel).queryByText(/thiếu dữ liệu/)).toBeNull();
+    // Không có ngưỡng nhận: không phán «đạt / chưa đạt».
+    expect(within(panel).getByText('4 chỗ có thể tốt hơn')).toBeInTheDocument();
+
+    await userEvent.click(within(items[0]!).getByRole('button', { name: /Nhờ AI sửa/ }));
+    expect(screen.getByLabelText(/Nội dung cần sửa/)).toHaveValue(
+      'Cải thiện «Tiêu chí mất nhiều nhất» ở: Phòng khách (living_1).',
+    );
   });
 });
 

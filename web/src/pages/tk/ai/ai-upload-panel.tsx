@@ -108,16 +108,28 @@ export function AiUploadPanel({
       <div className="mt-4">
         {!readOnly && (
           <div className="mb-3">
-            <AiModePicker
-              kind="image"
-              choice={image.choice}
-              recommended={image.defaultRoute}
-              options={image.options}
-              onMode={image.pickMode}
-              onRoute={image.pickRoute}
-              allowSolver={false}
-              disabled={draw.isPending || disabled}
-            />
+            {/* Ô chọn model gấp trong «Tùy chọn nâng cao» (25/10/2026) — mặc định là cấu hình công ty. */}
+            <details className="rounded-field border border-tk-line p-3">
+              <summary className="cursor-pointer text-sm font-medium select-none">
+                Tùy chọn nâng cao
+                <span className="font-normal text-fg-subtle">
+                  {' '}
+                  · {image.selected?.short ?? image.selected?.label ?? 'model của công ty'}
+                </span>
+              </summary>
+              <div className="mt-3">
+                <AiModePicker
+                  kind="image"
+                  choice={image.choice}
+                  recommended={image.defaultRoute}
+                  options={image.options}
+                  onMode={image.pickMode}
+                  onRoute={image.pickRoute}
+                  allowSolver={false}
+                  disabled={draw.isPending || disabled}
+                />
+              </div>
+            </details>
           </div>
         )}
         {draw.isError && <p className="mb-3 text-status-overdue">{toUserMessage(draw.error)}</p>}

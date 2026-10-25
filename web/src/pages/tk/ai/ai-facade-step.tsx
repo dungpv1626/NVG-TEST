@@ -95,6 +95,14 @@ export function AiFacadeStep({
 
   const plans = state.plans ?? [];
   const planNames = numberedNames(plans, 'Phương án');
+  // Chỉ có MỘT phương án mà chưa chọn cái nào: dùng luôn phương án ấy (anh Dũng 25/10/2026 — trước phải chọn lại
+  // trong ô chọn chỉ có một dòng, nút dựng xám tới lúc đó). Nhiều phương án thì vẫn để người dùng chọn.
+  const onlyPlan = plans.length === 1 ? plans[0]!.artifactId : null;
+  useEffect(() => {
+    if (readOnly || !onlyPlan || state.planHeadArtifactId || choosePlan.isPending) return;
+    choosePlan.mutate({ projectId, artifactId: onlyPlan }, { onError: () => undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readOnly, onlyPlan, state.planHeadArtifactId, projectId]);
   /** Chưa xếp phương án mặt bằng nào — bước này chưa có gì để dựng trên. */
   const noPlans = plans.length === 0;
   /** Có phương án nhưng chưa chọn cái nào — nút dựng chờ ô chọn. */
@@ -171,25 +179,34 @@ export function AiFacadeStep({
           )}
           {!noPlans && !readOnly && (
             <div className="mt-4 space-y-4">
-              {/* Model và mức suy nghĩ cùng một hàng, hai ô dạng viên (07/10/2026). */}
-              <div className="flex items-end gap-2 *:first:min-w-0 *:last:shrink-0">
-                <AiModePicker
-                  kind="text"
-                  choice={ai.choice}
-                  recommended={ai.defaultRoute}
-                  options={ai.options}
-                  onMode={ai.pickMode}
-                  onRoute={ai.pickRoute}
-                  allowSolver={false}
-                  disabled={running || start.isPending}
-                />
-                <ReasoningEffortPicker
-                  value={effort}
-                  onChange={setEffort}
-                  option={ai.selected}
-                  disabled={running || start.isPending}
-                />
-              </div>
+              {/* Model và mức suy nghĩ gấp trong «Tùy chọn nâng cao» (25/10/2026) — mặc định là cấu hình công ty. */}
+              <details className="rounded-field border border-tk-line p-3">
+                <summary className="cursor-pointer text-sm font-medium select-none">
+                  Tùy chọn nâng cao
+                  <span className="font-normal text-fg-subtle">
+                    {' '}
+                    · {ai.selected?.short ?? ai.selected?.label ?? 'model của công ty'}
+                  </span>
+                </summary>
+                <div className="mt-3 flex items-end gap-2 *:first:min-w-0 *:last:shrink-0">
+                  <AiModePicker
+                    kind="text"
+                    choice={ai.choice}
+                    recommended={ai.defaultRoute}
+                    options={ai.options}
+                    onMode={ai.pickMode}
+                    onRoute={ai.pickRoute}
+                    allowSolver={false}
+                    disabled={running || start.isPending}
+                  />
+                  <ReasoningEffortPicker
+                    value={effort}
+                    onChange={setEffort}
+                    option={ai.selected}
+                    disabled={running || start.isPending}
+                  />
+                </div>
+              </details>
               {/* Yêu cầu mặt đứng là phần «Mặt đứng» của ĐẦU BÀI: AI Design chỉ thừa hưởng, không
                     bày lại phiếu ở đây (Haan, 08/10/2026 — mọi khảo sát nằm ở đầu bài). */}
               <p className="text-fg-subtle">

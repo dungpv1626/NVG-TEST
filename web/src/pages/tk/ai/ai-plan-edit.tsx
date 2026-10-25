@@ -14,7 +14,7 @@
  */
 
 import { formatNumber } from '@nvg/shared';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -39,7 +39,13 @@ export function PlanEditPanel({
   onSubmit,
   route,
   option,
+  prefill,
 }: {
+  /**
+   * Câu điền sẵn từ «Nhờ AI sửa» của khối Đánh giá (25/10/2026) — `nonce` đổi mỗi lần bấm để cùng một câu bấm lại
+   * vẫn điền lại. Chỉ điền chữ, không gửi.
+   */
+  prefill?: { text: string; nonce: number } | null;
   /** Tuyến mô hình đang chọn ở cột thiết lập — để ước tính chi phí lượt sửa. */
   route: string | null;
   option: AiModelOption | null | undefined;
@@ -55,6 +61,18 @@ export function PlanEditPanel({
   onSubmit: (instruction: string) => void;
 }): React.ReactElement {
   const [text, setText] = useState('');
+  const box = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (!prefill) return;
+    setText((current) =>
+      current.trim()
+        ? `${current.trim()}
+${prefill.text}`
+        : prefill.text,
+    );
+    box.current?.focus();
+    box.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [prefill]);
   const cost = useCostEstimate('plan_edit', route, option);
   const rooms = review.levels.find((item) => item.level === level)?.roomList ?? [];
   const applied = notes.filter((note) => note.code === 'edit_applied');
@@ -108,6 +126,7 @@ export function PlanEditPanel({
             hint="Gọi phòng theo tên và diện tích trên tờ vẽ, hoặc theo mã bên dưới. Mỗi ý một câu."
           >
             <textarea
+              ref={box}
               id="plan-edit-request"
               value={text}
               onChange={(event) => setText(event.target.value)}
