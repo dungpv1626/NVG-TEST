@@ -206,6 +206,9 @@ export function EntityDetail({
               'z-10 mb-4 bg-canvas lg:sticky lg:-top-2',
               '-mx-4 -mt-2 px-4 pt-2',
               'lg:-mx-6 lg:mb-5 lg:px-6',
+              // Có cột phải: mép phải của header là khe giữa hai cột, không phải phần đệm của <main> —
+              // giữ margin âm bên phải thì header (z-10, nền canvas) thò sang đè mép thẻ «Bước tiếp theo».
+              showAside && 'lg:mr-0 lg:pr-0',
             )}
           >
             <Breadcrumb items={effectiveBreadcrumbs} />
@@ -299,7 +302,9 @@ export function EntityDetail({
 
         {showAside && (
           <aside className="w-[330px] shrink-0" aria-label="Bước tiếp theo và hồ sơ liên quan">
-            <div className="sticky top-(--detail-sticky-top) space-y-4">
+            {/* Dính sát mép trên chứ không dưới header: header chỉ trải cột trái, nên mốc «dưới header»
+                đẩy cột phải xuống lưng chừng ngay cả khi chưa cuộn (anh Dũng 25/10/2026). */}
+            <div className="sticky top-0 space-y-4">
               <div ref={setNextEl} className="empty:hidden" />
               <div ref={setChainEl} className="empty:hidden" />
               {related.length > 0 && <RelatedGroups related={related} from={fromForRelated} />}

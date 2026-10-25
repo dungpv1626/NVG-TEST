@@ -116,7 +116,8 @@ export function StepTrack<S extends string>({
         {/* Thanh bước dạng viên (v2): xong = viên nhạt có dấu tích, đang ở = viên rừng, chưa tới = chữ. */}
         <ol
           aria-label="Các bước của hồ sơ"
-          className="hidden gap-1 overflow-x-auto rounded-full bg-surface p-1 sm:flex"
+          // Thiếu chỗ thì xuống hàng thứ hai (thẻ bo 22 thay cho viên) — không cắt chữ, không bẻ tên bước.
+          className="hidden flex-wrap gap-1 rounded-card-dark bg-surface p-1 sm:flex"
         >
           {flow.main.map((stage) => {
             const state = w.done.includes(stage) ? 'done' : stage === current ? 'current' : 'todo';
@@ -125,7 +126,10 @@ export function StepTrack<S extends string>({
                 key={stage}
                 aria-current={state === 'current' ? 'step' : undefined}
                 className={cn(
-                  'flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-3',
+                  // Mỗi viên rộng theo chữ, một dòng (anh Dũng 25/10/2026: cột trái hẹp từng ra «Tiếp n…»,
+                  // «Xác m…»); hàng giãn đều cho kín bề ngang.
+                  'flex h-9 flex-auto items-center justify-center gap-1.5 rounded-full px-3',
+                  'whitespace-nowrap',
                   state === 'done' && 'bg-pill text-ink',
                   state === 'current' && 'bg-shell font-semibold text-fg-inverse',
                   state === 'todo' && 'text-ink-subtle',
@@ -134,7 +138,7 @@ export function StepTrack<S extends string>({
                 {state === 'done' && <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />}
                 {state === 'current' && <CircleDot className="size-3.5 shrink-0" aria-hidden />}
                 {state === 'todo' && <Circle className="size-3.5 shrink-0" aria-hidden />}
-                <span className="truncate">{flow.steps[stage].label}</span>
+                <span>{flow.steps[stage].label}</span>
                 <span className="sr-only">
                   {state === 'done' ? ' — đã xong' : state === 'current' ? ' — đang ở đây' : ''}
                 </span>
