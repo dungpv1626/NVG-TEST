@@ -1091,8 +1091,10 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    1. ĐÃ LÀM (T170, 24/10/2026): tuyến `POST /design/ai/plan/replay` (chỉ khi `.dev.vars` có `AI_REPLAY=1`), digest hồ
       sơ phải trùng digest lượt ghi; hồ sơ thử `NVO-TK-2026-PL01` (`fbcd8e1d-b915-406e-9df4-f98a08272e98`), kịch bản
       `backup/ai-phat-lai/` (`dung-dau-bai.ts` → `tao-ho-so.mjs` → `phat-lai.mjs` → `chup.cjs`).
-   2. Khung nhà ống do chương trình dựng: lô hẹp mà mô hình đặt phòng cạnh thang (không bao giờ vừa 5 m) thì tự xếp kiểu
-      nhà ống (thang giữa, phòng trước / sau, hành lang cạnh thang), giữ ý đồ phòng của mô hình — mở rộng T102 `skeleton`.
+   2. ĐÃ THỬ RỒI GỠ (T171, 25/10/2026): khung nhà ống do chương trình dựng — phát lại 243 vòng: luồng thật THU5 0 → 0 vòng
+      qua, ngữ cảnh thử 6 → 4 (lùi) nên gỡ; mã giữ ở scratchpad `rowhouse/t171-wip.patch`. Chặn thật: tầng 1 chọn vị trí thang /
+      giếng trời theo điểm riêng tầng 1, các tầng trên hết chiều sâu. Hướng gỡ: quay lui chọn tầng 1 biết các tầng trên
+      (kiểu T169, không tốn tiền) HOẶC đổi lời dẫn cho mô hình vẽ mỗi dải sâu trọn bề ngang (cần lượt chạy thật, xin phép).
    3. Sau đó mới xin chạy thật thêm (mỗi lượt 0,2–0,5 USD, trần 0,8). Thử mô hình khác: chưa khuyên.
    Phát lại / đo bộ xếp: một lượt vitest một lúc, `--pool=forks --poolOptions.forks.maxForks=1` (máy 8 GB).
    Danh sách chỗ khó dùng ban đầu của lượt 23/10 (đã làm hết, T163):
