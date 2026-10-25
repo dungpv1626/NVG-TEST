@@ -19,11 +19,17 @@
  * ngắn dưới), không bỏ hẳn chữ; tên đọc được của liên kết vẫn là nhãn đầy đủ (`aria-label`).
  * Mọi `shortLabel` là một phần của `label` (WCAG 2.5.3) — có test canh.
  *
+ * ── Kéo đổi bề rộng, ẩn hẳn (25/10/2026) ─────────────────────────────────────────────────
+ * Mép phải của thanh kéo được: 208–360px khi mở; kéo hẹp quá thì thu thành dải biểu tượng, kéo
+ * tiếp thì ẩn hẳn (còn một dải mỏng ở mép trái — bấm hoặc kéo ra để hiện lại). Nhấp đúp mép = bề
+ * rộng mặc định. Ctrl + B ẩn / hiện như VS Code.
+ *
  * ⚠️ Dùng `Link`, KHÔNG dùng `NavLink`: `NavLink` ghi đè `aria-current` ta truyền vào, để màu
  * thành cách duy nhất báo vị trí. Một nguồn sự thật: `useActiveModule()`.
  */
 
 import {
+  ChevronsLeft,
   Gauge,
   Inbox,
   ListChecks,
@@ -31,6 +37,7 @@ import {
   PanelLeftOpen,
   type LucideIcon,
 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { MODULES, type ModuleCode } from '@nvg/shared';
 import { usePendingApprovals } from '@/hooks/use-approvals';
@@ -46,7 +53,12 @@ import {
   useShowExecOverview,
   useVisibleModules,
 } from './module-nav';
-import { useSidebarCollapsed } from './use-sidebar-collapsed';
+import {
+  SIDEBAR_WIDTH_DEFAULT,
+  SIDEBAR_WIDTH_MAX,
+  SIDEBAR_WIDTH_MIN,
+  useSidebarLayout,
+} from './use-sidebar-collapsed';
 
 /** Ba nhóm phân hệ của bản v2, theo thứ tự nghiệp vụ. Nhóm «Của tôi» dựng riêng ở dưới. */
 export const NAV_GROUPS: readonly { title: string; modules: readonly ModuleCode[] }[] = [
@@ -70,7 +82,27 @@ export function Sidebar() {
   const visible = useVisibleModules();
   const moduleRoutes = useModuleRoutes();
   const activeModule = useActiveModule();
-  const { collapsed, toggle } = useSidebarCollapsed();
+  const { mode, width, setMode, dragTo, toggle } = useSidebarLayout();
+  const collapsed = mode === 'rail';
+  const hidden = mode === 'hidden';
+  const asideRef = useRef<HTMLElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  // Ctrl + B: ẩn / hiện thanh (như VS Code). Ẩn thì nhớ dạng trước đó để hiện lại đúng dạng ấy.
+  const beforeHide = useRef<'open' | 'rail'>('open');
+  useEffect(() => {
+    if (mode !== 'hidden') beforeHide.current = mode;
+  }, [mode]);
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || e.key.toLowerCase() !== 'b')
+        return;
+      e.preventDefault();
+      setMode(mode === 'hidden' ? beforeHide.current : 'hidden');
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mode, setMode]);
   const canSeeExec = useShowExecOverview();
   const { pathname } = useLocation();
   const { profile } = useAuth();
@@ -133,15 +165,95 @@ export function Sidebar() {
     })),
   ].filter((g) => g.items.length > 0);
 
+  // Kéo mép phải: bề rộng = vị trí con trỏ tính từ mép trái thanh.
+  function edgeHandlers(from: 'aside' | 'strip') {
+    return {
+      onPointerDown(e: React.PointerEvent<HTMLElement>) {
+        if (e.button !== 0) return;
+        setDragging(true);
+        e.currentTarget.setPointerCapture(e.pointerId);
+      },
+      onPointerMove(e: React.PointerEvent<HTMLElement>) {
+        if (!dragging) return;
+        const left = from === 'aside' ? (asideRef.current?.getBoundingClientRect().left ?? 0) : 0;
+        dragTo(e.clientX - left);
+      },
+      onPointerUp(e: React.PointerEvent<HTMLElement>) {
+        setDragging(false);
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      },
+    };
+  }
+
+  if (hidden) {
+    return (
+      <div className="group relative hidden w-3.5 shrink-0 lg:block">
+        <div
+          {...edgeHandlers('strip')}
+          className="absolute inset-0 cursor-col-resize touch-none"
+          title="Kéo sang phải để hiện thanh điều hướng"
+          aria-hidden
+        />
+        <button
+          type="button"
+          onClick={() => setMode(beforeHide.current)}
+          aria-label="Hiện thanh điều hướng"
+          title="Hiện thanh điều hướng (Ctrl + B)"
+          aria-controls="dieu-huong-chinh"
+          aria-expanded={false}
+          className={cn(
+            'absolute top-4 left-1 z-30 grid size-9 place-items-center rounded-full',
+            'bg-shell text-fg-inverse shadow-md ring-2 ring-canvas hover:bg-shell-active',
+          )}
+        >
+          <PanelLeftOpen className="size-4" aria-hidden />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <aside
+      ref={asideRef}
+      style={collapsed ? undefined : { width }}
       className={cn(
-        'hidden shrink-0 flex-col self-stretch overflow-hidden text-fg-inverse',
+        'relative hidden shrink-0 flex-col self-stretch overflow-hidden text-fg-inverse',
         'lg:flex lg:h-[calc(100dvh-1.75rem)]',
-        'transition-[width] duration-(--motion-base) ease-(--ease-out)',
-        collapsed ? 'w-20 px-2' : 'w-62 pr-3 pl-4',
+        !dragging && 'transition-[width] duration-(--motion-base) ease-(--ease-out)',
+        collapsed ? 'w-20 px-2' : 'pr-3 pl-4',
       )}
     >
+      {/* Mép kéo: đổi bề rộng; kéo hẹp hẳn thì thu gọn / ẩn. */}
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Kéo để đổi bề rộng thanh điều hướng"
+        aria-valuemin={SIDEBAR_WIDTH_MIN}
+        aria-valuemax={SIDEBAR_WIDTH_MAX}
+        aria-valuenow={collapsed ? 80 : width}
+        tabIndex={0}
+        title="Kéo để đổi bề rộng · kéo hẹp hẳn để ẩn · nhấp đúp để về mặc định"
+        {...edgeHandlers('aside')}
+        onDoubleClick={() => dragTo(SIDEBAR_WIDTH_DEFAULT)}
+        onKeyDown={(e) => {
+          const step = e.key === 'ArrowLeft' ? -24 : e.key === 'ArrowRight' ? 24 : 0;
+          if (!step) return;
+          e.preventDefault();
+          dragTo((collapsed ? 80 : width) + step);
+        }}
+        className={cn(
+          'group absolute inset-y-0 right-0 z-10 flex w-2 cursor-col-resize touch-none justify-end',
+        )}
+      >
+        <span
+          className={cn(
+            'h-full w-0.5 rounded-full transition-colors',
+            dragging
+              ? 'bg-meter'
+              : 'bg-transparent group-hover:bg-shell-line group-focus-visible:bg-meter',
+          )}
+        />
+      </div>
       {/* Logo: trên nền tối chỉ dùng ba ô màu — bản có chữ đen nằm trên nền trắng. */}
       <Link
         to="/"
@@ -155,7 +267,7 @@ export function Sidebar() {
         {!collapsed && <span className="text-md font-bold whitespace-nowrap">Nhà Việt Group</span>}
       </Link>
 
-      <div className={cn('mt-3 flex items-center gap-1', collapsed && 'flex-col')}>
+      <div className={cn('mt-3 flex items-center gap-0.5', collapsed && 'flex-col')}>
         {/* Thu gọn thì bộ chọn pháp nhân dùng lại dạng `compact` — không dựng dạng thứ ba. */}
         <div className={cn('min-w-0', collapsed ? 'w-full' : 'flex-1')}>
           <CompanySwitcher compact={collapsed} onDark />
@@ -168,7 +280,7 @@ export function Sidebar() {
           title={collapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
           aria-label={collapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
           className={cn(
-            'grid size-10 shrink-0 place-items-center rounded-full text-shell-fg',
+            'grid size-8 shrink-0 place-items-center rounded-full text-shell-fg',
             'transition-colors duration-(--motion-fast) ease-(--ease-out)',
             'hover:bg-shell-active hover:text-fg-inverse',
           )}
@@ -178,6 +290,19 @@ export function Sidebar() {
           ) : (
             <PanelLeftClose className="size-4" aria-hidden />
           )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('hidden')}
+          title="Ẩn thanh điều hướng (Ctrl + B)"
+          aria-label="Ẩn thanh điều hướng"
+          className={cn(
+            'grid size-8 shrink-0 place-items-center rounded-full text-shell-fg',
+            'transition-colors duration-(--motion-fast) ease-(--ease-out)',
+            'hover:bg-shell-active hover:text-fg-inverse',
+          )}
+        >
+          <ChevronsLeft className="size-4" aria-hidden />
         </button>
       </div>
 

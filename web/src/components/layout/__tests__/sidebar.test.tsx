@@ -91,6 +91,19 @@ describe('Thanh điều hướng trái', () => {
     );
   });
 
+  it('ẩn hẳn được (nút hoặc Ctrl + B), hiện lại đúng dạng trước khi ẩn', async () => {
+    renderWithApp(<Sidebar />);
+    await userEvent.click(screen.getByRole('button', { name: 'Thu gọn thanh điều hướng' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ẩn thanh điều hướng' }));
+    expect(screen.queryByRole('navigation', { name: 'Điều hướng chính' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Hiện thanh điều hướng' }));
+    expect(screen.getByRole('button', { name: 'Mở rộng thanh điều hướng' })).toBeInTheDocument();
+    await userEvent.keyboard('{Control>}b{/Control}');
+    expect(screen.queryByRole('navigation', { name: 'Điều hướng chính' })).not.toBeInTheDocument();
+    await userEvent.keyboard('{Control>}b{/Control}');
+    expect(screen.getByRole('navigation', { name: 'Điều hướng chính' })).toBeInTheDocument();
+  });
+
   it('nhóm theo nghiệp vụ: chỉ hiện nhóm còn mục được xem', () => {
     renderWithApp(<Sidebar />);
     expect(screen.getByRole('group', { name: 'Của tôi' })).toBeInTheDocument();

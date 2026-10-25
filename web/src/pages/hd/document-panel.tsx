@@ -16,11 +16,15 @@ import {
   AlertTriangle,
   CheckCircle2,
   Download,
+  Expand,
   FilePen,
   FileText,
   Lock,
   Send,
+  Shrink,
   Upload,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 import PizZip from 'pizzip';
 import {
@@ -346,9 +350,49 @@ function Workspace({
   tabs: WorkspaceTab[];
   storageKey: string;
 }) {
+  // «Toàn màn hình» (anh Dũng 25/10/2026: khung soạn thấp, chữ nhỏ khó đọc): hai ngăn phủ cả cửa sổ, che header
+  // hồ sơ và thanh điều hướng. Esc hoặc bấm lại để thu về. Hộp thoại (z-50) vẫn nổi trên khung (z-40).
+  const [full, setFull] = useState(false);
+  useEffect(() => {
+    if (!full) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [role="dialog"]')) return;
+      setFull(false);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [full]);
   return (
-    <div className="flex flex-col gap-3 lg:sticky lg:top-[var(--detail-sticky-top,12rem)] lg:h-[var(--detail-sticky-avail,75vh)]">
-      <div className="shrink-0">{top}</div>
+    <div
+      className={cn(
+        'flex flex-col gap-3',
+        full
+          ? 'fixed inset-0 z-40 bg-canvas p-4'
+          : 'lg:sticky lg:top-[var(--detail-sticky-top,12rem)] lg:h-[var(--detail-sticky-avail,75vh)]',
+      )}
+    >
+      <div className="flex shrink-0 items-start gap-2">
+        <div className="min-w-0 flex-1">{top}</div>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="hidden shrink-0 lg:inline-flex"
+          onClick={() => setFull((v) => !v)}
+          title={full ? 'Thu về (Esc)' : 'Mở khung soạn phủ cả màn hình'}
+        >
+          {full ? (
+            <>
+              <Shrink className="size-4" aria-hidden /> Thu về
+            </>
+          ) : (
+            <>
+              <Expand className="size-4" aria-hidden /> Toàn màn hình
+            </>
+          )}
+        </Button>
+      </div>
       <SplitWorkspace tabs={tabs} storageKey={storageKey} className="lg:min-h-0 lg:flex-1" />
     </div>
   );
@@ -543,6 +587,7 @@ function FillSection({
   // Phần tử giữ bản xem trước là STATE, không ref: kéo tab «Văn bản» sang ngăn kia thì phần tử dựng lại và văn bản
   // phải vẽ lại vào phần tử mới.
   const [previewEl, setPreviewEl] = useState<HTMLDivElement | null>(null);
+  const [zoom, setZoom] = usePreviewZoom(previewEl);
   const previewBoxRef = useRef<HTMLDivElement>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   // Ô điền ngay trên văn bản (anh Dũng 25/10/2026): nhãn ở cột trái là câu văn máy tự cắt quanh chỗ trống,
@@ -951,6 +996,7 @@ function FillSection({
   const preview = filled ? (
     <>
       <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-subtle">
+        <PreviewZoomControl zoom={zoom} onChange={setZoom} target={previewEl} />
         <span>{stale || busy ? 'Đang cập nhật…' : `Cập nhật ${formatDateTime(filled.at)}`}</span>
         <span className="rounded-sm bg-status-completed-bg px-1.5 text-fg">Lấy từ hồ sơ</span>
         <span className="rounded-sm bg-status-progress-bg px-1.5 text-fg">Điền tay</span>
@@ -967,7 +1013,10 @@ function FillSection({
             if (canSave) openInline(mark);
             else focusTemplateField(mark.dataset.key!);
           }}
-          className="overflow-x-hidden rounded-md border border-border"
+          className={cn(
+            'rounded-md border border-border',
+            zoom === 'fit' ? 'overflow-x-hidden' : 'overflow-x-auto',
+          )}
         />
         {inline && (
           <InlineBlankEditor
@@ -1497,8 +1546,103 @@ function markPreview(root: HTMLElement) {
 }
 
 /**
- * Thu nhỏ trang A4 vừa bề rộng cột xem trước — cột hẹp hơn khổ giấy, để nguyên thì phải cuộn
- * ngang mới đọc hết dòng.
+ * Cỡ chữ của bản xem trước (anh Dũng 25/10/2026: «văn bản nhỏ nên khó đọc»): «Vừa khổ» co / giãn trang A4 theo bề
+ * rộng ngăn; chọn một mức cố định thì trang giữ mức đó, ngăn hẹp hơn thì cuộn ngang. Nhớ trên máy người dùng.
+ */
+type PreviewZoom = 'fit' | number;
+const ZOOM_KEY = 'hd-van-ban-co-chu';
+const ZOOM_STEPS = [0.6, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
+/** «Vừa khổ» được giãn tới mức này khi ngăn rộng hơn trang (toàn màn hình). */
+const FIT_MAX = 1.5;
+
+function readZoom(): PreviewZoom {
+  try {
+    const raw = window.localStorage.getItem(ZOOM_KEY);
+    const n = Number(raw);
+    return raw && raw !== 'fit' && n >= ZOOM_STEPS[0]! && n <= ZOOM_STEPS.at(-1)! ? n : 'fit';
+  } catch {
+    return 'fit';
+  }
+}
+
+function usePreviewZoom(el: HTMLElement | null): [PreviewZoom, (z: PreviewZoom) => void] {
+  const [zoom, setZoom] = useState<PreviewZoom>(readZoom);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(ZOOM_KEY, String(zoom));
+    } catch {
+      // chỉ là tiện lợi
+    }
+    if (!el) return;
+    el.dataset.zoom = String(zoom);
+    fitPreview(el);
+  }, [el, zoom]);
+  return [zoom, setZoom];
+}
+
+/** Mức đang thấy thật (kể cả khi đang «Vừa khổ») — để nút +/− bước tiếp từ đó. */
+function currentZoom(el: HTMLElement | null): number {
+  const z = Number(el?.querySelector<HTMLElement>('.docx-wrapper')?.style.zoom);
+  return Number.isFinite(z) && z > 0 ? z : 1;
+}
+
+function PreviewZoomControl({
+  zoom,
+  onChange,
+  target,
+}: {
+  zoom: PreviewZoom;
+  onChange: (z: PreviewZoom) => void;
+  target: HTMLElement | null;
+}) {
+  const now = zoom === 'fit' ? currentZoom(target) : zoom;
+  const smaller = [...ZOOM_STEPS].reverse().find((z) => z < now - 0.01);
+  const larger = ZOOM_STEPS.find((z) => z > now + 0.01);
+  const btn =
+    'grid size-8 place-items-center rounded-full text-ink-subtle hover:bg-surface-hover hover:text-ink disabled:opacity-40';
+  return (
+    <span role="group" aria-label="Cỡ chữ văn bản" className="inline-flex items-center gap-0.5">
+      <button
+        type="button"
+        className={btn}
+        disabled={smaller === undefined}
+        onClick={() => smaller !== undefined && onChange(smaller)}
+        aria-label="Thu nhỏ chữ"
+        title="Thu nhỏ chữ"
+      >
+        <ZoomOut className="size-4" aria-hidden />
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('fit')}
+        aria-pressed={zoom === 'fit'}
+        title="Vừa bề rộng ngăn"
+        className={cn(
+          'min-w-20 rounded-full px-2 py-1 text-xs tabular-nums',
+          zoom === 'fit'
+            ? 'bg-pill font-semibold text-ink'
+            : 'text-ink-subtle hover:bg-surface-hover',
+        )}
+      >
+        {zoom === 'fit' ? 'Vừa khổ' : `${Math.round(zoom * 100)} %`}
+      </button>
+      <button
+        type="button"
+        className={btn}
+        disabled={larger === undefined}
+        onClick={() => larger !== undefined && onChange(larger)}
+        aria-label="Phóng to chữ"
+        title="Phóng to chữ"
+      >
+        <ZoomIn className="size-4" aria-hidden />
+      </button>
+    </span>
+  );
+}
+
+/**
+ * Co trang A4 vừa bề rộng cột xem trước — cột hẹp hơn khổ giấy, để nguyên thì phải cuộn
+ * ngang mới đọc hết dòng. Người dùng chọn mức cố định (`data-zoom`) thì giữ mức đó.
  */
 function fitPreview(root: HTMLElement) {
   const wrapper = root.querySelector<HTMLElement>('.docx-wrapper');
@@ -1513,8 +1657,12 @@ function fitPreview(root: HTMLElement) {
     pageWidth > 0
       ? pageWidth + parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)
       : wrapper.scrollWidth;
-  const ratio = root.clientWidth / need;
-  wrapper.style.zoom = ratio < 1 ? String(ratio) : '1';
+  const fixed = Number(root.dataset.zoom);
+  const zoom =
+    root.dataset.zoom && root.dataset.zoom !== 'fit' && fixed > 0
+      ? fixed
+      : Math.min(FIT_MAX, root.clientWidth / need);
+  wrapper.style.zoom = String(zoom);
 }
 
 /** «Điều 7. Thanh toán» → «Điều 7»; «PHỤ LỤC 01 – …» → «Phụ lục 01» — nhãn gọn cho danh sách. */
@@ -1595,10 +1743,10 @@ function InlineBlankEditor({
  * khoá. Bản sửa trong Word cũng hiện đúng như tệp đã tải lên, vì đây là tệp thật trong kho, không dựng lại từ mẫu.
  */
 function SavedDocumentPreview({ path, title }: { path: string; title: string }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const [el, setEl] = useState<HTMLDivElement | null>(null);
+  const [zoom, setZoom] = usePreviewZoom(el);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    const el = ref.current;
     if (!el) return;
     let cancelled = false;
     setError(null);
@@ -1625,19 +1773,25 @@ function SavedDocumentPreview({ path, title }: { path: string; title: string }) 
       cancelled = true;
       observer?.disconnect();
     };
-  }, [path]);
+  }, [path, el]);
   return (
     <section className="rounded-card bg-surface p-4">
-      <h3 className="font-medium">Văn bản — {title}</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-medium">Văn bản — {title}</h3>
+        <PreviewZoomControl zoom={zoom} onChange={setZoom} target={el} />
+      </div>
       {error && (
         <p role="alert" className="mt-2 text-status-overdue">
           Không mở được văn bản: {error}
         </p>
       )}
       <div
-        ref={ref}
+        ref={setEl}
         aria-label="Văn bản hợp đồng đã lưu"
-        className="mt-2 overflow-x-hidden rounded-md border border-border"
+        className={cn(
+          'mt-2 rounded-md border border-border',
+          zoom === 'fit' ? 'overflow-x-hidden' : 'overflow-x-auto',
+        )}
       />
     </section>
   );
