@@ -22,6 +22,7 @@ import {
 } from '@/hooks/use-contract-templates';
 import type { ContractDetailRecord } from '@/hooks/use-contracts';
 import { cn } from '@/lib/utils';
+import { revealElement } from '@/components/ui/split-workspace';
 
 export type DocumentInputs = Record<string, string>;
 
@@ -52,8 +53,8 @@ export function focusTemplateField(key: string): boolean {
   for (let d = el.closest('details'); d; d = d.parentElement?.closest('details') ?? null) {
     d.open = true;
   }
-  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  (el as HTMLInputElement).focus({ preventScroll: true });
+  // Ô có thể nằm trong một tab đang ẩn của khung hai ngăn — mở tab ấy trước rồi mới cuộn và đặt con trỏ.
+  revealElement(el, true);
   return true;
 }
 
@@ -220,10 +221,7 @@ export function DocInputsSection({
   }
 
   return (
-    <section
-      id="noi-dung-van-ban"
-      className="scroll-mt-48 rounded-card bg-surface p-4"
-    >
+    <section id="noi-dung-van-ban" className="scroll-mt-48 rounded-card bg-surface p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="font-medium">Nội dung riêng của văn bản</h3>
         <span className="text-xs text-fg-subtle">

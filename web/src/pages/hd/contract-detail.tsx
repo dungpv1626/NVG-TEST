@@ -55,6 +55,7 @@ import { TermsPanel } from './terms-panel';
 import { SignContractDialog } from './sign-contract-dialog';
 import { SignedScanLink } from './signed-scan-link';
 import { SignedScanPanel } from './signed-scan-panel';
+import { revealById } from '@/components/ui/split-workspace';
 
 const EM_DASH = '—';
 
@@ -168,9 +169,8 @@ export function ContractDetailPage() {
     next.set('tab', tab);
     setSearchParams(next, { replace: true });
     if (anchor) {
-      requestAnimationFrame(() =>
-        document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth' }),
-      );
+      // Đích có thể nằm trong tab đang ẩn của khung hai ngăn «Soạn hợp đồng» — `revealById` mở tab ấy trước.
+      requestAnimationFrame(() => revealById(anchor));
     }
   }
 

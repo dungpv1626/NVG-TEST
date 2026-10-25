@@ -76,6 +76,7 @@ import {
   useDocumentInputsState,
   type DocumentInputs,
 } from './document-inputs';
+import { revealById, SplitWorkspace, type WorkspaceTab } from '@/components/ui/split-workspace';
 import { cn } from '@/lib/utils';
 
 /**
@@ -110,6 +111,13 @@ export function DocumentPanel({
   const chosen = candidates.find((t) => t.id === templateId) ?? candidates[0] ?? null;
   const inputs = useDocumentInputsState(contract, editable);
   const { data: versions } = useContractDocuments(contract.id);
+  const versionsSection = (
+    <VersionsSection
+      contractId={contract.id}
+      submittedId={contract.submitted_document_id}
+      approvedId={contract.approved_document_id}
+    />
+  );
 
   // Chỉ xem (anh Dũng 25/10/2026): người không sửa được — Ban Giám đốc, người khác trong phòng — từng thấy cả
   // biểu mẫu trống bị khoá (con trỏ «cấm») và «Còn 119 chỗ». Họ cần đọc VĂN BẢN: bản xem trước toàn khổ, ai
@@ -125,92 +133,172 @@ export function DocumentPanel({
       : latest?.source === 'sua_trong_word'
         ? latest
         : null;
-    return (
-      <div className="space-y-4">
-        <p className="flex items-start gap-2 rounded-card bg-surface px-4 py-3">
-          <Lock className="mt-0.5 size-4 shrink-0 text-fg-subtle" aria-hidden />
-          <span>
-            {locked
-              ? contract.stage === 'cho_duyet'
-                ? 'Hợp đồng đang chờ phê duyệt — văn bản giữ đúng bản đã gửi. Bị trả về thì người chịu trách nhiệm lập bản mới.'
-                : contract.stage === 'da_duyet'
-                  ? 'Hợp đồng đã được phê duyệt theo văn bản dưới đây — tải về để in và ký. Không lập thêm bản mới.'
-                  : 'Hợp đồng đã ký — văn bản đã khoá. Thay đổi sau ký đi qua tab Phát sinh.'
-              : `${contract.responsible?.full_name ?? 'Người chịu trách nhiệm'} đang soạn văn bản này — chỉ người chịu trách nhiệm sửa được khi hợp đồng còn Nháp. Bên dưới là văn bản theo dữ liệu hiện có.`}
-          </span>
-        </p>
-        {shown ? (
-          <SavedDocumentPreview
-            path={shown.storage_path}
-            title={`Bản ${shown.version}${shown.source === 'sua_trong_word' ? ' — sửa trong Word' : ''}`}
-          />
-        ) : !locked ? (
-          <FillSection
-            contract={contract}
-            canSave={false}
-            templatesLoading={templates.isLoading}
-            candidates={candidates}
-            chosen={chosen}
-            onChooseTemplate={setTemplateId}
-            values={inputs.values}
-            valuesReady={inputs.ready}
-            setValue={inputs.setValue}
-          />
-        ) : (
-          <p className="rounded-card bg-surface px-4 py-3 text-fg-subtle">
-            Hợp đồng này chưa lưu văn bản nào.
-          </p>
-        )}
-        <VersionsSection
-          contractId={contract.id}
-          submittedId={contract.submitted_document_id}
-          approvedId={contract.approved_document_id}
+    const notice = (
+      <p className="flex items-start gap-2 rounded-card bg-surface px-4 py-3">
+        <Lock className="mt-0.5 size-4 shrink-0 text-fg-subtle" aria-hidden />
+        <span>
+          {locked
+            ? contract.stage === 'cho_duyet'
+              ? 'Hợp đồng đang chờ phê duyệt — văn bản giữ đúng bản đã gửi. Bị trả về thì người chịu trách nhiệm lập bản mới.'
+              : contract.stage === 'da_duyet'
+                ? 'Hợp đồng đã được phê duyệt theo văn bản dưới đây — tải về để in và ký. Không lập thêm bản mới.'
+                : 'Hợp đồng đã ký — văn bản đã khoá. Thay đổi sau ký đi qua tab Phát sinh.'
+            : `${contract.responsible?.full_name ?? 'Người chịu trách nhiệm'} đang soạn văn bản này — chỉ người chịu trách nhiệm sửa được khi hợp đồng còn Nháp. Văn bản dưới đây dựng theo dữ liệu hiện có.`}
+        </span>
+      </p>
+    );
+    const sideTabs: WorkspaceTab[] = [
+      {
+        id: 'dieu-khoan-tab',
+        label: 'Điều khoản',
+        side: 'left',
+        content: <div id="dieu-khoan">{termsPanel}</div>,
+      },
+      { id: 'phien-ban', label: 'Phiên bản', side: 'left', content: versionsSection },
+    ];
+    if (shown || locked) {
+      return (
+        <Workspace
+          top={notice}
+          storageKey="hd-van-ban-xem"
+          tabs={[
+            {
+              id: 'van-ban',
+              label: 'Văn bản',
+              side: 'right',
+              content: shown ? (
+                <SavedDocumentPreview
+                  path={shown.storage_path}
+                  title={`Bản ${shown.version}${shown.source === 'sua_trong_word' ? ' — sửa trong Word' : ''}`}
+                />
+              ) : (
+                <p className="text-fg-subtle">Hợp đồng này chưa lưu văn bản nào.</p>
+              ),
+            },
+            ...sideTabs,
+          ]}
         />
-        <div id="dieu-khoan" className="scroll-mt-48">
-          {termsPanel}
-        </div>
-      </div>
+      );
+    }
+    return (
+      <FillSection
+        contract={contract}
+        canSave={false}
+        templatesLoading={templates.isLoading}
+        candidates={candidates}
+        chosen={chosen}
+        onChooseTemplate={setTemplateId}
+        values={inputs.values}
+        valuesReady={inputs.ready}
+        setValue={inputs.setValue}
+        layout={(parts) => (
+          <Workspace
+            top={
+              <>
+                {notice}
+                {parts.toolbar}
+              </>
+            }
+            storageKey="hd-van-ban-xem"
+            tabs={[
+              { id: 'van-ban', label: 'Văn bản', side: 'right', content: parts.preview },
+              {
+                id: 'cho-trong',
+                label: 'Chỗ trống',
+                side: 'left',
+                badge: parts.requiredLeft || undefined,
+                content: parts.missing,
+              },
+              ...sideTabs,
+            ]}
+          />
+        )}
+      />
     );
   }
 
+  // Người soạn (anh Dũng 25/10/2026: «chia tab như Visual Studio Code, kéo ra kéo vào»): ngăn trái các tab soạn,
+  // ngăn phải văn bản — sửa bên trái vẫn thấy văn bản bên phải, không phải cuộn xuống xem rồi cuộn lên sửa.
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start">
-        <div className="min-w-0 space-y-4">
-          <InfoSection contract={contract} editable />
-          <div id="dieu-khoan" className="scroll-mt-48">
-            {termsPanel}
-          </div>
-          {chosen && (
-            <DocInputsSection
-              template={chosen}
-              values={inputs.values}
-              setValue={inputs.setValue}
-              setMany={inputs.setMany}
-              status={inputs.status}
-              editable
-            />
-          )}
-        </div>
-        <div className="min-w-0 lg:sticky lg:top-[var(--detail-sticky-top,12rem)] lg:max-h-[var(--detail-sticky-avail,70vh)] lg:overflow-y-auto">
-          <FillSection
-            contract={contract}
-            canSave={canDraft}
-            templatesLoading={templates.isLoading}
-            candidates={candidates}
-            chosen={chosen}
-            onChooseTemplate={setTemplateId}
-            values={inputs.values}
-            valuesReady={inputs.ready}
-            setValue={inputs.setValue}
-          />
-        </div>
-      </div>
-      <VersionsSection
-        contractId={contract.id}
-        submittedId={contract.submitted_document_id}
-        approvedId={contract.approved_document_id}
-      />
+    <FillSection
+      contract={contract}
+      canSave={canDraft}
+      templatesLoading={templates.isLoading}
+      candidates={candidates}
+      chosen={chosen}
+      onChooseTemplate={setTemplateId}
+      values={inputs.values}
+      valuesReady={inputs.ready}
+      setValue={inputs.setValue}
+      layout={(parts) => (
+        <Workspace
+          top={parts.toolbar}
+          storageKey="hd-van-ban-soan"
+          tabs={[
+            {
+              id: 'cho-trong',
+              label: 'Chỗ trống',
+              side: 'left',
+              badge: parts.requiredLeft || undefined,
+              content: parts.missing,
+            },
+            {
+              id: 'thong-tin',
+              label: 'Thông tin',
+              side: 'left',
+              content: <InfoSection contract={contract} editable />,
+            },
+            {
+              id: 'dieu-khoan-tab',
+              label: 'Điều khoản',
+              side: 'left',
+              content: <div id="dieu-khoan">{termsPanel}</div>,
+            },
+            ...(chosen
+              ? [
+                  {
+                    id: 'noi-dung',
+                    label: 'Nội dung riêng',
+                    side: 'left' as const,
+                    content: (
+                      <DocInputsSection
+                        template={chosen}
+                        values={inputs.values}
+                        setValue={inputs.setValue}
+                        setMany={inputs.setMany}
+                        status={inputs.status}
+                        editable
+                      />
+                    ),
+                  },
+                ]
+              : []),
+            { id: 'van-ban', label: 'Văn bản', side: 'right', content: parts.preview },
+            { id: 'phien-ban', label: 'Phiên bản', side: 'right', content: versionsSection },
+          ]}
+        />
+      )}
+    />
+  );
+}
+
+/**
+ * Khung tab «Soạn hợp đồng»: phần trên (mẫu, nút, thông báo) rồi hai ngăn. Từ lg khung cao đúng phần màn hình dưới
+ * header dính (`--detail-sticky-avail`, đo ở `EntityDetail`) để mỗi ngăn cuộn riêng; dưới lg cuộn theo trang.
+ */
+function Workspace({
+  top,
+  tabs,
+  storageKey,
+}: {
+  top: ReactNode;
+  tabs: WorkspaceTab[];
+  storageKey: string;
+}) {
+  return (
+    <div className="flex flex-col gap-3 lg:sticky lg:top-[var(--detail-sticky-top,12rem)] lg:h-[var(--detail-sticky-avail,75vh)]">
+      <div className="shrink-0">{top}</div>
+      <SplitWorkspace tabs={tabs} storageKey={storageKey} className="lg:min-h-0 lg:flex-1" />
     </div>
   );
 }
@@ -369,6 +457,7 @@ function FillSection({
   values,
   valuesReady,
   setValue,
+  layout,
 }: {
   contract: ContractDetailRecord;
   canSave: boolean;
@@ -380,6 +469,8 @@ function FillSection({
   values: DocumentInputs;
   valuesReady: boolean;
   setValue: (key: string, value: string) => void;
+  /** Đặt các khối (thanh công cụ, chỗ trống, văn bản) vào khung làm việc của nơi gọi. */
+  layout: (parts: FillParts) => ReactNode;
 }) {
   const promptDialog = usePromptDialog();
   const company = useCompanyContractInfo(contract.company_id);
@@ -398,7 +489,9 @@ function FillSection({
   const manual = Object.fromEntries(
     Object.entries(values).filter(([k, v]) => !k.includes(':') && v.trim()),
   );
-  const previewRef = useRef<HTMLDivElement>(null);
+  // Phần tử giữ bản xem trước là STATE, không ref: kéo tab «Văn bản» sang ngăn kia thì phần tử dựng lại và văn bản
+  // phải vẽ lại vào phần tử mới.
+  const [previewEl, setPreviewEl] = useState<HTMLDivElement | null>(null);
   const previewBoxRef = useRef<HTMLDivElement>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   // Ô điền ngay trên văn bản (anh Dũng 25/10/2026): nhãn ở cột trái là câu văn máy tự cắt quanh chỗ trống,
@@ -424,7 +517,7 @@ function FillSection({
   }, [ready, contract, terms, chosen, values, company.data, partner.data]);
 
   useEffect(() => {
-    const el = previewRef.current;
+    const el = previewEl;
     if (!filled || !el) return;
     let cancelled = false;
     el.replaceChildren();
@@ -447,7 +540,7 @@ function FillSection({
       cancelled = true;
       observer?.disconnect();
     };
-  }, [filled]);
+  }, [filled, previewEl]);
 
   if (templatesLoading) return <div className="h-24 animate-pulse rounded-lg bg-surface-hover" />;
 
@@ -673,8 +766,11 @@ function FillSection({
     }
   }
 
-  return (
-    <section className="rounded-card bg-surface p-4">
+  const missingTerms = CONTRACT_REQUIRED_TERM_TYPES.filter(
+    (type) => !(terms ?? []).some((t) => t.term_type === type),
+  ).map((type) => CONTRACT_TERM_TYPE_LABELS[type]);
+  const toolbar = (
+    <div>
       {promptDialog.dialog}
       <h3 className="font-medium">Lập văn bản từ mẫu</h3>
       <div className="mt-3 flex flex-wrap items-end gap-3">
@@ -784,61 +880,73 @@ function FillSection({
           {savedMessage}
         </p>
       )}
-
-      {filled && (
-        <>
-          <MissingBox
-            filled={filled}
-            contract={contract}
-            editable={canSave}
-            manual={manual}
-            onManualChange={setValue}
-            updating={stale || busy}
-            free={freeFieldStatus(chosen, values)}
-            freeArticles={missingByArticle(chosen, values)}
-            missingTerms={CONTRACT_REQUIRED_TERM_TYPES.filter(
-              (type) => !(terms ?? []).some((t) => t.term_type === type),
-            ).map((type) => CONTRACT_TERM_TYPE_LABELS[type])}
+    </div>
+  );
+  const missing = filled ? (
+    <>
+      <MissingBox
+        filled={filled}
+        contract={contract}
+        editable={canSave}
+        manual={manual}
+        onManualChange={setValue}
+        updating={stale || busy}
+        free={freeFieldStatus(chosen, values)}
+        freeArticles={missingByArticle(chosen, values)}
+        missingTerms={missingTerms}
+      />
+    </>
+  ) : null;
+  const preview = filled ? (
+    <>
+      <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-subtle">
+        <span>{stale || busy ? 'Đang cập nhật…' : `Cập nhật ${formatDateTime(filled.at)}`}</span>
+        <span className="rounded-sm bg-status-completed-bg px-1.5 text-fg">Lấy từ hồ sơ</span>
+        <span className="rounded-sm bg-status-progress-bg px-1.5 text-fg">Điền tay</span>
+        <span className="rounded-sm bg-status-pending-bg px-1.5 text-fg">Còn thiếu</span>
+        <span>Xem trước có thể lệch đôi chút so với Word; tệp tải về giữ đúng định dạng mẫu.</span>
+      </p>
+      <div ref={previewBoxRef} className="relative mt-2">
+        <div
+          ref={setPreviewEl}
+          aria-label="Xem trước văn bản hợp đồng"
+          onClick={(e) => {
+            const mark = (e.target as HTMLElement).closest<HTMLElement>('mark[data-key]');
+            if (!mark) return;
+            if (canSave) openInline(mark);
+            else focusTemplateField(mark.dataset.key!);
+          }}
+          className="overflow-x-hidden rounded-md border border-border"
+        />
+        {inline && (
+          <InlineBlankEditor
+            edit={inline}
+            onChange={(value) => setInline({ ...inline, value })}
+            onSave={saveInline}
+            onCancel={() => setInline(null)}
+            onOpenField={() => {
+              focusTemplateField(inline.key);
+              setInline(null);
+            }}
           />
-          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-subtle">
-            <span>
-              {stale || busy ? 'Đang cập nhật…' : `Cập nhật ${formatDateTime(filled.at)}`}
-            </span>
-            <span className="rounded-sm bg-status-completed-bg px-1.5 text-fg">Lấy từ hồ sơ</span>
-            <span className="rounded-sm bg-status-progress-bg px-1.5 text-fg">Điền tay</span>
-            <span className="rounded-sm bg-status-pending-bg px-1.5 text-fg">Còn thiếu</span>
-            <span>
-              Xem trước có thể lệch đôi chút so với Word; tệp tải về giữ đúng định dạng mẫu.
-            </span>
-          </p>
-          <div ref={previewBoxRef} className="relative mt-2">
-            <div
-              ref={previewRef}
-              aria-label="Xem trước văn bản hợp đồng"
-              onClick={(e) => {
-                const mark = (e.target as HTMLElement).closest<HTMLElement>('mark[data-key]');
-                if (!mark) return;
-                if (canSave) openInline(mark);
-                else focusTemplateField(mark.dataset.key!);
-              }}
-              className="overflow-x-hidden rounded-md border border-border"
-            />
-            {inline && (
-              <InlineBlankEditor
-                edit={inline}
-                onChange={(value) => setInline({ ...inline, value })}
-                onSave={saveInline}
-                onCancel={() => setInline(null)}
-                onOpenField={() => {
-                  focusTemplateField(inline.key);
-                  setInline(null);
-                }}
-              />
-            )}
-          </div>
-        </>
-      )}
-    </section>
+        )}
+      </div>
+    </>
+  ) : (
+    <div
+      className="h-64 animate-pulse rounded-md bg-surface-hover"
+      aria-label="Đang dựng văn bản"
+    />
+  );
+  return (
+    <>
+      {layout({
+        toolbar,
+        missing,
+        preview,
+        requiredLeft: filled ? requiredCount(filled, missingTerms) : null,
+      })}
+    </>
   );
 }
 
@@ -961,6 +1069,27 @@ const SHOULD_SOURCES: readonly MissingFieldSource[] = [
   'dien_tay',
 ];
 
+/** Số mục «Cần điền» — cùng phép đếm với khung chỗ trống, để huy hiệu trên tab khớp con số trong khung. */
+function requiredCount(filled: Filled, missingTerms: string[]): number {
+  return (
+    filled.missing
+      .filter((g) => REQUIRED_SOURCES.includes(g.source))
+      .reduce((n, g) => n + g.labels.length, 0) + missingTerms.length
+  );
+}
+
+/** Các khối của phần lập văn bản — nơi gọi xếp vào khung làm việc. */
+export interface FillParts {
+  /** Mẫu + các nút lưu / gửi / tải lên + thông báo. */
+  toolbar: ReactNode;
+  /** Khung chỗ trống chia mức (null khi chưa dựng xong). */
+  missing: ReactNode;
+  /** Văn bản xem trước (luôn có — đang dựng thì khung xám). */
+  preview: ReactNode;
+  /** Số mục cần điền còn thiếu (null khi chưa dựng xong). */
+  requiredLeft: number | null;
+}
+
 const isAppendix = (article: string) => /^(PHỤ LỤC|PHU LUC)/i.test(article.trim());
 
 /**
@@ -1022,9 +1151,7 @@ function MissingBox({
                 <button
                   type="button"
                   className="text-brand underline-offset-2 hover:underline"
-                  onClick={() =>
-                    document.getElementById(link.scrollTo!)?.scrollIntoView({ behavior: 'smooth' })
-                  }
+                  onClick={() => revealById(link.scrollTo!)}
                 >
                   {link.label}
                 </button>
@@ -1129,9 +1256,7 @@ function MissingBox({
                 <button
                   type="button"
                   className="text-brand underline-offset-2 hover:underline"
-                  onClick={() =>
-                    document.getElementById('dieu-khoan')?.scrollIntoView({ behavior: 'smooth' })
-                  }
+                  onClick={() => revealById('dieu-khoan')}
                 >
                   Tới phần Điều khoản
                 </button>
@@ -1173,9 +1298,7 @@ function MissingBox({
             <button
               type="button"
               className="mt-1.5 rounded-sm bg-surface px-2 py-0.5 text-sm hover:bg-surface-hover"
-              onClick={() =>
-                document.getElementById('noi-dung-van-ban')?.scrollIntoView({ behavior: 'smooth' })
-              }
+              onClick={() => revealById('noi-dung-van-ban')}
             >
               Chọn phương án <span className="text-ink-subtle">· {free.unchosen}</span>
             </button>
@@ -1307,7 +1430,16 @@ function fitPreview(root: HTMLElement) {
   const wrapper = root.querySelector<HTMLElement>('.docx-wrapper');
   if (!wrapper) return;
   wrapper.style.zoom = '1';
-  const ratio = root.clientWidth / wrapper.scrollWidth;
+  // Đo theo trang giấy, không theo `scrollWidth`: docx-preview đặt trang GIỮA khung, nên ở ngăn hẹp phần tràn sang
+  // trái không được tính và trang bị cắt mép phải (thấy khi kéo ngăn «Văn bản» hẹp lại, 25/10/2026).
+  const pages = [...wrapper.querySelectorAll<HTMLElement>(':scope > section')];
+  const pageWidth = Math.max(0, ...pages.map((p) => p.offsetWidth));
+  const style = getComputedStyle(wrapper);
+  const need =
+    pageWidth > 0
+      ? pageWidth + parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)
+      : wrapper.scrollWidth;
+  const ratio = root.clientWidth / need;
   wrapper.style.zoom = ratio < 1 ? String(ratio) : '1';
 }
 
