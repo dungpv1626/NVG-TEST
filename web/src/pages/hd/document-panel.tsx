@@ -25,6 +25,8 @@ import {
 import PizZip from 'pizzip';
 import {
   CONTRACT_PRICE_FORMS,
+  CONTRACT_REQUIRED_TERM_TYPES,
+  CONTRACT_TERM_TYPE_LABELS,
   CONTRACT_PRICE_FORM_LABELS,
   CONTRACT_TYPE_LABELS,
   buildTemplateData,
@@ -107,48 +109,101 @@ export function DocumentPanel({
   const [templateId, setTemplateId] = useState<string>('');
   const chosen = candidates.find((t) => t.id === templateId) ?? candidates[0] ?? null;
   const inputs = useDocumentInputsState(contract, editable);
+  const { data: versions } = useContractDocuments(contract.id);
+
+  // Chỉ xem (anh Dũng 25/10/2026): người không sửa được — Ban Giám đốc, người khác trong phòng — từng thấy cả
+  // biểu mẫu trống bị khoá (con trỏ «cấm») và «Còn 119 chỗ». Họ cần đọc VĂN BẢN: bản xem trước toàn khổ, ai
+  // đang soạn, các phiên bản. Bản xem trước luôn hiện — không thay bằng danh sách ô hay thông báo khoá.
+  if (!editable) {
+    // Đã khoá: đúng bản đã duyệt / đang gửi. Còn Nháp: văn bản dựng từ dữ liệu đang soạn — trừ khi bản mới nhất
+    // là bản sửa trong Word, vì đó mới là bản sẽ gửi phê duyệt.
+    const latest = versions?.[0] ?? null;
+    const shown = locked
+      ? (versions?.find((v) => v.id === contract.approved_document_id) ??
+        versions?.find((v) => v.id === contract.submitted_document_id) ??
+        latest)
+      : latest?.source === 'sua_trong_word'
+        ? latest
+        : null;
+    return (
+      <div className="space-y-4">
+        <p className="flex items-start gap-2 rounded-card bg-surface px-4 py-3">
+          <Lock className="mt-0.5 size-4 shrink-0 text-fg-subtle" aria-hidden />
+          <span>
+            {locked
+              ? contract.stage === 'cho_duyet'
+                ? 'Hợp đồng đang chờ phê duyệt — văn bản giữ đúng bản đã gửi. Bị trả về thì người chịu trách nhiệm lập bản mới.'
+                : contract.stage === 'da_duyet'
+                  ? 'Hợp đồng đã được phê duyệt theo văn bản dưới đây — tải về để in và ký. Không lập thêm bản mới.'
+                  : 'Hợp đồng đã ký — văn bản đã khoá. Thay đổi sau ký đi qua tab Phát sinh.'
+              : `${contract.responsible?.full_name ?? 'Người chịu trách nhiệm'} đang soạn văn bản này — chỉ người chịu trách nhiệm sửa được khi hợp đồng còn Nháp. Bên dưới là văn bản theo dữ liệu hiện có.`}
+          </span>
+        </p>
+        {shown ? (
+          <SavedDocumentPreview
+            path={shown.storage_path}
+            title={`Bản ${shown.version}${shown.source === 'sua_trong_word' ? ' — sửa trong Word' : ''}`}
+          />
+        ) : !locked ? (
+          <FillSection
+            contract={contract}
+            canSave={false}
+            templatesLoading={templates.isLoading}
+            candidates={candidates}
+            chosen={chosen}
+            onChooseTemplate={setTemplateId}
+            values={inputs.values}
+            valuesReady={inputs.ready}
+            setValue={inputs.setValue}
+          />
+        ) : (
+          <p className="rounded-card bg-surface px-4 py-3 text-fg-subtle">
+            Hợp đồng này chưa lưu văn bản nào.
+          </p>
+        )}
+        <VersionsSection
+          contractId={contract.id}
+          submittedId={contract.submitted_document_id}
+          approvedId={contract.approved_document_id}
+        />
+        <div id="dieu-khoan" className="scroll-mt-48">
+          {termsPanel}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start">
         <div className="min-w-0 space-y-4">
-          <InfoSection contract={contract} editable={canDraft && contract.stage === 'nhap'} />
+          <InfoSection contract={contract} editable />
           <div id="dieu-khoan" className="scroll-mt-48">
             {termsPanel}
           </div>
-          {!locked && chosen && (
+          {chosen && (
             <DocInputsSection
               template={chosen}
               values={inputs.values}
               setValue={inputs.setValue}
               setMany={inputs.setMany}
               status={inputs.status}
-              editable={editable}
+              editable
             />
           )}
         </div>
         <div className="min-w-0 lg:sticky lg:top-[var(--detail-sticky-top,12rem)] lg:max-h-[var(--detail-sticky-avail,70vh)] lg:overflow-y-auto">
-          {locked ? (
-            <p className="flex items-center gap-2 rounded-md border border-border bg-surface-sunken px-3 py-2">
-              <Lock className="size-4 text-fg-subtle" aria-hidden />
-              {contract.stage === 'cho_duyet'
-                ? 'Hợp đồng đang chờ phê duyệt — văn bản giữ đúng bản đã gửi. Bị trả về thì lập bản mới.'
-                : contract.stage === 'da_duyet'
-                  ? 'Hợp đồng đã được phê duyệt theo văn bản «Bản đã duyệt» bên dưới — tải về để in và ký. Không lập thêm bản mới.'
-                  : 'Hợp đồng đã ký — văn bản đã khoá, không lập thêm bản điền mới. Thay đổi sau ký đi qua tab Phát sinh.'}
-            </p>
-          ) : (
-            <FillSection
-              contract={contract}
-              canSave={canDraft}
-              templatesLoading={templates.isLoading}
-              candidates={candidates}
-              chosen={chosen}
-              onChooseTemplate={setTemplateId}
-              values={inputs.values}
-              valuesReady={inputs.ready}
-              setValue={inputs.setValue}
-            />
-          )}
+          <FillSection
+            contract={contract}
+            canSave={canDraft}
+            templatesLoading={templates.isLoading}
+            candidates={candidates}
+            chosen={chosen}
+            onChooseTemplate={setTemplateId}
+            values={inputs.values}
+            valuesReady={inputs.ready}
+            setValue={inputs.setValue}
+          />
         </div>
       </div>
       <VersionsSection
@@ -623,20 +678,27 @@ function FillSection({
       {promptDialog.dialog}
       <h3 className="font-medium">Lập văn bản từ mẫu</h3>
       <div className="mt-3 flex flex-wrap items-end gap-3">
-        <Field label="Mẫu" className="min-w-64 flex-1">
-          <select
-            value={chosen?.id ?? ''}
-            onChange={(e) => onChooseTemplate(e.target.value)}
-            className={cn(FIELD_BOX, 'w-full')}
-          >
-            {candidates.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.title}
-                {t.price_form ? ` — ${CONTRACT_PRICE_FORM_LABELS[t.price_form]}` : ''}
-              </option>
-            ))}
-          </select>
-        </Field>
+        {!canSave && chosen ? (
+          <p className="min-w-64 flex-1">
+            <span className="text-ink-subtle">Mẫu: </span>
+            {chosen.title}
+          </p>
+        ) : (
+          <Field label="Mẫu" className="min-w-64 flex-1">
+            <select
+              value={chosen?.id ?? ''}
+              onChange={(e) => onChooseTemplate(e.target.value)}
+              className={cn(FIELD_BOX, 'w-full')}
+            >
+              {candidates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.title}
+                  {t.price_form ? ` — ${CONTRACT_PRICE_FORM_LABELS[t.price_form]}` : ''}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
         {filled && canSave && (
           <Button
             variant="secondary"
@@ -678,11 +740,13 @@ function FillSection({
           </>
         )}
       </div>
-      <p className="mt-2 text-xs text-fg-subtle">
-        Cần sửa câu chữ, thêm hoặc bớt điều khoản: «Lưu phiên bản và tải về», sửa trong Word, rồi
-        «Tải lên bản đã sửa trong Word». Bấm chỗ vàng hoặc xanh dương trên văn bản để điền ngay tại
-        chỗ.
-      </p>
+      {canSave && (
+        <p className="mt-2 text-xs text-fg-subtle">
+          Cần sửa câu chữ, thêm hoặc bớt điều khoản: «Lưu phiên bản và tải về», sửa trong Word, rồi
+          «Tải lên bản đã sửa trong Word». Bấm chỗ vàng hoặc xanh dương trên văn bản để điền ngay
+          tại chỗ.
+        </p>
+      )}
       {wordLatest && (
         <div className="mt-3 rounded-field border border-status-pending bg-status-pending-bg p-3 text-sm">
           <p className="flex items-start gap-2 font-semibold">
@@ -732,6 +796,9 @@ function FillSection({
             updating={stale || busy}
             free={freeFieldStatus(chosen, values)}
             freeArticles={missingByArticle(chosen, values)}
+            missingTerms={CONTRACT_REQUIRED_TERM_TYPES.filter(
+              (type) => !(terms ?? []).some((t) => t.term_type === type),
+            ).map((type) => CONTRACT_TERM_TYPE_LABELS[type])}
           />
           <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-subtle">
             <span>
@@ -878,9 +945,28 @@ function missingSourceLink(
 type MissingGroup = { source: MissingFieldSource; labels: string[]; keys: string[] };
 
 /**
- * Khung ô còn thiếu + ô điền tay NGAY tại chỗ (anh Dũng 21/10/2026: «còn 6 ô, muốn điền luôn thì
- * sao?»). Nhóm điều khoản chỉ dẫn sang cột trái — dữ liệu của hợp đồng; nhóm khác điền tay cho
- * RIÊNG văn bản này, không ghi ngược vào hồ sơ pháp nhân / khách hàng.
+ * Mức cần thiết của từng nhóm ô còn thiếu (anh Dũng 25/10/2026: «Còn 119 chỗ» gộp chỗ bắt buộc với hàng trăm dải
+ * chấm tùy chọn của mẫu — người soạn không biết bao giờ là đủ). Cần điền = thứ văn bản không thể thiếu (điều khoản
+ * bắt buộc, thông tin hợp đồng, bên NVG); Nên điền = thông tin bên khách và điều khoản không bắt buộc; Tùy chọn =
+ * dải chấm riêng của mẫu, để trống thì in dải chấm như bản giấy; Lúc ký = số / ngày / nơi ký.
+ */
+// Điều khoản bắt buộc đếm thẳng từ các dòng điều khoản đã ghi (`missingTerms`), không từ chỗ trống của mẫu: mẫu
+// không có bảng lặp cho mọi nhóm, nên «Phạm vi công việc — chưa có dòng nào» từng không được đếm (25/10/2026).
+const REQUIRED_SOURCES: readonly MissingFieldSource[] = ['thong_tin', 'phap_nhan'];
+const SHOULD_SOURCES: readonly MissingFieldSource[] = [
+  // Ô còn trống TRONG các dòng điều khoản đã ghi (vd hạn của một đợt thanh toán) — nhóm đã có dòng, nên «nên điền».
+  'dieu_khoan',
+  'khach_hang',
+  'dieu_khoan_tuy_chon',
+  'dien_tay',
+];
+
+const isAppendix = (article: string) => /^(PHỤ LỤC|PHU LUC)/i.test(article.trim());
+
+/**
+ * Khung ô còn thiếu, chia theo mức cần thiết; ô điền tay NGAY tại chỗ (anh Dũng 21/10/2026: «còn 6 ô, muốn điền
+ * luôn thì sao?»). Nhóm điều khoản chỉ dẫn sang cột trái — dữ liệu của hợp đồng; nhóm khác điền tay cho RIÊNG văn
+ * bản này, không ghi ngược vào hồ sơ pháp nhân / khách hàng.
  */
 function MissingBox({
   filled,
@@ -891,6 +977,7 @@ function MissingBox({
   updating,
   free,
   freeArticles,
+  missingTerms,
 }: {
   filled: Filled;
   contract: ContractDetailRecord;
@@ -901,163 +988,219 @@ function MissingBox({
   /** Chỗ trống tự do của mẫu (cột trái «Nội dung riêng của văn bản»). */
   free: { missing: number; unchosen: number };
   freeArticles: { article: string; missing: number; firstKey: string }[];
+  /** Nhóm điều khoản bắt buộc chưa ghi dòng nào (nhãn), theo `CONTRACT_REQUIRED_TERM_TYPES`. */
+  missingTerms: string[];
 }) {
-  const count =
-    filled.missing.reduce((n, g) => n + g.labels.length, 0) + free.missing + free.unchosen;
-  const manualCount = Object.values(manual).filter((v) => v.trim()).length;
-  // Còn thiếu thì mở sẵn — để đóng thì chỉ thấy «82 ô chưa có dữ liệu» mà không thấy là ô nào
-  // (anh Dũng 21/10/2026). Danh sách Điều còn thiếu đứng đầu, gọn một dòng.
-  const [open, setOpen] = useState(count > 0);
   const stillMissing = new Set(filled.missing.flatMap((g) => g.labels));
   // Nhóm điền tay lấy từ ô thiếu CỦA HỒ SƠ, để ô đã gõ vẫn còn đó mà sửa.
   const groups: MissingGroup[] = [
     ...filled.missingFromRecord.filter((g) => !g.source.startsWith('dieu_khoan')),
     ...filled.missing.filter((g) => g.source.startsWith('dieu_khoan')),
   ];
-  const freeLeft = free.missing + free.unchosen;
-  if (groups.length === 0 && freeLeft === 0) {
-    return <p className="mt-3 text-status-completed">Mọi chỗ trống của mẫu đã có dữ liệu.</p>;
-  }
-  const done = count === 0;
+  const countOf = (sources: readonly MissingFieldSource[]) =>
+    filled.missing
+      .filter((g) => sources.includes(g.source))
+      .reduce((n, g) => n + g.labels.length, 0);
+  const required = countOf(REQUIRED_SOURCES) + missingTerms.length;
+  const should = countOf(SHOULD_SOURCES);
+  const optional = free.missing + free.unchosen;
+  const atSigning = filled.missing.find((g) => g.source === 'ky')?.labels ?? [];
+  const mainArticles = freeArticles.filter((a) => !isAppendix(a.article));
+  const appendixArticles = freeArticles.filter((a) => isAppendix(a.article));
 
-  return (
-    <details
-      open={open}
-      onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
-      className={cn(
-        'mt-3 rounded-md border px-3 py-2',
-        done
-          ? 'border-status-completed bg-status-completed-bg'
-          : 'border-status-pending bg-status-pending-bg',
-      )}
-    >
-      <summary
-        className={cn(
-          'flex cursor-pointer items-center gap-2 font-medium',
-          done ? 'text-status-completed' : 'text-status-pending',
-        )}
-      >
-        {done ? (
-          <CheckCircle2 className="size-4" aria-hidden />
-        ) : (
-          <AlertTriangle className="size-4" aria-hidden />
-        )}
-        {done
-          ? `Đã đủ dữ liệu${manualCount ? ` — ${manualCount} ô điền tay` : ''}`
-          : `Còn ${count} chỗ chưa có dữ liệu`}
-      </summary>
-      {freeLeft > 0 && (
-        <div className="mt-3">
-          <p className="text-sm font-medium">
-            Nội dung riêng của văn bản (cột bên trái) —{' '}
-            {[
-              free.missing > 0 && `${free.missing} chỗ trống`,
-              free.unchosen > 0 && `${free.unchosen} nhóm phương án chưa chọn`,
-            ]
-              .filter(Boolean)
-              .join(', ')}
-          </p>
-          <p className="text-xs text-fg-subtle">
-            Bấm một mục để tới đúng ô; hoặc bấm chỗ vàng trong văn bản.
-          </p>
-          <ul className="mt-1 flex flex-wrap gap-1.5 text-sm">
-            {freeArticles.map((a) => (
-              <li key={a.article}>
+  function renderGroup(g: MissingGroup) {
+    const link = missingSourceLink(g.source, contract);
+    const manualGroup = editable && !g.source.startsWith('dieu_khoan');
+    return (
+      <div key={g.source} className="mt-3">
+        <p className="text-sm font-medium">
+          {MISSING_FIELD_SOURCE_LABELS[g.source]}
+          {link && editable && (
+            <>
+              {' · '}
+              {link.scrollTo ? (
                 <button
                   type="button"
-                  className="rounded-sm bg-surface px-2 py-0.5 text-left hover:bg-surface-hover"
-                  title={`${a.article} — còn ${a.missing} chỗ`}
-                  onClick={() => focusTemplateField(a.firstKey)}
-                >
-                  {shortArticle(a.article)}{' '}
-                  <span className="text-status-pending">· {a.missing}</span>
-                </button>
-              </li>
-            ))}
-            {free.unchosen > 0 && (
-              <li>
-                <button
-                  type="button"
-                  className="rounded-sm bg-surface px-2 py-0.5 hover:bg-surface-hover"
+                  className="text-brand underline-offset-2 hover:underline"
                   onClick={() =>
-                    document
-                      .getElementById('noi-dung-van-ban')
-                      ?.scrollIntoView({ behavior: 'smooth' })
+                    document.getElementById(link.scrollTo!)?.scrollIntoView({ behavior: 'smooth' })
                   }
                 >
-                  Chọn phương án <span className="text-status-pending">· {free.unchosen}</span>
+                  {link.label}
                 </button>
-              </li>
+              ) : (
+                <Link to={link.to!} className="text-brand underline-offset-2 hover:underline">
+                  {link.label}
+                </Link>
+              )}
+            </>
+          )}
+        </p>
+        {manualGroup ? (
+          <div className="mt-1 grid gap-2 sm:grid-cols-2">
+            {g.keys.map((key, i) => (
+              <Field key={key} label={g.labels[i]!}>
+                <Input
+                  id={`manual-${key}`}
+                  value={manual[key] ?? ''}
+                  onChange={(e) => onManualChange(key, e.target.value)}
+                  placeholder="Để trống thì in dải chấm"
+                  className={cn(manual[key]?.trim() && 'border-status-progress')}
+                />
+              </Field>
+            ))}
+          </div>
+        ) : (
+          <ul className="mt-1 flex flex-wrap gap-1.5 text-sm">
+            {g.labels
+              .filter((m) => stillMissing.has(m))
+              .map((m) => (
+                <li key={m} className="rounded-sm bg-surface px-2 py-0.5">
+                  {m}
+                </li>
+              ))}
+          </ul>
+        )}
+      </div>
+    );
+  }
+
+  const articleChips = (list: typeof freeArticles) => (
+    <ul className="mt-1 flex flex-wrap gap-1.5 text-sm">
+      {list.map((a) => (
+        <li key={a.article}>
+          <button
+            type="button"
+            className="rounded-sm bg-surface px-2 py-0.5 text-left hover:bg-surface-hover"
+            title={`${a.article} — còn ${a.missing} chỗ`}
+            onClick={() => focusTemplateField(a.firstKey)}
+          >
+            {shortArticle(a.article)} <span className="text-ink-subtle">· {a.missing}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+
+  const requiredGroups = groups.filter((g) => REQUIRED_SOURCES.includes(g.source));
+  const shouldGroups = groups.filter((g) => SHOULD_SOURCES.includes(g.source));
+
+  return (
+    <section
+      aria-label="Chỗ trống của văn bản"
+      className={cn(
+        'mt-3 rounded-md border px-3 py-2',
+        required > 0
+          ? 'border-status-pending bg-status-pending-bg'
+          : 'border-status-completed bg-status-completed-bg',
+      )}
+    >
+      <p
+        className={cn(
+          'flex items-center gap-2 font-semibold',
+          required > 0 ? 'text-status-pending' : 'text-status-completed',
+        )}
+      >
+        {required > 0 ? (
+          <AlertTriangle className="size-4" aria-hidden />
+        ) : (
+          <CheckCircle2 className="size-4" aria-hidden />
+        )}
+        {required > 0 ? `Cần điền: còn ${required} mục` : 'Đã đủ các mục cần điền'}
+      </p>
+      <p className="mt-0.5 text-xs text-ink-subtle">
+        {[
+          should > 0 && `Nên điền: ${should}`,
+          optional > 0 && `Tùy chọn của mẫu: ${optional}`,
+          atSigning.length > 0 && `Điền lúc ký: ${atSigning.length}`,
+        ]
+          .filter(Boolean)
+          .join(' · ') || 'Mọi chỗ trống của mẫu đã có dữ liệu.'}
+        {updating ? ' · Đang cập nhật bản xem trước…' : ''}
+      </p>
+
+      {missingTerms.length > 0 && (
+        <div className="mt-3">
+          <p className="text-sm font-medium">
+            Điều khoản bắt buộc chưa ghi
+            {editable && (
+              <>
+                {' · '}
+                <button
+                  type="button"
+                  className="text-brand underline-offset-2 hover:underline"
+                  onClick={() =>
+                    document.getElementById('dieu-khoan')?.scrollIntoView({ behavior: 'smooth' })
+                  }
+                >
+                  Tới phần Điều khoản
+                </button>
+              </>
             )}
+          </p>
+          <ul className="mt-1 flex flex-wrap gap-1.5 text-sm">
+            {missingTerms.map((m) => (
+              <li key={m} className="rounded-sm bg-surface px-2 py-0.5">
+                {m}
+              </li>
+            ))}
           </ul>
         </div>
       )}
-      {groups.map((g) => {
-        const link = missingSourceLink(g.source, contract);
-        const manualGroup = editable && !g.source.startsWith('dieu_khoan');
-        return (
-          <div key={g.source} className="mt-3">
-            <p className="text-sm font-medium">
-              {MISSING_FIELD_SOURCE_LABELS[g.source]}
-              {link && (
-                <>
-                  {' · '}
-                  {link.scrollTo ? (
-                    <button
-                      type="button"
-                      className="text-brand underline-offset-2 hover:underline"
-                      onClick={() =>
-                        document
-                          .getElementById(link.scrollTo!)
-                          ?.scrollIntoView({ behavior: 'smooth' })
-                      }
-                    >
-                      {link.label}
-                    </button>
-                  ) : (
-                    <Link to={link.to!} className="text-brand underline-offset-2 hover:underline">
-                      {link.label}
-                    </Link>
-                  )}
-                </>
-              )}
-            </p>
-            {manualGroup ? (
-              <div className="mt-1 grid gap-2 sm:grid-cols-2">
-                {g.keys.map((key, i) => (
-                  <Field key={key} label={g.labels[i]!}>
-                    <Input
-                      id={`manual-${key}`}
-                      value={manual[key] ?? ''}
-                      onChange={(e) => onManualChange(key, e.target.value)}
-                      placeholder="Để trống thì in dải chấm"
-                      className={cn(manual[key]?.trim() && 'border-status-progress')}
-                    />
-                  </Field>
-                ))}
-              </div>
-            ) : (
-              <ul className="mt-1 flex flex-wrap gap-1.5 text-sm">
-                {g.labels
-                  .filter((m) => stillMissing.has(m))
-                  .map((m) => (
-                    <li key={m} className="rounded-sm bg-surface px-2 py-0.5">
-                      {m}
-                    </li>
-                  ))}
-              </ul>
-            )}
-          </div>
-        );
-      })}
-      {editable && (
-        <p className="mt-2 text-xs text-fg-subtle">
-          Ô điền tay chỉ áp cho văn bản này. Thông tin dùng lâu dài (pháp nhân, khách hàng) nên sửa
-          ở hồ sơ để lần sau máy tự điền.
-          {updating ? ' Đang cập nhật bản xem trước…' : ''}
+      {requiredGroups.map(renderGroup)}
+
+      {shouldGroups.length > 0 && (
+        <details className="mt-3" open={required === 0}>
+          <summary className="cursor-pointer text-sm font-semibold">
+            Nên điền{should > 0 ? ` — còn ${should}` : ''}
+          </summary>
+          {shouldGroups.map(renderGroup)}
+        </details>
+      )}
+
+      {optional > 0 && editable && (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-sm font-semibold">
+            Tùy chọn của mẫu — {optional} chỗ
+          </summary>
+          <p className="mt-1 text-xs text-ink-subtle">
+            Dải chấm riêng của mẫu (cột bên trái «Nội dung riêng của văn bản»). Để trống thì văn bản
+            in dải chấm như bản giấy — điền tay trên bản in được. Bấm một mục để tới ô, hoặc bấm chỗ
+            vàng trên văn bản.
+          </p>
+          {mainArticles.length > 0 && articleChips(mainArticles)}
+          {free.unchosen > 0 && (
+            <button
+              type="button"
+              className="mt-1.5 rounded-sm bg-surface px-2 py-0.5 text-sm hover:bg-surface-hover"
+              onClick={() =>
+                document.getElementById('noi-dung-van-ban')?.scrollIntoView({ behavior: 'smooth' })
+              }
+            >
+              Chọn phương án <span className="text-ink-subtle">· {free.unchosen}</span>
+            </button>
+          )}
+          {appendixArticles.length > 0 && (
+            <>
+              <p className="mt-2 text-xs font-medium">Phụ lục</p>
+              {articleChips(appendixArticles)}
+            </>
+          )}
+        </details>
+      )}
+
+      {atSigning.length > 0 && (
+        <p className="mt-3 text-xs text-ink-subtle">
+          Điền lúc ký: {atSigning.join(', ')} — để dải chấm là bình thường.
         </p>
       )}
-    </details>
+      {editable && (
+        <p className="mt-2 text-xs text-ink-subtle">
+          Ô điền tay chỉ áp cho văn bản này. Thông tin dùng lâu dài (pháp nhân, khách hàng) nên sửa
+          ở hồ sơ để lần sau máy tự điền.
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -1238,5 +1381,58 @@ function InlineBlankEditor({
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * Văn bản của một phiên bản ĐÃ LƯU (bản đã duyệt / đang gửi / mới nhất) — cho người chỉ xem và hợp đồng đã
+ * khoá. Bản sửa trong Word cũng hiện đúng như tệp đã tải lên, vì đây là tệp thật trong kho, không dựng lại từ mẫu.
+ */
+function SavedDocumentPreview({ path, title }: { path: string; title: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let cancelled = false;
+    setError(null);
+    el.replaceChildren();
+    void (async () => {
+      try {
+        const blob = await downloadFile(DOCUMENT_BUCKET, path);
+        const { renderAsync } = await import('docx-preview');
+        if (cancelled) return;
+        await renderAsync(blob, el, undefined, {
+          inWrapper: true,
+          ignoreLastRenderedPageBreak: true,
+          breakPages: true,
+        });
+        if (!cancelled) fitPreview(el);
+      } catch (e) {
+        if (!cancelled) setError(toUserMessage(e));
+      }
+    })();
+    const observer =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => fitPreview(el));
+    observer?.observe(el);
+    return () => {
+      cancelled = true;
+      observer?.disconnect();
+    };
+  }, [path]);
+  return (
+    <section className="rounded-card bg-surface p-4">
+      <h3 className="font-medium">Văn bản — {title}</h3>
+      {error && (
+        <p role="alert" className="mt-2 text-status-overdue">
+          Không mở được văn bản: {error}
+        </p>
+      )}
+      <div
+        ref={ref}
+        aria-label="Văn bản hợp đồng đã lưu"
+        className="mt-2 overflow-x-hidden rounded-md border border-border"
+      />
+    </section>
   );
 }
