@@ -4411,3 +4411,45 @@ hiện tại làm gì với câu trả lời đã có, không chứng minh mô h
 - Màn hình từng ghi «Đạt ngưỡng 60» cho bản bộ xếp đã đánh dấu dưới ngưỡng: chip điểm chỉ so tổng, bỏ qua sàn nhóm. Tuyến
   đọc phương án nay trả `belowGroups`; chip ghi «Dưới sàn nhóm …». Dòng chi phí của lượt phát lại nói «không gọi mô hình,
   không tốn tiền» thay vì «có lượt chưa có giá».
+
+### T171 — Khung nhà ống cho lô hẹp: đã dựng, đo, GỠ — không có lợi đo được (25/10/2026, mạch B, việc 2 của mục 2b)
+
+**Vì sao thử.** Sáu lượt thật THU5 (nhà phố 5 × 18 m, 4 tầng) không ra phương án. T165–T169: thang chữ U ~2,4–2,5 m chiếm
+nửa bề ngang, phòng ngủ cần ≥ 2,6 m theo tim (`by_house_profile.ong`), mô hình cứ vẽ phòng CẠNH ô thang. Ý: khi lô hẹp thì
+chương trình dựng lại tầng như kiến trúc sư nhà ống — ô thang áp tường bên giữa nhà, phòng xếp chồng trước / sau lõi.
+
+**Đã dựng (mở rộng T102 `arrange/skeleton.ts`, bản cuối giữ ở scratchpad phiên 25/10, không vào mã).**
+- Điều kiện «lô hẹp» lấy từ dữ liệu, không số nào trong mã: bề ngang còn lại cạnh ô thang < `techMin` lớn nhất của phòng không
+  phụ trợ trên tầng (cạnh kỹ thuật từ `kb/construction_norms.yaml`). Biệt thự 15 m không bao giờ vào nhánh này.
+- Biến thể `skeleton|row|…`: dải trước / sau XẾP CHỒNG theo chiều sâu (mỗi hàng trọn bề ngang; hành lang dọc áp tường x0 / x1
+  nối các hàng trong với hàng ngoài cùng, hoặc không có); phòng bản phác vẽ cùng dải chiều sâu được gộp một hàng; WC khép kín
+  không đặt cạnh phòng mẹ được thì thành hàng riêng phía trong; ban công chỉ ở hàng ngoài cùng. Chiều sâu tối thiểu mỗi hàng dò
+  theo mô-đun bằng đúng phép đo `bandPlaced` + tỉ lệ dùng được (WC trọn 5 m phải sâu 1,7 m).
+- Tầng 1 (chưa mốc): ô thang dựng đúng cỡ tối thiểu (`sketchMinExtent` + 2 mô-đun như T169), áp tường bên bản phác vẽ, giữ
+  tâm chiều sâu; giếng trời ngay sau ô thang cùng bề ngang, hoặc cạnh thang khi bản phác vẽ nó ngoài cột thang.
+- Chỉ lên cổng khi không khung thường nào qua; lỗi của khung nhà ống không vào câu nhắc; ghi chú `row_house_arranged`.
+
+**Đo** (phát lại 243 vòng của 59 lượt ghi, một tiến trình, đối chứng = cùng mã với nhánh tắt bằng cờ tạm; hai đối chứng
+mặc định chạy độc lập trùng nhau từng vòng):
+
+| Ngữ cảnh | Nhóm | Vòng qua cổng (đối chứng → mới) | Tầng hỏng | Mã lỗi |
+| --- | --- | --- | --- | --- |
+| Workflow (loại thang, số đo nhà ống, mặt thoáng) | THU5 (23 vòng) | 0 → 0 | 31 → 31 | 51 → 55 |
+| Workflow | còn lại (220 vòng) | 11 → 11 | 299 → 299 | 358 → 358 |
+| Mặc định của phép thử | THU5 | **6 → 4** | 29 → 23 | 55 → 39 |
+| Mặc định | còn lại | 21 → 21 | 262 → 262 | 383 → 383 |
+
+`46d6eff3` vòng 1 vẫn qua ở cả hai. Mặc định: thêm `4eade9b1` vòng 3, MẤT `4eade9b1` vòng 1 và `b1859741` vòng 1–2 — lùi, nên gỡ
+theo luật đo (CLAUDE.md 8.3). Bản trước (giếng trời luôn sau thang) Workflow cũng 0 → 0, 5 vòng `4eade9b1` đổi lỗi, không vòng
+nào qua.
+
+**Học được — cái chặn nhà ống tiếp theo.**
+1. Tầng 1 dựng được kiểu nhà ống (gara → khách → hành lang → [thang | ăn] → WC; điểm tầng 79–93) nhưng bộ xếp chọn tầng 1 theo
+   điểm RIÊNG tầng 1, nên chỗ ô thang + giếng trời quyết chiều sâu dải sau của MỌI tầng: `4eade9b1` vòng 1 thang 870–1265 cm +
+   giếng 1265–1415 → dải sau tầng 2 còn 235 cm (130 sau hành lang ngang), phòng làm việc 10 m² trọn 5 m cần 240. Đặt giếng
+   cạnh thang thì khe còn lại 100 cm < hành lang 105 cm — mất dải dọc.
+2. Tầng trên đổi mốc theo tầng 1 dựng lại thì bản phác cũ của mô hình (vẽ cho ô thang ở chỗ cũ) hỏng thêm chỗ khác — lượt ghi
+   không phát lại được «nếu mô hình thấy tầng 1 mới thì vẽ gì».
+3. Muốn có lợi phải chọn tầng 1 BIẾT tầng trên (như T169 quay lui, nhưng thử nhiều chỗ ô thang / giếng trời theo chiều sâu và
+   giữ chỗ nào cho mọi tầng trên xếp được), hoặc cho lời dẫn nói mô hình vẽ trọn bề ngang từng dải (cần lượt thật, xin phép).
+   Lỗi bản phác thật của THU5 tầng 2–4 (hành lang không chữ nhật, thiếu WC tầng 4, đầu bước ra thang) vẫn phải qua câu nhắc.

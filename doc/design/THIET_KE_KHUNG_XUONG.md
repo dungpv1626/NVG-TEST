@@ -128,3 +128,12 @@ theo mặt đầu bài bắt buộc, dời phòng nhỏ nhất vào túi giữa 
 Hàng giữa cạnh lõi, hai hàng tự cân (chia hàng + dò chiều sâu), lật gương cả nhà: mỗi cái 0 / 126 vòng thêm, đã gỡ. Ban
 công đua 1 m (Q-55) mô phỏng trên ba lượt: 0 vòng thêm, không đổi mã. Lời dẫn 9.0.0 dạy mô hình vẽ hành lang ngay sau ô
 thang, trước các phòng — chờ một lượt thật. Chi tiết và số đo: `QUYET_DINH_AI.md` T103.
+
+## 7. Nhánh nhà ống cho lô hẹp — đã thử, đã gỡ (T171, 25/10/2026)
+
+Lô hẹp (bề ngang cạnh ô thang nhỏ hơn cạnh kỹ thuật của một phòng ở — suy từ `kb/`, không ngưỡng trong mã): dải trước / sau
+xếp CHỒNG theo chiều sâu, hành lang dọc áp tường nối các hàng, WC khép kín thành hàng riêng phía trong phòng mẹ, tầng 1 dựng ô
+thang đúng cỡ tối thiểu và giếng trời kề thang. Đi sau các khung thường, chỉ lên cổng khi chúng hỏng. Phát lại 243 vòng: ngữ
+cảnh Workflow THU5 0 → 0; ngữ cảnh mặc định THU5 6 → 4 (lùi), lượt khác không đổi — gỡ khỏi mã. Chặn thật: chỗ ô thang + giếng
+trời tầng 1 quyết chiều sâu dải sau của mọi tầng, mà tầng 1 được chọn theo điểm riêng của nó. Bước sau (nếu làm): chọn tầng 1
+có biết tầng trên (họ T169), thử vài chỗ lõi theo chiều sâu. Chi tiết và bảng số: `QUYET_DINH_AI.md` T171.
