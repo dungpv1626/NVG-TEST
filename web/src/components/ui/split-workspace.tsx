@@ -76,6 +76,11 @@ export function revealElement(el: HTMLElement, focus = false): void {
   );
 }
 
+/** Mở một tab theo id (nút «Bước tiếp» của các bước soạn). */
+export function openWorkspaceTab(id: string): void {
+  window.dispatchEvent(new CustomEvent(REVEAL_EVENT, { detail: id }));
+}
+
 export function revealById(id: string): boolean {
   const el = document.getElementById(id);
   if (!el) return false;

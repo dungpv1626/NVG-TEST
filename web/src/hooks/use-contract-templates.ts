@@ -272,6 +272,47 @@ export interface PartnerContractInfo {
   representative_title: string | null;
 }
 
+/**
+ * Ô bên khách của mẫu (`doi_tac_*`, hoặc `ben_a_*` / `ben_b_*` khi khách đứng bên ấy) → cột hồ sơ khách hàng. Dùng để
+ * điền thẳng vào hồ sơ khách ngay trong tab Soạn hợp đồng (anh Dũng 25/10/2026) — lần sau máy tự điền.
+ */
+export const CUSTOMER_COLUMN_BY_FIELD: Readonly<Record<string, string>> = {
+  ma_so_thue: 'tax_code',
+  dia_chi: 'address',
+  dien_thoai: 'phone',
+  email: 'email',
+  dai_dien: 'representative_name',
+  chuc_vu: 'representative_title',
+};
+
+export function customerColumnOf(templateKey: string): string | null {
+  const suffix = templateKey.replace(/^(doi_tac|ben_a|ben_b)_/, '');
+  return CUSTOMER_COLUMN_BY_FIELD[suffix] ?? null;
+}
+
+/** Ghi thông tin vào hồ sơ khách hàng — RLS `customers_update` quyết ai sửa được. */
+export function useSaveCustomerInfo() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, { customerId: string; changes: Record<string, string> }>({
+    mutationFn: async ({ customerId, changes }) => {
+      const { data, error } = await supabase
+        .from('customers')
+        .update(changes)
+        .eq('id', customerId)
+        .select('id');
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error(
+          'Không sửa được hồ sơ khách hàng — người chịu trách nhiệm khách hàng hoặc Ban Giám đốc sửa được. Có thể điền riêng cho văn bản này ở dưới.',
+        );
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['customers'] });
+    },
+  });
+}
+
 export function usePartnerContractInfo(customerId: string | undefined) {
   return useQuery<PartnerContractInfo | null, Error>({
     queryKey: ['customers', 'contract-info', customerId],

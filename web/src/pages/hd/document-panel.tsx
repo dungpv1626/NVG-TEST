@@ -55,6 +55,8 @@ import {
   useContractDocuments,
   usePartnerContractInfo,
   useSaveContractDocument,
+  useSaveCustomerInfo,
+  customerColumnOf,
   useTemplatesForContract,
 } from '@/hooks/use-contract-templates';
 import {
@@ -76,7 +78,12 @@ import {
   useDocumentInputsState,
   type DocumentInputs,
 } from './document-inputs';
-import { revealById, SplitWorkspace, type WorkspaceTab } from '@/components/ui/split-workspace';
+import {
+  openWorkspaceTab,
+  revealById,
+  SplitWorkspace,
+  type WorkspaceTab,
+} from '@/components/ui/split-workspace';
 import { cn } from '@/lib/utils';
 
 /**
@@ -233,52 +240,96 @@ export function DocumentPanel({
       layout={(parts) => (
         <Workspace
           top={parts.toolbar}
-          storageKey="hd-van-ban-soan"
+          storageKey="hd-van-ban-soan-buoc"
           tabs={[
-            {
-              id: 'cho-trong',
-              label: 'Chỗ trống',
-              side: 'left',
-              badge: parts.requiredLeft || undefined,
-              content: parts.missing,
-            },
+            // Bốn BƯỚC soạn (anh Dũng 25/10/2026): mỗi bước một tab bên trái, ✓ khi xong / số còn thiếu, nút «Bước
+            // tiếp» ở cuối; văn bản luôn bên phải.
             {
               id: 'thong-tin',
-              label: 'Thông tin',
+              label: '1. Thông tin',
               side: 'left',
-              content: <InfoSection contract={contract} editable />,
+              badge: stepBadge(parts.steps?.info),
+              content: (
+                <>
+                  <InfoSection contract={contract} editable />
+                  <NextStep to="dieu-khoan-tab" label="2. Điều khoản" />
+                </>
+              ),
             },
             {
               id: 'dieu-khoan-tab',
-              label: 'Điều khoản',
+              label: '2. Điều khoản',
               side: 'left',
-              content: <div id="dieu-khoan">{termsPanel}</div>,
+              badge: stepBadge(parts.steps?.terms),
+              content: (
+                <>
+                  <div id="dieu-khoan">{termsPanel}</div>
+                  <NextStep
+                    to={chosen ? 'noi-dung' : 'kiem-tra'}
+                    label={chosen ? '3. Nội dung riêng' : '4. Kiểm tra và gửi'}
+                  />
+                </>
+              ),
             },
             ...(chosen
               ? [
                   {
                     id: 'noi-dung',
-                    label: 'Nội dung riêng',
+                    label: '3. Nội dung riêng',
                     side: 'left' as const,
                     content: (
-                      <DocInputsSection
-                        template={chosen}
-                        values={inputs.values}
-                        setValue={inputs.setValue}
-                        setMany={inputs.setMany}
-                        status={inputs.status}
-                        editable
-                      />
+                      <>
+                        <p className="mb-3 text-sm text-ink-subtle">
+                          Bước tùy chọn — dải chấm riêng của mẫu
+                          {parts.steps && parts.steps.free > 0
+                            ? ` (còn ${parts.steps.free} chỗ)`
+                            : ''}
+                          . Để trống thì văn bản in dải chấm như bản giấy.
+                        </p>
+                        <DocInputsSection
+                          template={chosen}
+                          values={inputs.values}
+                          setValue={inputs.setValue}
+                          setMany={inputs.setMany}
+                          status={inputs.status}
+                          editable
+                        />
+                        <NextStep to="kiem-tra" label="4. Kiểm tra và gửi" />
+                      </>
                     ),
                   },
                 ]
               : []),
+            {
+              id: 'kiem-tra',
+              label: '4. Kiểm tra và gửi',
+              side: 'left',
+              badge: stepBadge(parts.requiredLeft),
+              content: parts.missing,
+            },
             { id: 'van-ban', label: 'Văn bản', side: 'right', content: parts.preview },
             { id: 'phien-ban', label: 'Phiên bản', side: 'right', content: versionsSection },
           ]}
         />
       )}
     />
+  );
+}
+
+/** Huy hiệu bước: ✓ khi đủ, số còn thiếu khi chưa, không gì khi chưa dựng xong. */
+function stepBadge(left: number | null | undefined): ReactNode {
+  if (left === null || left === undefined) return undefined;
+  return left === 0 ? '✓' : left;
+}
+
+/** Nút sang bước kế ở cuối mỗi bước soạn. */
+function NextStep({ to, label }: { to: string; label: string }) {
+  return (
+    <div className="mt-4 flex justify-end">
+      <Button variant="secondary" onClick={() => openWorkspaceTab(to)}>
+        Bước tiếp: {label}
+      </Button>
+    </div>
   );
 }
 
@@ -945,6 +996,18 @@ function FillSection({
         missing,
         preview,
         requiredLeft: filled ? requiredCount(filled, missingTerms) : null,
+        steps: filled
+          ? {
+              info: filled.missing
+                .filter((g) => g.source === 'thong_tin')
+                .reduce((n, g) => n + g.labels.length, 0),
+              terms: missingTerms.length,
+              free: (() => {
+                const f = freeFieldStatus(chosen, values);
+                return f.missing + f.unchosen;
+              })(),
+            }
+          : null,
       })}
     </>
   );
@@ -1088,6 +1151,8 @@ export interface FillParts {
   preview: ReactNode;
   /** Số mục cần điền còn thiếu (null khi chưa dựng xong). */
   requiredLeft: number | null;
+  /** Còn thiếu theo bước soạn: thông tin hợp đồng / điều khoản bắt buộc / chỗ trống riêng của mẫu (tùy chọn). */
+  steps: { info: number; terms: number; free: number } | null;
 }
 
 const isAppendix = (article: string) => /^(PHỤ LỤC|PHU LUC)/i.test(article.trim());
@@ -1120,6 +1185,7 @@ function MissingBox({
   /** Nhóm điều khoản bắt buộc chưa ghi dòng nào (nhãn), theo `CONTRACT_REQUIRED_TERM_TYPES`. */
   missingTerms: string[];
 }) {
+  const customerId = contract.customer_id;
   const stillMissing = new Set(filled.missing.flatMap((g) => g.labels));
   // Nhóm điền tay lấy từ ô thiếu CỦA HỒ SƠ, để ô đã gõ vẫn còn đó mà sửa.
   const groups: MissingGroup[] = [
@@ -1163,7 +1229,15 @@ function MissingBox({
             </>
           )}
         </p>
-        {manualGroup ? (
+        {manualGroup && g.source === 'khach_hang' && customerId ? (
+          <CustomerInlineForm
+            customerId={customerId}
+            keys={g.keys}
+            labels={g.labels}
+            manual={manual}
+            onManualChange={onManualChange}
+          />
+        ) : manualGroup ? (
           <div className="mt-1 grid gap-2 sm:grid-cols-2">
             {g.keys.map((key, i) => (
               <Field key={key} label={g.labels[i]!}>
@@ -1566,5 +1640,113 @@ function SavedDocumentPreview({ path, title }: { path: string; title: string }) 
         className="mt-2 overflow-x-hidden rounded-md border border-border"
       />
     </section>
+  );
+}
+
+/**
+ * Thiếu thông tin bên khách (địa chỉ, điện thoại, mã số thuế…): điền và lưu THẲNG vào hồ sơ khách hàng ngay tại đây
+ * (anh Dũng 25/10/2026 — trước phải rời trang sang hồ sơ khách). Văn bản này và mọi văn bản sau tự điền. Không sửa
+ * được hồ sơ (không phải người chịu trách nhiệm khách) thì vẫn điền riêng cho văn bản này như trước.
+ */
+function CustomerInlineForm({
+  customerId,
+  keys,
+  labels,
+  manual,
+  onManualChange,
+}: {
+  customerId: string;
+  keys: string[];
+  labels: string[];
+  manual: Record<string, string>;
+  onManualChange: (key: string, value: string) => void;
+}) {
+  const save = useSaveCustomerInfo();
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const fields = keys
+    .map((key, i) => ({ key, label: labels[i]!, column: customerColumnOf(key) }))
+    .filter((f): f is { key: string; label: string; column: string } => f.column !== null);
+  const others = keys
+    .map((key, i) => ({ key, label: labels[i]! }))
+    .filter((f) => customerColumnOf(f.key) === null);
+
+  async function saveToCustomer() {
+    setError(null);
+    setMessage(null);
+    const changes = Object.fromEntries(
+      fields
+        .map((f) => [f.column, (draft[f.key] ?? '').trim()] as const)
+        .filter(([, v]) => v !== ''),
+    );
+    if (Object.keys(changes).length === 0) return;
+    try {
+      await save.mutateAsync({ customerId, changes });
+      setDraft({});
+      setMessage('Đã lưu vào hồ sơ khách hàng — văn bản tự cập nhật.');
+    } catch (e) {
+      setError(toUserMessage(e, 'edit'));
+    }
+  }
+
+  return (
+    <div className="mt-1 space-y-2">
+      {fields.length > 0 && (
+        <div className="rounded-field bg-surface p-3">
+          <p className="text-xs text-ink-subtle">
+            Lưu vào hồ sơ khách hàng — văn bản này và các văn bản sau tự điền.
+          </p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {fields.map((f) => (
+              <Field key={f.key} label={f.label}>
+                <Input
+                  id={`customer-${f.key}`}
+                  value={draft[f.key] ?? ''}
+                  onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
+                />
+              </Field>
+            ))}
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="mt-2"
+            disabled={save.isPending || fields.every((f) => !(draft[f.key] ?? '').trim())}
+            onClick={() => void saveToCustomer()}
+          >
+            Lưu vào hồ sơ khách hàng
+          </Button>
+          {message && (
+            <p role="status" className="mt-1 text-xs text-status-completed">
+              {message}
+            </p>
+          )}
+          {error && (
+            <p role="alert" className="mt-1 text-xs text-status-overdue">
+              {error}
+            </p>
+          )}
+        </div>
+      )}
+      <details open={fields.length === 0 || error !== null}>
+        <summary className="cursor-pointer text-xs text-ink-subtle">
+          Hoặc chỉ điền cho văn bản này (không lưu vào hồ sơ)
+        </summary>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          {[...fields, ...others].map((f) => (
+            <Field key={f.key} label={f.label}>
+              <Input
+                id={`manual-${f.key}`}
+                value={manual[f.key] ?? ''}
+                onChange={(e) => onManualChange(f.key, e.target.value)}
+                placeholder="Để trống thì in dải chấm"
+                className={cn(manual[f.key]?.trim() && 'border-status-progress')}
+              />
+            </Field>
+          ))}
+        </div>
+      </details>
+    </div>
   );
 }
