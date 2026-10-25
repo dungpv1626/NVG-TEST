@@ -1030,6 +1030,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Đợt 3 / 4 / 5 (0195–0209)             | Xong trên máy (mỗi phần có phép thử CSDL + đột biến đo đỏ, chạy thử bằng đúng vai); anh Dũng CHƯA chạy thử. Dữ liệu thử hậu tố THU3 / THU4 / THU5. Số chờ NVG đã có giá trị DEMO (kịch bản `mac-dinh`) |
 | AI Design 4 bước (5B)                 | Giao diện + sửa T163–T169 xong. 6 lượt thật trên nhà phố 5 × 18 m (≈ 2,15 USD) chưa ra mặt bằng: lượt 4 qua tầng 1–3; lượt 6 mô hình trả lại bản phác y nguyên nên máy dừng sau 2 lời gọi. Phát lại (T170): biệt thự 15 × 20 m `46d6eff3` vòng 1 đã LƯU trên hồ sơ thử `NVO-TK-2026-PL01` — 70,2 điểm, dưới ngưỡng vì 2 nhóm dưới sàn; Bộ kết quả tải được. Mặt ngoài chưa chạy (tốn tiền mô hình) |
 | Giao diện v2                          | Xong mọi phân hệ, đã gộp `cai-tien-ux`. Web 738/755 (17 đỏ sẵn của Node 24). Làm thêm 24/10: thanh trên điện thoại nền xanh rừng, thông báo «Hoàn tác» (`ui/toast.tsx`), `FormLayout` cho Khách hàng / Nhân sự / Mẫu công trình — ảnh `backup/v2-them/` |
+| Soạn hợp đồng trực tiếp (0222)        | Xong 25/10/2026: bấm chỗ vàng / xanh dương trên bản xem trước là điền tại chỗ (thấy nguyên câu); «Tải lên bản đã sửa trong Word» = phiên bản mới `contract_documents.source = 'sua_trong_word'`, bắt buộc ghi đã sửa gì, gửi phê duyệt gửi đúng bản ấy; tab Soạn hợp đồng bỏ cột phải. Hợp đồng thử `NVC-HD-2026-WORD1` |
 | Bộ mẫu hợp đồng                       | Bản DỰ THẢO (anh Dũng gửi, dùng như chính thức) — chờ pháp chế NVG rà; bảng hỏi mục 6 trong tệp «00_Huong_dan» từng bộ chờ NVG trả lời. Tài khoản ngân hàng ba công ty là số DEMO                                                                                                                                                                                               |
 | AI trên máy                           | **Chạy THẬT**: Whisper (Workers AI) + Gemini 2.5 Flash trả phí — `workers/.dev.vars` `AI_FAKE=` rỗng, công tắc `ai.transcribe_enabled` / `ai.survey_summary_enabled` = 1 ở CSDL máy. Muốn quay về giả lập: `AI_FAKE=1`                                                                                                                                                          |
 | Bản demo cũ `nvg.tests99.workers.dev` | Vẫn chạy bản trước GĐ1, CSDL `awaiwegmuykhctnysvou` — ở tài khoản khác, máy này KHÔNG vào được                                                                                                                                                                                                                                                                                  |
@@ -1121,7 +1122,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: lịch sử bước chung `stage_transitions`; dải tiến trình gói thầu; QĐ-6 giao dịch nội bộ; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0222.** (Đã dùng tới 0221; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0223.** (Đã dùng tới 0222; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -1233,6 +1234,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Trần chi phí AI Design CHẶN thật (không chỉ hỏi); khoá «Xác nhận đầu bài» dưới ngưỡng ở cả Worker; hiện lý do hỏng chính trên màn hình (T164) | Hai lượt đầu tốn 0,74 USD không ra gì; đầu bài thiếu làm hỏng bộ xếp mà lượt hỏng vẫn tốn tiền; người dùng cần biết sửa đầu bài hay chạy lại |
 | Giữ phòng khách 16 m² của đầu bài thử, không hạ 13 m² | Phát lại cho thấy 16 m² vừa — thiếu chỗ là do chương trình lấn ô thang (T166); hạ đầu bài sẽ che mất lỗi thật |
 | Đo mọi sửa bộ xếp bằng phát lại toàn bộ vòng đã ghi (đối chứng tắt thay đổi); không lợi thì gỡ; chỉ lưu phương án phát lại khi thật sự qua cổng | Không làm giả kết quả; một sửa giúp ca này có thể làm hỏng ca khác (T169 bỏ một điều kiện vì mất chính vòng 46d6eff3) |
+| Soạn hợp đồng: điền chỗ trống ngay trên bản xem trước + tải lên bản đã sửa trong Word; KHÔNG làm trình soạn thảo đầy đủ trên hệ thống | Anh Dũng chọn (25/10/2026): nhãn chỗ trống máy tự cắt từ câu văn nên khó hiểu; sửa câu chữ trong Word giữ đúng định dạng mẫu (bảng, đánh số). Hệ thống không đọc ngược Word nên bản ấy được đánh dấu riêng |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)

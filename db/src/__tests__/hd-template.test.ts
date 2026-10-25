@@ -242,6 +242,55 @@ describeDb('Mẫu hợp đồng và văn bản đã điền (0171)', () => {
       const ownDl = await ksnb.storage.from('contract-documents').download(own!.storage_path);
       expect(ownDl.error).toBeNull();
     });
+
+    it('bản sửa trong Word (0222): bắt buộc ghi đã sửa gì, tệp .docx có thật của chính hợp đồng; máy không giữ giá trị điền', async () => {
+      async function upload(path: string, reason: string | null, put = true) {
+        if (put) expect((await uploadTo(kd, 'contract-documents', path)).error).toBeNull();
+        return kd
+          .from('contract_documents')
+          .insert({
+            contract_id: fx.draftId,
+            company_id: fx.nvcId,
+            template_id: templateId,
+            storage_path: path,
+            file_name: 'sua-trong-word.docx',
+            filled_values: { ten_hop_dong: 'không được giữ' },
+            missing_fields: ['x'],
+            change_reason: reason,
+            source: 'sua_trong_word',
+          })
+          .select('version, source, filled_values, missing_fields')
+          .single();
+      }
+      const own = () => `${fx.draftId}/${crypto.randomUUID()}.docx`;
+
+      expect((await upload(own(), '  ')).error?.message).toMatch(/đã sửa gì/);
+      expect((await upload(own(), 'Sửa Điều 5', false)).error?.message).toMatch(/Chưa thấy tệp/);
+      const otherContract = `${fx.signedId}/${crypto.randomUUID()}.docx`;
+      expect((await upload(otherContract, 'Sửa Điều 5', false)).error?.message).toMatch(/\.docx/);
+
+      const ok = await upload(own(), 'Sửa Điều 5 — thời hạn bảo hành 24 tháng');
+      expect(ok.error).toBeNull();
+      expect(ok.data).toMatchObject({
+        source: 'sua_trong_word',
+        filled_values: {},
+        missing_fields: [],
+      });
+
+      const bad = await kd
+        .from('contract_documents')
+        .insert({
+          contract_id: fx.draftId,
+          company_id: fx.nvcId,
+          storage_path: own(),
+          file_name: 'x.docx',
+          change_reason: 'x',
+          source: 'tu_che',
+        })
+        .select('id')
+        .single();
+      expect(bad.error).not.toBeNull();
+    });
   });
 });
 

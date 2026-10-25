@@ -12,7 +12,17 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, CheckCircle2, Download, FileText, Lock, Send } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Download,
+  FilePen,
+  FileText,
+  Lock,
+  Send,
+  Upload,
+} from 'lucide-react';
+import PizZip from 'pizzip';
 import {
   CONTRACT_PRICE_FORMS,
   CONTRACT_PRICE_FORM_LABELS,
@@ -57,6 +67,7 @@ import {
   DocInputsSection,
   emptyFreeKeys,
   focusTemplateField,
+  freeKey,
   missingByArticle,
   freeFieldStatus,
   templateInputData,
@@ -333,6 +344,13 @@ function FillSection({
     Object.entries(values).filter(([k, v]) => !k.includes(':') && v.trim()),
   );
   const previewRef = useRef<HTMLDivElement>(null);
+  const previewBoxRef = useRef<HTMLDivElement>(null);
+  const uploadRef = useRef<HTMLInputElement>(null);
+  // Ô điền ngay trên văn bản (anh Dũng 25/10/2026): nhãn ở cột trái là câu văn máy tự cắt quanh chỗ trống,
+  // khó đoán ô nào là ô nào — bấm chỗ trống trên chính văn bản thì gõ luôn tại đó, thấy nguyên câu.
+  const [inline, setInline] = useState<InlineEdit | null>(null);
+  const latest = versions?.[0] ?? null;
+  const wordLatest = latest?.source === 'sua_trong_word' ? latest : null;
 
   const ready = Boolean(
     valuesReady && company.data && terms && (!contract.customer_id || partner.data),
@@ -474,7 +492,9 @@ function FillSection({
     if (next > 1) {
       reason = await promptDialog.ask({
         title: `Lưu bản ${next}`,
-        label: 'Nguyên nhân lập lại văn bản',
+        label: wordLatest
+          ? `Nguyên nhân lập lại văn bản — bản ${next} điền từ mẫu, KHÔNG giữ các sửa trong Word của bản ${wordLatest.version}`
+          : 'Nguyên nhân lập lại văn bản',
         confirmLabel: download ? 'Lưu và tải về' : 'Lưu',
       });
       if (reason === null) return null;
@@ -516,6 +536,88 @@ function FillSection({
     }
   }
 
+  /** Khoá lưu của một chỗ trống: chỗ trống tự do của mẫu mang tiền tố mẫu, ô chuẩn thì không (0186). */
+  function storeKey(key: string): string {
+    return chosen?.free_fields?.some((f) => f.key === key) ? freeKey(chosen.id, key) : key;
+  }
+
+  function openInline(mark: HTMLElement) {
+    const key = mark.dataset.key!;
+    const box = previewBoxRef.current;
+    if (!box) return;
+    const at = mark.getBoundingClientRect();
+    const origin = box.getBoundingClientRect();
+    const sentence = (mark.closest('p')?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    setInline({
+      key,
+      value: values[storeKey(key)] ?? '',
+      sentence: sentence.length > 240 ? `${sentence.slice(0, 240)}…` : sentence,
+      top: at.bottom - origin.top + box.scrollTop + 6,
+      left: Math.max(0, Math.min(at.left - origin.left, origin.width - 320)),
+    });
+  }
+
+  function saveInline() {
+    if (!inline) return;
+    setValue(storeKey(inline.key), inline.value);
+    setInline(null);
+  }
+
+  // Tải lên bản đã sửa trong Word (0222): một phiên bản mới, đánh dấu «sửa trong Word», bắt buộc ghi đã
+  // sửa gì. Máy không đọc ngược tệp — chỉ kiểm đúng là tệp Word đọc được.
+  async function uploadEdited(file: File) {
+    setError(null);
+    setSavedMessage(null);
+    if (!/\.docx$/i.test(file.name)) {
+      setError(
+        'Chỉ nhận tệp Word .docx — lưu lại trong Word bằng «Save As → Word Document (.docx)».',
+      );
+      return;
+    }
+    try {
+      const zip = new PizZip(await file.arrayBuffer());
+      if (!zip.file('word/document.xml')) throw new Error('not docx');
+    } catch {
+      setError('Tệp không mở được như văn bản Word — kiểm tra lại tệp rồi tải lên.');
+      return;
+    }
+    const next = (versions?.[0]?.version ?? 0) + 1;
+    const reason = await promptDialog.ask({
+      title: `Tải lên bản ${next} — sửa trong Word`,
+      label: 'Đã sửa gì trong Word (người duyệt đọc dòng này)',
+      confirmLabel: 'Tải lên',
+    });
+    if (reason === null) return;
+    try {
+      const version = await save.mutateAsync({
+        contractId: contract.id,
+        companyId: contract.company_id,
+        templateId: chosen?.id ?? null,
+        blob: file,
+        fileName: safeFileName(
+          `${contract.code} - ${contract.title} - bản ${next} (sửa trong Word).docx`,
+        ),
+        filledValues: {},
+        missingFields: [],
+        changeReason: reason,
+        source: 'sua_trong_word',
+      });
+      setSavedMessage(`Đã lưu bản ${version} — bản sửa trong Word.`);
+    } catch (e) {
+      setError(toUserMessage(e, 'create'));
+    }
+  }
+
+  async function submitLatest() {
+    setError(null);
+    try {
+      await submitApproval.mutateAsync({ contractId: contract.id });
+      setSavedMessage(`Đã gửi phê duyệt bản ${wordLatest?.version ?? ''}.`);
+    } catch (e) {
+      setError(`Chưa gửi phê duyệt được: ${toUserMessage(e, 'edit')}`);
+    }
+  }
+
   return (
     <section className="rounded-card bg-surface p-4">
       {promptDialog.dialog}
@@ -546,14 +648,64 @@ function FillSection({
         )}
         {filled && canSave && contract.stage === 'nhap' && (
           <Button
-            variant="primary"
+            variant={wordLatest ? 'secondary' : 'primary'}
             disabled={save.isPending || submitApproval.isPending || stale || busy}
             onClick={() => void saveAndSubmit()}
           >
             <Send className="size-4" aria-hidden /> Lưu và gửi phê duyệt
           </Button>
         )}
+        {canSave && contract.stage === 'nhap' && (
+          <>
+            <Button
+              variant="secondary"
+              disabled={save.isPending}
+              onClick={() => uploadRef.current?.click()}
+            >
+              <Upload className="size-4" aria-hidden /> Tải lên bản đã sửa trong Word
+            </Button>
+            <input
+              ref={uploadRef}
+              type="file"
+              accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = '';
+                if (f) void uploadEdited(f);
+              }}
+            />
+          </>
+        )}
       </div>
+      <p className="mt-2 text-xs text-fg-subtle">
+        Cần sửa câu chữ, thêm hoặc bớt điều khoản: «Lưu phiên bản và tải về», sửa trong Word, rồi
+        «Tải lên bản đã sửa trong Word». Bấm chỗ vàng hoặc xanh dương trên văn bản để điền ngay tại
+        chỗ.
+      </p>
+      {wordLatest && (
+        <div className="mt-3 rounded-field border border-status-pending bg-status-pending-bg p-3 text-sm">
+          <p className="flex items-start gap-2 font-semibold">
+            <FilePen className="mt-0.5 size-4 shrink-0" aria-hidden />
+            Bản {wordLatest.version} là bản sửa trong Word — gửi phê duyệt sẽ gửi đúng bản này.
+          </p>
+          <p className="mt-1">Đã sửa: {wordLatest.change_reason}</p>
+          <p className="mt-1 text-fg-subtle">
+            Bản xem trước dưới đây dựng lại từ mẫu và các ô đã điền — không có các sửa trong Word.
+            Lưu phiên bản từ mẫu sẽ tạo bản mới không giữ các sửa đó.
+          </p>
+          {canSave && contract.stage === 'nhap' && (
+            <Button
+              variant="primary"
+              className="mt-2"
+              disabled={submitApproval.isPending}
+              onClick={() => void submitLatest()}
+            >
+              <Send className="size-4" aria-hidden /> Gửi phê duyệt bản {wordLatest.version}
+            </Button>
+          )}
+        </div>
+      )}
 
       {error && (
         <p
@@ -592,16 +744,31 @@ function FillSection({
               Xem trước có thể lệch đôi chút so với Word; tệp tải về giữ đúng định dạng mẫu.
             </span>
           </p>
-          <div
-            ref={previewRef}
-            aria-label="Xem trước văn bản hợp đồng"
-            onClick={(e) => {
-              const key = (e.target as HTMLElement).closest<HTMLElement>('mark[data-key]')?.dataset
-                .key;
-              if (key) focusTemplateField(key);
-            }}
-            className="mt-2 overflow-x-hidden rounded-md border border-border"
-          />
+          <div ref={previewBoxRef} className="relative mt-2">
+            <div
+              ref={previewRef}
+              aria-label="Xem trước văn bản hợp đồng"
+              onClick={(e) => {
+                const mark = (e.target as HTMLElement).closest<HTMLElement>('mark[data-key]');
+                if (!mark) return;
+                if (canSave) openInline(mark);
+                else focusTemplateField(mark.dataset.key!);
+              }}
+              className="overflow-x-hidden rounded-md border border-border"
+            />
+            {inline && (
+              <InlineBlankEditor
+                edit={inline}
+                onChange={(value) => setInline({ ...inline, value })}
+                onSave={saveInline}
+                onCancel={() => setInline(null)}
+                onOpenField={() => {
+                  focusTemplateField(inline.key);
+                  setInline(null);
+                }}
+              />
+            )}
+          </div>
         </>
       )}
     </section>
@@ -664,6 +831,11 @@ function VersionsSection({
                 {formatDateTime(v.created_at)} · {v.creator?.full_name ?? 'Không rõ người lập'}
                 {v.template ? ` · mẫu «${v.template.title}»` : ''}
               </span>
+              {v.source === 'sua_trong_word' && (
+                <span className="rounded-full bg-status-pending-bg px-2 py-0.5 text-xs font-semibold text-status-pending">
+                  Sửa trong Word
+                </span>
+              )}
               {v.missing_fields.length > 0 && (
                 <span className="text-status-pending">{v.missing_fields.length} ô điền tay</span>
               )}
@@ -896,28 +1068,36 @@ const MAN_OPEN = '\uE002';
 const MAN_CLOSE = '\uE003';
 const BLANK_OPEN = '\uE004';
 const BLANK_CLOSE = '\uE005';
-const HIDDEN_MARKS = /[\uE000-\uE005]/g;
+/** Ngăn khoá với giá trị trong dấu «điền tay» — để bấm chỗ xanh dương trên văn bản là sửa đúng ô. */
+const KEY_SEP = '\uE006';
+const HIDDEN_MARKS = /[\uE000-\uE006]/g;
 
 /** Bọc từng giá trị bằng dấu ẩn — mỗi dòng một cặp, vì xuống dòng tách thành nhiều nút chữ. */
 function wrapForPreview(
   data: Record<string, TemplateValue>,
   manualKeys: ReadonlySet<string>,
 ): Record<string, TemplateValue> {
-  const wrap = (v: string, manual: boolean) =>
+  const wrap = (v: string, manualKey: string | null) =>
     v
       .split('\n')
       .map((line) =>
-        line ? (manual ? MAN_OPEN + line + MAN_CLOSE : REC_OPEN + line + REC_CLOSE) : line,
+        line
+          ? manualKey
+            ? MAN_OPEN + manualKey + KEY_SEP + line + MAN_CLOSE
+            : REC_OPEN + line + REC_CLOSE
+          : line,
       )
       .join('\n');
   const out: Record<string, TemplateValue> = {};
   for (const [key, value] of Object.entries(data)) {
     if (typeof value === 'string')
-      out[key] = /^pa_\d+_[a-z]_o$/.test(key) ? value : wrap(value, manualKeys.has(key));
+      out[key] = /^pa_\d+_[a-z]_o$/.test(key)
+        ? value
+        : wrap(value, manualKeys.has(key) ? key : null);
     else if (Array.isArray(value))
       out[key] = value.map((row) =>
         Object.fromEntries(
-          Object.entries(row).map(([k, v]) => [k, typeof v === 'string' ? wrap(v, false) : v]),
+          Object.entries(row).map(([k, v]) => [k, typeof v === 'string' ? wrap(v, null) : v]),
         ),
       ) as TemplateValue;
     else out[key] = value;
@@ -931,14 +1111,14 @@ function wrapForPreview(
  */
 function markPreview(root: HTMLElement) {
   const token = new RegExp(
-    `${REC_OPEN}([^${REC_CLOSE}]*)${REC_CLOSE}|${MAN_OPEN}([^${MAN_CLOSE}]*)${MAN_CLOSE}|${BLANK_OPEN}([a-z0-9_]+)${BLANK_CLOSE}|${TEMPLATE_BLANK}`,
+    `${REC_OPEN}([^${REC_CLOSE}]*)${REC_CLOSE}|${MAN_OPEN}([a-z0-9_]+)${KEY_SEP}([^${MAN_CLOSE}]*)${MAN_CLOSE}|${BLANK_OPEN}([a-z0-9_]+)${BLANK_CLOSE}|${TEMPLATE_BLANK}`,
     'g',
   );
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const hits: Text[] = [];
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
     const v = n.nodeValue ?? '';
-    if (v.includes(TEMPLATE_BLANK) || /[\uE000-\uE005]/.test(v)) hits.push(n as Text);
+    if (v.includes(TEMPLATE_BLANK) || /[\uE000-\uE006]/.test(v)) hits.push(n as Text);
   }
   for (const node of hits) {
     const text = node.nodeValue!;
@@ -951,12 +1131,16 @@ function markPreview(root: HTMLElement) {
         mark.textContent = m[1];
         mark.className = 'bg-status-completed-bg text-fg';
       } else if (m[2] !== undefined) {
-        mark.textContent = m[2];
-        mark.className = 'bg-status-progress-bg text-fg';
-      } else if (m[3] !== undefined) {
-        // Chỗ trống điền được trên màn hình — bấm là tới ô điền (xem `focusTemplateField`).
+        // Đã điền tay — bấm để sửa ngay tại chỗ.
+        mark.textContent = m[3]!;
+        mark.dataset.key = m[2];
+        mark.title = 'Bấm để sửa';
+        mark.className =
+          'cursor-pointer bg-status-progress-bg text-fg hover:outline hover:outline-1';
+      } else if (m[4] !== undefined) {
+        // Chỗ trống điền được trên màn hình — bấm là mở ô điền ngay tại chỗ.
         mark.textContent = TEMPLATE_BLANK;
-        mark.dataset.key = m[3];
+        mark.dataset.key = m[4];
         mark.title = 'Bấm để điền';
         mark.className =
           'cursor-pointer bg-status-pending-bg text-fg hover:outline hover:outline-1';
@@ -989,4 +1173,70 @@ function shortArticle(article: string): string {
   const m = /^(Điều \d+|PHỤ LỤC \d+|BIÊN BẢN [^–(]{0,30})/i.exec(article);
   if (!m) return article;
   return m[1]!.replace(/^PHỤ LỤC/i, 'Phụ lục').trim();
+}
+
+interface InlineEdit {
+  /** Khoá chỗ trống trong mẫu (`o_12`, `doi_tac_dia_chi`…), không phải khoá lưu. */
+  key: string;
+  value: string;
+  /** Nguyên câu văn chứa chỗ trống — thay cho nhãn máy tự cắt ở cột trái. */
+  sentence: string;
+  top: number;
+  left: number;
+}
+
+/** Ô điền nổi ngay dưới chỗ trống trên bản xem trước. Enter lưu, Shift+Enter xuống dòng, Esc thôi. */
+function InlineBlankEditor({
+  edit,
+  onChange,
+  onSave,
+  onCancel,
+  onOpenField,
+}: {
+  edit: InlineEdit;
+  onChange: (value: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  onOpenField: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-label="Điền chỗ trống"
+      style={{ top: edit.top, left: edit.left }}
+      className="absolute z-20 w-80 rounded-card bg-surface p-3 shadow-overlay ring-1 ring-border"
+    >
+      {edit.sentence && <p className="text-xs text-ink-subtle">{edit.sentence}</p>}
+      <textarea
+        autoFocus
+        rows={2}
+        value={edit.value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onCancel();
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            onSave();
+          }
+        }}
+        aria-label="Nội dung chỗ trống"
+        className={cn(FIELD_BOX, 'mt-2 h-auto w-full py-2')}
+      />
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <Button variant="primary" size="sm" onClick={onSave}>
+          Lưu
+        </Button>
+        <Button variant="secondary" size="sm" onClick={onCancel}>
+          Thôi
+        </Button>
+        <button
+          type="button"
+          onClick={onOpenField}
+          className="ml-auto text-xs font-medium text-brand underline-offset-2 hover:underline"
+        >
+          Mở ô ở cột trái
+        </button>
+      </div>
+    </div>
+  );
 }

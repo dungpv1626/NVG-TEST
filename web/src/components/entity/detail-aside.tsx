@@ -19,6 +19,11 @@ interface AsideSlot {
   targets: Record<AsidePlace, HTMLElement | null>;
   /** Báo cho `EntityDetail` biết có khối muốn sang cột phải — để dựng cột khi chưa có hồ sơ liên quan. */
   register: () => () => void;
+  /**
+   * Tab đang mở cần cả bề ngang (`DetailTab.fullWidth`) — khối của cột phải ẩn hẳn chứ không dồn về đầu
+   * cột chính, nơi nó đẩy phần soạn thảo xuống dưới nửa màn hình. Thanh bước vẫn ở trên.
+   */
+  hidden?: boolean;
 }
 
 export const DetailAsideContext = createContext<AsideSlot | null>(null);
@@ -51,6 +56,7 @@ export function DetailAside({ place, children }: { place: AsidePlace; children: 
   const slot = useContext(DetailAsideContext);
   const register = slot?.register;
   useEffect(() => register?.(), [register]);
+  if (slot?.hidden) return null;
   const target = slot?.targets[place];
   if (target) return createPortal(children, target);
   return <>{children}</>;

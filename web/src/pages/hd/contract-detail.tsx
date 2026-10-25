@@ -526,6 +526,7 @@ export function ContractDetailPage() {
           {
             id: 'soan-thao',
             label: 'Soạn hợp đồng',
+            fullWidth: true,
             content: (
               <DocumentPanel
                 contract={contract}

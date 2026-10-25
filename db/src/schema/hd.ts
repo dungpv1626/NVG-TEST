@@ -300,6 +300,8 @@ export const contractDocuments = pgTable(
       .notNull()
       .default(sql`'{}'`),
     changeReason: text('change_reason'),
+    /** `mau` = máy điền từ mẫu; `sua_trong_word` = người soạn sửa trong Word rồi tải lên (0222). */
+    source: text('source').notNull().default('mau'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   },

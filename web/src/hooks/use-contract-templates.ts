@@ -300,6 +300,8 @@ export interface ContractDocumentRecord {
   missing_fields: string[];
   change_reason: string | null;
   created_at: string;
+  /** `sua_trong_word` = người soạn sửa trong Word rồi tải lên (0222) — máy không đọc ngược tệp này. */
+  source: 'mau' | 'sua_trong_word';
   template: { title: string } | null;
   creator: { full_name: string } | null;
 }
@@ -311,7 +313,7 @@ export function useContractDocuments(contractId: string | undefined) {
       const { data, error } = await supabase
         .from('contract_documents')
         .select(
-          'id, version, storage_path, file_name, missing_fields, change_reason, created_at, ' +
+          'id, version, storage_path, file_name, missing_fields, change_reason, created_at, source, ' +
             'template:contract_templates(title), ' +
             'creator:users!contract_documents_created_by_fkey(full_name)',
         )
@@ -399,12 +401,14 @@ export function useSaveContractDocument() {
     {
       contractId: string;
       companyId: string;
-      templateId: string;
+      templateId: string | null;
       blob: Blob;
       fileName: string;
       filledValues: Record<string, unknown>;
       missingFields: string[];
       changeReason: string | null;
+      /** Bản tải lên sau khi sửa trong Word (0222); vắng = máy điền từ mẫu. */
+      source?: 'mau' | 'sua_trong_word';
     }
   >({
     mutationFn: async (v) => {
@@ -426,6 +430,7 @@ export function useSaveContractDocument() {
           filled_values: v.filledValues,
           missing_fields: v.missingFields,
           change_reason: v.changeReason,
+          source: v.source ?? 'mau',
         })
         .select('version')
         .single();

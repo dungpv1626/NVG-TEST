@@ -39,6 +39,11 @@ export interface DetailTab {
   content: ReactNode;
   /** Số hiệu hiển thị cạnh nhãn tab (ví dụ số phiên bản, số chứng từ). */
   badge?: number;
+  /**
+   * Tab cần cả bề ngang — không dựng cột phải (thẻ «Bước tiếp theo» về lại cột chính). Tab «Soạn hợp
+   * đồng» có hai cột riêng (ô điền + bản xem trước); thêm cột phải 330px thì văn bản hẹp không đọc nổi.
+   */
+  fullWidth?: boolean;
 }
 
 /** Breadcrumb mắt xích "vừa đi qua" — đính vào `state` của link khi điều hướng sang hồ sơ
@@ -139,13 +144,14 @@ export function EntityDetail({
     setAsideUsers((n) => n + 1);
     return () => setAsideUsers((n) => n - 1);
   }, []);
-  const showAside = wide && (related.length > 0 || asideUsers > 0);
+  const showAside = wide && !active?.fullWidth && (related.length > 0 || asideUsers > 0);
   const asideSlot = useMemo(
     () => ({
       targets: showAside ? { next: nextEl, chain: chainEl } : { next: null, chain: null },
       register,
+      hidden: Boolean(active?.fullWidth),
     }),
-    [showAside, nextEl, chainEl, register],
+    [showAside, nextEl, chainEl, register, active?.fullWidth],
   );
 
   // Cột dính bên dưới header (vd bản xem trước hợp đồng) cần biết header cao bao nhiêu — chiều
