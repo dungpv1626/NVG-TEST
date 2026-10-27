@@ -64,6 +64,7 @@ import { BriefField } from './brief-field';
 import { IssueBody, issueTone } from './brief-issue';
 import { describeField } from './brief-describe';
 import { printBrief } from './brief-print';
+import { BriefSummary } from './brief-summary';
 import { SitePlanPreview } from './site-plan-preview';
 import { SectionHelp } from '@/components/ui/section-help';
 import { DESIGN_HELP } from './help-texts';
@@ -718,7 +719,14 @@ export function BriefPanel({
               if (sectionId) return goTo(sectionId, path);
             }
           }}
-        />
+        >
+          {/* Bản xem trước sống (anh Dũng 25/10/2026): gõ tới đâu, tóm tắt đổi tới đó. */}
+          <BriefSummary
+            form={form}
+            draft={draft}
+            onJump={(sectionId, path) => goTo(sectionId, path)}
+          />
+        </CompletenessPanel>
       </div>
     );
   }
@@ -836,32 +844,58 @@ export function BriefPanel({
 
           <SurveyMismatch brief={current} survey={survey} />
 
-          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-            {/*
-              Lọc bằng ĐÚNG hàm mà biểu mẫu dùng: câu hỏi chỉ dành cho biệt thự không được
-              hiện ở chế độ xem của một hồ sơ nhà phố, dù chỉ hiện dấu gạch ngang. Một danh
-              sách trường trống kéo dài làm người đọc tưởng hồ sơ còn thiếu.
-            */}
-            {form.sections.flatMap((section) =>
-              section.fields
-                .filter(
-                  (field) =>
-                    !field.path.startsWith('legacy.') &&
-                    isFieldVisible(field, section, current.structured ?? {}),
-                )
-                .map((field) => (
-                  <ReadOnlyField
-                    key={field.path}
-                    id={viewAnchor(field.path)}
-                    label={field.label}
-                    value={describeField(
-                      field,
-                      valueAtPath(current.structured, field.path),
-                      current.structured?.family,
-                    )}
-                  />
-                )),
-            )}
+          {/* Thông tin chính trước (anh Dũng 25/10/2026: đầu bài 98 câu đọc một mạch thì không nắm được), toàn bộ câu
+              trả lời gấp theo từng mục bên dưới. */}
+          <BriefSummary
+            form={form}
+            draft={current.structured ?? {}}
+            onJump={(_, path) => flashTo(viewAnchor(path))}
+            className="bg-surface-sunken"
+          />
+
+          {/*
+            Lọc bằng ĐÚNG hàm mà biểu mẫu dùng: câu hỏi chỉ dành cho biệt thự không được
+            hiện ở chế độ xem của một hồ sơ nhà phố, dù chỉ hiện dấu gạch ngang. Một danh
+            sách trường trống kéo dài làm người đọc tưởng hồ sơ còn thiếu.
+          */}
+          {form.sections.map((section) => {
+            const fields = section.fields.filter(
+              (field) =>
+                !field.path.startsWith('legacy.') &&
+                isFieldVisible(field, section, current.structured ?? {}),
+            );
+            if (fields.length === 0) return null;
+            const values = fields.map((field) =>
+              describeField(
+                field,
+                valueAtPath(current.structured, field.path),
+                current.structured?.family,
+              ),
+            );
+            const answered = values.filter((v) => v !== null).length;
+            return (
+              <details key={section.id} className="mt-3 rounded-sm border border-border">
+                <summary className="cursor-pointer px-3 py-2 font-medium">
+                  {section.title}
+                  <span className="ml-2 font-normal text-fg-subtle">
+                    đã trả lời {answered}/{fields.length} câu
+                  </span>
+                </summary>
+                <dl className="grid gap-x-6 gap-y-3 px-3 pb-3 sm:grid-cols-2">
+                  {fields.map((field, i) => (
+                    <ReadOnlyField
+                      key={field.path}
+                      id={viewAnchor(field.path)}
+                      label={field.label}
+                      value={values[i]!}
+                    />
+                  ))}
+                </dl>
+              </details>
+            );
+          })}
+
+          <dl className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
             <ReadOnlyField label="Nhiệm vụ thiết kế" value={current.design_task} wide />
             <ReadOnlyField
               label="Ghi chú thêm về công năng"
@@ -963,10 +997,7 @@ function StepBar({
   onGo: (sectionId: string) => void;
 }) {
   return (
-    <nav
-      aria-label="Các bước của đầu bài"
-      className="rounded-card bg-surface p-3"
-    >
+    <nav aria-label="Các bước của đầu bài" className="rounded-card bg-surface p-3">
       <div className="flex flex-wrap gap-x-6 gap-y-2">
         {parts.map((part) => {
           const inPart = steps
@@ -1130,7 +1161,10 @@ function CompletenessPanel({
   artifactId,
   onJump,
   onJumpPath,
+  children,
 }: {
+  /** Khối thêm dưới cùng của cột (tóm tắt đầu bài). */
+  children?: React.ReactNode;
   score: ReturnType<typeof scoreBrief>;
   issues: ReturnType<typeof checkBriefConsistency>;
   threshold: number | null;
@@ -1153,7 +1187,7 @@ function CompletenessPanel({
   const { required: requiredMissing, optional: optionalMissing } = splitMissing(score.missing);
 
   return (
-    <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+    <aside className="space-y-4 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:self-start lg:overflow-y-auto">
       <div className="rounded-card bg-surface p-4">
         <p className="font-medium">Mức độ đầy đủ</p>
         <p className={`mt-1 text-2xl font-semibold text-status-${tone}`}>{percent}%</p>
@@ -1236,6 +1270,7 @@ function CompletenessPanel({
           </ul>
         </div>
       )}
+      {children}
     </aside>
   );
 }
@@ -1282,6 +1317,9 @@ function viewAnchor(path: string): string {
 function flashTo(id: string): boolean {
   const el = document.getElementById(id);
   if (!el) return false;
+  // Ô nằm trong mục đang gấp (chế độ xem) — mở mục ra trước, cuộn tới phần tử ẩn không có tác dụng.
+  for (let d = el.closest('details'); d; d = d.parentElement?.closest('details') ?? null)
+    d.open = true;
   el.scrollIntoView({ block: 'center', behavior: 'smooth' });
   const ring = ['ring-2', 'ring-status-pending', 'ring-offset-4', 'ring-offset-surface'];
   el.classList.add(...ring);

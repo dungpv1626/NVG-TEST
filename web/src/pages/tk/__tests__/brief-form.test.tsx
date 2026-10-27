@@ -412,7 +412,7 @@ describe('Chế độ xem — không để lọt mã máy ra màn hình', () => 
         readOnly={false}
       />,
     );
-    await screen.findByText('Nhà phố');
+    expect(await screen.findAllByText('Nhà phố')).not.toHaveLength(0);
 
     const text = container.textContent ?? '';
     for (const code of [
@@ -440,7 +440,7 @@ describe('Chế độ xem — không để lọt mã máy ra màn hình', () => 
         readOnly={false}
       />,
     );
-    await screen.findByText(/Vợ chồng: 2 người/);
+    expect(await screen.findAllByText(/Vợ chồng: 2 người/)).not.toHaveLength(0);
     expect(container.textContent).toContain('2.000.000.000 đồng');
   });
 
@@ -458,7 +458,7 @@ describe('Chế độ xem — không để lọt mã máy ra màn hình', () => 
         readOnly={false}
       />,
     );
-    await screen.findByText('Nhà phố');
+    expect(await screen.findAllByText('Nhà phố')).not.toHaveLength(0);
 
     expect(screen.queryByText('Số cánh nhà mong muốn')).not.toBeInTheDocument();
     expect(screen.queryByText('Số lõi thang')).not.toBeInTheDocument();
@@ -780,7 +780,8 @@ describe('Chế độ xem KHÔNG đổ mã máy ra màn hình', () => {
       />,
     );
 
-    const summary = await screen.findByText(/Ông bà: 2 người/);
+    // Dòng của danh sách đầy đủ (dòng đầu là khung «Tóm tắt đầu bài»).
+    const summary = (await screen.findAllByText(/Ông bà: 2 người/)).at(-1)!;
     expect(summary.textContent).not.toContain('bedroom');
     expect(summary.textContent).not.toContain('wc');
     expect(summary.textContent).toContain('Ban công riêng');
@@ -928,7 +929,7 @@ describe('Nhu cầu riêng của nhóm thành viên', () => {
         readOnly={false}
       />,
     );
-    await screen.findByText(/Con: 1 người/);
+    expect(await screen.findAllByText(/Con: 1 người/)).not.toHaveLength(0);
     expect(container.textContent).toContain('Kho riêng');
     expect(container.textContent).not.toContain('storage');
   });

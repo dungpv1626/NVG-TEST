@@ -233,7 +233,13 @@ export function describeField(
   if (field.control === 'sides') {
     const sides = value as Record<string, unknown>;
     const parts = ACCESS_SIDES.filter((side) => sides[side]).map(
-      (side) => `${SIDE_LABEL[side]}: ${label(sides[side])}`,
+      // Khoảng lùi từng mặt là SỐ (m) — đọc bằng dấu phẩy thập phân như mọi số khác (CGD 4.3), không `String()`.
+      (side) =>
+        `${SIDE_LABEL[side]}: ${
+          typeof sides[side] === 'number'
+            ? `${formatNumber(sides[side])}${field.unit ? ` ${field.unit}` : ''}`
+            : label(sides[side])
+        }`,
     );
     return parts.length ? parts.join(' · ') : null;
   }
