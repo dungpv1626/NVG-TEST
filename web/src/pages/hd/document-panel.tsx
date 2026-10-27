@@ -337,8 +337,9 @@ function NextStep({ to, label }: { to: string; label: string }) {
 }
 
 /**
- * Khung tab «Soạn hợp đồng»: phần trên (mẫu, nút, thông báo) rồi hai ngăn. Từ lg khung cao đúng phần màn hình dưới
- * header dính (`--detail-sticky-avail`, đo ở `EntityDetail`) để mỗi ngăn cuộn riêng; dưới lg cuộn theo trang.
+ * Khung tab «Soạn hợp đồng»: phần trên (mẫu, nút, thông báo) rồi hai ngăn. Từ lg hai ngăn cao bằng phần màn hình dưới
+ * header dính (`--detail-sticky-avail`, đo ở `EntityDetail`, tối thiểu 32rem) để mỗi ngăn cuộn riêng; dưới lg cuộn theo
+ * trang.
  */
 function Workspace({
   top,
@@ -350,12 +351,16 @@ function Workspace({
   storageKey: string;
 }) {
   // «Toàn màn hình»: `FullscreenFrame` (anh Dũng 25/10/2026: khung soạn thấp, chữ nhỏ khó đọc).
+  // Chiều cao đặt ở HAI NGĂN, không ở cả khung: phần trên (mẫu, dải báo vàng) từng ăn hết chiều cao khung, màn thấp /
+  // header cao thì hai ngăn chỉ còn ~160 px, không đọc được (anh Dũng 27/10/2026). Nay hai ngăn cao bằng phần màn hình
+  // dưới header, tối thiểu 32rem; phần trên cuộn đi theo trang. Toàn màn hình: `basis-auto` + co / giãn lấp khung.
   return (
-    <FullscreenFrame
-      top={top}
-      idleClassName="lg:sticky lg:top-[var(--detail-sticky-top,12rem)] lg:h-[var(--detail-sticky-avail,75vh)]"
-    >
-      <SplitWorkspace tabs={tabs} storageKey={storageKey} className="lg:min-h-0 lg:flex-1" />
+    <FullscreenFrame top={top}>
+      <SplitWorkspace
+        tabs={tabs}
+        storageKey={storageKey}
+        className="lg:h-[max(32rem,var(--detail-sticky-avail,75vh))] lg:min-h-0 lg:flex-1 lg:basis-auto"
+      />
     </FullscreenFrame>
   );
 }
