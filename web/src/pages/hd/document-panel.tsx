@@ -16,12 +16,10 @@ import {
   AlertTriangle,
   CheckCircle2,
   Download,
-  Expand,
   FilePen,
   FileText,
   Lock,
   Send,
-  Shrink,
   Upload,
   ZoomIn,
   ZoomOut,
@@ -88,6 +86,7 @@ import {
   SplitWorkspace,
   type WorkspaceTab,
 } from '@/components/ui/split-workspace';
+import { FullscreenFrame } from '@/components/ui/fullscreen-frame';
 import { cn } from '@/lib/utils';
 
 /**
@@ -350,51 +349,14 @@ function Workspace({
   tabs: WorkspaceTab[];
   storageKey: string;
 }) {
-  // «Toàn màn hình» (anh Dũng 25/10/2026: khung soạn thấp, chữ nhỏ khó đọc): hai ngăn phủ cả cửa sổ, che header
-  // hồ sơ và thanh điều hướng. Esc hoặc bấm lại để thu về. Hộp thoại (z-50) vẫn nổi trên khung (z-40).
-  const [full, setFull] = useState(false);
-  useEffect(() => {
-    if (!full) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key !== 'Escape' || e.defaultPrevented) return;
-      const target = e.target as HTMLElement | null;
-      if (target?.closest('input, textarea, select, [role="dialog"]')) return;
-      setFull(false);
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [full]);
+  // «Toàn màn hình»: `FullscreenFrame` (anh Dũng 25/10/2026: khung soạn thấp, chữ nhỏ khó đọc).
   return (
-    <div
-      className={cn(
-        'flex flex-col gap-3',
-        full
-          ? 'fixed inset-0 z-40 bg-canvas p-4'
-          : 'lg:sticky lg:top-[var(--detail-sticky-top,12rem)] lg:h-[var(--detail-sticky-avail,75vh)]',
-      )}
+    <FullscreenFrame
+      top={top}
+      idleClassName="lg:sticky lg:top-[var(--detail-sticky-top,12rem)] lg:h-[var(--detail-sticky-avail,75vh)]"
     >
-      <div className="flex shrink-0 items-start gap-2">
-        <div className="min-w-0 flex-1">{top}</div>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="hidden shrink-0 lg:inline-flex"
-          onClick={() => setFull((v) => !v)}
-          title={full ? 'Thu về (Esc)' : 'Mở khung soạn phủ cả màn hình'}
-        >
-          {full ? (
-            <>
-              <Shrink className="size-4" aria-hidden /> Thu về
-            </>
-          ) : (
-            <>
-              <Expand className="size-4" aria-hidden /> Toàn màn hình
-            </>
-          )}
-        </Button>
-      </div>
       <SplitWorkspace tabs={tabs} storageKey={storageKey} className="lg:min-h-0 lg:flex-1" />
-    </div>
+    </FullscreenFrame>
   );
 }
 

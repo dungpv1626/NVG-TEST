@@ -89,6 +89,7 @@ import { costCeiling, type CostEstimate } from './run-cost-estimate';
 import { formatUsd } from './ai-usage';
 import { AiPlanCompare, ScoreChip } from './ai-plan-compare';
 import { PlanVerdict, planVerdict } from './ai-plan-verdict';
+import { FullscreenFrame } from '@/components/ui/fullscreen-frame';
 import { openWorkspaceTab, SplitWorkspace } from '@/components/ui/split-workspace';
 import { PlanEditPanel } from './ai-plan-edit';
 import { roomName } from './plan-deductions';
@@ -530,12 +531,13 @@ export function AiPlanStep({
 
   // Khung hai ngăn (anh Dũng 25/10/2026 — như tab Soạn hợp đồng): bản vẽ LUÔN ở ngăn phải; trái là các tab xếp,
   // đánh giá, ảnh nội thất. Trước đó đánh giá và ô «Yêu cầu sửa» nằm dưới tờ vẽ — xem rồi phải cuộn xuống mới sửa.
+  // «Toàn màn hình» (anh Dũng 27/10/2026): bản vẽ to hơn khi xem / bấm phòng để nhờ sửa.
   return (
-    <div className="lg:h-[calc(100dvh-15rem)] lg:min-h-[560px]">
+    <FullscreenFrame idleClassName="lg:h-[calc(100dvh-15rem)] lg:min-h-[600px]">
       <SplitWorkspace
         storageKey="ai-mat-bang"
         defaultRatio={0.36}
-        className="lg:h-full"
+        className="lg:min-h-0 lg:flex-1"
         tabs={[
           { id: 'xep', label: 'Xếp mặt bằng', side: 'left', content: setup },
           {
@@ -643,7 +645,7 @@ export function AiPlanStep({
           )}
         </ConfirmDialog>
       )}
-    </div>
+    </FullscreenFrame>
   );
 }
 

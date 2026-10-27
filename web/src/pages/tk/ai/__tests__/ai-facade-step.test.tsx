@@ -9,10 +9,32 @@
  *  · ô «Dựng trên mặt bằng» đặt mốc mặt bằng (`/plan/choose`), không giữ lựa chọn riêng.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithApp } from '@/test/render';
+
+// Khung hai ngăn (27/10/2026): từ màn hình rộng, tờ mặt đứng luôn ở ngăn phải. Thiết lập chung của bộ thử giả lập
+// điện thoại (`matchMedia` không khớp, một ngăn) — ở đây giả lập màn hình rộng như bước mặt bằng.
+let wide: MockInstance | null = null;
+beforeEach(() => {
+  try {
+    for (const k of Object.keys(localStorage))
+      if (k.startsWith('split:')) localStorage.removeItem(k);
+  } catch {
+    // không có localStorage — bỏ qua
+  }
+  wide = vi.spyOn(window, 'matchMedia').mockImplementation(
+    (query: string) =>
+      ({
+        matches: true,
+        media: query,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }) as unknown as MediaQueryList,
+  );
+});
+afterEach(() => wide?.mockRestore());
 
 const PLAN_A = `sha256:${'a'.repeat(64)}`;
 const PLAN_B = `sha256:${'b'.repeat(64)}`;

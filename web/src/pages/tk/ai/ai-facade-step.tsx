@@ -18,6 +18,8 @@
 import { useCallback, useEffect, useId, useState } from 'react';
 import { AlertTriangle, Building2, Maximize2, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { FullscreenFrame } from '@/components/ui/fullscreen-frame';
+import { SplitWorkspace } from '@/components/ui/split-workspace';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Skeleton } from '@/components/ui/states';
 import { formatDateTime } from '@nvg/shared';
@@ -135,263 +137,273 @@ export function AiFacadeStep({
       .catch(() => undefined);
   };
 
-  // Hai cột như bước mặt bằng (07/10/2026): trái là phiếu yêu cầu + thiết lập + nút chính, phải là
-  // các bản đã dựng và tờ mặt đứng.
-  return (
-    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
-      <div className="min-w-0 space-y-4">
-        <Panel
-          title="Dựng mặt đứng"
-          aside={
-            state.facadeArtifactId ? (
-              stale ? (
-                <Chip tone="am">Theo phương án cũ</Chip>
-              ) : (
-                <Chip tone="gr">Đã có</Chip>
-              )
+  // Khung hai ngăn như bước Mặt bằng (anh Dũng 27/10/2026): trái là thiết lập + nút chính + tiến trình lượt chạy,
+  // phải LUÔN là các bản đã dựng và tờ mặt đứng. Kéo thanh giữa, kéo tab sang ngăn kia, «Toàn màn hình».
+  const setup = (
+    <div className="min-w-0 space-y-4">
+      <Panel
+        title="Dựng mặt đứng"
+        aside={
+          state.facadeArtifactId ? (
+            stale ? (
+              <Chip tone="am">Theo phương án cũ</Chip>
             ) : (
-              <Chip tone="am">Chưa có</Chip>
+              <Chip tone="gr">Đã có</Chip>
             )
-          }
-        >
-          {noPlans ? (
-            <p className="text-fg-subtle">
-              Chưa có phương án mặt bằng. Mở bước «Mặt bằng từng tầng» và xếp mặt bằng trước — mặt
-              đứng dựng trên một phương án đã xếp.
-            </p>
           ) : (
-            <div className="space-y-4">
-              <PlanSourcePicker
-                plans={plans}
-                names={planNames}
-                value={state.planHeadArtifactId}
-                facadePlanRef={state.facadeArtifactId ? (state.facadePlanRef ?? null) : null}
-                readOnly={readOnly}
-                disabled={running || start.isPending || choosePlan.isPending}
-                onChange={(artifactId) =>
-                  choosePlan.mutate({ projectId, artifactId }, { onError: () => undefined })
-                }
-              />
-              {choosePlan.isError && (
-                <p className="text-status-overdue">{toUserMessage(choosePlan.error)}</p>
-              )}
-            </div>
-          )}
-          {!noPlans && !readOnly && (
-            <div className="mt-4 space-y-4">
-              {/* Model và mức suy nghĩ gấp trong «Tùy chọn nâng cao» (25/10/2026) — mặc định là cấu hình công ty. */}
-              <details className="rounded-field border border-tk-line p-3">
-                <summary className="cursor-pointer text-sm font-medium select-none">
-                  Tùy chọn nâng cao
-                  <span className="font-normal text-fg-subtle">
-                    {' '}
-                    · {ai.selected?.short ?? ai.selected?.label ?? 'model của công ty'}
-                  </span>
-                </summary>
-                <div className="mt-3 flex items-end gap-2 *:first:min-w-0 *:last:shrink-0">
-                  <AiModePicker
-                    kind="text"
-                    choice={ai.choice}
-                    recommended={ai.defaultRoute}
-                    options={ai.options}
-                    onMode={ai.pickMode}
-                    onRoute={ai.pickRoute}
-                    allowSolver={false}
-                    disabled={running || start.isPending}
-                  />
-                  <ReasoningEffortPicker
-                    value={effort}
-                    onChange={setEffort}
-                    option={ai.selected}
-                    disabled={running || start.isPending}
-                  />
-                </div>
-              </details>
-              {/* Yêu cầu mặt đứng là phần «Mặt đứng» của ĐẦU BÀI: AI Design chỉ thừa hưởng, không
+            <Chip tone="am">Chưa có</Chip>
+          )
+        }
+      >
+        {noPlans ? (
+          <p className="text-fg-subtle">
+            Chưa có phương án mặt bằng. Mở bước «Mặt bằng từng tầng» và xếp mặt bằng trước — mặt
+            đứng dựng trên một phương án đã xếp.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            <PlanSourcePicker
+              plans={plans}
+              names={planNames}
+              value={state.planHeadArtifactId}
+              facadePlanRef={state.facadeArtifactId ? (state.facadePlanRef ?? null) : null}
+              readOnly={readOnly}
+              disabled={running || start.isPending || choosePlan.isPending}
+              onChange={(artifactId) =>
+                choosePlan.mutate({ projectId, artifactId }, { onError: () => undefined })
+              }
+            />
+            {choosePlan.isError && (
+              <p className="text-status-overdue">{toUserMessage(choosePlan.error)}</p>
+            )}
+          </div>
+        )}
+        {!noPlans && !readOnly && (
+          <div className="mt-4 space-y-4">
+            {/* Model và mức suy nghĩ gấp trong «Tùy chọn nâng cao» (25/10/2026) — mặc định là cấu hình công ty. */}
+            <details className="rounded-field border border-tk-line p-3">
+              <summary className="cursor-pointer text-sm font-medium select-none">
+                Tùy chọn nâng cao
+                <span className="font-normal text-fg-subtle">
+                  {' '}
+                  · {ai.selected?.short ?? ai.selected?.label ?? 'model của công ty'}
+                </span>
+              </summary>
+              <div className="mt-3 flex items-end gap-2 *:first:min-w-0 *:last:shrink-0">
+                <AiModePicker
+                  kind="text"
+                  choice={ai.choice}
+                  recommended={ai.defaultRoute}
+                  options={ai.options}
+                  onMode={ai.pickMode}
+                  onRoute={ai.pickRoute}
+                  allowSolver={false}
+                  disabled={running || start.isPending}
+                />
+                <ReasoningEffortPicker
+                  value={effort}
+                  onChange={setEffort}
+                  option={ai.selected}
+                  disabled={running || start.isPending}
+                />
+              </div>
+            </details>
+            {/* Yêu cầu mặt đứng là phần «Mặt đứng» của ĐẦU BÀI: AI Design chỉ thừa hưởng, không
                     bày lại phiếu ở đây (Haan, 08/10/2026 — mọi khảo sát nằm ở đầu bài). */}
-              <p className="text-fg-subtle">
-                Dựng theo phần Mặt đứng của đầu bài đã xác nhận. {briefLink}
+            <p className="text-fg-subtle">
+              Dựng theo phần Mặt đứng của đầu bài đã xác nhận. {briefLink}
+            </p>
+            <details className="text-fg-subtle">
+              <summary className="cursor-pointer select-none hover:text-fg">
+                Cách AI dựng mặt đứng
+              </summary>
+              <p className="mt-2">
+                Khung nhà, cao độ các tầng, cửa, cửa sổ và ban công lấy nguyên từ phương án mặt bằng
+                đang chọn — AI không được dời hay thêm bớt. AI chọn mái, vật liệu, màu, cổng, tường
+                rào và các mảng trang trí; chương trình kiểm và dựng tờ mặt đứng. Ý tưởng không dùng
+                được thì AI được gọi lại một lần kèm lý do — lượt ấy cũng tính tiền.
               </p>
-              <details className="text-fg-subtle">
-                <summary className="cursor-pointer select-none hover:text-fg">
-                  Cách AI dựng mặt đứng
-                </summary>
-                <p className="mt-2">
-                  Khung nhà, cao độ các tầng, cửa, cửa sổ và ban công lấy nguyên từ phương án mặt
-                  bằng đang chọn — AI không được dời hay thêm bớt. AI chọn mái, vật liệu, màu, cổng,
-                  tường rào và các mảng trang trí; chương trình kiểm và dựng tờ mặt đứng. Ý tưởng
-                  không dùng được thì AI được gọi lại một lần kèm lý do — lượt ấy cũng tính tiền.
-                </p>
-              </details>
+            </details>
+            <Button
+              variant="primary"
+              className="w-full"
+              onClick={() => void onRun()}
+              disabled={
+                running || start.isPending || choosePlan.isPending || blocked || !ai.choice.route
+              }
+            >
+              {start.isPending
+                ? 'Đang gửi…'
+                : state.facadeArtifactId
+                  ? 'Dựng lại ý tưởng mặt đứng'
+                  : 'Dựng ý tưởng mặt đứng'}
+            </Button>
+          </div>
+        )}
+        {start.isError && <p className="mt-3 text-status-overdue">{toUserMessage(start.error)}</p>}
+      </Panel>
+
+      {run.data && (
+        <AiRunProgress
+          projectId={projectId}
+          run={run.data}
+          purposePrefix="facade"
+          reportTitle="Báo cáo lượt dựng mặt đứng"
+          reportExtra={
+            failedIssues.length > 0
+              ? ['## Ý tưởng chưa dùng được', '', ...failedIssues.map((i) => `- ${i}`)].join('\n')
+              : undefined
+          }
+          onRetry={readOnly ? undefined : () => void onRun()}
+          retryDisabled={start.isPending || blocked || !ai.choice.route}
+          runningLabel="Đang dựng mặt đứng"
+          doneLabel={failedIssues.length > 0 ? 'Ý tưởng chưa dùng được' : 'Đã dựng xong'}
+          failedLabel="Chưa dựng được mặt đứng"
+          readOnly={readOnly}
+        />
+      )}
+    </div>
+  );
+
+  const drawing = (
+    <div className="min-w-0 space-y-4">
+      {!shown && (
+        <div className="grid min-h-[360px] place-items-center rounded-lg border border-dashed border-tk-line2 bg-tk-panel p-8 text-center">
+          <div className="max-w-sm">
+            <Building2 className="mx-auto size-10 text-tk-t3" aria-hidden />
+            <p className="mt-3 font-medium">
+              {running ? 'AI đang dựng mặt đứng' : 'Chưa có mặt đứng'}
+            </p>
+            <p className="mt-1 text-fg-subtle">
+              {running
+                ? 'Tờ mặt đứng hiện ở đây ngay khi dựng xong.'
+                : noPlans
+                  ? 'Xếp mặt bằng ở bước trước, rồi quay lại đây.'
+                  : blocked
+                    ? 'Chọn phương án mặt bằng ở ô «Dựng trên mặt bằng» (ngăn «Dựng mặt đứng»), rồi bấm «Dựng ý tưởng mặt đứng».'
+                    : 'Bấm «Dựng ý tưởng mặt đứng» ở ngăn «Dựng mặt đứng». AI dựng trên phương án đã chọn và phần Mặt đứng của đầu bài.'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Dải các bản đã dựng (20/09/2026). Một lượt chạy mới KHÔNG còn đẩy bản cũ ra khỏi tầm mắt:
+          artifact vốn bất biến nên bản cũ chưa bao giờ mất, chỉ là màn hình không có đường mở lại. */}
+      {versions.length > 1 && (
+        <Panel title="Các bản mặt đứng đã dựng">
+          <ul className="flex flex-wrap gap-2">
+            {versions.map((version) => {
+              const isOpen = version.artifactId === shown;
+              const isHead = version.artifactId === state.facadeArtifactId;
+              const name = versionNames.get(version.artifactId)!;
+              return (
+                <li key={version.artifactId} className="flex items-stretch">
+                  <button
+                    type="button"
+                    aria-pressed={isOpen}
+                    onClick={() => setOpen(version.artifactId)}
+                    className={
+                      isOpen
+                        ? 'rounded-l-md border border-tk-bl-line bg-tk-bl-bg px-3 py-2 text-left'
+                        : 'rounded-l-md border border-tk-line bg-tk-panel px-3 py-2 text-left'
+                    }
+                  >
+                    <span className="block font-medium">{name}</span>
+                    <span className="block text-xs text-tk-t3">
+                      {formatDateTime(version.createdAt)}
+                      {version.planLabel && ` · theo Phương án ${version.planLabel}`}
+                    </span>
+                    {isHead && <Chip tone="gr">Đang hiệu lực</Chip>}
+                  </button>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => setAskHide({ artifactId: version.artifactId, name })}
+                      aria-label={`Xoá ${name} khỏi danh sách`}
+                      title="Xoá khỏi danh sách"
+                      className="rounded-r-md border border-l-0 border-tk-line bg-tk-panel px-2 text-fg-subtle hover:text-status-overdue"
+                    >
+                      <X className="h-4 w-4" aria-hidden />
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {!readOnly && !shownIsHead && (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
               <Button
-                variant="primary"
-                className="w-full"
-                onClick={() => void onRun()}
-                disabled={
-                  running || start.isPending || choosePlan.isPending || blocked || !ai.choice.route
+                variant="secondary"
+                onClick={() =>
+                  void choose
+                    .mutateAsync({ projectId, artifactId: shown! })
+                    .then(() => setOpen(null))
+                    .catch(() => undefined)
                 }
+                disabled={choose.isPending}
               >
-                {start.isPending
-                  ? 'Đang gửi…'
-                  : state.facadeArtifactId
-                    ? 'Dựng lại ý tưởng mặt đứng'
-                    : 'Dựng ý tưởng mặt đứng'}
+                {choose.isPending ? 'Đang lưu…' : 'Chọn bản này làm bản hiệu lực'}
               </Button>
             </div>
           )}
-          {start.isError && (
-            <p className="mt-3 text-status-overdue">{toUserMessage(start.error)}</p>
+          {choose.isError && (
+            <p className="mt-2 text-status-overdue">{toUserMessage(choose.error)}</p>
           )}
+          {hide.isError && <p className="mt-2 text-status-overdue">{toUserMessage(hide.error)}</p>}
         </Panel>
+      )}
 
-        {run.data && (
-          <AiRunProgress
-            projectId={projectId}
-            run={run.data}
-            purposePrefix="facade"
-            reportTitle="Báo cáo lượt dựng mặt đứng"
-            reportExtra={
-              failedIssues.length > 0
-                ? ['## Ý tưởng chưa dùng được', '', ...failedIssues.map((i) => `- ${i}`)].join('\n')
-                : undefined
-            }
-            onRetry={readOnly ? undefined : () => void onRun()}
-            retryDisabled={start.isPending || blocked || !ai.choice.route}
-            runningLabel="Đang dựng mặt đứng"
-            doneLabel={failedIssues.length > 0 ? 'Ý tưởng chưa dùng được' : 'Đã dựng xong'}
-            failedLabel="Chưa dựng được mặt đứng"
-            readOnly={readOnly}
-          />
-        )}
-      </div>
-
-      <div className="min-w-0 space-y-4">
-        {!shown && (
-          <div className="grid min-h-[360px] place-items-center rounded-lg border border-dashed border-tk-line2 bg-tk-panel p-8 text-center">
-            <div className="max-w-sm">
-              <Building2 className="mx-auto size-10 text-tk-t3" aria-hidden />
-              <p className="mt-3 font-medium">
-                {running ? 'AI đang dựng mặt đứng' : 'Chưa có mặt đứng'}
-              </p>
-              <p className="mt-1 text-fg-subtle">
-                {running
-                  ? 'Tờ mặt đứng hiện ở đây ngay khi dựng xong.'
-                  : noPlans
-                    ? 'Xếp mặt bằng ở bước trước, rồi quay lại đây.'
-                    : blocked
-                      ? 'Chọn phương án mặt bằng ở ô «Dựng trên mặt bằng» bên trái, rồi bấm «Dựng ý tưởng mặt đứng».'
-                      : 'Bấm «Dựng ý tưởng mặt đứng» ở cột bên trái. AI dựng trên phương án đã chọn và phần Mặt đứng của đầu bài.'}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Dải các bản đã dựng (20/09/2026). Một lượt chạy mới KHÔNG còn đẩy bản cũ ra khỏi tầm mắt:
-          artifact vốn bất biến nên bản cũ chưa bao giờ mất, chỉ là màn hình không có đường mở lại. */}
-        {versions.length > 1 && (
-          <Panel title="Các bản mặt đứng đã dựng">
-            <ul className="flex flex-wrap gap-2">
-              {versions.map((version) => {
-                const isOpen = version.artifactId === shown;
-                const isHead = version.artifactId === state.facadeArtifactId;
-                const name = versionNames.get(version.artifactId)!;
-                return (
-                  <li key={version.artifactId} className="flex items-stretch">
-                    <button
-                      type="button"
-                      aria-pressed={isOpen}
-                      onClick={() => setOpen(version.artifactId)}
-                      className={
-                        isOpen
-                          ? 'rounded-l-md border border-tk-bl-line bg-tk-bl-bg px-3 py-2 text-left'
-                          : 'rounded-l-md border border-tk-line bg-tk-panel px-3 py-2 text-left'
-                      }
-                    >
-                      <span className="block font-medium">{name}</span>
-                      <span className="block text-xs text-tk-t3">
-                        {formatDateTime(version.createdAt)}
-                        {version.planLabel && ` · theo Phương án ${version.planLabel}`}
-                      </span>
-                      {isHead && <Chip tone="gr">Đang hiệu lực</Chip>}
-                    </button>
-                    {!readOnly && (
-                      <button
-                        type="button"
-                        onClick={() => setAskHide({ artifactId: version.artifactId, name })}
-                        aria-label={`Xoá ${name} khỏi danh sách`}
-                        title="Xoá khỏi danh sách"
-                        className="rounded-r-md border border-l-0 border-tk-line bg-tk-panel px-2 text-fg-subtle hover:text-status-overdue"
-                      >
-                        <X className="h-4 w-4" aria-hidden />
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-            {!readOnly && !shownIsHead && (
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <Button
-                  variant="secondary"
-                  onClick={() =>
-                    void choose
-                      .mutateAsync({ projectId, artifactId: shown! })
-                      .then(() => setOpen(null))
-                      .catch(() => undefined)
-                  }
-                  disabled={choose.isPending}
-                >
-                  {choose.isPending ? 'Đang lưu…' : 'Chọn bản này làm bản hiệu lực'}
-                </Button>
-              </div>
-            )}
-            {choose.isError && (
-              <p className="mt-2 text-status-overdue">{toUserMessage(choose.error)}</p>
-            )}
-            {hide.isError && (
-              <p className="mt-2 text-status-overdue">{toUserMessage(hide.error)}</p>
-            )}
-          </Panel>
-        )}
-
-        {askHide && (
-          <ConfirmDialog
-            title={`Xoá ${askHide.name} khỏi danh sách?`}
-            confirmLabel="Xoá khỏi danh sách"
-            cancelLabel="Không xoá"
-            onCancel={() => setAskHide(null)}
-            onConfirm={() => {
-              hide.mutate({ projectId, artifactId: askHide.artifactId });
-              if (askHide.artifactId === open) setOpen(null);
-              setAskHide(null);
-            }}
-          >
-            <p>
-              Bản mặt đứng thôi hiện ở đây. Dữ liệu vẫn còn trong hồ sơ, nên tờ vẽ đã tải, ảnh dựng
-              từ nó và nhật ký chi phí của lượt gọi vẫn truy được.
+      {askHide && (
+        <ConfirmDialog
+          title={`Xoá ${askHide.name} khỏi danh sách?`}
+          confirmLabel="Xoá khỏi danh sách"
+          cancelLabel="Không xoá"
+          onCancel={() => setAskHide(null)}
+          onConfirm={() => {
+            hide.mutate({ projectId, artifactId: askHide.artifactId });
+            if (askHide.artifactId === open) setOpen(null);
+            setAskHide(null);
+          }}
+        >
+          <p>
+            Bản mặt đứng thôi hiện ở đây. Dữ liệu vẫn còn trong hồ sơ, nên tờ vẽ đã tải, ảnh dựng từ
+            nó và nhật ký chi phí của lượt gọi vẫn truy được.
+          </p>
+          {askHide.artifactId === state.facadeArtifactId && (
+            <p className="mt-1">
+              Đây đang là bản hiệu lực — xoá xong bước Phối cảnh cần chọn lại một bản mặt đứng.
             </p>
-            {askHide.artifactId === state.facadeArtifactId && (
-              <p className="mt-1">
-                Đây đang là bản hiệu lực — xoá xong bước Phối cảnh cần chọn lại một bản mặt đứng.
-              </p>
-            )}
-          </ConfirmDialog>
-        )}
+          )}
+        </ConfirmDialog>
+      )}
 
-        {shown && (
-          <FacadeDetail
-            projectId={projectId}
-            artifactId={shown}
-            /* Nhãn «phương án mặt bằng cũ» chỉ đo được cho bản HIỆU LỰC: `/state` trả `plan_ref` của
+      {shown && (
+        <FacadeDetail
+          projectId={projectId}
+          artifactId={shown}
+          /* Nhãn «phương án mặt bằng cũ» chỉ đo được cho bản HIỆU LỰC: `/state` trả `plan_ref` của
              riêng bản ấy. Bản cũ mở ra để so thì không khẳng định gì về chuyện đó. */
-            stale={shownIsHead && stale}
-            readOnly={readOnly}
-            planNames={planNames}
-            shownPlanLabel={versions.find((v) => v.artifactId === shown)?.planLabel ?? null}
-          />
-        )}
-      </div>
+          stale={shownIsHead && stale}
+          readOnly={readOnly}
+          planNames={planNames}
+          shownPlanLabel={versions.find((v) => v.artifactId === shown)?.planLabel ?? null}
+        />
+      )}
     </div>
+  );
+
+  return (
+    <FullscreenFrame idleClassName="lg:h-[calc(100dvh-15rem)] lg:min-h-[600px]">
+      <SplitWorkspace
+        storageKey="ai-mat-dung"
+        defaultRatio={0.34}
+        className="lg:min-h-0 lg:flex-1"
+        tabs={[
+          { id: 'dung-mat-dung', label: 'Dựng mặt đứng', side: 'left', content: setup },
+          { id: 'ban-ve-mat-dung', label: 'Mặt đứng', side: 'right', content: drawing },
+        ]}
+      />
+    </FullscreenFrame>
   );
 }
 
