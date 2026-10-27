@@ -299,6 +299,12 @@ export async function cleanupTestData(): Promise<void> {
     await sql`DELETE FROM contract_templates WHERE title LIKE ${TEST_PREFIX + '%'}`;
     // Xoá gói thầu kéo theo khối lượng, dự toán, hồ sơ thầu và ngân sách (khoá ngoại CASCADE).
     await sql`DELETE FROM bidding_projects WHERE name LIKE ${TEST_PREFIX + '%'}`;
+    // Lịch sử chuyển bước (0225) không có khoá ngoại tới hồ sơ (một bảng cho ba loại) — dọn dòng mồ côi.
+    await sql`DELETE FROM stage_transitions st WHERE NOT EXISTS (
+      SELECT 1 FROM contracts c WHERE c.id = st.entity_id
+      UNION ALL SELECT 1 FROM bidding_projects b WHERE b.id = st.entity_id
+      UNION ALL SELECT 1 FROM construction_sites s WHERE s.id = st.entity_id
+    )`;
     // Module Thiết kế AI: `design_head.artifact_id` cố ý là ON DELETE RESTRICT (không xoá
     // được artifact đang là bản hiệu lực). Xoá dự án cha thì hai bảng cùng bị cascade, và thứ
     // tự Postgres chọn có thể chạm RESTRICT trước — nên hạ con trỏ xuống trước, tường minh.

@@ -21,6 +21,7 @@ import {
   type SiteStage,
 } from '@nvg/shared';
 import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
+import { StageHistory } from '@/components/entity/stage-history';
 import { Button } from '@/components/ui/button';
 import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
@@ -444,16 +445,24 @@ export function SiteDetailPage() {
           },
         ]}
         historyContent={
-          <DetailFields
-            fields={[
-              { label: 'Mở công trình', value: formatDateTime(site.created_at) },
-              { label: 'Cập nhật gần nhất', value: formatDateTime(site.updated_at) },
-              {
-                label: 'Bàn giao chủ đầu tư',
-                value: site.handed_over_at ? formatDateTime(site.handed_over_at) : EM_DASH,
-              },
-            ]}
-          />
+          <div className="space-y-6">
+            <DetailFields
+              fields={[
+                { label: 'Mở công trình', value: formatDateTime(site.created_at) },
+                { label: 'Cập nhật gần nhất', value: formatDateTime(site.updated_at) },
+                {
+                  label: 'Bàn giao chủ đầu tư',
+                  value: site.handed_over_at ? formatDateTime(site.handed_over_at) : EM_DASH,
+                },
+              ]}
+            />
+            <StageHistory
+              entityType="construction_sites"
+              entityId={site.id}
+              stage={site.stage}
+              meta={SITE_STAGE_META}
+            />
+          </div>
         }
         related={[
           {

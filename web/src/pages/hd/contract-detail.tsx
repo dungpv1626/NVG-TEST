@@ -26,6 +26,7 @@ import {
   summarizeContractValue,
 } from '@nvg/shared';
 import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
+import { StageHistory } from '@/components/entity/stage-history';
 import { Button } from '@/components/ui/button';
 import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
@@ -591,24 +592,33 @@ export function ContractDetailPage() {
           },
         ]}
         historyContent={
-          <DetailFields
-            fields={[
-              { label: 'Tạo lúc', value: formatDateTime(contract.created_at) },
-              { label: 'Cập nhật gần nhất', value: formatDateTime(contract.updated_at) },
-              {
-                label: 'Phê duyệt nội bộ',
-                value: contract.approved_at ? formatDateTime(contract.approved_at) : EM_DASH,
-              },
-              {
-                label: 'Ghi nhận đã ký',
-                value: contract.signed_at ? formatDateTime(contract.signed_at) : EM_DASH,
-              },
-              {
-                label: 'Quyết toán',
-                value: contract.settled_at ? formatDateTime(contract.settled_at) : EM_DASH,
-              },
-            ]}
-          />
+          <div className="space-y-6">
+            <DetailFields
+              fields={[
+                { label: 'Tạo lúc', value: formatDateTime(contract.created_at) },
+                { label: 'Cập nhật gần nhất', value: formatDateTime(contract.updated_at) },
+                {
+                  label: 'Phê duyệt nội bộ',
+                  value: contract.approved_at ? formatDateTime(contract.approved_at) : EM_DASH,
+                },
+                {
+                  label: 'Ghi nhận đã ký',
+                  value: contract.signed_at ? formatDateTime(contract.signed_at) : EM_DASH,
+                },
+                {
+                  label: 'Quyết toán',
+                  value: contract.settled_at ? formatDateTime(contract.settled_at) : EM_DASH,
+                },
+              ]}
+            />
+            <StageHistory
+              entityType="contracts"
+              entityId={contract.id}
+              stage={contract.stage}
+              meta={CONTRACT_STAGE_META}
+              negativeStages={['huy']}
+            />
+          </div>
         }
         related={[
           {

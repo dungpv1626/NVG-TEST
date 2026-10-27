@@ -770,8 +770,9 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
   hỗ trợ NVC khi cần». CRM chưa có đầu mối trước cơ hội, nhật ký liên hệ (CRM-01), chăm sóc khách cũ (CRM-07); đã có
   báo cáo phễu (`bc/sales-effectiveness.tsx`) và bàn giao khách khi nghỉ việc (CRM-10).
 
-**GĐ1 còn thiếu:** bảng lịch sử bước chung `stage_transitions` (hợp đồng / gói thầu / công trình); dải tiến
-trình cho gói thầu; thanh lưu dính của biểu mẫu đầu bài, thẻ PWA trên hộp thoại, `ConfirmDialog` qua portal.
+**GĐ1 còn thiếu:** dải tiến
+trình cho gói thầu; (lịch sử bước chung `stage_transitions` xong ở 0225 — trigger trên ba bảng, ghi kèm cột lý do vừa
+đổi, quyền đọc theo hồ sơ gốc, khối «Các lần chuyển bước» `components/entity/stage-history.tsx` ở tab Lịch sử); thanh lưu dính của biểu mẫu đầu bài, thẻ PWA trên hộp thoại, `ConfirmDialog` qua portal.
 
 ### 9.3 Trạng thái hiện tại và bước tiếp theo
 
@@ -1124,10 +1125,10 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    Trợ lý AI của bản demo; chạy thử bằng đúng vai.
 4. Việc nhỏ treo của Đợt 1: AI điền luôn các ô «Thông tin hiện trường» riêng từng công ty; nút «Gửi mẫu» trên đầu mối /
    cơ hội; nhập đầu mối từ Excel; Kinh doanh NVS sửa ô phiếu khảo sát (câu 22).
-5. Việc treo cũ, làm xen: lịch sử bước chung `stage_transitions`; dải tiến trình gói thầu; QĐ-6 giao dịch nội bộ; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
+5. Việc treo cũ, làm xen: dải tiến trình gói thầu; QĐ-6 giao dịch nội bộ; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0225.** (Đã dùng tới 0224; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0226.** (Đã dùng tới 0225; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 

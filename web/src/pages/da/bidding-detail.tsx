@@ -17,6 +17,7 @@ import {
   formatDateTime,
 } from '@nvg/shared';
 import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
+import { StageHistory } from '@/components/entity/stage-history';
 import { Button } from '@/components/ui/button';
 import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
@@ -304,22 +305,31 @@ export function BiddingDetailPage() {
           },
         ]}
         historyContent={
-          <DetailFields
-            fields={[
-              { label: 'Tạo lúc', value: formatDateTime(project.created_at) },
-              { label: 'Cập nhật gần nhất', value: formatDateTime(project.updated_at) },
-              {
-                label: 'Nộp thầu',
-                value: project.submitted_at ? formatDateTime(project.submitted_at) : EM_DASH,
-              },
-              {
-                label: 'Bàn giao ngân sách',
-                value: project.budget_generated_at
-                  ? formatDateTime(project.budget_generated_at)
-                  : EM_DASH,
-              },
-            ]}
-          />
+          <div className="space-y-6">
+            <DetailFields
+              fields={[
+                { label: 'Tạo lúc', value: formatDateTime(project.created_at) },
+                { label: 'Cập nhật gần nhất', value: formatDateTime(project.updated_at) },
+                {
+                  label: 'Nộp thầu',
+                  value: project.submitted_at ? formatDateTime(project.submitted_at) : EM_DASH,
+                },
+                {
+                  label: 'Bàn giao ngân sách',
+                  value: project.budget_generated_at
+                    ? formatDateTime(project.budget_generated_at)
+                    : EM_DASH,
+                },
+              ]}
+            />
+            <StageHistory
+              entityType="bidding_projects"
+              entityId={project.id}
+              stage={project.stage}
+              meta={BIDDING_STAGE_META}
+              negativeStages={['truot_thau']}
+            />
+          </div>
         }
         related={[
           {
