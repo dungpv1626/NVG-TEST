@@ -17,6 +17,7 @@ import {
   BUTTONS,
   formatCurrency,
   formatDateTime,
+  isPayableContract,
   type AmendmentStage,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,9 @@ import {
   type AmendmentRecord,
 } from '@/hooks/use-contracts';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { useAnnexDocuments } from '@/hooks/use-contract-annex';
+import type { ContractDetailRecord } from '@/hooks/use-contracts';
+import { AnnexComposer } from './annex-composer';
 
 const EM_DASH = '—';
 
@@ -44,10 +48,13 @@ export function AmendmentPanel({
   contractId,
   companyId,
   readOnly,
+  contract,
 }: {
   contractId: string;
   companyId: string;
   readOnly: boolean;
+  /** Hợp đồng đầy đủ — có thì mỗi phát sinh soạn được văn bản phụ lục từ mẫu (0229). */
+  contract?: ContractDetailRecord;
 }) {
   const { data: amendments } = useContractAmendments(contractId);
   const { data: users } = useActiveUsers();
@@ -242,7 +249,18 @@ export function AmendmentPanel({
       ) : (
         <ul className="space-y-3">
           {(amendments ?? []).map((a) => (
-            <AmendmentCard key={a.id} amendment={a} readOnly={readOnly} />
+            <AmendmentCard
+              key={a.id}
+              amendment={a}
+              readOnly={readOnly}
+              contract={contract}
+              // Số thứ tự phụ lục gợi ý: thứ tự đề xuất trong hợp đồng (cũ nhất là 1).
+              annexNumber={
+                [...(amendments ?? [])]
+                  .sort((x, y) => x.requested_at.localeCompare(y.requested_at))
+                  .findIndex((x) => x.id === a.id) + 1
+              }
+            />
           ))}
         </ul>
       )}
@@ -250,8 +268,21 @@ export function AmendmentPanel({
   );
 }
 
-function AmendmentCard({ amendment, readOnly }: { amendment: AmendmentRecord; readOnly: boolean }) {
+function AmendmentCard({
+  amendment,
+  readOnly,
+  contract,
+  annexNumber,
+}: {
+  amendment: AmendmentRecord;
+  readOnly: boolean;
+  contract?: ContractDetailRecord;
+  annexNumber: number;
+}) {
   const promptDialog = usePromptDialog();
+  const annexDocs = useAnnexDocuments(contract?.id);
+  const annexVersions = (annexDocs.data ?? []).filter((d) => d.amendment_id === amendment.id);
+  const [composing, setComposing] = useState(false);
   const markQuoteSent = useMarkAmendmentQuoteSent();
   const submitApproval = useSubmitAmendmentApproval();
   const confirmByCustomer = useConfirmAmendmentByCustomer();
@@ -412,6 +443,36 @@ function AmendmentCard({ amendment, readOnly }: { amendment: AmendmentRecord; re
         <p role="alert" className="mt-2 text-status-overdue">
           {error}
         </p>
+      )}
+
+      {/* Mẫu phụ lục NVG viết cho hợp đồng NVG nhận việc — hợp đồng NVG đi thuê / mua không soạn ở đây (sai vai hai bên). */}
+      {contract && !isPayableContract(contract.type) && (
+        <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-line-soft pt-3">
+          <span className="text-sm text-fg-subtle">
+            Văn bản phụ lục:{' '}
+            {annexVersions.length > 0
+              ? `bản ${annexVersions[0]!.version} · ${formatDateTime(annexVersions[0]!.created_at)}`
+              : 'chưa soạn'}
+          </span>
+          {(annexVersions.length > 0 || (!readOnly && stage === 'de_xuat')) && (
+            <Button variant="secondary" size="sm" onClick={() => setComposing(true)}>
+              {!readOnly && stage === 'de_xuat'
+                ? annexVersions.length > 0
+                  ? 'Sửa văn bản phụ lục'
+                  : 'Soạn văn bản phụ lục'
+                : 'Xem văn bản phụ lục'}
+            </Button>
+          )}
+        </div>
+      )}
+      {composing && contract && (
+        <AnnexComposer
+          contract={contract}
+          kind="phu_luc"
+          amendment={{ id: amendment.id, title: amendment.title, number: annexNumber }}
+          editable={!readOnly && stage === 'de_xuat'}
+          onClose={() => setComposing(false)}
+        />
       )}
 
       {nextAction && <div className="mt-3">{nextAction}</div>}

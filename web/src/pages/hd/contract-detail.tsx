@@ -57,6 +57,7 @@ import { TermsPanel } from './terms-panel';
 import { SignContractDialog } from './sign-contract-dialog';
 import { SignedScanLink } from './signed-scan-link';
 import { SignedScanPanel } from './signed-scan-panel';
+import { LiquidationCard } from './liquidation-card';
 import { revealById } from '@/components/ui/split-workspace';
 
 const EM_DASH = '—';
@@ -451,6 +452,12 @@ export function ContractDetailPage() {
                     canManage={canApprove || (canEdit && isResponsible)}
                   />
                 )}
+                {(contract.stage === 'da_ky' || contract.stage === 'hoan_thanh') && (
+                  <LiquidationCard
+                    contract={contract}
+                    canManage={canApprove || (canEdit && isResponsible)}
+                  />
+                )}
                 <DetailFields
                   fields={[
                     { label: 'Trạng thái', value: CONTRACT_STAGE_META[contract.stage].label },
@@ -587,6 +594,7 @@ export function ContractDetailPage() {
                 contractId={contract.id}
                 companyId={contract.company_id}
                 readOnly={readOnly}
+                contract={contract}
               />
             ),
           },

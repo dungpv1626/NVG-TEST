@@ -1541,6 +1541,13 @@
       "when": 1791730000000,
       "tag": "0228_de_nghi_thanh_toan_chung_tu",
       "breakpoints": true
+    },
+    {
+      "idx": 228,
+      "version": "7",
+      "when": 1791740000000,
+      "tag": "0229_van_ban_phu_luc_thanh_ly",
+      "breakpoints": true
     }
   ]
 }

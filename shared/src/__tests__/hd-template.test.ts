@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   TEMPLATE_FIELD_KEYS,
+  buildAnnexData,
   buildTemplateData,
   missingTemplateFields,
   moneyToVietnameseWords,
@@ -236,5 +237,41 @@ describe('missingTemplateFieldsBySource — ô thiếu chia theo nơi sửa', ()
     );
     expect(groups.phap_nhan).toEqual(['Người đại diện (bên A)', 'Số tài khoản (bên A)']);
     expect(groups.khach_hang).toEqual(['Địa chỉ (bên B)']);
+  });
+});
+
+describe('văn bản kèm theo — phụ lục / biên bản thanh lý (0229)', () => {
+  it('giữ số và ngày ký HỢP ĐỒNG gốc; ngày ký là của chính văn bản, chưa biết thì để trống', () => {
+    const src = source({ contract_number: '05/2026/HĐTC' });
+    const blankDate = buildAnnexData(src, {
+      documentNumber: null,
+      annexNumber: '2',
+      signedDate: null,
+    });
+    expect(blankDate.so_hop_dong).toBe('05/2026/HĐTC');
+    expect(blankDate.ngay_ky_hd).toBe('05/10/2026');
+    expect(blankDate.so_phu_luc).toBe('2');
+    expect(blankDate.so_van_ban).toBeNull();
+    expect(blankDate.ngay_ky_ngay).toBeNull();
+    expect(blankDate.ngay_ky_nam).toBeNull();
+    expect(blankDate.nvg_ten).toBe(buildTemplateData(src).nvg_ten);
+
+    const dated = buildAnnexData(src, {
+      documentNumber: '12/PL-NVC',
+      annexNumber: null,
+      signedDate: '2026-11-20',
+    });
+    expect(dated.so_van_ban).toBe('12/PL-NVC');
+    expect([dated.ngay_ky_ngay, dated.ngay_ky_thang, dated.ngay_ky_nam]).toEqual([
+      '20',
+      '11',
+      '2026',
+    ]);
+    expect(dated.ngay_ky_hd).toBe('05/10/2026');
+  });
+
+  it('ba chỗ trống mới nằm trong danh mục — mẫu dùng chúng không bị coi là chỗ trống lạ', () => {
+    for (const k of ['so_van_ban', 'so_phu_luc', 'ngay_ky_hd'])
+      expect(TEMPLATE_FIELD_KEYS.has(k)).toBe(true);
   });
 });

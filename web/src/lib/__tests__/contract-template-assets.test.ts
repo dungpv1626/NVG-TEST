@@ -20,7 +20,9 @@ interface ManifestEntry {
   file: string;
   code: string;
   title: string;
-  contract_type: ContractType;
+  /** Rỗng với phụ lục / biên bản thanh lý (0229). */
+  contract_type: ContractType | null;
+  document_kind: 'hop_dong' | 'phu_luc' | 'thanh_ly';
   tags: Record<string, Record<string, unknown>>;
   payment_milestones: { noi_dung: string; ty_le: string | null }[];
 }
@@ -47,8 +49,11 @@ function toBuffer(blob: Blob): Promise<ArrayBuffer> {
 }
 
 describe('bộ mẫu hợp đồng NVC / NVO / NVS', () => {
-  it('có đủ 21 mẫu, tệp nào trong thư mục cũng có trong manifest', () => {
-    expect(entries).toHaveLength(21);
+  it('có đủ 21 mẫu hợp đồng + 12 văn bản kèm theo, tệp nào trong thư mục cũng có trong manifest', () => {
+    expect(entries.filter((e) => e.document_kind === 'hop_dong')).toHaveLength(21);
+    // Mỗi pháp nhân: 3 mẫu phụ lục (DC-01 tách A/B/C) + 1 biên bản thanh lý (0229).
+    expect(entries.filter((e) => e.document_kind === 'phu_luc')).toHaveLength(9);
+    expect(entries.filter((e) => e.document_kind === 'thanh_ly')).toHaveLength(3);
     for (const company of ['NVC', 'NVO', 'NVS']) {
       const files = readdirSync(join(ROOT, company)).filter((f) => f.endsWith('.docx'));
       const listed = entries.filter((e) => e.company === company).map((e) => e.file);
@@ -59,7 +64,8 @@ describe('bộ mẫu hợp đồng NVC / NVO / NVS', () => {
   it.each(entries.map((e) => [e.code, e] as const))(
     '%s đọc được, không có chỗ trống lạ',
     (_, e) => {
-      expect(CONTRACT_TYPES).toContain(e.contract_type);
+      if (e.document_kind === 'hop_dong') expect(CONTRACT_TYPES).toContain(e.contract_type);
+      else expect(e.contract_type).toBeNull();
       const result = inspectTemplate(load(e.company, e.file));
       expect(result.ok).toBe(true);
       if (!result.ok) return;
@@ -79,7 +85,8 @@ describe('bộ mẫu hợp đồng NVC / NVO / NVS', () => {
           code: 'X-HD-2026-0001',
           contract_number: '01/2026',
           title: 'Công trình thử',
-          type: e.contract_type,
+          // Văn bản kèm theo không gắn loại — thử như hợp đồng thi công NVG nhận việc.
+          type: e.contract_type ?? 'thi_cong',
           price_form: null,
           value: '1000000000',
           vat_rate: null,

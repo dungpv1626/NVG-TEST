@@ -225,6 +225,10 @@ export const TEMPLATE_FIELDS: readonly TemplateField[] = [
   { key: 'ngay_bat_dau', label: 'Ngày bắt đầu', group: 'hop_dong', kind: 'text' },
   { key: 'ngay_ket_thuc', label: 'Ngày kết thúc', group: 'hop_dong', kind: 'text' },
   { key: 'ngay_lap', label: 'Ngày lập văn bản', group: 'hop_dong', kind: 'text' },
+  // Văn bản kèm theo (phụ lục, biên bản thanh lý — 0229): số của chính văn bản, số thứ tự phụ lục, ngày ký hợp đồng gốc.
+  { key: 'so_van_ban', label: 'Số văn bản', group: 'hop_dong', kind: 'text' },
+  { key: 'so_phu_luc', label: 'Số thứ tự phụ lục', group: 'hop_dong', kind: 'text' },
+  { key: 'ngay_ky_hd', label: 'Ngày ký hợp đồng (dd/mm/yyyy)', group: 'hop_dong', kind: 'text' },
 
   { key: 'gia_tri', label: 'Giá trị hợp đồng (đã gồm thuế)', group: 'gia_tri', kind: 'text' },
   { key: 'gia_tri_bang_chu', label: 'Giá trị bằng chữ', group: 'gia_tri', kind: 'text' },
@@ -416,6 +420,9 @@ export function buildTemplateData(src: TemplateSource): Record<string, TemplateV
   data.ngay_bat_dau = c.start_date ? formatDate(c.start_date) : null;
   data.ngay_ket_thuc = c.end_date ? formatDate(c.end_date) : null;
   data.ngay_lap = formatDate(src.today);
+  data.ngay_ky_hd = data.ngay_ky;
+  data.so_van_ban = null;
+  data.so_phu_luc = null;
 
   const hasValue = c.value !== null && c.value !== undefined && c.value !== '';
   data.gia_tri = hasValue ? money(c.value) : null;
@@ -482,6 +489,35 @@ export function buildTemplateData(src: TemplateSource): Record<string, TemplateV
   return data;
 }
 
+/** Thông tin riêng của một văn bản kèm theo hợp đồng (phụ lục / biên bản thanh lý — 0229). */
+export interface AnnexInfo {
+  /** Số của chính văn bản («Số: …/…» đầu trang) — thường cấp lúc ký. */
+  documentNumber: string | null;
+  /** Số thứ tự phụ lục của hợp đồng (1, 2, 3…); biên bản thanh lý không có. */
+  annexNumber: string | null;
+  /** Ngày ký văn bản (yyyy-mm-dd); chưa biết thì để dải chấm. */
+  signedDate: string | null;
+}
+
+/**
+ * Giá trị cho mẫu phụ lục / biên bản thanh lý: mọi ô của hợp đồng gốc (hai bên, số và ngày ký hợp đồng, công trình…),
+ * riêng «ngày ký» là ngày của CHÍNH văn bản này — không lấy ngày ký hợp đồng (in nhầm thì phụ lục mang ngày cũ).
+ */
+export function buildAnnexData(
+  src: TemplateSource,
+  annex: AnnexInfo,
+): Record<string, TemplateValue> {
+  const data = buildTemplateData(src);
+  const signed = dateParts(annex.signedDate);
+  data.ngay_ky = annex.signedDate ? formatDate(annex.signedDate) : null;
+  data.ngay_ky_ngay = signed?.d ?? null;
+  data.ngay_ky_thang = signed?.m ?? null;
+  data.ngay_ky_nam = signed?.y ?? null;
+  data.so_van_ban = blank(annex.documentNumber);
+  data.so_phu_luc = blank(annex.annexNumber);
+  return data;
+}
+
 /** Tên ngắn của bên — ghi kèm ô thiếu để biết thiếu của ai. */
 const PARTY_SHORT: Partial<Record<TemplateFieldGroup, string>> = {
   nvg: 'pháp nhân NVG',
@@ -526,6 +562,7 @@ export const MISSING_FIELD_SOURCE_LABELS: Record<MissingFieldSource, string> = {
 
 const SIGNING_KEYS: ReadonlySet<string> = new Set([
   'so_hop_dong',
+  'so_van_ban',
   'noi_ky',
   'ngay_ky',
   'ngay_ky_ngay',

@@ -1,9 +1,1572 @@
 [
   {
+    "file": "NVO-DC-01A_Phu_luc_hop_dong_phat_sinh_gia_han.docx",
+    "code": "NVO-DC-01A",
+    "title": "NVO-DC-01A — Phụ lục hợp đồng — Điều chỉnh khối lượng, phát sinh",
+    "contract_type": null,
+    "document_kind": "phu_luc",
+    "replaced": [
+      "dia_diem",
+      "doi_tac_chuc_vu",
+      "doi_tac_dai_dien",
+      "doi_tac_dia_chi",
+      "doi_tac_dien_thoai",
+      "doi_tac_ma_so_thue",
+      "doi_tac_ngan_hang",
+      "doi_tac_so_tai_khoan",
+      "doi_tac_ten",
+      "ngay_ky",
+      "noi_ky",
+      "nvg_chuc_vu",
+      "nvg_dai_dien",
+      "nvg_dia_chi",
+      "nvg_dien_thoai",
+      "nvg_email",
+      "nvg_ma_so_thue",
+      "nvg_ngan_hang",
+      "nvg_so_tai_khoan",
+      "nvg_ten",
+      "so_hop_dong",
+      "so_phu_luc",
+      "so_van_ban",
+      "ten_hop_dong"
+    ],
+    "payment_table": false,
+    "payment_milestones": [],
+    "tags": {
+      "so_van_ban": {},
+      "noi_ky": {},
+      "ngay_ky_ngay": {},
+      "ngay_ky_thang": {},
+      "ngay_ky_nam": {},
+      "so_phu_luc": {},
+      "so_hop_dong": {},
+      "ngay_ky_hd": {},
+      "ten_hop_dong": {},
+      "dia_diem": {},
+      "o_1": {},
+      "o_2": {},
+      "o_3": {},
+      "o_4": {},
+      "o_5": {},
+      "o_6": {},
+      "o_7": {},
+      "o_8": {},
+      "o_9": {},
+      "doi_tac_ten": {},
+      "doi_tac_dia_chi": {},
+      "doi_tac_ma_so_thue": {},
+      "doi_tac_dien_thoai": {},
+      "doi_tac_dai_dien": {},
+      "doi_tac_chuc_vu": {},
+      "o_10": {},
+      "o_11": {},
+      "doi_tac_so_tai_khoan": {},
+      "doi_tac_ngan_hang": {},
+      "nvg_ten": {},
+      "nvg_dia_chi": {},
+      "nvg_ma_so_thue": {},
+      "nvg_dien_thoai": {},
+      "nvg_email": {},
+      "nvg_dai_dien": {},
+      "nvg_chuc_vu": {},
+      "o_12": {},
+      "o_13": {},
+      "o_14": {},
+      "o_15": {},
+      "nvg_so_tai_khoan": {},
+      "nvg_ngan_hang": {},
+      "o_16": {},
+      "o_17": {},
+      "pa_1_a": {
+        "pa_1_a_o": {}
+      },
+      "pa_1_b": {
+        "pa_1_b_o": {}
+      },
+      "c_1": {},
+      "o_18": {},
+      "pa_2_a": {
+        "pa_2_a_o": {}
+      },
+      "pa_2_b": {
+        "pa_2_b_o": {},
+        "o_19": {},
+        "o_20": {},
+        "o_21": {}
+      },
+      "c_2": {},
+      "o_22": {}
+    },
+    "options": [
+      {
+        "id": "pa_1",
+        "article": "Điều 2. Đơn giá áp dụng",
+        "label": "Điều 2. Đơn giá áp dụng",
+        "options": [
+          {
+            "key": "pa_1_a",
+            "letter": "A",
+            "text": "Phương án A: Áp dụng đơn giá trong Hợp đồng cho các công việc đã có đơn giá."
+          },
+          {
+            "key": "pa_1_b",
+            "letter": "B",
+            "text": "Phương án B: Công việc mới chưa có đơn giá: áp dụng đơn giá do hai bên thỏa thuận tại bảng trên, lập trên cơ sở giá thị trường tại thời điểm thực hiện (kèm bảng"
+          }
+        ]
+      },
+      {
+        "id": "pa_2",
+        "article": "Điều 4. Ảnh hưởng đến tiến độ và thanh toán",
+        "label": "Điều 4. Ảnh hưởng đến tiến độ và thanh toán",
+        "options": [
+          {
+            "key": "pa_2_a",
+            "letter": "A",
+            "text": "Phương án A: Không thay đổi thời gian thực hiện Hợp đồng."
+          },
+          {
+            "key": "pa_2_b",
+            "letter": "B",
+            "text": "Phương án B: Thời gian thực hiện Hợp đồng được gia hạn thêm …… ngày; ngày hoàn thành mới: ……/……/20……; Bên B không bị phạt chậm tiến độ đối với thời gian gia hạn"
+          }
+        ]
+      }
+    ],
+    "free_fields": [
+      {
+        "key": "o_1",
+        "seq": 1,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH KHỐI LƯỢNG, PHÁT SINH",
+        "before": "Hợp đồng thi công xây dựng/thiết kế số … ký ngày … giữa ",
+        "after": " và … (sau đây gọi là \"Hợp đồng\");",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_2",
+        "seq": 2,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH KHỐI LƯỢNG, PHÁT SINH",
+        "before": "Hợp đồng thi công xây dựng/thiết kế số … ký ngày … giữa ……………………… và ",
+        "after": " (sau đây gọi là \"Hợp đồng\");",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_3",
+        "seq": 3,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH KHỐI LƯỢNG, PHÁT SINH",
+        "before": "Các phụ lục đã ký: số ",
+        "after": " ngày …; số … ngày …;",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_4",
+        "seq": 4,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH KHỐI LƯỢNG, PHÁT SINH",
+        "before": "Các phụ lục đã ký: số …… ngày ",
+        "after": "; số … ngày …;",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_5",
+        "seq": 5,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH KHỐI LƯỢNG, PHÁT SINH",
+        "before": "Các phụ lục đã ký: số …… ngày ……; số ",
+        "after": " ngày …;",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_6",
+        "seq": 6,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH KHỐI LƯỢNG, PHÁT SINH",
+        "before": "Các phụ lục đã ký: số …… ngày ……; số …… ngày ",
+        "after": ";",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_7",
+        "seq": 7,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH KHỐI LƯỢNG, PHÁT SINH",
+        "before": "Lệnh thay đổi/văn bản yêu cầu số ",
+        "after": " ngày … của Bên giao thầu; biên bản xác nhận hiện",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_8",
+        "seq": 8,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH KHỐI LƯỢNG, PHÁT SINH",
+        "before": "Lệnh thay đổi/văn bản yêu cầu số …… ngày ",
+        "after": " của Bên giao thầu; biên bản xác nhận hiện trường",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_9",
+        "seq": 9,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH KHỐI LƯỢNG, PHÁT SINH",
+        "before": "y đổi/văn bản yêu cầu số …… ngày …… của Bên giao thầu; biên bản xác nhận hiện trường ngày ",
+        "after": ";",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_10",
+        "seq": 10,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH KHỐI LƯỢNG, PHÁT SINH",
+        "before": "(Theo Giấy ủy quyền số ",
+        "after": " ngày … – nếu người ký không phải đại diện theo ph",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_11",
+        "seq": 11,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH KHỐI LƯỢNG, PHÁT SINH",
+        "before": "(Theo Giấy ủy quyền số ……… ngày ",
+        "after": " – nếu người ký không phải đại diện theo pháp luật",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_12",
+        "seq": 12,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH KHỐI LƯỢNG, PHÁT SINH",
+        "before": "(Hoặc người được ủy quyền: ",
+        "after": " – Chức vụ: … – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_13",
+        "seq": 13,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH KHỐI LƯỢNG, PHÁT SINH",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ",
+        "after": " – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_14",
+        "seq": 14,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH KHỐI LƯỢNG, PHÁT SINH",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ",
+        "after": " ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_15",
+        "seq": 15,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH KHỐI LƯỢNG, PHÁT SINH",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ……… ngày ",
+        "after": ")",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_16",
+        "seq": 16,
+        "article": "Điều 1. Nội dung điều chỉnh khối lượng",
+        "before": "1.1. Lý do: ",
+        "after": " (thay đổi thiết kế theo yêu cầu Bên A/sai khác gi",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_17",
+        "seq": 17,
+        "article": "Điều 1. Nội dung điều chỉnh khối lượng",
+        "before": "iết kế theo yêu cầu Bên A/sai khác giữa bản vẽ và BOQ/điều kiện hiện trường khác khảo sát ",
+        "after": ").",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "c_1",
+        "seq": 18,
+        "article": "Điều 3. Giá trị hợp đồng sau điều chỉnh",
+        "before": "Giá trị trên ",
+        "after": " thuế GTGT. Bằng chữ: ………………………………………",
+        "default": null,
+        "option": null,
+        "choices": [
+          "đã bao gồm",
+          "chưa bao gồm"
+        ]
+      },
+      {
+        "key": "o_18",
+        "seq": 19,
+        "article": "Điều 3. Giá trị hợp đồng sau điều chỉnh",
+        "before": "Giá trị trên [đã bao gồm/chưa bao gồm] thuế GTGT. Bằng chữ: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_19",
+        "seq": 20,
+        "article": "Điều 4. Ảnh hưởng đến tiến độ và thanh toán",
+        "before": "… Phương án B: Thời gian thực hiện Hợp đồng được gia hạn thêm ",
+        "after": " ngày; ngày hoàn thành mới: …/20…; Bên B không bị",
+        "default": null,
+        "option": "pa_2_b"
+      },
+      {
+        "key": "o_20",
+        "seq": 21,
+        "article": "Điều 4. Ảnh hưởng đến tiến độ và thanh toán",
+        "before": "Phương án B: Thời gian thực hiện Hợp đồng được gia hạn thêm …… ngày; ngày hoàn thành mới: ",
+        "after": "/20…; Bên B không bị phạt chậm tiến độ đối với thờ",
+        "default": null,
+        "option": "pa_2_b"
+      },
+      {
+        "key": "o_21",
+        "seq": 22,
+        "article": "Điều 4. Ảnh hưởng đến tiến độ và thanh toán",
+        "before": "n B: Thời gian thực hiện Hợp đồng được gia hạn thêm …… ngày; ngày hoàn thành mới: ……/……/20",
+        "after": "; Bên B không bị phạt chậm tiến độ đối với thời gi",
+        "default": null,
+        "option": "pa_2_b"
+      },
+      {
+        "key": "c_2",
+        "seq": 23,
+        "article": "Điều 4. Ảnh hưởng đến tiến độ và thanh toán",
+        "before": "4.2. Giá trị phát sinh được thanh toán ",
+        "after": "; giá trị bảo đảm thực hiện hợp đồng [giữ nguyên/đ",
+        "default": null,
+        "option": null,
+        "choices": [
+          "cùng đợt thanh toán kế tiếp",
+          "khi quyết toán"
+        ]
+      },
+      {
+        "key": "o_22",
+        "seq": 24,
+        "article": "Điều 4. Ảnh hưởng đến tiến độ và thanh toán",
+        "before": "oán]; giá trị bảo đảm thực hiện hợp đồng [giữ nguyên/được điều chỉnh tương ứng trong vòng ",
+        "after": " ngày].",
+        "default": null,
+        "option": null
+      }
+    ],
+    "sha": "90a6b6893e5f198a",
+    "notes_removed": 1
+  },
+  {
+    "file": "NVO-DC-01B_Phu_luc_hop_dong_phat_sinh_gia_han.docx",
+    "code": "NVO-DC-01B",
+    "title": "NVO-DC-01B — Phụ lục hợp đồng — Gia hạn thời gian thực hiện",
+    "contract_type": null,
+    "document_kind": "phu_luc",
+    "replaced": [
+      "dia_diem",
+      "doi_tac_chuc_vu",
+      "doi_tac_dai_dien",
+      "doi_tac_dia_chi",
+      "doi_tac_dien_thoai",
+      "doi_tac_ma_so_thue",
+      "doi_tac_ngan_hang",
+      "doi_tac_so_tai_khoan",
+      "doi_tac_ten",
+      "ngay_ky",
+      "noi_ky",
+      "nvg_chuc_vu",
+      "nvg_dai_dien",
+      "nvg_dia_chi",
+      "nvg_dien_thoai",
+      "nvg_email",
+      "nvg_ma_so_thue",
+      "nvg_ngan_hang",
+      "nvg_so_tai_khoan",
+      "nvg_ten",
+      "so_hop_dong",
+      "so_phu_luc",
+      "so_van_ban",
+      "ten_hop_dong"
+    ],
+    "payment_table": false,
+    "payment_milestones": [],
+    "tags": {
+      "so_van_ban": {},
+      "noi_ky": {},
+      "ngay_ky_ngay": {},
+      "ngay_ky_thang": {},
+      "ngay_ky_nam": {},
+      "so_phu_luc": {},
+      "so_hop_dong": {},
+      "ngay_ky_hd": {},
+      "ten_hop_dong": {},
+      "dia_diem": {},
+      "o_1": {},
+      "o_2": {},
+      "o_3": {},
+      "o_4": {},
+      "o_5": {},
+      "o_6": {},
+      "o_7": {},
+      "o_8": {},
+      "o_9": {},
+      "doi_tac_ten": {},
+      "doi_tac_dia_chi": {},
+      "doi_tac_ma_so_thue": {},
+      "doi_tac_dien_thoai": {},
+      "doi_tac_dai_dien": {},
+      "doi_tac_chuc_vu": {},
+      "o_10": {},
+      "o_11": {},
+      "doi_tac_so_tai_khoan": {},
+      "doi_tac_ngan_hang": {},
+      "nvg_ten": {},
+      "nvg_dia_chi": {},
+      "nvg_ma_so_thue": {},
+      "nvg_dien_thoai": {},
+      "nvg_email": {},
+      "nvg_dai_dien": {},
+      "nvg_chuc_vu": {},
+      "o_12": {},
+      "o_13": {},
+      "o_14": {},
+      "o_15": {},
+      "nvg_so_tai_khoan": {},
+      "nvg_ngan_hang": {},
+      "pa_1_a": {
+        "pa_1_a_o": {},
+        "o_16": {}
+      },
+      "pa_1_b": {
+        "pa_1_b_o": {},
+        "o_17": {},
+        "o_18": {}
+      },
+      "pa_1_c": {
+        "pa_1_c_o": {},
+        "o_19": {},
+        "o_20": {}
+      },
+      "pa_1_d": {
+        "pa_1_d_o": {},
+        "o_21": {}
+      },
+      "pa_2_a": {
+        "pa_2_a_o": {},
+        "o_22": {}
+      },
+      "pa_2_b": {
+        "pa_2_b_o": {},
+        "o_23": {}
+      },
+      "pa_2_c": {
+        "pa_2_c_o": {}
+      },
+      "o_24": {},
+      "o_25": {},
+      "o_26": {}
+    },
+    "options": [
+      {
+        "id": "pa_1",
+        "article": "Điều 1. Lý do gia hạn",
+        "label": "Điều 1. Lý do gia hạn",
+        "options": [
+          {
+            "key": "pa_1_a",
+            "letter": "A",
+            "text": "Phương án A: Do Bên giao thầu chậm bàn giao mặt bằng, hồ sơ thiết kế, vật tư cấp hoặc chậm thanh toán (nêu cụ thể: ……………)."
+          },
+          {
+            "key": "pa_1_b",
+            "letter": "B",
+            "text": "Phương án B: Do sự kiện bất khả kháng: …………… (kèm văn bản thông báo ngày ……)."
+          },
+          {
+            "key": "pa_1_c",
+            "letter": "C",
+            "text": "Phương án C: Do khối lượng phát sinh theo Phụ lục số …… ngày ……."
+          },
+          {
+            "key": "pa_1_d",
+            "letter": "D",
+            "text": "Phương án D: Theo đề nghị của Bên nhận thầu và được Bên kia chấp thuận (nêu lý do: ……………)."
+          }
+        ]
+      },
+      {
+        "id": "pa_2",
+        "article": "Điều 3. Phạt vi phạm và chi phí",
+        "label": "Điều 3. Phạt vi phạm và chi phí",
+        "options": [
+          {
+            "key": "pa_2_a",
+            "letter": "A",
+            "text": "Phương án A: Gia hạn không do lỗi của Bên B: Bên B không bị phạt chậm tiến độ trong thời gian gia hạn; Bên A thanh toán chi phí duy trì công trường hợp lý (nếu "
+          },
+          {
+            "key": "pa_2_b",
+            "letter": "B",
+            "text": "Phương án B: Gia hạn do lỗi của Bên B: thời gian gia hạn không miễn trừ phạt chậm tiến độ theo Hợp đồng; mức phạt tính từ ngày ……"
+          },
+          {
+            "key": "pa_2_c",
+            "letter": "C",
+            "text": "Phương án C: Gia hạn theo thỏa thuận: các bên không phạt nhau, mỗi bên tự chịu chi phí của mình."
+          }
+        ]
+      }
+    ],
+    "free_fields": [
+      {
+        "key": "o_1",
+        "seq": 1,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – GIA HẠN THỜI GIAN THỰC HIỆN",
+        "before": "Hợp đồng thi công xây dựng/thiết kế số … ký ngày … giữa ",
+        "after": " và … (sau đây gọi là \"Hợp đồng\");",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_2",
+        "seq": 2,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – GIA HẠN THỜI GIAN THỰC HIỆN",
+        "before": "Hợp đồng thi công xây dựng/thiết kế số … ký ngày … giữa ……………………… và ",
+        "after": " (sau đây gọi là \"Hợp đồng\");",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_3",
+        "seq": 3,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – GIA HẠN THỜI GIAN THỰC HIỆN",
+        "before": "Các phụ lục đã ký: số ",
+        "after": " ngày …; số … ngày …;",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_4",
+        "seq": 4,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – GIA HẠN THỜI GIAN THỰC HIỆN",
+        "before": "Các phụ lục đã ký: số …… ngày ",
+        "after": "; số … ngày …;",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_5",
+        "seq": 5,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – GIA HẠN THỜI GIAN THỰC HIỆN",
+        "before": "Các phụ lục đã ký: số …… ngày ……; số ",
+        "after": " ngày …;",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_6",
+        "seq": 6,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – GIA HẠN THỜI GIAN THỰC HIỆN",
+        "before": "Các phụ lục đã ký: số …… ngày ……; số …… ngày ",
+        "after": ";",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_7",
+        "seq": 7,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – GIA HẠN THỜI GIAN THỰC HIỆN",
+        "before": "Lệnh thay đổi/văn bản yêu cầu số ",
+        "after": " ngày … của Bên giao thầu; biên bản xác nhận hiện",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_8",
+        "seq": 8,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – GIA HẠN THỜI GIAN THỰC HIỆN",
+        "before": "Lệnh thay đổi/văn bản yêu cầu số …… ngày ",
+        "after": " của Bên giao thầu; biên bản xác nhận hiện trường",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_9",
+        "seq": 9,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – GIA HẠN THỜI GIAN THỰC HIỆN",
+        "before": "y đổi/văn bản yêu cầu số …… ngày …… của Bên giao thầu; biên bản xác nhận hiện trường ngày ",
+        "after": ";",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_10",
+        "seq": 10,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – GIA HẠN THỜI GIAN THỰC HIỆN",
+        "before": "(Theo Giấy ủy quyền số ",
+        "after": " ngày … – nếu người ký không phải đại diện theo ph",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_11",
+        "seq": 11,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – GIA HẠN THỜI GIAN THỰC HIỆN",
+        "before": "(Theo Giấy ủy quyền số ……… ngày ",
+        "after": " – nếu người ký không phải đại diện theo pháp luật",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_12",
+        "seq": 12,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – GIA HẠN THỜI GIAN THỰC HIỆN",
+        "before": "(Hoặc người được ủy quyền: ",
+        "after": " – Chức vụ: … – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_13",
+        "seq": 13,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – GIA HẠN THỜI GIAN THỰC HIỆN",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ",
+        "after": " – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_14",
+        "seq": 14,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – GIA HẠN THỜI GIAN THỰC HIỆN",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ",
+        "after": " ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_15",
+        "seq": 15,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – GIA HẠN THỜI GIAN THỰC HIỆN",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ……… ngày ",
+        "after": ")",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_16",
+        "seq": 16,
+        "article": "Điều 1. Lý do gia hạn",
+        "before": "thầu chậm bàn giao mặt bằng, hồ sơ thiết kế, vật tư cấp hoặc chậm thanh toán (nêu cụ thể: ",
+        "after": ").",
+        "default": null,
+        "option": "pa_1_a"
+      },
+      {
+        "key": "o_17",
+        "seq": 17,
+        "article": "Điều 1. Lý do gia hạn",
+        "before": "… Phương án B: Do sự kiện bất khả kháng: ",
+        "after": " (kèm văn bản thông báo ngày …).",
+        "default": null,
+        "option": "pa_1_b"
+      },
+      {
+        "key": "o_18",
+        "seq": 18,
+        "article": "Điều 1. Lý do gia hạn",
+        "before": "… Phương án B: Do sự kiện bất khả kháng: …………… (kèm văn bản thông báo ngày ",
+        "after": ").",
+        "default": null,
+        "option": "pa_1_b"
+      },
+      {
+        "key": "o_19",
+        "seq": 19,
+        "article": "Điều 1. Lý do gia hạn",
+        "before": "… Phương án C: Do khối lượng phát sinh theo Phụ lục số ",
+        "after": " ngày ….",
+        "default": null,
+        "option": "pa_1_c"
+      },
+      {
+        "key": "o_20",
+        "seq": 20,
+        "article": "Điều 1. Lý do gia hạn",
+        "before": "… Phương án C: Do khối lượng phát sinh theo Phụ lục số …… ngày ",
+        "after": ".",
+        "default": null,
+        "option": "pa_1_c"
+      },
+      {
+        "key": "o_21",
+        "seq": 21,
+        "article": "Điều 1. Lý do gia hạn",
+        "before": "… Phương án D: Theo đề nghị của Bên nhận thầu và được Bên kia chấp thuận (nêu lý do: ",
+        "after": ").",
+        "default": null,
+        "option": "pa_1_d"
+      },
+      {
+        "key": "o_22",
+        "seq": 22,
+        "article": "Điều 3. Phạt vi phạm và chi phí",
+        "before": "độ trong thời gian gia hạn; Bên A thanh toán chi phí duy trì công trường hợp lý (nếu có): ",
+        "after": " đồng.",
+        "default": null,
+        "option": "pa_2_a"
+      },
+      {
+        "key": "o_23",
+        "seq": 23,
+        "article": "Điều 3. Phạt vi phạm và chi phí",
+        "before": ": thời gian gia hạn không miễn trừ phạt chậm tiến độ theo Hợp đồng; mức phạt tính từ ngày ",
+        "after": "",
+        "default": null,
+        "option": "pa_2_b"
+      },
+      {
+        "key": "o_24",
+        "seq": 24,
+        "article": "Điều 4. Gia hạn bảo lãnh",
+        "before": "Trong vòng ",
+        "after": " ngày kể từ ngày ký Phụ lục, Bên B gia hạn bảo lãn",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_25",
+        "seq": 25,
+        "article": "Điều 4. Gia hạn bảo lãnh",
+        "before": "Phụ lục, Bên B gia hạn bảo lãnh thực hiện hợp đồng và bảo lãnh tạm ứng (nếu có) đến ngày ",
+        "after": "/20…. Nếu Bên B không gia hạn bảo lãnh, Bên A có q",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_26",
+        "seq": 26,
+        "article": "Điều 4. Gia hạn bảo lãnh",
+        "before": ", Bên B gia hạn bảo lãnh thực hiện hợp đồng và bảo lãnh tạm ứng (nếu có) đến ngày ……/……/20",
+        "after": ". Nếu Bên B không gia hạn bảo lãnh, Bên A có quyền",
+        "default": null,
+        "option": null
+      }
+    ],
+    "sha": "fdb19e8c158f8be1",
+    "notes_removed": 2
+  },
+  {
+    "file": "NVO-DC-01C_Phu_luc_hop_dong_phat_sinh_gia_han.docx",
+    "code": "NVO-DC-01C",
+    "title": "NVO-DC-01C — Phụ lục hợp đồng — Điều chỉnh nội dung khác",
+    "contract_type": null,
+    "document_kind": "phu_luc",
+    "replaced": [
+      "dia_diem",
+      "doi_tac_chuc_vu",
+      "doi_tac_dai_dien",
+      "doi_tac_dia_chi",
+      "doi_tac_dien_thoai",
+      "doi_tac_ma_so_thue",
+      "doi_tac_ngan_hang",
+      "doi_tac_so_tai_khoan",
+      "doi_tac_ten",
+      "ngay_ky",
+      "noi_ky",
+      "nvg_chuc_vu",
+      "nvg_dai_dien",
+      "nvg_dia_chi",
+      "nvg_dien_thoai",
+      "nvg_email",
+      "nvg_ma_so_thue",
+      "nvg_ngan_hang",
+      "nvg_so_tai_khoan",
+      "nvg_ten",
+      "so_hop_dong",
+      "so_phu_luc",
+      "so_van_ban",
+      "ten_hop_dong"
+    ],
+    "payment_table": false,
+    "payment_milestones": [],
+    "tags": {
+      "so_van_ban": {},
+      "noi_ky": {},
+      "ngay_ky_ngay": {},
+      "ngay_ky_thang": {},
+      "ngay_ky_nam": {},
+      "so_phu_luc": {},
+      "so_hop_dong": {},
+      "ngay_ky_hd": {},
+      "ten_hop_dong": {},
+      "dia_diem": {},
+      "o_1": {},
+      "o_2": {},
+      "o_3": {},
+      "o_4": {},
+      "o_5": {},
+      "o_6": {},
+      "o_7": {},
+      "o_8": {},
+      "o_9": {},
+      "doi_tac_ten": {},
+      "doi_tac_dia_chi": {},
+      "doi_tac_ma_so_thue": {},
+      "doi_tac_dien_thoai": {},
+      "doi_tac_dai_dien": {},
+      "doi_tac_chuc_vu": {},
+      "o_10": {},
+      "o_11": {},
+      "doi_tac_so_tai_khoan": {},
+      "doi_tac_ngan_hang": {},
+      "nvg_ten": {},
+      "nvg_dia_chi": {},
+      "nvg_ma_so_thue": {},
+      "nvg_dien_thoai": {},
+      "nvg_email": {},
+      "nvg_dai_dien": {},
+      "nvg_chuc_vu": {},
+      "o_12": {},
+      "o_13": {},
+      "o_14": {},
+      "o_15": {},
+      "nvg_so_tai_khoan": {},
+      "nvg_ngan_hang": {},
+      "o_16": {},
+      "o_17": {},
+      "o_18": {},
+      "o_19": {},
+      "pa_1_a": {
+        "pa_1_a_o": {},
+        "o_20": {}
+      },
+      "pa_1_b": {
+        "pa_1_b_o": {}
+      },
+      "pa_1_c": {
+        "pa_1_c_o": {}
+      },
+      "pa_1_d": {
+        "pa_1_d_o": {},
+        "o_21": {}
+      }
+    },
+    "options": [
+      {
+        "id": "pa_1",
+        "article": "Điều 1. Nội dung sửa đổi, bổ sung",
+        "label": "Các nhóm nội dung thường gặp (đánh dấu nội dung áp dụng):",
+        "options": [
+          {
+            "key": "pa_1_a",
+            "letter": "A",
+            "text": "Phương án A: Điều chỉnh giá/đơn giá: theo chỉ số giá hoặc biến động giá vật liệu chính vượt …… % (kèm bảng tính)."
+          },
+          {
+            "key": "pa_1_b",
+            "letter": "B",
+            "text": "Phương án B: Điều chỉnh thanh toán: thay đổi số đợt, tỷ lệ, mốc thanh toán, tài khoản nhận tiền."
+          },
+          {
+            "key": "pa_1_c",
+            "letter": "C",
+            "text": "Phương án C: Thay đổi thông tin các bên: tên, địa chỉ, người đại diện, chỉ huy trưởng/đầu mối liên lạc (kèm giấy tờ chứng minh)."
+          },
+          {
+            "key": "pa_1_d",
+            "letter": "D",
+            "text": "Phương án D: Khác: ……………………………………………"
+          }
+        ]
+      }
+    ],
+    "free_fields": [
+      {
+        "key": "o_1",
+        "seq": 1,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH NỘI DUNG KHÁC",
+        "before": "Hợp đồng thi công xây dựng/thiết kế số … ký ngày … giữa ",
+        "after": " và … (sau đây gọi là \"Hợp đồng\");",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_2",
+        "seq": 2,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH NỘI DUNG KHÁC",
+        "before": "Hợp đồng thi công xây dựng/thiết kế số … ký ngày … giữa ……………………… và ",
+        "after": " (sau đây gọi là \"Hợp đồng\");",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_3",
+        "seq": 3,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH NỘI DUNG KHÁC",
+        "before": "Các phụ lục đã ký: số ",
+        "after": " ngày …; số … ngày …;",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_4",
+        "seq": 4,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH NỘI DUNG KHÁC",
+        "before": "Các phụ lục đã ký: số …… ngày ",
+        "after": "; số … ngày …;",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_5",
+        "seq": 5,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH NỘI DUNG KHÁC",
+        "before": "Các phụ lục đã ký: số …… ngày ……; số ",
+        "after": " ngày …;",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_6",
+        "seq": 6,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH NỘI DUNG KHÁC",
+        "before": "Các phụ lục đã ký: số …… ngày ……; số …… ngày ",
+        "after": ";",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_7",
+        "seq": 7,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH NỘI DUNG KHÁC",
+        "before": "Lệnh thay đổi/văn bản yêu cầu số ",
+        "after": " ngày … của Bên giao thầu; biên bản xác nhận hiện",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_8",
+        "seq": 8,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH NỘI DUNG KHÁC",
+        "before": "Lệnh thay đổi/văn bản yêu cầu số …… ngày ",
+        "after": " của Bên giao thầu; biên bản xác nhận hiện trường",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_9",
+        "seq": 9,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH NỘI DUNG KHÁC",
+        "before": "y đổi/văn bản yêu cầu số …… ngày …… của Bên giao thầu; biên bản xác nhận hiện trường ngày ",
+        "after": ";",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_10",
+        "seq": 10,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH NỘI DUNG KHÁC",
+        "before": "(Theo Giấy ủy quyền số ",
+        "after": " ngày … – nếu người ký không phải đại diện theo ph",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_11",
+        "seq": 11,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH NỘI DUNG KHÁC",
+        "before": "(Theo Giấy ủy quyền số ……… ngày ",
+        "after": " – nếu người ký không phải đại diện theo pháp luật",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_12",
+        "seq": 12,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH NỘI DUNG KHÁC",
+        "before": "(Hoặc người được ủy quyền: ",
+        "after": " – Chức vụ: … – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_13",
+        "seq": 13,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH NỘI DUNG KHÁC",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ",
+        "after": " – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_14",
+        "seq": 14,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH NỘI DUNG KHÁC",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ",
+        "after": " ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_15",
+        "seq": 15,
+        "article": "PHỤ LỤC HỢP ĐỒNG SỐ {so_phu_luc} – ĐIỀU CHỈNH NỘI DUNG KHÁC",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ……… ngày ",
+        "after": ")",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_16",
+        "seq": 16,
+        "article": "Điều 1. Nội dung sửa đổi, bổ sung",
+        "before": "Điều ",
+        "after": ", khoản …",
+        "default": null,
+        "option": null,
+        "cell": "Điều khoản"
+      },
+      {
+        "key": "o_17",
+        "seq": 17,
+        "article": "Điều 1. Nội dung sửa đổi, bổ sung",
+        "before": "Điều …, khoản ",
+        "after": "",
+        "default": null,
+        "option": null,
+        "cell": "Điều khoản"
+      },
+      {
+        "key": "o_18",
+        "seq": 18,
+        "article": "Điều 1. Nội dung sửa đổi, bổ sung",
+        "before": "Điều ",
+        "after": ", khoản …",
+        "default": null,
+        "option": null,
+        "cell": "Điều khoản"
+      },
+      {
+        "key": "o_19",
+        "seq": 19,
+        "article": "Điều 1. Nội dung sửa đổi, bổ sung",
+        "before": "Điều …, khoản ",
+        "after": "",
+        "default": null,
+        "option": null,
+        "cell": "Điều khoản"
+      },
+      {
+        "key": "o_20",
+        "seq": 20,
+        "article": "Điều 1. Nội dung sửa đổi, bổ sung",
+        "before": "ương án A: Điều chỉnh giá/đơn giá: theo chỉ số giá hoặc biến động giá vật liệu chính vượt ",
+        "after": " % (kèm bảng tính).",
+        "default": null,
+        "option": "pa_1_a"
+      },
+      {
+        "key": "o_21",
+        "seq": 21,
+        "article": "Điều 1. Nội dung sửa đổi, bổ sung",
+        "before": "… Phương án D: Khác: ",
+        "after": "",
+        "default": null,
+        "option": "pa_1_d"
+      }
+    ],
+    "sha": "f6843ed3efa19b9c",
+    "notes_removed": 1
+  },
+  {
+    "file": "NVO-DC-03_Bien_ban_thanh_ly_hop_dong.docx",
+    "code": "NVO-DC-03",
+    "title": "NVO-DC-03 — Biên bản thanh lý hợp đồng",
+    "contract_type": null,
+    "document_kind": "thanh_ly",
+    "replaced": [
+      "doi_tac_chuc_vu",
+      "doi_tac_dai_dien",
+      "doi_tac_dia_chi",
+      "doi_tac_dien_thoai",
+      "doi_tac_ma_so_thue",
+      "doi_tac_ngan_hang",
+      "doi_tac_so_tai_khoan",
+      "doi_tac_ten",
+      "ngay_ky",
+      "noi_ky",
+      "nvg_chuc_vu",
+      "nvg_dai_dien",
+      "nvg_dia_chi",
+      "nvg_dien_thoai",
+      "nvg_email",
+      "nvg_ma_so_thue",
+      "nvg_ngan_hang",
+      "nvg_so_tai_khoan",
+      "nvg_ten",
+      "so_hop_dong",
+      "so_van_ban"
+    ],
+    "payment_table": false,
+    "payment_milestones": [],
+    "tags": {
+      "so_van_ban": {},
+      "noi_ky": {},
+      "ngay_ky_ngay": {},
+      "ngay_ky_thang": {},
+      "ngay_ky_nam": {},
+      "so_hop_dong": {},
+      "ngay_ky_hd": {},
+      "o_1": {},
+      "o_2": {},
+      "o_3": {},
+      "o_4": {},
+      "o_5": {},
+      "o_6": {},
+      "doi_tac_ten": {},
+      "doi_tac_dia_chi": {},
+      "doi_tac_ma_so_thue": {},
+      "doi_tac_dien_thoai": {},
+      "doi_tac_dai_dien": {},
+      "doi_tac_chuc_vu": {},
+      "o_7": {},
+      "o_8": {},
+      "doi_tac_so_tai_khoan": {},
+      "doi_tac_ngan_hang": {},
+      "nvg_ten": {},
+      "nvg_dia_chi": {},
+      "nvg_ma_so_thue": {},
+      "nvg_dien_thoai": {},
+      "nvg_email": {},
+      "nvg_dai_dien": {},
+      "nvg_chuc_vu": {},
+      "o_9": {},
+      "o_10": {},
+      "o_11": {},
+      "o_12": {},
+      "nvg_so_tai_khoan": {},
+      "nvg_ngan_hang": {},
+      "o_13": {},
+      "o_14": {},
+      "pa_1_a": {
+        "pa_1_a_o": {}
+      },
+      "pa_1_b": {
+        "pa_1_b_o": {},
+        "o_15": {},
+        "o_16": {},
+        "o_17": {},
+        "o_18": {}
+      },
+      "o_19": {},
+      "o_20": {},
+      "o_21": {},
+      "c_1": {},
+      "o_22": {},
+      "o_23": {},
+      "o_24": {},
+      "o_25": {},
+      "o_26": {},
+      "pa_2_a": {
+        "pa_2_a_o": {},
+        "o_27": {}
+      },
+      "pa_2_b": {
+        "pa_2_b_o": {},
+        "o_28": {},
+        "o_29": {},
+        "o_30": {},
+        "o_31": {},
+        "o_32": {},
+        "o_33": {}
+      },
+      "o_34": {},
+      "o_35": {}
+    },
+    "options": [
+      {
+        "id": "pa_1",
+        "article": "Điều 1. Kết quả thực hiện hợp đồng",
+        "label": "1.1. Bên B đã hoàn thành thi công/thiết kế các công việc theo Hợp đồng và đã bàn giao cho Bên A ngày ……/……/20…….",
+        "options": [
+          {
+            "key": "pa_1_a",
+            "letter": "A",
+            "text": "Phương án A: Hợp đồng được thực hiện xong toàn bộ."
+          },
+          {
+            "key": "pa_1_b",
+            "letter": "B",
+            "text": "Phương án B: Hợp đồng chấm dứt trước hạn từ ngày ……/……/20…… theo [thỏa thuận/thông báo của Bên ……]; khối lượng đã thực hiện được xác định tại biên bản ngày ……."
+          }
+        ]
+      },
+      {
+        "id": "pa_2",
+        "article": "Điều 3. Bảo lãnh và tiền giữ lại bảo hành",
+        "label": "3.2. Bảo hành:",
+        "options": [
+          {
+            "key": "pa_2_a",
+            "letter": "A",
+            "text": "Phương án A: Tiền giữ lại bảo hành ……… đồng đã được hoàn trả; Bên B đã hoàn thành nghĩa vụ bảo hành."
+          },
+          {
+            "key": "pa_2_b",
+            "letter": "B",
+            "text": "Phương án B: Bên A tiếp tục giữ ……… đồng (hoặc bảo lãnh bảo hành số …… của Ngân hàng ……) đến hết thời hạn bảo hành ngày ……/……/20……; hoàn trả trong vòng …… ngày "
+          }
+        ]
+      }
+    ],
+    "free_fields": [
+      {
+        "key": "o_1",
+        "seq": 1,
+        "article": "BIÊN BẢN THANH LÝ HỢP ĐỒNG",
+        "before": "Hợp đồng số … ký ngày … và các phụ lục: ",
+        "after": " (sau đây gọi là \"Hợp đồng\");",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_2",
+        "seq": 2,
+        "article": "BIÊN BẢN THANH LÝ HỢP ĐỒNG",
+        "before": "Biên bản nghiệm thu hoàn thành số ",
+        "after": " ngày …; hồ sơ quyết toán được các bên xác nhận ng",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_3",
+        "seq": 3,
+        "article": "BIÊN BẢN THANH LÝ HỢP ĐỒNG",
+        "before": "Biên bản nghiệm thu hoàn thành số …… ngày ",
+        "after": "; hồ sơ quyết toán được các bên xác nhận ngày …;",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_4",
+        "seq": 4,
+        "article": "BIÊN BẢN THANH LÝ HỢP ĐỒNG",
+        "before": "Biên bản nghiệm thu hoàn thành số …… ngày ……; hồ sơ quyết toán được các bên xác nhận ngày ",
+        "after": ";",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_5",
+        "seq": 5,
+        "article": "BIÊN BẢN THANH LÝ HỢP ĐỒNG",
+        "before": "[Hoặc: Thông báo chấm dứt Hợp đồng số ",
+        "after": " ngày … – trường hợp thanh lý trước hạn].",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_6",
+        "seq": 6,
+        "article": "BIÊN BẢN THANH LÝ HỢP ĐỒNG",
+        "before": "[Hoặc: Thông báo chấm dứt Hợp đồng số …… ngày ",
+        "after": " – trường hợp thanh lý trước hạn].",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_7",
+        "seq": 7,
+        "article": "BIÊN BẢN THANH LÝ HỢP ĐỒNG",
+        "before": "(Theo Giấy ủy quyền số ",
+        "after": " ngày … – nếu người ký không phải đại diện theo ph",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_8",
+        "seq": 8,
+        "article": "BIÊN BẢN THANH LÝ HỢP ĐỒNG",
+        "before": "(Theo Giấy ủy quyền số ……… ngày ",
+        "after": " – nếu người ký không phải đại diện theo pháp luật",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_9",
+        "seq": 9,
+        "article": "BIÊN BẢN THANH LÝ HỢP ĐỒNG",
+        "before": "(Hoặc người được ủy quyền: ",
+        "after": " – Chức vụ: … – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_10",
+        "seq": 10,
+        "article": "BIÊN BẢN THANH LÝ HỢP ĐỒNG",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ",
+        "after": " – theo Giấy ủy quyền số … ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_11",
+        "seq": 11,
+        "article": "BIÊN BẢN THANH LÝ HỢP ĐỒNG",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ",
+        "after": " ngày …)",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_12",
+        "seq": 12,
+        "article": "BIÊN BẢN THANH LÝ HỢP ĐỒNG",
+        "before": "(Hoặc người được ủy quyền: ……………………… – Chức vụ: ……………… – theo Giấy ủy quyền số ……… ngày ",
+        "after": ")",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_13",
+        "seq": 13,
+        "article": "Điều 1. Kết quả thực hiện hợp đồng",
+        "before": "đã hoàn thành thi công/thiết kế các công việc theo Hợp đồng và đã bàn giao cho Bên A ngày ",
+        "after": "/20….",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_14",
+        "seq": 14,
+        "article": "Điều 1. Kết quả thực hiện hợp đồng",
+        "before": "thành thi công/thiết kế các công việc theo Hợp đồng và đã bàn giao cho Bên A ngày ……/……/20",
+        "after": ".",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_15",
+        "seq": 15,
+        "article": "Điều 1. Kết quả thực hiện hợp đồng",
+        "before": "… Phương án B: Hợp đồng chấm dứt trước hạn từ ngày ",
+        "after": "/20… theo [thỏa thuận/thông báo của Bên …]; khối l",
+        "default": null,
+        "option": "pa_1_b"
+      },
+      {
+        "key": "o_16",
+        "seq": 16,
+        "article": "Điều 1. Kết quả thực hiện hợp đồng",
+        "before": "… Phương án B: Hợp đồng chấm dứt trước hạn từ ngày ……/……/20",
+        "after": " theo [thỏa thuận/thông báo của Bên …]; khối lượng",
+        "default": null,
+        "option": "pa_1_b"
+      },
+      {
+        "key": "o_17",
+        "seq": 17,
+        "article": "Điều 1. Kết quả thực hiện hợp đồng",
+        "before": "g án B: Hợp đồng chấm dứt trước hạn từ ngày ……/……/20…… theo [thỏa thuận/thông báo của Bên ",
+        "after": "]; khối lượng đã thực hiện được xác định tại biên",
+        "default": null,
+        "option": "pa_1_b"
+      },
+      {
+        "key": "o_18",
+        "seq": 18,
+        "article": "Điều 1. Kết quả thực hiện hợp đồng",
+        "before": "thỏa thuận/thông báo của Bên ……]; khối lượng đã thực hiện được xác định tại biên bản ngày ",
+        "after": ".",
+        "default": null,
+        "option": "pa_1_b"
+      },
+      {
+        "key": "o_19",
+        "seq": 19,
+        "article": "Điều 2. Giá trị và thanh toán",
+        "before": "Khấu trừ (phạt vi phạm, chi phí Bên A làm thay, vật tư cấp vượt định mức ",
+        "after": ")",
+        "default": null,
+        "option": null,
+        "cell": "Nội dung"
+      },
+      {
+        "key": "o_20",
+        "seq": 20,
+        "article": "Điều 2. Giá trị và thanh toán",
+        "before": "Bằng chữ: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_21",
+        "seq": 21,
+        "article": "Điều 2. Giá trị và thanh toán",
+        "before": "2.1. Thời hạn thanh toán/hoàn trả số tiền tại dòng 6: trong vòng ",
+        "after": " ngày kể từ ngày ký biên bản này, vào tài khoản …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "c_1",
+        "seq": 22,
+        "article": "Điều 2. Giá trị và thanh toán",
+        "before": "hoàn trả số tiền tại dòng 6: trong vòng …… ngày kể từ ngày ký biên bản này, vào tài khoản ",
+        "after": " số ……………… tại Ngân hàng ………………",
+        "default": null,
+        "option": null,
+        "choices": [
+          "Bên A",
+          "Bên B"
+        ]
+      },
+      {
+        "key": "o_22",
+        "seq": 23,
+        "article": "Điều 2. Giá trị và thanh toán",
+        "before": "tại dòng 6: trong vòng …… ngày kể từ ngày ký biên bản này, vào tài khoản [Bên A/Bên B] số ",
+        "after": " tại Ngân hàng …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_23",
+        "seq": 24,
+        "article": "Điều 2. Giá trị và thanh toán",
+        "before": "g …… ngày kể từ ngày ký biên bản này, vào tài khoản [Bên A/Bên B] số ……………… tại Ngân hàng ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_24",
+        "seq": 25,
+        "article": "Điều 2. Giá trị và thanh toán",
+        "before": "a đơn: Bên B đã xuất đủ hóa đơn GTGT tương ứng giá trị quyết toán; [hóa đơn điều chỉnh số ",
+        "after": " ngày … (nếu có)].",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_25",
+        "seq": 26,
+        "article": "Điều 2. Giá trị và thanh toán",
+        "before": "ên B đã xuất đủ hóa đơn GTGT tương ứng giá trị quyết toán; [hóa đơn điều chỉnh số …… ngày ",
+        "after": " (nếu có)].",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_26",
+        "seq": 27,
+        "article": "Điều 3. Bảo lãnh và tiền giữ lại bảo hành",
+        "before": "ảo lãnh thực hiện hợp đồng và bảo lãnh tạm ứng: [Bên A đã hoàn trả bản gốc cho Bên B ngày ",
+        "after": " /hoàn trả cùng ngày ký biên bản này/không áp dụng",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_27",
+        "seq": 28,
+        "article": "Điều 3. Bảo lãnh và tiền giữ lại bảo hành",
+        "before": "… Phương án A: Tiền giữ lại bảo hành ",
+        "after": " đồng đã được hoàn trả; Bên B đã hoàn thành nghĩa",
+        "default": null,
+        "option": "pa_2_a"
+      },
+      {
+        "key": "o_28",
+        "seq": 29,
+        "article": "Điều 3. Bảo lãnh và tiền giữ lại bảo hành",
+        "before": "… Phương án B: Bên A tiếp tục giữ ",
+        "after": " đồng (hoặc bảo lãnh bảo hành số … của Ngân hàng …",
+        "default": null,
+        "option": "pa_2_b"
+      },
+      {
+        "key": "o_29",
+        "seq": 30,
+        "article": "Điều 3. Bảo lãnh và tiền giữ lại bảo hành",
+        "before": "… Phương án B: Bên A tiếp tục giữ ……… đồng (hoặc bảo lãnh bảo hành số ",
+        "after": " của Ngân hàng …) đến hết thời hạn bảo hành ngày …",
+        "default": null,
+        "option": "pa_2_b"
+      },
+      {
+        "key": "o_30",
+        "seq": 31,
+        "article": "Điều 3. Bảo lãnh và tiền giữ lại bảo hành",
+        "before": "… Phương án B: Bên A tiếp tục giữ ……… đồng (hoặc bảo lãnh bảo hành số …… của Ngân hàng ",
+        "after": ") đến hết thời hạn bảo hành ngày …/20…; hoàn trả t",
+        "default": null,
+        "option": "pa_2_b"
+      },
+      {
+        "key": "o_31",
+        "seq": 32,
+        "article": "Điều 3. Bảo lãnh và tiền giữ lại bảo hành",
+        "before": "ữ ……… đồng (hoặc bảo lãnh bảo hành số …… của Ngân hàng ……) đến hết thời hạn bảo hành ngày ",
+        "after": "/20…; hoàn trả trong vòng … ngày kể từ ngày hết hạ",
+        "default": null,
+        "option": "pa_2_b"
+      },
+      {
+        "key": "o_32",
+        "seq": 33,
+        "article": "Điều 3. Bảo lãnh và tiền giữ lại bảo hành",
+        "before": "ng (hoặc bảo lãnh bảo hành số …… của Ngân hàng ……) đến hết thời hạn bảo hành ngày ……/……/20",
+        "after": "; hoàn trả trong vòng … ngày kể từ ngày hết hạn nế",
+        "default": null,
+        "option": "pa_2_b"
+      },
+      {
+        "key": "o_33",
+        "seq": 34,
+        "article": "Điều 3. Bảo lãnh và tiền giữ lại bảo hành",
+        "before": "nh số …… của Ngân hàng ……) đến hết thời hạn bảo hành ngày ……/……/20……; hoàn trả trong vòng ",
+        "after": " ngày kể từ ngày hết hạn nếu không có khiếu nại bả",
+        "default": null,
+        "option": "pa_2_b"
+      },
+      {
+        "key": "o_34",
+        "seq": 35,
+        "article": "Điều 4. Nghĩa vụ còn lại sau thanh lý",
+        "before": "bảo hành công trình; bảo mật thông tin; thanh toán/hoàn trả theo Điều 2; [nghĩa vụ khác: ",
+        "after": "].",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_35",
+        "seq": 36,
+        "article": "Điều 4. Nghĩa vụ còn lại sau thanh lý",
+        "before": "4.2. Hồ sơ đã bàn giao: hồ sơ hoàn công, hướng dẫn vận hành bảo trì; ",
+        "after": "",
+        "default": null,
+        "option": null
+      }
+    ],
+    "sha": "50bd881370b5d22b",
+    "notes_removed": 2
+  },
+  {
     "file": "NVO-DC-04_Hop_dong_nguyen_tac_nha_cung_cap.docx",
     "code": "NVO-DC-04",
     "title": "NVO-DC-04 — Hợp đồng nguyên tắc với nhà cung cấp",
     "contract_type": "mua_vat_tu",
+    "document_kind": "hop_dong",
     "replaced": [
       "doi_tac_chuc_vu",
       "doi_tac_dai_dien",
@@ -588,6 +2151,7 @@
     "code": "NVO-HĐ-01",
     "title": "NVO-HĐ-01 — Hợp đồng tư vấn thiết kế nhà ở",
     "contract_type": "thiet_ke",
+    "document_kind": "hop_dong",
     "replaced": [
       "dia_diem",
       "doi_tac_dia_chi",
@@ -1321,6 +2885,7 @@
     "code": "NVO-HĐ-02",
     "title": "NVO-HĐ-02 — Hợp đồng thiết kế – thi công trọn gói nhà ở",
     "contract_type": "thi_cong",
+    "document_kind": "hop_dong",
     "replaced": [
       "dia_diem",
       "doi_tac_dia_chi",
@@ -2764,6 +4329,7 @@
     "code": "NVO-HĐ-03",
     "title": "NVO-HĐ-03 — Hợp đồng thi công phần thô hoặc hoàn thiện",
     "contract_type": "thi_cong",
+    "document_kind": "hop_dong",
     "replaced": [
       "dia_diem",
       "doi_tac_dia_chi",
@@ -3451,6 +5017,7 @@
     "code": "NVO-HĐ-04",
     "title": "NVO-HĐ-04 — Hợp đồng thiết kế, sản xuất, lắp đặt nội thất",
     "contract_type": "thi_cong",
+    "document_kind": "hop_dong",
     "replaced": [
       "doi_tac_dia_chi",
       "doi_tac_dien_thoai",
@@ -3961,6 +5528,7 @@
     "code": "NVO-HĐ-05",
     "title": "NVO-HĐ-05 — Hợp đồng giao khoán nhân công tổ đội",
     "contract_type": "khoan_thau_phu",
+    "document_kind": "hop_dong",
     "replaced": [
       "dia_diem",
       "doi_tac_dia_chi",
@@ -4444,6 +6012,7 @@
     "code": "NVO-HĐ-06",
     "title": "NVO-HĐ-06 — Hợp đồng mua bán vật tư xây dựng",
     "contract_type": "mua_vat_tu",
+    "document_kind": "hop_dong",
     "replaced": [
       "doi_tac_chuc_vu",
       "doi_tac_dai_dien",

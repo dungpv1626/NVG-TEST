@@ -414,7 +414,7 @@ describeDb('Bộ mẫu hợp đồng ba pháp nhân và loại hợp đồng m�
       const rows = await sql<{ code: string; n: number }[]>`
         SELECT c.code, count(*)::int AS n FROM contract_templates t
         JOIN companies c ON c.id = t.company_id
-        WHERE t.is_active AND t.notes LIKE 'Bộ mẫu dự thảo NVG%'
+        WHERE t.is_active AND t.notes LIKE 'Bộ mẫu dự thảo NVG%' AND t.document_kind = 'hop_dong'
         GROUP BY c.code ORDER BY c.code`;
       expect(Object.fromEntries(rows.map((r) => [r.code, r.n]))).toEqual({
         NVC: 8,

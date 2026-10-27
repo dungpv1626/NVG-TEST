@@ -256,7 +256,10 @@ export const contractTemplates = pgTable(
     id: primaryId(),
     companyId: uuid('company_id').notNull(),
     title: text('title').notNull(),
-    contractType: contractTypeEnum('contract_type').notNull(),
+    /** Rỗng với phụ lục / biên bản thanh lý (0229). */
+    contractType: contractTypeEnum('contract_type'),
+    /** hop_dong · phu_luc · thanh_ly (0229). */
+    documentKind: text('document_kind').notNull().default('hop_dong'),
     priceForm: contractPriceFormEnum('price_form'),
     storagePath: text('storage_path').notNull(),
     fileName: text('file_name').notNull(),

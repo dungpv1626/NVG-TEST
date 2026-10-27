@@ -57,6 +57,14 @@ CATALOG = {
     'NVS-DC-04': ('mua_vat_tu', 'Hợp đồng nguyên tắc với nhà cung cấp'),
 }
 
+# Văn bản kèm theo hợp đồng (0229, anh Dũng 27/10/2026): phụ lục DC-01 gồm BA mẫu trong một tệp (điều chỉnh khối
+# lượng / phát sinh, gia hạn, điều chỉnh nội dung khác) — tách thành ba mẫu theo bảng tiêu đề «CÔNG TY…» mở đầu mỗi mẫu.
+# Hợp đồng lao động (DC-05, DC-06), biên bản nghiệm thu (DC-02), bộ biểu mẫu dự thầu chưa nạp (phân hệ khác).
+ANNEX_CATALOG = {
+    'DC-01': ('phu_luc', 'Phụ lục hợp đồng', True),
+    'DC-03': ('thanh_ly', 'Biên bản thanh lý hợp đồng', False),
+}
+
 # Nhãn trong khối thông tin một bên → khoá chỗ trống (không có tiền tố bên).
 PARTY_LABELS = [
     (re.compile(r'Địa chỉ[^:]{0,24}:'), 'dia_chi'),
@@ -69,6 +77,8 @@ PARTY_LABELS = [
     (re.compile(r' tại (Ngân hàng|NH)\s*'), 'ngan_hang'),
 ]
 PARTY_HEADER = re.compile(r'^(?P<label>[^:]*\(BÊN (?P<side>[AB])[^)]*\)[^:]*?)\s*:\s?(?P<rest>.*)$')
+# Văn bản kèm theo ghi chữ bên NGOÀI ngoặc: «BÊN A (BÊN GIAO THẦU): …» (0229).
+PARTY_HEADER_ANNEX = re.compile(r'^(?P<label>BÊN (?P<side>[AB]) [^:]*?)\s*:\s?(?P<rest>.*)$')
 
 
 def texts(p):
@@ -241,14 +251,18 @@ VALUE_RX = re.compile(
     r'(?:Giá hợp đồng|Tổng giá trị hợp đồng|Giá trị hợp đồng)[^:]{0,24}: (…+ đồng) \(Bằng chữ: (…+)\)'
 )
 NOTE_PREFIX = 'Ghi chú soạn thảo'
+ANNEX_NO_RX = re.compile(r'PHỤ LỤC HỢP ĐỒNG SỐ (…+)')
+CONTRACT_REF_RX = re.compile(r'[Hh]ợp đồng[^…{}]{0,60}?số:? (…+) ký ngày (…+/…+/20…+)')
 PLACE_SIGN_HEAD_RX = re.compile(r'^(…+), ngày ')
 PLACE_SIGN_TODAY_RX = re.compile(r', tại (…+), chúng tôi')
 
 
-def convert(src: Path, code: str):
+def convert(src: Path, code: str, kind: str = 'hop_dong', root=None):
     z = zipfile.ZipFile(src)
-    root = etree.fromstring(z.read('word/document.xml'))
+    if root is None:
+        root = etree.fromstring(z.read('word/document.xml'))
     body = root.find(W + 'body')
+    annex = kind != 'hop_dong'
     report = {'replaced': [], 'notes_removed': 0, 'payment_table': False, 'milestones': []}
     report['options'] = []
     report['free_fields'] = []
@@ -266,7 +280,7 @@ def convert(src: Path, code: str):
     person = False
     for i, p in enumerate(paras[:head_end]):
         t = ptext(p)
-        m = PARTY_HEADER.match(t)
+        m = PARTY_HEADER.match(t) or (PARTY_HEADER_ANNEX.match(t) if annex else None)
         if m and ('BÊN' in m.group('label')) and i > 3:
             rest = m.group('rest')
             own = f'({code})' in rest
@@ -305,9 +319,11 @@ def convert(src: Path, code: str):
     for i, p in enumerate(paras[:head_end]):
         t = ptext(p)
         if not numbered and NUMBER_RX.match(t):
-            replace_regex_groups(p, NUMBER_RX, ['so_hop_dong'])
+            # Phụ lục / thanh lý: «Số:» đầu văn bản là số của CHÍNH văn bản ấy, không phải số hợp đồng.
+            key = 'so_van_ban' if annex else 'so_hop_dong'
+            replace_regex_groups(p, NUMBER_RX, [key])
             numbered = True
-            report['replaced'].append('so_hop_dong')
+            report['replaced'].append(key)
         if DATE_RX.search(t) and (t.startswith(DOTS) or t.startswith('Hôm nay')):
             replace_regex_groups(p, DATE_RX, ['ngay_ky_ngay', 'ngay_ky_thang', 'ngay_ky_nam'])
             report['replaced'].append('ngay_ky')
@@ -337,19 +353,27 @@ def convert(src: Path, code: str):
             replace_regex_groups(p, PLACE_RX, ['dia_diem'])
             report['replaced'].append('dia_diem')
 
-    # 3) Giá hợp đồng (lần đầu).
-    for p in paras[head_end:]:
-        if replace_regex_groups(p, VALUE_RX, ['gia_tri', 'gia_tri_bang_chu']):
-            report['replaced'].append('gia_tri')
-            break
+    if annex:
+        # 2b) Số phụ lục trong tiêu đề, và mọi chỗ dẫn «Hợp đồng … số …… ký ngày ……/……/20……».
+        for p in paras:
+            if replace_regex_groups(p, ANNEX_NO_RX, ['so_phu_luc']):
+                report['replaced'].append('so_phu_luc')
+            while replace_regex_groups(p, CONTRACT_REF_RX, ['so_hop_dong', 'ngay_ky_hd']):
+                report['replaced'].append('so_hop_dong')
+    else:
+        # 3) Giá hợp đồng (lần đầu).
+        for p in paras[head_end:]:
+            if replace_regex_groups(p, VALUE_RX, ['gia_tri', 'gia_tri_bang_chu']):
+                report['replaced'].append('gia_tri')
+                break
 
-    # 4) Bảng các đợt thanh toán (bảng đầu tiên khớp).
-    for tbl in body.iter(W + 'tbl'):
-        milestones = convert_payment_table(tbl)
-        if milestones is not None:
-            report['payment_table'] = True
-            report['milestones'] = milestones
-            break
+        # 4) Bảng các đợt thanh toán (bảng đầu tiên khớp).
+        for tbl in body.iter(W + 'tbl'):
+            milestones = convert_payment_table(tbl)
+            if milestones is not None:
+                report['payment_table'] = True
+                report['milestones'] = milestones
+                break
 
     # 5) Tên pháp nhân viết đúng đăng ký: «Tư vấn và Xây dựng» (anh Dũng chốt 21/10/2026; bộ mẫu
     #    ghi «&» ở chỗ in sẵn tên NVO — hợp đồng nội bộ, hợp đồng nguyên tắc nhà cung cấp).
@@ -565,6 +589,62 @@ def collect_tags(root):
     return tags
 
 
+def split_forms(f: Path):
+    """Tệp nhiều mẫu → [(chữ cái, tiêu đề phụ, root)] — mỗi mẫu bắt đầu ở bảng tiêu đề «CÔNG TY…»."""
+    root = etree.fromstring(zipfile.ZipFile(f).read('word/document.xml'))
+    body = root.find(W + 'body')
+    kids = list(body)
+    sect = kids[-1] if etree.QName(kids[-1]).localname == 'sectPr' else None
+    content = kids[:-1] if sect is not None else kids
+    text = lambda el: ''.join(t.text or '' for t in el.iter(W + 't')).strip()
+    starts = [i for i, k in enumerate(content) if etree.QName(k).localname == 'tbl' and text(k).startswith('CÔNG TY')]
+    forms = []
+    for n, a in enumerate(starts):
+        b = starts[n + 1] if n + 1 < len(starts) else len(content)
+        seg = content[a:b]
+        heading = next((text(k) for k in seg if 'PHỤ LỤC HỢP ĐỒNG SỐ' in text(k)), '')
+        sub = heading.split('–', 1)[1].strip().capitalize() if '–' in heading else ''
+        new_root = copy.deepcopy(root)
+        new_body = new_root.find(W + 'body')
+        for k in list(new_body):
+            new_body.remove(k)
+        # Bỏ đoạn chỉ có ngắt trang ở cuối mẫu — tách ra thì nó thành trang trắng.
+        while seg and etree.QName(seg[-1]).localname == 'p' and not text(seg[-1]):
+            seg = seg[:-1]
+        for k in seg:
+            new_body.append(copy.deepcopy(k))
+        if sect is not None:
+            new_body.append(copy.deepcopy(sect))
+        forms.append((chr(ord('A') + n), sub, new_root))
+    return forms
+
+
+def write_docx(f: Path, out: Path, xml: bytes):
+    z = zipfile.ZipFile(f)
+    with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as zo:
+        for item in z.infolist():
+            data = xml if item.filename == 'word/document.xml' else z.read(item.filename)
+            zo.writestr(item, data)
+
+
+def manifest_row(file_name, code, title, contract_type, kind, report, xml):
+    return {
+        'file': file_name,
+        'code': code,
+        'title': title,
+        'contract_type': contract_type,
+        'document_kind': kind,
+        'replaced': sorted(set(report['replaced'])),
+        'payment_table': report['payment_table'],
+        'payment_milestones': report['milestones'],
+        'tags': report['tags'],
+        'options': report['options'],
+        'free_fields': report['free_fields'],
+        'sha': hashlib.sha256(xml).hexdigest()[:16],
+        'notes_removed': report['notes_removed'],
+    }
+
+
 def main():
     src_dir, code = Path(sys.argv[1]), sys.argv[2]
     out_dir = Path(__file__).parent / code
@@ -572,6 +652,17 @@ def main():
     manifest = []
     for f in sorted(src_dir.glob('*.docx')):
         key = f.name[:9]
+        annex = ANNEX_CATALOG.get(key[4:])
+        if annex:
+            kind, base_title, split = annex
+            parts = split_forms(f) if split else [('', '', None)]
+            for letter, sub, root in parts:
+                z, xml, report = convert(f, code, kind, root)
+                name = f.name.replace(key + '_', f'{key}{letter}_') if letter else f.name
+                write_docx(f, out_dir / name, xml)
+                title = f'{key}{letter} — {base_title}' + (f' — {sub}' if sub else '')
+                manifest.append(manifest_row(name, f'{key}{letter}', title, None, kind, report, xml))
+            continue
         if key not in CATALOG:
             continue
         contract_type, title = CATALOG[key]
@@ -586,6 +677,7 @@ def main():
             'code': key.replace('-HD-', '-HĐ-'),
             'title': f'{key.replace("-HD-", "-HĐ-")} — {title}',
             'contract_type': contract_type,
+            'document_kind': 'hop_dong',
             'replaced': sorted(set(report['replaced'])),
             'payment_table': report['payment_table'],
             'payment_milestones': report['milestones'],
@@ -600,7 +692,7 @@ def main():
         json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
     )
     for m in manifest:
-        print(m['code'], m['contract_type'], len(m['replaced']), 'payment' if m['payment_table'] else '-', m['notes_removed'])
+        print(m['code'], m['contract_type'] or m['document_kind'], len(m['replaced']), 'payment' if m['payment_table'] else '-', m['notes_removed'])
 
 
 if __name__ == '__main__':

@@ -13,13 +13,24 @@ import { useCompanyScope, withCompanyScope } from '@/lib/company-scope';
 import { supabase } from '@/lib/supabase';
 
 export const TEMPLATE_BUCKET = 'contract-templates';
+
+/** Loại văn bản của mẫu (0229). */
+export type TemplateDocumentKind = 'hop_dong' | 'phu_luc' | 'thanh_ly';
+
+export const TEMPLATE_DOCUMENT_KIND_LABELS: Readonly<Record<TemplateDocumentKind, string>> = {
+  hop_dong: 'Hợp đồng',
+  phu_luc: 'Phụ lục hợp đồng',
+  thanh_ly: 'Biên bản thanh lý',
+};
 export const DOCUMENT_BUCKET = 'contract-documents';
 
 export interface ContractTemplateRecord {
   id: string;
   company_id: string;
   title: string;
-  contract_type: ContractType;
+  /** Rỗng với mẫu phụ lục / biên bản thanh lý — dùng cho mọi loại hợp đồng (0229). */
+  contract_type: ContractType | null;
+  document_kind: TemplateDocumentKind;
   price_form: ContractPriceForm | null;
   storage_path: string;
   file_name: string;
@@ -38,7 +49,7 @@ export interface ContractTemplateRecord {
 }
 
 const TEMPLATE_SELECT =
-  'id, company_id, title, contract_type, price_form, storage_path, file_name, tags, ' +
+  'id, company_id, title, contract_type, document_kind, price_form, storage_path, file_name, tags, ' +
   'payment_milestones, free_fields, options, is_active, ' +
   'notes, created_at, company:companies(code, short_name), ' +
   'creator:users!contract_templates_created_by_fkey(full_name)';

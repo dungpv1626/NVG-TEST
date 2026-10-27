@@ -1056,8 +1056,10 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    `congtruong.nvc@…`, `thietke.nvo@…`. Sau khi khởi động lại máy: Docker → `npm run db:start` → `npm run dev:workers` →
    `npm run dev`. Cổng 8788 có nhiều tiến trình `workerd` cũ thì tắt hết rồi chạy lại một bản.
    Việc treo của phần hợp đồng (lỗi «Ông/Bà Ông …» đã sửa 22/10, commit 3f1077f):
-   phụ lục / biên bản nghiệm thu / thanh lý / hợp đồng lao động / bộ biểu mẫu dự thầu trong bộ gửi CHƯA nạp (thuộc
-   phân hệ khác — nạp khi làm phần đó, dùng lại `convert.py`); chưa có chỗ tạo hợp đồng mua vật tư / thuê máy / giao
+   PHỤ LỤC + THANH LÝ đã nạp và soạn từ mẫu (0229, 27/10/2026 — `contract_templates.document_kind`, DC-01 tách 3 mẫu
+   A/B/C, `contract_annex_documents` bất biến; bộ soạn `pages/hd/annex-composer.tsx` mở từ từng phát sinh và khối «Biên
+   bản thanh lý»; chỉ hợp đồng NVG nhận việc — mẫu NVG viết cho bên nhận thầu). Chưa nạp: biên bản nghiệm thu (đã có bản
+   in tự điền 2D), hợp đồng lao động (anh Dũng: để sau, làm cùng đợt Nhân sự), bộ biểu mẫu dự thầu (câu 19); chưa có chỗ tạo hợp đồng mua vật tư / thuê máy / giao
    khoán với nhà cung cấp, tổ đội (thuộc Mua hàng, Thi công).
    Việc treo của bộ quét: (a) **giấy cong** — đề xuất thêm điểm giữa mỗi cạnh để uốn theo mép (máy tự đặt khi thấy mép),
    chờ anh Dũng quyết; tờ giấy tràn khung thì chỉ nắn được theo dòng chữ (khó hơn nhiều); (b) thử trên **điện thoại thật**
@@ -1132,7 +1134,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email.
 
-**Migration tiếp theo: 0229.** (Đã dùng tới 0228; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0230.** (Đã dùng tới 0229; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -1247,6 +1249,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Ban Giám đốc «Nhận soạn thay» hợp đồng Nháp thay vì có quyền sửa mọi hợp đồng | Anh Dũng đồng ý (25/10/2026). Giữ tách người thực hiện / người phê duyệt: lãnh đạo chỉ sửa ĐÚNG hợp đồng đã nhận, có nhật ký và báo người soạn trước |
 | Soạn hợp đồng: điền chỗ trống ngay trên bản xem trước + tải lên bản đã sửa trong Word; KHÔNG làm trình soạn thảo đầy đủ trên hệ thống | Anh Dũng chọn (25/10/2026): nhãn chỗ trống máy tự cắt từ câu văn nên khó hiểu; sửa câu chữ trong Word giữ đúng định dạng mẫu (bảng, đánh số). Hệ thống không đọc ngược Word nên bản ấy được đánh dấu riêng |
 | Gói thầu tự sang Khảo sát / Bóc tách / Lập dự toán khi ghi khảo sát, có dòng khối lượng đầu tiên, có dự toán; chỉ đi tới, khảo sát bỏ qua được (0226) | Trước 0226 không đường nào vào ba bước này — gói thầu đang lập dự toán vẫn ghi «Tiếp nhận hồ sơ», dải tiến trình sẽ nói sai. Áp quyết định «làm xong việc của bước thì tự sang bước kế»; NVC hay nhận sẵn BOQ của chủ đầu tư |
+| Phụ lục / biên bản thanh lý soạn từ mẫu, tự điền; văn bản ở bảng riêng `contract_annex_documents`, giá trị điền lưu kèm từng bản; hợp đồng lao động để sau (0229) | Anh Dũng chọn 27/10/2026. Văn bản hợp đồng chính khoá khi đã ký mà phụ lục / thanh lý sinh ra sau ký; một hợp đồng nhiều phụ lục nên không dùng chung `contract_document_inputs`. Mẫu NVG viết cho bên nhận thầu — hợp đồng NVG đi thuê / mua không mời soạn để không in sai vai |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)

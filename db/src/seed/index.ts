@@ -48,7 +48,10 @@ interface ContractTemplateAsset {
   file: string;
   code: string;
   title: string;
-  contract_type: string;
+  /** Rỗng với phụ lục / biên bản thanh lý (0229) — dùng cho mọi loại hợp đồng. */
+  contract_type: string | null;
+  /** hop_dong · phu_luc · thanh_ly (0229). */
+  document_kind?: string;
   tags: Record<string, unknown>;
   payment_milestones: unknown[];
   free_fields: unknown[];
@@ -385,9 +388,10 @@ async function main() {
           WHERE company_id = ${companyId} AND title = ${m.title} AND is_active`);
         await db.execute(sqlOp`
           INSERT INTO public.contract_templates
-            (company_id, title, contract_type, storage_path, file_name, tags, payment_milestones,
-             free_fields, options, notes)
-          VALUES (${companyId}, ${m.title}, ${m.contract_type}::public.contract_type, ${path},
+            (company_id, title, contract_type, document_kind, storage_path, file_name, tags,
+             payment_milestones, free_fields, options, notes)
+          VALUES (${companyId}, ${m.title}, ${m.contract_type}::public.contract_type,
+                  ${m.document_kind ?? 'hop_dong'}, ${path},
                   ${m.file}, ${JSON.stringify(m.tags)}::jsonb,
                   ${JSON.stringify(m.payment_milestones)}::jsonb,
                   ${JSON.stringify(m.free_fields)}::jsonb, ${JSON.stringify(m.options)}::jsonb,

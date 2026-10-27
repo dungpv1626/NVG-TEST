@@ -34,6 +34,7 @@ import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/ui/states
 import {
   TEMPLATE_BUCKET,
   downloadFile,
+  TEMPLATE_DOCUMENT_KIND_LABELS,
   useContractTemplates,
   useSetTemplateActive,
   useTransactionalCompanies,
@@ -145,9 +146,15 @@ export function ContractTemplatePage() {
               <div className="min-w-0 flex-1 basis-60">
                 <p className="font-medium">{t.title}</p>
                 <p className="text-sm text-fg-subtle">
-                  {t.company?.short_name ?? ''} · {CONTRACT_TYPE_LABELS[t.contract_type]} ·{' '}
-                  {t.price_form ? CONTRACT_PRICE_FORM_LABELS[t.price_form] : 'Mọi hình thức giá'} ·{' '}
-                  {Object.keys(t.tags).length} chỗ trống · tải lên {formatDate(t.created_at)}
+                  {t.company?.short_name ?? ''} ·{' '}
+                  {t.contract_type
+                    ? `${CONTRACT_TYPE_LABELS[t.contract_type]} · ${
+                        t.price_form
+                          ? CONTRACT_PRICE_FORM_LABELS[t.price_form]
+                          : 'Mọi hình thức giá'
+                      }`
+                    : `${TEMPLATE_DOCUMENT_KIND_LABELS[t.document_kind]} — mọi loại hợp đồng`}{' '}
+                  · {Object.keys(t.tags).length} chỗ trống · tải lên {formatDate(t.created_at)}
                   {t.creator ? ` bởi ${t.creator.full_name}` : ''}
                 </p>
                 {t.notes && <p className="text-sm">{t.notes}</p>}
