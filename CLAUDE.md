@@ -1124,8 +1124,10 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    `.dev.vars`); (e) `NVG_DB_TARGET=demo npx tsx db/src/demo/index.ts --confirm=fvfmtbdcvcniakigfpdm --only=nvo` và `--only=mac-dinh` (tham số DEMO); migrate demo bây giờ phải tới 0218;
    (f) `npm run deploy:web`; kiểm `curl https://nvg-api.automkt.workers.dev/design/health`; (g) bật hai công tắc AI ở trang
    Trợ lý AI của bản demo; chạy thử bằng đúng vai.
-4. Việc nhỏ treo của Đợt 1: AI điền luôn các ô «Thông tin hiện trường» riêng từng công ty; nút «Gửi mẫu» trên đầu mối /
-   cơ hội; nhập đầu mối từ Excel; Kinh doanh NVS sửa ô phiếu khảo sát (câu 22).
+4. Việc nhỏ treo của Đợt 1: AI điền luôn các ô «Thông tin hiện trường» riêng từng công ty; Kinh doanh NVS sửa ô phiếu
+   khảo sát (câu 22). ĐÃ LÀM 27/10/2026: nút «Gửi mẫu công trình» trên đầu mối / cơ hội (`showcase/send-showcase-link.ts`);
+   «Nhập từ Excel» `/crm/dau-moi/nhap-excel` (`.xlsx` đọc bằng pizzip — `lib/sheet-read.ts`, không thêm thư viện; kiểm dòng
+   `shared/src/lead-import.ts`, số đã có bỏ chọn sẵn, Excel rơi số 0 đầu thì thêm lại và nói ra).
 5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 

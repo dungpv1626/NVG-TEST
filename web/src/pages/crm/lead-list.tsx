@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   BUTTONS,
   LEAD_STATUSES,
@@ -16,6 +17,7 @@ import {
   type LeadStatus,
 } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
+import { Button } from '@/components/ui/button';
 import { EntityTable, useCreateActions, type EntityRow } from '@/components/entity/entity-table';
 import { useLeads } from '@/hooks/use-leads';
 import { useCan, useIsOrgManager } from '@/lib/auth';
@@ -81,7 +83,16 @@ export function LeadListPage() {
       <PageHeader
         title="Đầu mối"
         breadcrumbs={[{ label: 'Khách hàng & Cơ hội' }, { label: 'Đầu mối' }]}
-        actions={headerAction}
+        actions={
+          canCreate || isLeader ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="secondary" asChild>
+                <Link to="/crm/dau-moi/nhap-excel">Nhập từ Excel</Link>
+              </Button>
+              {headerAction}
+            </div>
+          ) : undefined
+        }
       />
       <CrmNav />
 

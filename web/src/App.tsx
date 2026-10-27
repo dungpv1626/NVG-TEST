@@ -119,6 +119,9 @@ const OldCustomerListPage = lazy(() =>
 const LeadListPage = lazy(() =>
   import('@/pages/crm/lead-list').then((m) => ({ default: m.LeadListPage })),
 );
+const LeadImportPage = lazy(() =>
+  import('@/pages/crm/lead-import').then((m) => ({ default: m.LeadImportPage })),
+);
 const LeadCreatePage = lazy(() =>
   import('@/pages/crm/lead-create').then((m) => ({ default: m.LeadCreatePage })),
 );
@@ -429,6 +432,7 @@ const router = createBrowserRouter(
           <Route path="crm/khach-cu" element={<OldCustomerListPage />} />
           <Route path="crm/dau-moi" element={<LeadListPage />} />
           <Route path="crm/dau-moi/tao-moi" element={<LeadCreatePage />} />
+          <Route path="crm/dau-moi/nhap-excel" element={<LeadImportPage />} />
           <Route path="crm/dau-moi/:id" element={<LeadDetailPage />} />
           <Route path="crm/khieu-nai" element={<ComplaintListPage />} />
           <Route path="crm/khieu-nai/tao-moi" element={<ComplaintCreatePage />} />
