@@ -7,7 +7,8 @@
  */
 
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { showcaseSendPath } from '@/pages/showcase/send-showcase-link';
 import {
   CUSTOMER_SOURCES,
   LEAD_STATUS_META,
@@ -132,6 +133,20 @@ export function LeadDetailPage() {
               {lead.status !== 'khong_phu_hop' && (
                 <Button variant="primary" onClick={() => setConverting(true)}>
                   Chuyển thành cơ hội
+                </Button>
+              )}
+              {/* Gửi mẫu công trình cho khách ngay từ đầu mối — link gắn với đầu mối, tạo xong ghi nhật ký chăm sóc. */}
+              {open && (
+                <Button variant="secondary" asChild>
+                  <Link
+                    to={showcaseSendPath({
+                      leadId: lead.id,
+                      name: lead.full_name,
+                      projectType: lead.project_type,
+                    })}
+                  >
+                    Gửi mẫu công trình
+                  </Link>
                 </Button>
               )}
               {open && lead.status !== 'luu_tru' && (

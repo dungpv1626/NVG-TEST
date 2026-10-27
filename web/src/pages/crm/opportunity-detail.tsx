@@ -10,6 +10,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { showcaseSendPath } from '@/pages/showcase/send-showcase-link';
 import {
   OPPORTUNITY_FLOW,
   OPPORTUNITY_STAGE_META,
@@ -317,6 +318,20 @@ export function OpportunityDetailPage() {
                     onClick={() => void changeStage('mat_co_hoi')}
                   >
                     Đánh dấu mất cơ hội
+                  </Button>
+                )}
+                {/* Gửi mẫu công trình cho khách — link gắn với cơ hội, tạo xong ghi nhật ký chăm sóc. */}
+                {!stageMeta.isTerminal && (
+                  <Button variant="secondary" asChild>
+                    <Link
+                      to={showcaseSendPath({
+                        opportunityId: data.id,
+                        name: customer?.name ?? data.name,
+                        projectType: data.project_type,
+                      })}
+                    >
+                      Gửi mẫu công trình
+                    </Link>
                   </Button>
                 )}
                 {/* Webapp Flow 3.1 bước 5: khách đồng ý ở bước Đàm phán thì soạn hợp đồng
