@@ -1124,7 +1124,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 --workspace=db` (Windows: không dùng `npm run db:migrate:demo` — cmd không hiểu cú pháp đặt biến) rồi seed cùng cách;
    (d) `npm run deploy:workers`; đặt secret `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_PAID_API_KEY` và các khoá AI Design
    (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `POLLINATIONS_API_KEY` — anh Dũng đã cho chép từ
-   `.dev.vars`); (e) `NVG_DB_TARGET=demo npx tsx db/src/demo/index.ts --confirm=fvfmtbdcvcniakigfpdm --only=nvo` và `--only=mac-dinh` (tham số DEMO) và `--only=qua-han` (công nợ quá hạn ba công ty — Tổng quan điều hành có vấn đề để xem); migrate demo bây giờ phải tới 0218;
+   `.dev.vars`); (e) `NVG_DB_TARGET=demo npx tsx db/src/demo/index.ts --confirm=fvfmtbdcvcniakigfpdm --only=nvo` và `--only=mac-dinh` (tham số DEMO) và `--only=qua-han` (công nợ quá hạn ba công ty — Tổng quan điều hành có vấn đề để xem) và `--only=dau-thau` (bộ hồ sơ dự thầu demo); migrate demo bây giờ phải tới 0218;
    (f) `npm run deploy:web`; kiểm `curl https://nvg-api.automkt.workers.dev/design/health`; (g) bật hai công tắc AI ở trang
    Trợ lý AI của bản demo; chạy thử bằng đúng vai.
 4. Việc nhỏ treo của Đợt 1: AI điền luôn các ô «Thông tin hiện trường» riêng từng công ty; Kinh doanh NVS sửa ô phiếu
@@ -1285,7 +1285,8 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     ĐÃ CHỐT: mẫu NVC / NVS cũng do Phòng Thiết kế đưa vào; Kinh doanh tự đặt thời hạn thu hồi link. ĐÃ CHỐT: link không giới
     hạn thời hạn tối đa.
 19. ĐÃ CHỐT HƯỚNG (anh Dũng 27/10/2026): Claude Code dựng MỘT bộ hồ sơ dự thầu DEMO chi tiết, đủ để NVG nắm quy trình
-    chuẩn — thay bằng hồ sơ thật sau.
+    chuẩn — thay bằng hồ sơ thật sau. ĐÃ CÓ: kịch bản demo `dau-thau` (gói thầu NVC đi đủ 8 bước, dừng ở chờ kết quả) và
+    `doc/QUY_TRINH_DU_THAU.md`. CÒN: bộ mẫu Word hồ sơ dự thầu tự điền (đơn dự thầu, thư giảm giá, bảng giá, nhân sự, thiết bị…).
 20. Bộ nhận diện: ĐÃ QUYẾT (chủ dự án giao Claude Code, 17/10/2026) — dùng logo PNG + mã đo trên ảnh, giữ Be Vietnam Pro, nền
     xám trung tính, Module Thiết kế chỉ đổi màu nhấn; chi tiết và lý do ở mục 1b kế hoạch. NVG gửi vector / mã chuẩn thì thay.
 21. Pháp nhân (lấy từ website 17/10/2026, đã điền vào seed — chỉ điền ô trống): mã số thuế NVO 1001222166 + địa chỉ đăng ký;

@@ -16,12 +16,14 @@ import { DEMO_CASH_FLOW_PERIOD } from './scenario-cash-flow';
 import { NS_DEMO_ASSETS, NS_DEMO_EMPLOYEES, NS_DEMO_POSITION } from './scenario-ns';
 import { DEMO_LOT_MATERIALS, NVS_FIRST_RENTAL_CUSTOMER, demoLotCode } from './scenario-nvs';
 import { OVERDUE_DEMO_DEBTS } from './scenario-overdue';
+import { BID_DEMO_CAPABILITY_TITLES, BID_DEMO_CUSTOMER } from './scenario-du-thau';
 
 export const DEMO_CUSTOMERS = [
   'Công ty TNHH Cơ khí Chính xác Hưng Thịnh',
   NVS_FIRST_RENTAL_CUSTOMER,
   'Công ty TNHH Đầu tư Xây dựng Thành An',
   NVO_CUSTOMER,
+  BID_DEMO_CUSTOMER,
 ];
 export const DEMO_SUPPLIERS = [
   'Công ty CP Thép Nam Việt',
@@ -224,6 +226,12 @@ export async function removeDemoData(): Promise<Record<string, number>> {
       await del(
         'hợp đồng thuê',
         tx`DELETE FROM rental_agreements WHERE id IN (SELECT id FROM g_rentals)`,
+      );
+      await del(
+        'giấy tờ năng lực demo (kịch bản dau-thau)',
+        tx`DELETE FROM company_documents
+        WHERE title = ANY(${[...BID_DEMO_CAPABILITY_TITLES]})
+          AND created_by IN (SELECT id FROM users WHERE email LIKE ${SEED_ACCOUNT_DOMAIN})`,
       );
       await del(
         'công nợ quá hạn (kịch bản qua-han)',
