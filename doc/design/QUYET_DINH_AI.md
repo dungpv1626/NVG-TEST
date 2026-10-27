@@ -4453,3 +4453,33 @@ nào qua.
 3. Muốn có lợi phải chọn tầng 1 BIẾT tầng trên (như T169 quay lui, nhưng thử nhiều chỗ ô thang / giếng trời theo chiều sâu và
    giữ chỗ nào cho mọi tầng trên xếp được), hoặc cho lời dẫn nói mô hình vẽ trọn bề ngang từng dải (cần lượt thật, xin phép).
    Lỗi bản phác thật của THU5 tầng 2–4 (hành lang không chữ nhật, thiếu WC tầng 4, đầu bước ra thang) vẫn phải qua câu nhắc.
+
+## T172 — Tầng trên hỏng thì dời ô thang tầng 1 một ô lưới (27/10/2026)
+
+**Bối cảnh.** T171 chỉ ra cái chặn: tầng 1 chọn chỗ ô thang (và giếng trời kề nó) theo điểm RIÊNG tầng 1, nên các tầng
+trên hết chiều sâu. Hướng 1 của T171 (không tốn tiền): chọn tầng 1 BIẾT tầng trên.
+
+**Làm.** `evaluateHouse`: tầng trên vẫn hỏng thì xếp lại tầng 1 với ô thang bản phác (kèm lá giếng trời) dời từng ô lưới
+bản phác (`groundShifts`: chiều sâu trước bề ngang, gần trước xa sau, lùi trước tiến), mỗi chỗ thử có / không thu gọn
+(T169); giữ bản đầu tiên cho MỌI tầng trên xếp được, rồi mới tới quay lui xếp hạng T113. Số bước mỗi phía là dữ liệu:
+`kb/construction_norms.yaml` `sketch.ground_core_shift.max_steps` (vắng = tắt; sai kiểu thì lỗi cấu hình).
+
+**Đo** (phát lại 243 vòng, một tiến trình, đối chứng = cùng mã với `max_steps: 0`):
+
+| Ngữ cảnh | Nhóm | Vòng qua cổng | Thời gian cả bộ | Vòng lâu nhất |
+| --- | --- | --- | --- | --- |
+| Workflow, 2 bước | còn lại (220) | 11 → **15** | 914 → 2.093 s | 37 → 96 s |
+| Workflow, 2 bước | THU5 (23) | 0 → 0 | | |
+| Mặc định, 2 bước | còn lại | 21 → 21 | 1.203 → 2.403 s | 46 → **218 s** |
+| Mặc định, 2 bước | THU5 | 6 → 6 | | |
+| Workflow, **1 bước** | còn lại | 11 → **15** | 914 → 1.470 s | 37 → 50 s |
+| Workflow, 1 bước | THU5 | 0 → 0 | | |
+| Mặc định, 1 bước | còn lại | 21 → 21 | 1.203 → 1.544 s | 46 → 56 s |
+| Mặc định, 1 bước | THU5 | 6 → 6 | | |
+
+Workflow 1 bước: thêm `02982bd7` vòng 3, `894b350d` vòng 3–4, `b1543b8c` vòng 5–6; mất `1330ce12` vòng 6 (tầng 1 bị chê
+diện tích / cạnh hẹp sau khi dời). Hai bước KHÔNG thêm vòng nào so với một bước mà vòng lâu nhất 218 s — sát trần 300 s
+CPU của Worker. **Giữ, 1 bước.** Lợi thật ở đường Workflow: bớt lượt gọi mô hình trả phí cho các hồ sơ khác.
+
+**Chưa gỡ nhà ống THU5** (0 → 0). Lỗi còn lại của THU5 nằm ở bản phác tầng 2–4 (hành lang không chữ nhật, thiếu WC, đầu
+bước ra thang) — chỉ câu nhắc / lượt chạy thật sửa được (xin phép trước). Kết quả đo: `backup/ai-quay-lui/` (không commit).

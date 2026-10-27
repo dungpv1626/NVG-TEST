@@ -106,6 +106,7 @@ import {
 } from './arrange';
 import { stairEntrySide, type StairSide } from './arrange/doors';
 import { SPLIT_MIN_CM } from './arrange/grid';
+import { MODULE_CM } from './arrange/placed';
 import { equalizeByType, hallVariants, retargetIntent } from './plan-variants';
 import { absorbStranded, type StrandedNote } from './stranded';
 import { absorbUnknown, partitionRows, splitMerged } from './arrange/sketch';
@@ -326,6 +327,8 @@ export interface PlanContextInput {
   stairEntryAvoid?: StairSide;
   /** Tầng 1: thu ô thang bản phác vẽ dư về cạnh tối thiểu — chỉ cho bước quay lui của `evaluateHouse` (T169). */
   stairTight?: boolean;
+  /** Tầng 1: dời ô thang (và giếng trời kề nó) theo một trục — chỉ cho bước quay lui của `evaluateHouse` (T172). */
+  stairShift?: { axis: 'x' | 'y'; by: number };
   /**
    * Cỡ ô bản phác, m. Vắng = `sketchGridOf` (ô ~1 m cho mô hình đếm). Lược đồ hình chữ nhật (bàn giao v5,
    * cách A) đổi rect của mô hình ra lưới mịn hơn để không làm tròn mất WC 1,5 m hay hành lang 1,3 m.
@@ -3430,6 +3433,7 @@ export function arrangeFor(
     ...(input.rankSkip ? { rankSkip: input.rankSkip } : {}),
     ...(input.stairEntryAvoid ? { stairEntryAvoid: input.stairEntryAvoid } : {}),
     ...(input.stairTight ? { stairTight: true } : {}),
+    ...(input.stairShift ? { stairShift: input.stairShift } : {}),
     openFaces: context.openFaces,
     accessFaces: context.accessFaces,
     entrances: context.entrances,
@@ -3922,6 +3926,33 @@ export interface HouseEvaluation {
  *
  * Đo trên 105 vòng thật (không gọi mô hình): gốc 0 mặt bằng; với các biến thể 5 mặt bằng, 4 qua ngưỡng.
  */
+/**
+ * Các bước dời ô thang tầng 1 của bước quay lui T172, theo thứ tự thử: mỗi bước là MỘT ô lưới bản phác theo trục ấy (cỡ ô
+ * suy từ khối nhà và số hàng / cột bản phác, làm tròn mô-đun), gần trước xa sau, lùi về phía trước (âm) trước tiến về
+ * phía sau; trục chiều sâu (y) trước trục ngang (x). Bước nào không dời được thì bộ xếp tự bỏ (cạnh trên hình bao).
+ */
+export function groundShifts(
+  footprint: Rect,
+  rows: readonly string[],
+  maxSteps: number,
+): { axis: 'x' | 'y'; by: number }[] {
+  const cols = rows[0]?.trim().split(/\s+/).length ?? 0;
+  const cell = (span: number, count: number) =>
+    count > 0 ? Math.max(MODULE_CM, Math.round(span / count / MODULE_CM) * MODULE_CM) : 0;
+  const out: { axis: 'x' | 'y'; by: number }[] = [];
+  for (const axis of ['y', 'x'] as const) {
+    const step =
+      axis === 'y'
+        ? cell(footprint.y1 - footprint.y0, rows.length)
+        : cell(footprint.x1 - footprint.x0, cols);
+    if (!step) continue;
+    for (let k = 1; k <= maxSteps; k += 1) {
+      out.push({ axis, by: -k * step }, { axis, by: k * step });
+    }
+  }
+  return out;
+}
+
 /** Số bản tầng 1 xếp hạng kế tiếp được thử khi tầng trên hỏng (T113). */
 const GROUND_BACKTRACK = 2;
 
@@ -4727,6 +4758,46 @@ export function evaluateHouse(
         chosenGround = { result: alt, done: altDone };
         upperRun = altRun;
       }
+    }
+  }
+  // Chọn tầng 1 BIẾT tầng trên (T172): chỗ ô thang tầng 1 theo chiều sâu quyết phần còn lại cạnh thang của mọi tầng
+  // (T171: 4eade9b1 vòng 1 tầng 2 chỉ còn 130 cm sau hành lang ngang cho phòng làm việc cần 240). Tầng trên vẫn hỏng thì
+  // dời ô thang tầng 1 (và giếng trời kề nó) từng ô lưới bản phác, có và không thu gọn (T169), giữ bản đầu tiên cho MỌI
+  // tầng trên xếp được. Số bước tối đa ở `kb/construction_norms.yaml` `sketch.ground_core_shift`.
+  const shiftSteps = input.construction.sketch?.ground_core_shift?.max_steps ?? 0;
+  const groundRows = sketches.get(ground!) ?? null;
+  if (upperRun.failed && upper.length && shiftSteps > 0 && groundRows?.length) {
+    const seen = new Set([JSON.stringify(groundDone.level.rooms)]);
+    for (const move of groundShifts(context.buildableCm, groundRows, shiftSteps)) {
+      let found = false;
+      for (const tight of [false, true]) {
+        const alt = arrangeFor(
+          { ...input, stairShift: move, ...(tight ? { stairTight: true } : {}) },
+          context,
+          programBeforeGround,
+          ground!,
+          groundIntentUsed,
+          null,
+          minimums,
+          groundRows,
+        );
+        const altDone = arrangedLevel(alt);
+        if (!altDone) continue;
+        const key = JSON.stringify(altDone.level.rooms);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const altRun = upperFrom(alt, altDone);
+        input.trace?.(
+          `▷ ô thang tầng 1 dời ${move.by} cm theo ${move.axis}${tight ? ', thu gọn' : ''}: tầng trên ${altRun.failed ? 'vẫn hỏng' : 'qua'}`,
+        );
+        if (!altRun.failed) {
+          chosenGround = { result: alt, done: altDone };
+          upperRun = altRun;
+          found = true;
+          break;
+        }
+      }
+      if (found) break;
     }
   }
   if (upperRun.failed && upper.length) {

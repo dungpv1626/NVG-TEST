@@ -101,6 +101,7 @@ import {
   sketchTrees,
   stackWetRooms,
   type PreparedSketch,
+  type SketchTreeInput,
 } from './sketch';
 import {
   MANDATORY_CODES,
@@ -167,6 +168,11 @@ export interface ArrangeInput {
    * lớp gọi chỉ bật khi quay lui vì tầng trên hỏng.
    */
   stairTight?: boolean;
+  /**
+   * Tầng 1: dời ô thang bản phác (và giếng trời kề nó) `by` cm theo trục `axis` (T172, `SketchTreeInput.shiftCores`) —
+   * lớp gọi chỉ bật khi quay lui vì tầng trên hỏng.
+   */
+  stairShift?: { axis: Axis; by: number };
   /** Tầng 1: cạnh ô thang xếp cuối khi chọn lối vào (T161, `DoorsInput.stairEntryAvoid`). */
   stairEntryAvoid?: StairSide;
   openFaces: readonly Face[];
@@ -2093,6 +2099,9 @@ function sketchStage(
     ensuiteOf: (id) => env.leafById.get(id)?.parent ?? null,
     fixedCore: (id) => coreLeaf(input, intent, id),
     ...(input.stairTight && input.level === 1 ? { tightCores: stairLeafSet(input, intent) } : {}),
+    ...(input.stairShift && input.level === 1
+      ? { shiftCores: coreShift(input, intent, env, input.stairShift) }
+      : {}),
     ...(input.trace ? { trace: input.trace } : {}),
   });
   if (drawn.issues.length) {
@@ -2169,6 +2178,24 @@ function stairLeafSet(input: ArrangeInput, intent: LevelIntent): Set<string> {
   );
 }
 
+/** Ô dời của bước quay lui T172: lá ô thang, kèm lá giếng trời (dời theo khi chung cạnh với ô thang). */
+function coreShift(
+  input: ArrangeInput,
+  intent: LevelIntent,
+  env: PackEnv,
+  move: { axis: Axis; by: number },
+): NonNullable<SketchTreeInput['shiftCores']> {
+  return {
+    ids: stairLeafSet(input, intent),
+    companions: new Set(
+      intent.leaves
+        .filter((leaf) => env.leafById.get(leaf.id)?.types.includes('light_well'))
+        .map((leaf) => leaf.id),
+    ),
+    ...move,
+  };
+}
+
 /** Lá là ô lõi — thang bộ hay thang máy (T166): nắn phòng lồi trên bản phác không lấy ô của nó tới mức hụt. */
 function coreLeaf(input: ArrangeInput, intent: LevelIntent, id: string): boolean {
   const leaf = intent.leaves.find((item) => item.id === id);
@@ -2201,6 +2228,9 @@ function treesOfStacked(
     ensuiteOf: (id) => env.leafById.get(id)?.parent ?? null,
     fixedCore: (id) => coreLeaf(input, intent, id),
     ...(input.stairTight && input.level === 1 ? { tightCores: stairLeafSet(input, intent) } : {}),
+    ...(input.stairShift && input.level === 1
+      ? { shiftCores: coreShift(input, intent, env, input.stairShift) }
+      : {}),
     ...(input.trace ? { trace: input.trace } : {}),
   }).trees;
 }

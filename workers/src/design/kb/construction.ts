@@ -63,6 +63,11 @@ export interface SketchNorms {
    * Phòng phụ nhỏ không lối vào trên bản phác — chương trình nhập vào phòng bên cạnh (T153). Vắng = tắt.
    */
   absorb_stranded?: { types: string[]; max_area_m2: number };
+  /**
+   * Bước quay lui T172: tầng trên hỏng thì dời ô thang tầng 1 tối đa bấy nhiêu ô lưới bản phác mỗi phía, theo từng trục.
+   * Vắng = tắt.
+   */
+  ground_core_shift?: { max_steps: number };
 }
 
 export interface EntryStepNorms {
@@ -315,11 +320,24 @@ function parseSketch(raw: unknown): SketchNorms {
     }
     absorb = { types: types.slice() as string[], max_area_m2: max };
   }
+  const shiftRaw = (raw as Record<string, unknown>).ground_core_shift as
+    Record<string, unknown> | undefined;
+  let shift: SketchNorms['ground_core_shift'];
+  if (shiftRaw !== undefined) {
+    const steps = shiftRaw?.max_steps;
+    if (typeof steps !== 'number' || !Number.isInteger(steps) || steps < 0) {
+      throw new ConstructionNormsError(
+        '"sketch.ground_core_shift.max_steps" phải là số nguyên không âm',
+      );
+    }
+    shift = { max_steps: steps };
+  }
   return {
     area_slack_ratio: ratio,
     grow_tries: tries,
     floor_tolerance_ratio: tolerance,
     ...(absorb ? { absorb_stranded: absorb } : {}),
+    ...(shift ? { ground_core_shift: shift } : {}),
   };
 }
 

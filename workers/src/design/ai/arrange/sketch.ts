@@ -24,7 +24,15 @@ import type { DrawNote } from '../draw/notes';
 import type { PlanIssue } from '../plan-check';
 import { zoneOfRect, type Zone } from './grid';
 import { arrangeIssue } from './issues';
-import { leaves, MODULE_CM, pinLeaf, type Axis, type Placed, type Side } from './placed';
+import {
+  leaves,
+  MODULE_CM,
+  pinLeaf,
+  sharedEdge,
+  type Axis,
+  type Placed,
+  type Side,
+} from './placed';
 
 /** Ô không xây. */
 const EMPTY = '.';
@@ -288,6 +296,17 @@ export interface SketchTreeInput {
    * khi lớp gọi quay lui vì tầng trên hỏng: ô thang tầng 1 là mốc của mọi tầng, rộng dư thì tầng trên mất bề ngang.
    */
   tightCores?: ReadonlySet<string>;
+  /**
+   * Dời ô thang tầng 1 (và giếng trời kề nó) `by` cm theo trục `axis`, giữ cỡ (T172) — chỉ khi lớp gọi quay lui vì tầng
+   * trên hỏng: chỗ ô thang tầng 1 quyết chiều sâu còn lại cạnh thang của MỌI tầng. Không dời được (cạnh trên hình bao,
+   * phòng kề hụt ô nhỏ nhất) thì cây bị bỏ.
+   */
+  shiftCores?: {
+    ids: ReadonlySet<string>;
+    companions: ReadonlySet<string>;
+    axis: Axis;
+    by: number;
+  };
   /** Dòng gỡ lỗi — chỉ phép thử dùng. */
   trace?: (line: string) => void;
 }
@@ -429,7 +448,8 @@ export function sketchTrees(input: SketchTreeInput): SketchTrees {
   for (const mode of SIZING_MODES) {
     const sized = place(root, footprint, mode, input);
     if (!sized) continue;
-    const placed = tighten(repair(sized, input), input);
+    const placed = shift(tighten(repair(sized, input), input), input);
+    if (!placed) continue;
     const signature = JSON.stringify(placed);
     if (seen.has(signature)) continue;
     seen.add(signature);
@@ -1322,6 +1342,39 @@ function tighten(root: Placed, input: SketchTreeInput): Placed {
       current = next;
     }
   }
+  return current;
+}
+
+/**
+ * Dời ô lõi theo `SketchTreeInput.shiftCores` (T172): ô thang và giếng trời CHUNG CẠNH với nó dời cùng một đoạn, giữ cỡ,
+ * bằng cách dời các nhát cắt sinh ra cạnh của chúng (`pinLeaf`). Dời ô xa trước để ô gần không ép ô kia hụt. `null` khi
+ * không dời được.
+ */
+function shift(root: Placed, input: SketchTreeInput): Placed | null {
+  const move = input.shiftCores;
+  if (!move || !move.by) return root;
+  const all = leaves(root);
+  const cores = all.filter((leaf) => move.ids.has(leaf.id));
+  if (!cores.length) return null;
+  const group = [
+    ...cores,
+    ...all.filter(
+      (leaf) =>
+        move.companions.has(leaf.id) && cores.some((core) => sharedEdge(core.rect, leaf.rect) > 0),
+    ),
+  ];
+  const [lo, hi] = move.axis === 'x' ? (['x0', 'x1'] as const) : (['y0', 'y1'] as const);
+  // Dời về phía dương thì ô nằm xa nhất phía dương đi trước.
+  group.sort((a, b) => (move.by > 0 ? b.rect[lo] - a.rect[lo] : a.rect[lo] - b.rect[lo]));
+  let current: Placed | null = root;
+  for (const item of group) {
+    const target = { ...item.rect, [lo]: item.rect[lo] + move.by, [hi]: item.rect[hi] + move.by };
+    current = pinLeaf(current, item.id, target, input.minCell);
+    if (!current) return null;
+  }
+  input.trace?.(
+    `    ⇵ dời ô thang ${group.map((item) => `"${item.id}"`).join(', ')} ${move.by > 0 ? '+' : ''}${move.by} cm theo ${move.axis}`,
+  );
   return current;
 }
 

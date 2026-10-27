@@ -424,3 +424,8 @@ sketch:
   absorb_stranded:
     types: [storage, closet]
     max_area_m2: 4
+  # Tầng trên hỏng thì thử dời ô thang tầng 1 (và giếng trời kề nó) từng ô lưới bản phác theo chiều sâu / bề ngang,
+  # tối đa bấy nhiêu ô mỗi phía (T172): chỗ ô thang tầng 1 là mốc của mọi tầng, mà tầng 1 được chọn theo điểm riêng
+  # của nó. Mỗi bước tốn một lượt xếp tầng 1 + các tầng trên. Bỏ mục này là tắt.
+  ground_core_shift:
+    max_steps: 1
