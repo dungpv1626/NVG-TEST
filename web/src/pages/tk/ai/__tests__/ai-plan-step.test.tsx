@@ -46,6 +46,7 @@ async function openTab(name: RegExp): Promise<void> {
 
 const state = vi.hoisted(() => ({
   review: null as unknown,
+  hits: [] as { id: string; x: number; y: number; w: number; h: number }[],
   run: null as unknown,
   start: vi.fn((_input: unknown) => Promise.resolve({ runId: 'r1' })),
   dxf: vi.fn((_input: unknown) => Promise.resolve()),
@@ -70,6 +71,7 @@ vi.mock('@/hooks/use-ai-design', () => ({
   useAiPlanReview: () => ({ data: state.review, isLoading: false, isError: false, error: null }),
   useAiPlanSheet: () => ({
     url: 'blob:vector',
+    hits: state.hits,
     scale: 60,
     orientation: 'portrait',
     loading: false,
@@ -250,7 +252,8 @@ describe('Tờ mặt bằng — tờ SVG tất định là tờ CHÍNH (T22, 12/
   it('cỡ xem mặc định là «Vừa»; chọn «Tràn khung» thì bỏ chặn bề ngang', async () => {
     state.review = review();
     show();
-    const sheet = screen.getByRole('img', { name: /Tờ mặt bằng Tầng 1/ });
+    // Bề ngang chặn ở khung bọc ảnh (khung đó mang cả lớp nút bấm phòng phủ lên ảnh).
+    const sheet = screen.getByRole('img', { name: /Tờ mặt bằng Tầng 1/ }).parentElement!;
     expect(sheet.style.maxWidth).toBe('720px');
 
     await userEvent.click(screen.getByRole('button', { name: 'Tràn khung' }));
@@ -827,9 +830,7 @@ describe('Điểm, ngưỡng và bản sửa — sau khi gỡ ô yêu cầu sử
   it('điểm từ 65 trở lên: «Đạt ngưỡng 65»; dưới 65: «Dưới ngưỡng 65» — ở đầu tờ vẽ', () => {
     state.run = null;
     state.review = review({ score: scored(70), acceptPercent: 65, editable: true });
-    const first = renderWithApp(
-      <AiPlanStep projectId="p1" readOnly={false} state={designState as never} />,
-    );
+    renderWithApp(<AiPlanStep projectId="p1" readOnly={false} state={designState as never} />);
     expect(screen.getByText(/Đạt ngưỡng 65/)).toBeInTheDocument();
     cleanup();
     state.review = review({ score: scored(60), acceptPercent: 65, editable: true });
@@ -1100,6 +1101,51 @@ describe('Đánh giá bằng lời (25/10/2026, thay «Ba lý do trừ điểm l
     expect(screen.getByLabelText(/Nội dung cần sửa/)).toHaveValue(
       'Cải thiện «Tiêu chí mất nhiều nhất» ở: Phòng khách (living_1).',
     );
+  });
+  it('bản vẽ đánh dấu phòng có việc nên sửa; bấm phòng thì điền sẵn ô yêu cầu (việc C)', async () => {
+    state.run = null;
+    state.hits = [
+      { id: 'living_1', x: 0.1, y: 0.1, w: 0.4, h: 0.3 },
+      { id: 'kitchen_1', x: 0.1, y: 0.5, w: 0.4, h: 0.3 },
+    ];
+    state.review = review({
+      roomLabels: { living: 'Phòng khách', kitchen: 'Bếp' },
+      score: {
+        ...scoreOf(),
+        points: 70,
+        criteria: [
+          {
+            code: 'C2',
+            group: 'C',
+            vi: 'Lối vào phòng khách',
+            giaiThich: null,
+            value: 1,
+            score: 0.2,
+            weight: 10,
+            n: 3,
+            label: 'ĐO',
+            notScored: null,
+            why: null,
+            refs: ['living_1'],
+          },
+        ],
+      },
+    });
+    show();
+    const living = screen.getByRole('button', {
+      name: /Nhờ AI sửa Phòng khách \(living_1\) — nên sửa/,
+    });
+    expect(living).toHaveTextContent('!');
+    // Phòng không bị trừ điểm vẫn bấm được, không có dấu «!».
+    expect(
+      screen.getByRole('button', { name: 'Nhờ AI sửa Bếp (kitchen_1)' }),
+    ).not.toHaveTextContent('!');
+
+    await userEvent.click(living);
+    expect(screen.getByLabelText(/Nội dung cần sửa/)).toHaveValue(
+      'Phòng khách (living_1) — cải thiện «Lối vào phòng khách»: ',
+    );
+    state.hits = [];
   });
 });
 

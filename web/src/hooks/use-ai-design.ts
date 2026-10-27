@@ -16,6 +16,7 @@ import { DesignApiError, designApi, designApiFile } from '@/lib/design-api';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { svgUrlToPngBase64 } from '@/lib/rasterise';
 import { supabase } from '@/lib/supabase';
+import { parseRoomHits, type SheetRoomHit } from '@/lib/sheet-hits';
 
 // ---------------------------------------------------------------------------
 // Danh mục model
@@ -689,6 +690,8 @@ export function useAiPlanReview(
 export interface AiPlanSheetState {
   /** Địa chỉ blob để gắn vào `<img>`. `null` khi chưa có hoặc đang nạp. */
   url: string | null;
+  /** Vùng bấm từng phòng đọc từ tờ vẽ (`parseRoomHits`) — rỗng với tờ mặt đứng hoặc Worker cũ. */
+  hits: SheetRoomHit[];
   scale: number | null;
   orientation: string | null;
   loading: boolean;
@@ -724,6 +727,7 @@ export function useAiPlanSheet(
 function useSheetBlob(path: string | null, fallbackError: string): AiPlanSheetState {
   const [state, setState] = useState<AiPlanSheetState>({
     url: null,
+    hits: [],
     scale: null,
     orientation: null,
     loading: false,
@@ -732,21 +736,30 @@ function useSheetBlob(path: string | null, fallbackError: string): AiPlanSheetSt
 
   useEffect(() => {
     if (!path) {
-      setState({ url: null, scale: null, orientation: null, loading: false, error: null });
+      setState({
+        url: null,
+        hits: [],
+        scale: null,
+        orientation: null,
+        loading: false,
+        error: null,
+      });
       return;
     }
     let cancelled = false;
     let objectUrl: string | null = null;
-    setState({ url: null, scale: null, orientation: null, loading: true, error: null });
+    setState({ url: null, hits: [], scale: null, orientation: null, loading: true, error: null });
 
     void designApiFile(path)
       .then(async (response) => {
         const blob = await response.blob();
+        const hits = parseRoomHits(await blob.text());
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
         const scale = Number(response.headers.get('X-Sheet-Scale'));
         setState({
           url: objectUrl,
+          hits,
           scale: Number.isFinite(scale) && scale > 0 ? scale : null,
           orientation: response.headers.get('X-Sheet-Orientation'),
           loading: false,
@@ -757,6 +770,7 @@ function useSheetBlob(path: string | null, fallbackError: string): AiPlanSheetSt
         if (cancelled) return;
         setState({
           url: null,
+          hits: [],
           scale: null,
           orientation: null,
           loading: false,

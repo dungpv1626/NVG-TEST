@@ -121,6 +121,7 @@ export function renderPlanSheet(
     // fd3b0b86 — dòng thứ ba đè lên «Mặt bằng công năng — Tầng 1»).
     renderFooter(area, style, sheetNotes(plan, level)),
     renderPlanBody(plan, level, paper, options, notes),
+    renderRoomHits(level, paper),
     // Mũi tên bắc nằm TRONG vùng hình, không sát khung: chữ «B» in phía ngoài vòng tròn, nên
     // đặt đúng mép thì nó tràn qua nét khung hoặc qua cột khung tên. Chừa thêm một cỡ chữ.
     renderNorthArrow(
@@ -135,6 +136,29 @@ export function renderPlanSheet(
   ].join('');
 
   return { svg: svgDocument(style, orientation, body), scale, orientation, notes: notes.list() };
+}
+
+/**
+ * Vùng bấm VÔ HÌNH của từng phòng (27/10/2026, «bấm phòng trên bản vẽ để nhờ sửa»): tờ vẽ hiện qua `<img>` nên trang
+ * không bấm được vào phòng; giao diện đọc các ô `data-room` này (toạ độ giấy, mm) để phủ nút bấm lên ảnh. Không màu,
+ * không nét — in ra hay mở bằng phần mềm khác đều không thấy. Chỉ ở tờ SVG: DXF dựng từ `renderPlanBody`, không đi qua đây.
+ */
+function renderRoomHits(level: AiFloorPlanLevel, paper: Paper): string {
+  const hits = level.rooms.map((room) => {
+    const r = toRect(room.rect);
+    const [ax, ay] = paper.p([r.x0, r.y0]);
+    const [bx, by] = paper.p([r.x1, r.y1]);
+    return tag('rect', {
+      'data-room': room.id,
+      x: Math.min(ax, bx),
+      y: Math.min(ay, by),
+      width: Math.abs(bx - ax),
+      height: Math.abs(by - ay),
+      fill: 'none',
+      stroke: 'none',
+    });
+  });
+  return hits.length ? `<g data-room-hits="">${hits.join('')}</g>` : '';
 }
 
 /**

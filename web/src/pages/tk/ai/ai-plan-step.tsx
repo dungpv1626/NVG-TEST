@@ -91,6 +91,8 @@ import { AiPlanCompare, ScoreChip } from './ai-plan-compare';
 import { PlanVerdict, planVerdict } from './ai-plan-verdict';
 import { openWorkspaceTab, SplitWorkspace } from '@/components/ui/split-workspace';
 import { PlanEditPanel } from './ai-plan-edit';
+import { roomName } from './plan-deductions';
+import { roomFixRequest, SheetRoomOverlay } from './sheet-room-overlay';
 import { failureViews, type FailedVariant } from './plan-failure';
 
 /** Kết quả một lượt chạy giai đoạn mặt bằng, đúng hình dạng Workflow ghi vào `design_ai_run`. */
@@ -439,6 +441,7 @@ export function AiPlanStep({
             onAskFix={(text) => setPrefill({ text, nonce: Date.now() })}
           />
         ),
+        onAskRoom: canFix ? (text: string) => setPrefill({ text, nonce: Date.now() }) : undefined,
         editPanel: (
           <PlanEditPanel
             review={review.data}
@@ -847,7 +850,10 @@ function PlanDetail({
   editPanel,
   verdict,
   part,
+  onAskRoom,
 }: {
+  /** Bấm một phòng trên tờ vẽ → điền sẵn ô «Yêu cầu sửa». Vắng = chỉ đánh dấu phòng có vấn đề, không bấm được. */
+  onAskRoom?: (text: string) => void;
   /**
    * Phần dựng (25/10/2026, khung hai ngăn): `sheet` = tờ vẽ (ngăn phải, luôn hiện); `review` = đánh giá, yêu cầu
    * sửa và các mục gấp (tab «Đánh giá» bên trái).
@@ -883,6 +889,12 @@ function PlanDetail({
   // ý định, lỗi và đối chiếu là các mục gấp bên dưới; lỗi chặn tự mở, và panel điểm vẫn đứng SAU
   // danh sách lỗi (T24).
   if (part === 'sheet') {
+    // Phòng bị trừ điểm — đúng danh sách khối «Đánh giá» nêu (`planVerdict`), không chấm lại.
+    const issues = new Map<string, string[]>();
+    for (const item of planVerdict(review).items) {
+      for (const id of item.refs) issues.set(id, [...(issues.get(id) ?? []), item.label]);
+    }
+    const nameOf = (id: string) => roomName(id, review.roomLabels);
     return (
       <section className="rounded-lg border border-tk-line bg-tk-panel">
         <div className="flex flex-wrap items-center gap-3 border-b border-tk-line p-3">
@@ -949,14 +961,31 @@ function PlanDetail({
           {sheet.loading && <Skeleton className="h-96 w-full" />}
           {sheet.error && <p className="text-status-overdue">{sheet.error}</p>}
           {sheet.url && (
-            // `<img>` chứ không phải SVG nhúng: xem ghi chú đầu tệp.
-            <img
-              src={sheet.url}
-              alt={`Tờ mặt bằng ${current?.name ?? `tầng ${level}`}`}
-              style={sheetWidthStyle(sheetSize)}
-              onClick={() => setViewing(true)}
-              className="w-full cursor-zoom-in rounded-md border border-tk-line bg-white"
-            />
+            <div className="relative w-full" style={sheetWidthStyle(sheetSize)}>
+              {/* `<img>` chứ không phải SVG nhúng: xem ghi chú đầu tệp. */}
+              <img
+                src={sheet.url}
+                alt={`Tờ mặt bằng ${current?.name ?? `tầng ${level}`}`}
+                onClick={() => setViewing(true)}
+                className="block w-full cursor-zoom-in rounded-md border border-tk-line bg-white"
+              />
+              <SheetRoomOverlay
+                hits={sheet.hits}
+                nameOf={nameOf}
+                issues={issues}
+                onPick={
+                  onAskRoom
+                    ? (id) => onAskRoom(roomFixRequest(nameOf(id), issues.get(id) ?? []))
+                    : undefined
+                }
+              />
+            </div>
+          )}
+          {sheet.url && sheet.hits.length > 0 && (onAskRoom || issues.size > 0) && (
+            <p className="mt-2 text-sm text-fg-subtle">
+              {onAskRoom && 'Bấm vào một phòng trên bản vẽ để nhờ AI sửa phòng đó. '}
+              {issues.size > 0 && 'Viền cam đứt, dấu «!»: phòng có việc nên sửa (xem «Đánh giá»).'}
+            </p>
           )}
           {viewing && sheet.url && (
             <SheetViewer
