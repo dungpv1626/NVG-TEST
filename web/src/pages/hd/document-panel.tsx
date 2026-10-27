@@ -88,6 +88,7 @@ import {
   type WorkspaceTab,
 } from '@/components/ui/split-workspace';
 import { FullscreenFrame } from '@/components/ui/fullscreen-frame';
+import { ChosenTemplateContext } from './chosen-template';
 import { followPreview, previewKeysOf, previewLabelOf } from './preview-follow';
 import { cn } from '@/lib/utils';
 
@@ -164,7 +165,13 @@ export function DocumentPanel({
         id: 'dieu-khoan-tab',
         label: 'Điều khoản',
         side: 'left',
-        content: <div id="dieu-khoan">{termsPanel}</div>,
+        content: (
+          <div id="dieu-khoan">
+            <ChosenTemplateContext.Provider value={chosen}>
+              {termsPanel}
+            </ChosenTemplateContext.Provider>
+          </div>
+        ),
       },
       { id: 'phien-ban', label: 'Phiên bản', side: 'left', content: versionsSection },
     ];
@@ -268,7 +275,11 @@ export function DocumentPanel({
               badge: stepBadge(parts.steps?.terms),
               content: (
                 <>
-                  <div id="dieu-khoan">{termsPanel}</div>
+                  <div id="dieu-khoan">
+                    <ChosenTemplateContext.Provider value={chosen}>
+                      {termsPanel}
+                    </ChosenTemplateContext.Provider>
+                  </div>
                   <NextStep
                     to={chosen ? 'noi-dung' : 'kiem-tra'}
                     label={chosen ? '3. Nội dung riêng' : '4. Kiểm tra và gửi'}

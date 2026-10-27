@@ -39,11 +39,13 @@ import {
   useContractTerms,
   useDeleteContractTerm,
   useSaveContractTerm,
+  useUpdateContract,
   type ContractTermRecord,
 } from '@/hooks/use-contracts';
 import { rankTemplates, useTemplatesForContract } from '@/hooks/use-contract-templates';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useContractTermSources } from '@/hooks/use-quotes';
+import { templatePrintsAny, useChosenTemplate } from './chosen-template';
 import { PREVIEW_KEYS_ATTR, PREVIEW_LABEL_ATTR, termPreviewKeys } from './preview-follow';
 
 interface TermForm {
@@ -143,6 +145,12 @@ export function TermsPanel({
     : {};
   const saveTerm = useSaveContractTerm();
   const deleteTerm = useDeleteContractTerm();
+  const updateContract = useUpdateContract();
+  // Mẫu đang chọn ở tab Soạn hợp đồng (null ở nơi khác): nhóm nào mẫu không có chỗ in thì nói ra — dòng ghi ở nhóm
+  // ấy chỉ lưu trên hồ sơ, văn bản không đổi (anh Dũng 27/10/2026 thêm Bảo lãnh / Tạm ứng mà văn bản «không thay đổi»).
+  const chosenTemplate = useChosenTemplate();
+  const printedBy = (type: ContractTermType) =>
+    !chosenTemplate || templatePrintsAny(chosenTemplate.tags, termPreviewKeys(type).split(' '));
   const templates = useTemplatesForContract(readOnly ? undefined : companyId, contractType);
   // Mẫu Word có bảng các đợt → gợi ý «Tiến độ thanh toán» theo đúng mốc mẫu đề xuất (0185).
   const milestoneTemplate =
@@ -329,6 +337,46 @@ export function TermsPanel({
                 </span>
               )}
             </div>
+            {!printedBy(type) && (
+              <p className="-mt-1 mb-3 rounded-field bg-pill px-3 py-2 text-sm text-ink-subtle">
+                Mẫu đang chọn không in dòng của phần này — câu chữ đã viết sẵn trong mẫu. Dòng ghi ở
+                đây chỉ lưu trên hồ sơ (nhắc hạn, đối chiếu). Muốn văn bản đổi: bấm chỗ vàng của
+                phần này trên văn bản, hoặc điền ở «3. Nội dung riêng».
+              </p>
+            )}
+            {type === 'gia_tri' &&
+              (() => {
+                // Văn bản in GIÁ TRỊ HỢP ĐỒNG của hồ sơ, không in dòng điều khoản — lệch nhau thì hỏi dùng số nào.
+                const other = rows.find(
+                  (r) => r.amount != null && String(r.amount) !== String(contractValue ?? ''),
+                );
+                if (!other) return null;
+                return (
+                  <div className="-mt-1 mb-3 rounded-field bg-status-pending-bg px-3 py-2 text-sm">
+                    Văn bản in giá trị hợp đồng của hồ sơ:{' '}
+                    <strong>
+                      {contractValue != null ? formatCurrency(contractValue) : 'chưa có'}
+                    </strong>
+                    . Dòng dưới ghi <strong>{formatCurrency(other.amount!)}</strong>.
+                    {!readOnly && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="ml-2"
+                        disabled={updateContract.isPending}
+                        onClick={() =>
+                          updateContract.mutate({
+                            id: contractId,
+                            changes: { value: String(other.amount) },
+                          })
+                        }
+                      >
+                        Dùng {formatCurrency(other.amount!)} làm giá trị hợp đồng
+                      </Button>
+                    )}
+                  </div>
+                );
+              })()}
 
             {suggestion && !formOpen && (
               <div className="mb-3 rounded-sm border border-status-progress bg-status-progress-bg px-3 py-2">
