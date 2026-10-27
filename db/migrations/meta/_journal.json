@@ -1506,6 +1506,13 @@
       "when": 1791680000000,
       "tag": "0223_nhan_soan_thay_hop_dong",
       "breakpoints": true
+    },
+    {
+      "idx": 223,
+      "version": "7",
+      "when": 1791690000000,
+      "tag": "0224_don_hang_pham_vi_cong_truong",
+      "breakpoints": true
     }
   ]
 }

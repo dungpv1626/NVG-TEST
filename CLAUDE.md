@@ -944,8 +944,9 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   `select_quotation` chép 0037, «thấp nhất» chỉ xét báo giá đủ hàng. 4C khối «Đơn hàng đến hạn giao» + quét đêm
   `scan_purchase_order_due_reminders` (sắp tới hạn = tham số TRỐNG `mh.order_due_soon_days`; quá hẹn / hôm nay luôn báo).
   4D tồn tối thiểu: trigger `inventory_items_low_stock_notify` báo ngay lúc tồn vượt xuống mức, mức trống = «Chưa đặt mức».
-  Dữ liệu thử hậu tố THU4. Lỗ có sẵn: chính sách đọc `purchase_orders` / `deliveries` chỉ Mẫu A (chỉ huy trưởng thấy đơn
-  công trình khác) — chưa sửa. Hàm danh sách nối nhiều bảng có RLS: viết điều kiện phạm vi tường minh trong SECURITY
+  Dữ liệu thử hậu tố THU4. Lỗ chỉ huy trưởng thấy đơn / phiếu giao nhận công trình khác đã vá ở 0224 (đơn theo công trình
+  của đề nghị mua gốc, `rls_purchase_order_site_in_scope`; trigger `deliveries_site_scope_guard`; phép thử
+  `mh-pham-vi-cong-truong.test.ts`, hai đột biến đã đo đỏ). Hàm danh sách nối nhiều bảng có RLS: viết điều kiện phạm vi tường minh trong SECURITY
   DEFINER (`mh_purchase_pool`), để RLS tự áp trên năm bảng nối thì quá 8 giây.
 - **Đợt 5 (trừ 5B), xong trên máy 23/10/2026 (0205–0209, phép thử `dot5-*`, `rental-quote`):** 5A khảo sát thiết kế máy ghi
   giờ (`start_design_survey` / `finish_design_survey`) + ghi âm lời chủ nhà (kho `design-audio`, Worker `/ai/design-transcribe`
@@ -1073,8 +1074,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    `/kt/de-nghi-thu`, `/kt/dong-tien-theo-tuan`; TGĐ / KSNB `/tong-quan/bat-thuong`, `/bc/lai-lo-quan-tri`; Mua hàng
    `/mh/gom-de-nghi`, `/mh/don-hang`; Kho `/kho/ton-kho`; Thiết kế khảo sát ghi âm + vòng ý kiến; `/ns/giay-to-phap-nhan`;
    `/da/ho-so-nang-luc`; `/sx/bao-gia-thue`. Còn chặn: bảng công (câu 6), 5C-2/3/4/6/7/8/10 (câu 14, 19), mốc NVC (câu 15).
-   Lỗ có sẵn chưa sửa: chỉ huy trưởng thấy đơn đặt hàng công trình khác (chính sách `purchase_orders` / `deliveries` chỉ Mẫu
-   A) — hỏi anh Dũng có sửa không.
+   ĐÃ VÁ (0224, 27/10/2026): chỉ huy trưởng thấy / ghi giao nhận đơn đặt hàng công trình khác.
 2a. **Giao diện v2 (`design_handoff_nvg_v2/`, anh Dũng duyệt + giao toàn quyền 24/10/2026) — đã gộp vào `cai-tien-ux`:**
    token v2 (DESIGN_SYSTEM.md §8), khung xanh rừng + sidebar 4 nhóm + thanh tab điện thoại 4 ô, khuôn chung (danh
    sách, chi tiết có cột phải «Bước tiếp theo» + «Chuỗi hồ sơ», Kanban, biểu mẫu «Sau khi lưu», trạng thái), trang
@@ -1127,7 +1127,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: lịch sử bước chung `stage_transitions`; dải tiến trình gói thầu; QĐ-6 giao dịch nội bộ; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0224.** (Đã dùng tới 0223; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0225.** (Đã dùng tới 0224; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 
