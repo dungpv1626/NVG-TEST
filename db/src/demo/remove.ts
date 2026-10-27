@@ -15,6 +15,7 @@ import { NVO_CUSTOMER } from './scenario-nvo';
 import { DEMO_CASH_FLOW_PERIOD } from './scenario-cash-flow';
 import { NS_DEMO_ASSETS, NS_DEMO_EMPLOYEES, NS_DEMO_POSITION } from './scenario-ns';
 import { DEMO_LOT_MATERIALS, NVS_FIRST_RENTAL_CUSTOMER, demoLotCode } from './scenario-nvs';
+import { OVERDUE_DEMO_DEBTS } from './scenario-overdue';
 
 export const DEMO_CUSTOMERS = [
   'Công ty TNHH Cơ khí Chính xác Hưng Thịnh',
@@ -223,6 +224,13 @@ export async function removeDemoData(): Promise<Record<string, number>> {
       await del(
         'hợp đồng thuê',
         tx`DELETE FROM rental_agreements WHERE id IN (SELECT id FROM g_rentals)`,
+      );
+      await del(
+        'công nợ quá hạn (kịch bản qua-han)',
+        tx`DELETE FROM receivables_payables
+        WHERE description = ANY(${OVERDUE_DEMO_DEBTS.map((d) => d.description)})
+          AND settled_amount = 0
+          AND created_by IN (SELECT id FROM users WHERE email LIKE ${SEED_ACCOUNT_DOMAIN})`,
       );
       await del(
         'kế hoạch dòng tiền',

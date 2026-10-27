@@ -1122,7 +1122,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 --workspace=db` (Windows: không dùng `npm run db:migrate:demo` — cmd không hiểu cú pháp đặt biến) rồi seed cùng cách;
    (d) `npm run deploy:workers`; đặt secret `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_PAID_API_KEY` và các khoá AI Design
    (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `POLLINATIONS_API_KEY` — anh Dũng đã cho chép từ
-   `.dev.vars`); (e) `NVG_DB_TARGET=demo npx tsx db/src/demo/index.ts --confirm=fvfmtbdcvcniakigfpdm --only=nvo` và `--only=mac-dinh` (tham số DEMO); migrate demo bây giờ phải tới 0218;
+   `.dev.vars`); (e) `NVG_DB_TARGET=demo npx tsx db/src/demo/index.ts --confirm=fvfmtbdcvcniakigfpdm --only=nvo` và `--only=mac-dinh` (tham số DEMO) và `--only=qua-han` (công nợ quá hạn ba công ty — Tổng quan điều hành có vấn đề để xem); migrate demo bây giờ phải tới 0218;
    (f) `npm run deploy:web`; kiểm `curl https://nvg-api.automkt.workers.dev/design/health`; (g) bật hai công tắc AI ở trang
    Trợ lý AI của bản demo; chạy thử bằng đúng vai.
 4. Việc nhỏ treo của Đợt 1: AI điền luôn các ô «Thông tin hiện trường» riêng từng công ty; Kinh doanh NVS sửa ô phiếu
@@ -1130,7 +1130,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    «Nhập từ Excel» `/crm/dau-moi/nhap-excel` (`.xlsx` đọc bằng pizzip — `lib/sheet-read.ts`, không thêm thư viện; kiểm dòng
    `shared/src/lead-import.ts`, số đã có bỏ chọn sẵn, Excel rơi số 0 đầu thì thêm lại và nói ra).
 5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
-   đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
+   đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email.
 
 **Migration tiếp theo: 0229.** (Đã dùng tới 0228; 0204, 0210–0216, 0220 bỏ trống.)
 

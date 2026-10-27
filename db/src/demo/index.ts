@@ -19,6 +19,7 @@ import { loadNvc } from './scenario-nvc';
 import { loadNs } from './scenario-ns';
 import { loadNvs } from './scenario-nvs';
 import { loadNvo } from './scenario-nvo';
+import { loadOverdue } from './scenario-overdue';
 
 const SCENARIOS = {
   nvc: { label: 'NVC — nhà xưởng, cơ hội tới lãi/lỗ, một ngày công trường', run: loadNvc },
@@ -29,6 +30,10 @@ const SCENARIOS = {
   nvo: {
     label: 'NVO — hồ sơ thiết kế nhà phố từ đầu bài tới bàn giao, yêu cầu làm rõ',
     run: loadNvo,
+  },
+  'qua-han': {
+    label: 'Công nợ phải thu / phải trả quá hạn ở cả ba công ty (Tổng quan điều hành)',
+    run: loadOverdue,
   },
   'mac-dinh': {
     label: 'Tham số DEMO cho mọi con số NVG chưa quyết (chỉ điền ô còn trống)',
