@@ -21,7 +21,15 @@
  */
 
 import { History } from 'lucide-react';
-import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { formatDeadline, type StatusGroup } from '@nvg/shared';
 import { DetailAsideContext, useWideDetail } from '@/components/entity/detail-aside';
@@ -188,6 +196,19 @@ export function EntityDetail({
     };
   }, []);
 
+  // Header thu gọn khi cuộn (anh Dũng 27/10/2026: màn thấp thì header dính ăn gần nửa chiều cao, khung soạn hợp đồng
+  // chỉ còn một dải). Cuộn xuống quá 120 px thì bỏ đường dẫn và dòng mã / trạng thái, tên còn một dòng nhỏ; về sát đầu
+  // trang mới mở lại. Hai ngưỡng cách xa nhau để header co lại (nội dung dịch lên) không tự bật mở ngay.
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const scroller = headerRef.current?.closest('main');
+    if (!scroller) return;
+    const onScroll = () =>
+      setCompact((was) => (was ? scroller.scrollTop > 8 : scroller.scrollTop > 120));
+    scroller.addEventListener('scroll', onScroll, { passive: true });
+    return () => scroller.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
     // Có gì đứng TRƯỚC khung này (dải bước duyệt, thông báo lỗi, «Đề nghị bị từ chối…») thì
     // bù đúng phần margin âm của header — nếu không header kéo lên đè mất nửa dưới thứ đó.
@@ -217,11 +238,31 @@ export function EntityDetail({
               showAside && 'lg:mr-0 lg:pr-0',
             )}
           >
-            <Breadcrumb items={effectiveBreadcrumbs} />
-            <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+            <div className={cn(compact && 'lg:hidden')}>
+              <Breadcrumb items={effectiveBreadcrumbs} />
+            </div>
+            <div
+              className={cn(
+                'mt-2 flex flex-wrap items-start justify-between gap-3',
+                compact && 'lg:mt-0 lg:flex-nowrap lg:items-center',
+              )}
+            >
               <div className="min-w-0">
-                <h1 className="text-title font-bold text-pretty">{title}</h1>
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-ink-subtle">
+                <h1
+                  className={cn(
+                    'text-title font-bold text-pretty',
+                    compact && 'lg:truncate lg:text-lg',
+                  )}
+                  title={compact ? title : undefined}
+                >
+                  {title}
+                </h1>
+                <div
+                  className={cn(
+                    'mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-ink-subtle',
+                    compact && 'lg:hidden',
+                  )}
+                >
                   <span className="font-mono text-xs">{code}</span>
                   {statusLabel ? (
                     <StatusWithLabel status={status} label={statusLabel} />
@@ -252,7 +293,10 @@ export function EntityDetail({
               có cách nào nắm được cấu trúc màn hình (Content Guidelines 6.8). */}
             <nav
               role="tablist"
-              className="mt-3 flex gap-1 overflow-x-auto overflow-y-hidden pb-1"
+              className={cn(
+                'mt-3 flex gap-1 overflow-x-auto overflow-y-hidden pb-1',
+                compact && 'lg:mt-1',
+              )}
               aria-label="Nội dung hồ sơ"
             >
               {allTabs.map((tab) => {

@@ -354,12 +354,24 @@ function Workspace({
   // Chiều cao đặt ở HAI NGĂN, không ở cả khung: phần trên (mẫu, dải báo vàng) từng ăn hết chiều cao khung, màn thấp /
   // header cao thì hai ngăn chỉ còn ~160 px, không đọc được (anh Dũng 27/10/2026). Nay hai ngăn cao bằng phần màn hình
   // dưới header, tối thiểu 32rem; phần trên cuộn đi theo trang. Toàn màn hình: `basis-auto` + co / giãn lấp khung.
+  // Cuộn gần tới hai ngăn thì trang «hít» cho mép trên hai ngăn nằm ngay dưới header (header thu gọn khi cuộn — xem
+  // `EntityDetail`), không để thanh tab của hai ngăn chui xuống dưới header. Chỉ đặt kiểu hít trên <main> khi khung
+  // này đang hiện, gỡ khi rời tab.
+  useEffect(() => {
+    const main = document.querySelector('main');
+    if (!main || !window.matchMedia('(min-width: 1024px)').matches) return;
+    const before = main.style.scrollSnapType;
+    main.style.scrollSnapType = 'y proximity';
+    return () => {
+      main.style.scrollSnapType = before;
+    };
+  }, []);
   return (
     <FullscreenFrame top={top}>
       <SplitWorkspace
         tabs={tabs}
         storageKey={storageKey}
-        className="lg:h-[max(32rem,var(--detail-sticky-avail,75vh))] lg:min-h-0 lg:flex-1 lg:basis-auto"
+        className="lg:h-[max(32rem,var(--detail-sticky-avail,75vh))] lg:min-h-0 lg:flex-1 lg:basis-auto lg:snap-start lg:scroll-mt-[var(--detail-sticky-top,12rem)]"
       />
     </FullscreenFrame>
   );
