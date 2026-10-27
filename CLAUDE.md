@@ -1029,6 +1029,19 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     lập hồ sơ dự thầu — Nhà Việt Cons» https://claude.ai/artifact/T7Pox4qBuvYh5doeBF9HuS (câu 19); câu 14, 22 ghi nhận.
   - Sự cố đã khắc phục: xoá worktree bằng `rm -rf` đi xuyên junction `node_modules`, mất 280 gói → `npm install` dựng lại
     (bài học ở 9.6). Không có lượt AI trả phí nào trong phiên.
+  - Tối 27/10 — soạn hợp đồng theo phản hồi anh Dũng (commit b8f7633 → 5f1ee37): hai ngăn cao tối thiểu 32rem (dải trên
+    không ép còn ~160 px); header hồ sơ THU GỌN khi cuộn (`entity-detail.tsx`, mọi trang hồ sơ từ lg); hai ngăn «hít» ngay
+    dưới header (`scroll-snap` đặt trên `<main>` chỉ khi khung soạn đang hiện); bấm ô nào ở ngăn trái thì bản xem trước cuộn
+    tới và viền sáng chỗ ô ấy in (`pages/hd/preview-follow.ts`, chỗ lấy từ hồ sơ mang `data-src-key`, `Field previewKeys`);
+    nhóm điều khoản mẫu không in thì khung xám nói rõ + giá trị hợp đồng lệch dòng «Giá trị» thì nút «Dùng … làm giá trị hợp
+    đồng» (`pages/hd/chosen-template.ts`); chỗ trống cùng câu gộp một câu, ô nằm trong câu (`sentenceRuns`); nút «Gửi phê
+    duyệt» đầu trang mở khối gửi ở bước 4 (chọn «Lưu bản mới như màn hình và gửi» hoặc «Gửi tệp Word bản N») thay vì gửi
+    ngầm bản đã lưu; tải lên tệp Word còn chỗ trống `{…}` bị từ chối (`unfilledTemplateTags`).
+  - Đối chiếu tài liệu «Luồng nghiệp vụ 3 công ty» (PDF anh Dũng gửi, viết trước đợt cải tiến): khung xương đúng; tài liệu cũ
+    ở đầu mối / phân loại / duyệt khảo sát, văn bản Word, Kinh doanh ghi ký, tự mở công trình, mốc thi công, ký hai bên biên
+    bản, đề nghị thu tiền, kết thúc chờ hết bảo hành, 7 mục đầu bài, NVS phiếu giao + báo giá thuê. Chỗ hổng CÒN ĐÚNG: công
+    trình mở từ hợp đồng của cơ hội (không gói thầu / thiết kế) KHÔNG có ngân sách (`project_budgets` chỉ dựng từ gói thầu
+    trúng hoặc hồ sơ thiết kế) → đề nghị mua gắn công trình nhiều khả năng bị chặn ở mã chi phí (chưa chạy thử). Chưa sửa PDF.
 - Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
@@ -1054,6 +1067,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Câu 5 / 15 / 17 (0230, 0231, mốc NVC) | Xong: Thi công mở công trình từ trang Công trình; công trình NVC mới tự có 8 mốc (ĐỀ XUẤT, Trưởng phòng Thi công NVC rà lại); KSNB 90 % / 7 ngày + bảng bồi thường là mặc định thật |
 | Điểm danh tổ đội (0232, câu 6) | Xong trên máy: tab «Điểm danh» → «Điểm danh tổ đội», `/kt/bang-cong-to-doi`. Quy tắc công là ĐỀ XUẤT anh Dũng nhận, chỉnh tham số được. Chưa thử trên điện thoại thật |
 | Bộ hồ sơ dự thầu demo (câu 19) | Có kịch bản `dau-thau` (`NVC-DA-2026-0648` trên máy) + tài liệu quy trình. CÒN: bộ mẫu Word hồ sơ dự thầu tự điền |
+| Soạn hợp đồng — tối 27/10 | Xong trên máy, kiểm trên trình duyệt (`backup/hd-khung-cao/`), phép thử `preview-follow`, `sentence-runs`. Hợp đồng thử `NVC-HD-2026-WORD1` đang CHỜ DUYỆT với bản 1 là mẫu gốc chưa điền (tải lên ngày 25/10) — cần TGĐ «Từ chối» rồi Kinh doanh gửi lại bằng «Lưu bản mới như màn hình và gửi»; giá trị đã đổi thành 3.000.000.000 đồng (anh Dũng bấm) |
 | Bộ mẫu hợp đồng                       | Bản DỰ THẢO (anh Dũng gửi, dùng như chính thức) — chờ pháp chế NVG rà; bảng hỏi mục 6 trong tệp «00_Huong_dan» từng bộ chờ NVG trả lời. Tài khoản ngân hàng ba công ty là số DEMO                                                                                                                                                                                               |
 | AI trên máy                           | **Chạy THẬT**: Whisper (Workers AI) + Gemini 2.5 Flash trả phí — `workers/.dev.vars` `AI_FAKE=` rỗng, công tắc `ai.transcribe_enabled` / `ai.survey_summary_enabled` = 1 ở CSDL máy. Muốn quay về giả lập: `AI_FAKE=1`                                                                                                                                                          |
 | Bản demo cũ `nvg.tests99.workers.dev` | Vẫn chạy bản trước GĐ1, CSDL `awaiwegmuykhctnysvou` — ở tài khoản khác, máy này KHÔNG vào được                                                                                                                                                                                                                                                                                  |
@@ -1076,6 +1090,11 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    (d) Hợp đồng lao động từ hồ sơ nhân sự — làm cùng đợt Nhân sự (anh Dũng: để sau).
    (e) Câu hỏi còn mở: 11, 13, 16, 18, 21, 23 (không chặn tính năng); AI Design THU5 cần sửa câu nhắc + lượt chạy trả phí
    (xin phép trước); phát hành theo mục 3.
+   (f) **Ngân sách cho công trình không đấu thầu** — chờ anh Dũng chốt: có cần không, lập ở đâu (đề xuất: lập ngân sách ngay
+   trên công trình từ báo giá đã duyệt). Nay càng dễ gặp vì hợp đồng từ cơ hội ký xong TỰ mở công trình. Kèm hai câu của PDF:
+   gói thầu tạo từ cơ hội ở bước nào / ai làm; ai được gửi yêu cầu làm rõ / thay đổi ở NVO.
+   (g) Có bỏ nhóm «Giá trị hợp đồng» ở tab Điều khoản, chỉ sửa giá trị ở «1. Thông tin» (một nơi nhập) không — đã hỏi anh Dũng.
+   (h) Cập nhật PDF «Luồng nghiệp vụ 3 công ty» theo app hiện tại nếu anh Dũng muốn.
 1. **Anh Dũng đang chạy thử trên máy** — đã đi trọn: đầu mối → phân loại → khảo sát → duyệt → báo giá → gửi khách →
    Đàm phán → soạn hợp đồng (bộ mẫu NVC-HĐ-01) → duyệt → ký → công trình đã mở → quét bản đã ký. Hợp đồng «AB»
    `NVC-HD-2026-0501` (`ce44609b-3977-474c-887d-a747255bbd3a`, Đã ký, người chịu trách nhiệm Nguyễn Văn A — Kinh doanh
@@ -1293,6 +1312,11 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Tham số câu 17 thành mặc định thật bằng migration (chỉ điền ô trống); mức tồn tối thiểu vẫn để Kho đặt từng vật tư (0231) | Anh Dũng chấp nhận đề xuất — không còn là «NVG chưa quyết». Mức tồn là số của từng vật tư, không có giá trị chung đúng cho mọi vật tư |
 | Điểm danh tổ đội: Chỉ huy trưởng điểm danh hộ, Cả ngày / Nửa ngày / Vắng (không theo giờ vào – ra); bảng công thời vụ riêng theo tổ × công trình × tháng; GPS chỉ cảnh báo (0232) | Thời vụ không có tài khoản; ngân sách thao tác công trường 5–10 phút / ngày (4.6); trộn vào bảng công biên chế sai đối tượng trả lương. Chặn bằng GPS dễ chặn nhầm khi sóng yếu |
 | Mốc NVC và bộ hồ sơ dự thầu demo là ĐỀ XUẤT của Claude Code, ghi rõ chờ người chuyên môn NVG rà; số / tên trong demo là ví dụ | Câu 15, 19 anh Dũng giao «bạn đề xuất» — vẫn là nội dung chuyên môn của NVG (PRD 2.3), không coi là chuẩn đã duyệt |
+| Header hồ sơ thu gọn khi cuộn (hai ngưỡng 120 px / 8 px), không thêm nút kéo tay | Anh Dũng: màn thấp thì header dính ăn gần nửa chiều cao; hai ngưỡng cách xa để header co lại (nội dung dịch lên) không tự bật mở |
+| Bản xem trước hợp đồng chạy theo ô đang sửa bằng khoá chỗ trống của mẫu; mẫu không in khoá thì tới đoạn có tên phần | Anh Dũng: «ấn vào phần nào thì preview phần đó cũng nhảy theo». Khoá là nguồn chung của hai chiều (bấm văn bản → ô, bấm ô → văn bản) |
+| Nhóm điều khoản mẫu không in: nói rõ «chỉ lưu trên hồ sơ», không tự chép vào văn bản; giá trị hợp đồng chỉ đổi khi người soạn bấm | Mẫu NVG viết sẵn câu chữ / phương án cho các phần ấy — tự chèn sẽ phá văn bản; giá trị hợp đồng dùng cho hạn mức duyệt nên không đổi ngầm |
+| Nút «Gửi phê duyệt» đầu trang KHÔNG gửi ngay khi pháp nhân có mẫu: mở khối gửi ở bước 4 nói rõ gửi bản nào; tệp Word còn `{…}` bị từ chối | Lỗi thật 27/10: giám đốc nhận mẫu gốc chưa điền vì nút gửi bản đã lưu gần nhất (tệp tải lên 25/10), mọi thứ điền sau không đi kèm |
+| Chỗ trống tự do liền nhau của cùng câu gộp một câu, ô nằm trong câu | Anh Dũng: «tách ra nhiều quá» — câu 20.2 thành 7 ô, mỗi ô chép lại cả câu |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)
