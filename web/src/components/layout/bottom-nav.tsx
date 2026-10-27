@@ -15,7 +15,7 @@
  * (Content Guidelines 6.8).
  */
 
-import { Inbox, LayoutGrid, ListChecks, Menu, X, type LucideIcon } from 'lucide-react';
+import { Gauge, Inbox, LayoutGrid, ListChecks, Menu, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { MODULES, type ModuleCode } from '@nvg/shared';
@@ -23,7 +23,13 @@ import { usePendingApprovals } from '@/hooks/use-approvals';
 import { useMyFollowups } from '@/hooks/use-leads';
 import { cn } from '@/lib/utils';
 import { useBottomBarSlot } from './bottom-bar-slot';
-import { MODULE_ICONS, useActiveModule, useModuleRoutes, useVisibleModules } from './module-nav';
+import {
+  MODULE_ICONS,
+  useActiveModule,
+  useModuleRoutes,
+  useShowExecOverview,
+  useVisibleModules,
+} from './module-nav';
 
 /** Thứ tự nhóm nghiệp vụ của sidebar v2 (Kinh doanh → Triển khai → Nội bộ). */
 const NAV_ORDER: readonly ModuleCode[] = [
@@ -55,6 +61,8 @@ export function BottomNav() {
   const activeModule = useActiveModule();
   const [sheetOpen, setSheetOpen] = useState(false);
   const location = useLocation();
+  // Tổng quan điều hành (0169) — trang đầu của lãnh đạo / Kiểm soát nội bộ; ẩn với vai khác (CLAUDE.md 5.4).
+  const canSeeExec = useShowExecOverview();
   // Cùng hai truy vấn với thanh trên / sidebar — một con số ở mọi nơi.
   const { data: pending } = usePendingApprovals();
   const { data: followups } = useMyFollowups(0);
@@ -83,6 +91,7 @@ export function BottomNav() {
           <MoreSheet
             rest={visible}
             activeModule={activeModule}
+            showExec={canSeeExec}
             onClose={() => setSheetOpen(false)}
           />
         )}
@@ -115,12 +124,20 @@ export function BottomNav() {
       ? activeModule
       : (NAV_ORDER.find((code) => visible.includes(code)) ?? visible[0]);
   const onHome = location.pathname === '/viec-hom-nay';
+  const onExec = location.pathname === '/tong-quan' || location.pathname.startsWith('/tong-quan/');
+  // Lãnh đạo chưa ở phân hệ nào thì ô thứ hai là «Điều hành» — trước đây trên điện thoại không có lối về trang này.
+  const execSlot = canSeeExec && !(activeModule && visible.includes(activeModule));
   const onTodo = location.pathname.startsWith('/viec-can-lam');
 
   return (
     <>
       {sheetOpen && (
-        <MoreSheet rest={visible} activeModule={activeModule} onClose={() => setSheetOpen(false)} />
+        <MoreSheet
+          rest={visible}
+          activeModule={activeModule}
+          showExec={canSeeExec}
+          onClose={() => setSheetOpen(false)}
+        />
       )}
 
       <nav
@@ -138,14 +155,16 @@ export function BottomNav() {
           active={onHome}
           badge={followups?.length || undefined}
         />
-        {current && (
+        {execSlot ? (
+          <TabLink to="/tong-quan" label="Điều hành" Icon={Gauge} active={onExec} />
+        ) : current ? (
           <TabLink
             to={moduleRoutes[current]}
             label={MODULES[current].shortLabel}
             Icon={MODULE_ICONS[current]}
             active={activeModule === current}
           />
-        )}
+        ) : null}
         <TabLink
           to="/viec-can-lam"
           label="Phê duyệt"
@@ -216,10 +235,12 @@ function TabLink({
 function MoreSheet({
   rest,
   activeModule,
+  showExec,
   onClose,
 }: {
   rest: ModuleCode[];
   activeModule: ModuleCode | null;
+  showExec: boolean;
   onClose: () => void;
 }) {
   const moduleRoutes = useModuleRoutes();
@@ -252,6 +273,17 @@ function MoreSheet({
         </div>
 
         <ul className="grid grid-cols-3 gap-2">
+          {showExec && (
+            <li>
+              <NavLink
+                to="/tong-quan"
+                className="flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-md border border-border p-2 text-center"
+              >
+                <Gauge className="size-5 shrink-0" />
+                <span className="text-xs leading-tight">Tổng quan điều hành</span>
+              </NavLink>
+            </li>
+          )}
           {rest.map((code) => {
             const Icon = MODULE_ICONS[code];
             const meta = MODULES[code];

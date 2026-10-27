@@ -4,9 +4,11 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { renderWithApp } from '@/test/render';
 
 let active: string | null = 'CRM';
+let exec = false;
 vi.mock('@/components/layout/module-nav', async (original) => {
   const actual = await original<typeof import('@/components/layout/module-nav')>();
   return {
@@ -14,6 +16,7 @@ vi.mock('@/components/layout/module-nav', async (original) => {
     useVisibleModules: () => ['CRM', 'HD', 'TC'],
     useModuleRoutes: () => actual.MODULE_ROUTES,
     useActiveModule: () => active,
+    useShowExecOverview: () => exec,
   };
 });
 vi.mock('@/hooks/use-approvals', () => ({ usePendingApprovals: () => ({ data: [{}] }) }));
@@ -47,5 +50,37 @@ describe('Thanh tab điện thoại', () => {
     active = null;
     renderWithApp(<BottomNav />, { route: '/viec-hom-nay' });
     expect(screen.getByRole('link', { name: /Hôm nay/ })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('lãnh đạo chưa ở phân hệ nào: ô thứ hai là «Điều hành», mở Tổng quan điều hành', () => {
+    active = null;
+    exec = true;
+    renderWithApp(<BottomNav />, { route: '/tong-quan' });
+    const link = screen.getByRole('link', { name: 'Điều hành' });
+    expect(link).toHaveAttribute('href', '/tong-quan');
+    expect(link).toHaveAttribute('aria-current', 'page');
+    exec = false;
+  });
+
+  it('lãnh đạo đang ở phân hệ: ô thứ hai là phân hệ, Tổng quan điều hành nằm trong bảng «Thêm»', async () => {
+    active = 'CRM';
+    exec = true;
+    renderWithApp(<BottomNav />, { route: '/crm/co-hoi' });
+    expect(screen.queryByRole('link', { name: 'Điều hành' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Thêm' }));
+    expect(screen.getByRole('link', { name: 'Tổng quan điều hành' })).toHaveAttribute(
+      'href',
+      '/tong-quan',
+    );
+    exec = false;
+  });
+
+  it('vai khác không thấy lối vào Tổng quan điều hành', async () => {
+    active = null;
+    exec = false;
+    renderWithApp(<BottomNav />, { route: '/viec-hom-nay' });
+    expect(screen.queryByRole('link', { name: 'Điều hành' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Thêm' }));
+    expect(screen.queryByRole('link', { name: 'Tổng quan điều hành' })).not.toBeInTheDocument();
   });
 });
