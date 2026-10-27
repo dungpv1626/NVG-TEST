@@ -935,7 +935,8 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   `/bc/lai-lo-quan-tri`, «số quản trị, không thay sổ kế toán»; chưa có ngân sách / chi phí thì «Chưa đủ dữ liệu»). 3E danh
   sách bất thường `ksnb_anomalies` (`/tong-quan/bat-thuong`, sáu nhóm; ngưỡng `ksnb.near_limit_percent`,
   `ksnb.acceptance_unsigned_days` TRỐNG → «Chưa cấu hình ngưỡng»). Dữ liệu thử hậu tố THU3 (`NVO-HD-2026-THU3`,
-  `NVO-CT-2026-THU3`). Còn: khoản phải thu Kế toán lập tay cho cùng đợt có thể đếm hai lần ở dòng tiền; kế hoạch thu – chi
+  `NVO-CT-2026-THU3`). Còn: (đếm trùng đợt thu ở dòng tiền đã vá ở 0227 — công nợ phải thu có `contract_term_id`, chọn đợt ở trang Công nợ,
+  khoản chưa chọn đợt hiện «có thể đang tính trùng» trên trang dòng tiền kèm ô gắn đợt); kế hoạch thu – chi
   nhập tay chưa vào dòng tiền tuần; QĐ-6.
 - **Đợt 4 — Mua hàng và Kho, xong trên máy 23/10/2026 (0200–0203, phép thử `mh-dot4-*`):** 4A `/mh/gom-de-nghi`
   (`mh_purchase_pool` — gộp theo pháp nhân + mã vật tư + đơn vị; «Hỏi giá chung» / «Nhập giá chung» ghi trên TỪNG đề nghị
@@ -1125,10 +1126,10 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    Trợ lý AI của bản demo; chạy thử bằng đúng vai.
 4. Việc nhỏ treo của Đợt 1: AI điền luôn các ô «Thông tin hiện trường» riêng từng công ty; nút «Gửi mẫu» trên đầu mối /
    cơ hội; nhập đầu mối từ Excel; Kinh doanh NVS sửa ô phiếu khảo sát (câu 22).
-5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
+5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0227.** (Đã dùng tới 0226; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0228.** (Đã dùng tới 0227; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 

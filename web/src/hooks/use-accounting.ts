@@ -560,6 +560,8 @@ export interface NewReceivableInput {
   supplierId?: string | null;
   partyName?: string | null;
   contractId?: string | null;
+  /** Đợt thu của hợp đồng mà khoản phải thu này thu — dòng tiền tuần không đếm đợt hai lần (0227). */
+  contractTermId?: string | null;
   invoiceNumber?: string | null;
   invoiceDate?: string | null;
   description?: string | null;
@@ -582,6 +584,7 @@ export function useCreateReceivable() {
           supplier_id: input.supplierId || null,
           party_name: input.partyName?.trim() || null,
           contract_id: input.contractId || null,
+          contract_term_id: input.contractTermId || null,
           invoice_number: input.invoiceNumber?.trim() || null,
           invoice_date: input.invoiceDate || null,
           description: input.description?.trim() || null,

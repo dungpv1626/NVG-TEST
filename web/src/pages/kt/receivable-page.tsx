@@ -18,11 +18,12 @@ import {
   PAYMENT_METHOD_LABELS,
   RECEIVABLE_DIRECTION_LABELS,
   formatCurrency,
+  formatDate,
   receivableAging,
   receivableDisplayStatus,
   toMoney,
 } from '@nvg/shared';
-import type { PaymentMethod, ReceivableDirection } from '@nvg/shared';
+import { COLLECTION_TERM_TYPES, type PaymentMethod, type ReceivableDirection } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { EntityTable, type EntityRow } from '@/components/entity/entity-table';
 import { Button } from '@/components/ui/button';
@@ -31,7 +32,7 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
 import { BlockedNotice } from '@/components/ui/states';
-import { useContracts } from '@/hooks/use-contracts';
+import { useContracts, useContractTerms } from '@/hooks/use-contracts';
 import {
   useAgingBuckets,
   useCreateReceivable,
@@ -63,6 +64,7 @@ export function ReceivablePage() {
   );
   const [isFormOpen, setFormOpen] = useState(false);
   const [amount, setAmount] = useState('');
+  const [contractId, setContractId] = useState('');
   const [settleFor, setSettleFor] = useState<string | null>(null);
   const [settleAmount, setSettleAmount] = useState('');
   const [pageError, setPageError] = useState<string | null>(null);
@@ -70,6 +72,14 @@ export function ReceivablePage() {
   const { data, isLoading, error, refetch } = useReceivables(direction);
   const { data: agingBuckets } = useAgingBuckets();
   const { data: contracts } = useContracts();
+  // Đợt thu của hợp đồng đã chọn (chỉ công nợ phải thu) — đợt còn mở, chưa có công nợ nào khác gắn vào thì CSDL mới
+  // không đếm hai lần; ở đây chỉ liệt kê đợt chưa xong (0227).
+  const { data: contractTerms } = useContractTerms(
+    direction === 'phai_thu' && contractId ? contractId : undefined,
+  );
+  const collectionTerms = (contractTerms ?? []).filter(
+    (t) => COLLECTION_TERM_TYPES.includes(t.term_type) && !t.completed_at,
+  );
   const create = useCreateReceivable();
   const settle = useRecordSettlement();
 
@@ -107,7 +117,9 @@ export function ReceivablePage() {
         companyId: scope.companyId,
         direction,
         partyType: direction === 'phai_thu' ? 'khach_hang' : 'nha_cung_cap',
-        contractId: String(values.get('contract_id') ?? '') || null,
+        contractId: contractId || null,
+        contractTermId:
+          direction === 'phai_thu' ? String(values.get('contract_term_id') ?? '') || null : null,
         partyName: String(values.get('party_name') ?? ''),
         invoiceNumber: String(values.get('invoice_number') ?? ''),
         invoiceDate: String(values.get('invoice_date') ?? '') || null,
@@ -117,6 +129,7 @@ export function ReceivablePage() {
       });
       form.reset();
       setAmount('');
+      setContractId('');
       setFormOpen(false);
     } catch (e) {
       setPageError(toUserMessage(e, 'create'));
@@ -226,7 +239,12 @@ export function ReceivablePage() {
             label="Hợp đồng"
             hint="Chọn hợp đồng thì mỗi lần thu sẽ cộng vào phần 'đã thu' của chính hợp đồng đó."
           >
-            <select name="contract_id" className={SELECT_CLASS}>
+            <select
+              name="contract_id"
+              className={SELECT_CLASS}
+              value={contractId}
+              onChange={(e) => setContractId(e.target.value)}
+            >
               <option value="">Không gắn hợp đồng</option>
               {(contracts ?? []).map((c) => (
                 <option key={c.id} value={c.id}>
@@ -235,6 +253,22 @@ export function ReceivablePage() {
               ))}
             </select>
           </Field>
+          {direction === 'phai_thu' && contractId && (
+            <Field
+              label="Đợt thu"
+              hint="Chọn đợt của hợp đồng mà khoản này thu — dòng tiền tuần sẽ không tính đợt ấy thêm lần nữa."
+            >
+              <select name="contract_term_id" className={SELECT_CLASS} defaultValue="">
+                <option value="">Không thuộc đợt nào</option>
+                {collectionTerms.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.description}
+                    {t.due_date ? ` — hạn ${formatDate(t.due_date)}` : ''}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
           <Field label="Tên đối tác" hint="Dùng khi đối tác chưa có hồ sơ trong danh mục.">
             <Input name="party_name" maxLength={200} />
           </Field>

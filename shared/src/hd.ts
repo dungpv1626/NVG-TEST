@@ -204,6 +204,13 @@ export const CONTRACT_TERM_TYPES = [
 
 export type ContractTermType = (typeof CONTRACT_TERM_TYPES)[number];
 
+/** Điều khoản là một ĐỢT THU TIỀN của khách — khớp danh sách trong `cash_flow_forecast_items` (0197) và 0227. */
+export const COLLECTION_TERM_TYPES: readonly ContractTermType[] = [
+  'tam_ung',
+  'tien_do_thanh_toan',
+  'quyet_toan',
+];
+
 export const CONTRACT_TERM_TYPE_LABELS: Readonly<Record<ContractTermType, string>> = {
   pham_vi: 'Phạm vi công việc',
   gia_tri: 'Giá trị hợp đồng',

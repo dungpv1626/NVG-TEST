@@ -30,6 +30,7 @@ import { useCompanyScope } from '@/lib/company-scope';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { KtNav } from './kt-nav';
+import { UnlinkedReceivables } from './unlinked-receivables';
 
 const KIND_LABELS: Record<CashForecastKind, string> = {
   opening: 'Số dư đầu kỳ',
@@ -140,6 +141,8 @@ export function CashForecastPage() {
               </p>
             )}
           </section>
+
+          <UnlinkedReceivables />
 
           <ul className="space-y-2">
             {forecast.weeks.map((w) => (

@@ -1527,6 +1527,13 @@
       "when": 1791710000000,
       "tag": "0226_goi_thau_tu_sang_buoc",
       "breakpoints": true
+    },
+    {
+      "idx": 226,
+      "version": "7",
+      "when": 1791720000000,
+      "tag": "0227_dong_tien_khong_dem_trung",
+      "breakpoints": true
     }
   ]
 }
