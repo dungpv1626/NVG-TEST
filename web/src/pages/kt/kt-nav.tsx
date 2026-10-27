@@ -15,6 +15,7 @@ const ITEMS = [
   { to: '/kt/dot-thu', label: 'Đợt thu' },
   { to: '/kt/de-nghi-thu', label: 'Đề nghị thu' },
   { to: '/kt/bien-ban-nghiem-thu', label: 'Biên bản nghiệm thu' },
+  { to: '/kt/bang-cong-to-doi', label: 'Bảng công tổ đội' },
   { to: '/kt/cong-no', label: 'Công nợ' },
   { to: '/kt/thue-gian-giao', label: 'Thuê giàn giáo' },
   { to: '/kt/dong-tien', label: 'Dòng tiền' },
@@ -24,10 +25,7 @@ const ITEMS = [
 
 export function KtNav() {
   return (
-    <nav
-      className="mb-4 flex gap-1.5 overflow-x-auto"
-      aria-label="Màn hình trong phân hệ"
-    >
+    <nav className="mb-4 flex gap-1.5 overflow-x-auto" aria-label="Màn hình trong phân hệ">
       {ITEMS.map((item) => (
         <NavLink
           key={item.to}

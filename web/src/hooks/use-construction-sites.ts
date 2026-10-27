@@ -76,6 +76,9 @@ export interface ConstructionSiteDetailRecord extends ConstructionSiteRecord {
   actual_start_date: string | null;
   actual_end_date: string | null;
   handed_over_at: string | null;
+  /** Tâm công trình — cảnh báo điểm danh xa công trình (0232). */
+  latitude: number | null;
+  longitude: number | null;
   pause_reason: string | null;
   notes: string | null;
   updated_at: string;
@@ -91,6 +94,7 @@ export function useConstructionSite(id: string | undefined) {
         .select(
           `${SITE_SELECT}, contract_id, bidding_project_id, design_project_id, ` +
             'actual_start_date, actual_end_date, handed_over_at, pause_reason, notes, updated_at, ' +
+            'latitude, longitude, ' +
             'contract:contracts!construction_sites_contract_id_contracts_id_fk(id, code, contract_number, title)',
         )
         .eq('id', id!)

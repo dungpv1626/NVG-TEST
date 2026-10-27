@@ -640,7 +640,7 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
 | 4   | Mẫu hợp đồng `.docx` có chỗ trống, tự điền, xem trước, xuất (vấn đề 5)                                                                               | **Xong vòng đầu** — chờ Haan kiểm                            |
 | 5   | AI Design thành 4 bước: Đầu vào → Mặt bằng → Mặt ngoài → Bộ kết quả (vấn đề 7)                                                                       | **Giao diện xong + sửa A/B (T163–T169)**; 6 lượt thật chưa ra mặt bằng — xem 9.3 |
 | Đ1  | Đợt 1 Kinh doanh (kế hoạch tổng): 1A–1H + bổ sung 18/10 (AI thật, đính kèm, in, phiếu riêng)                                                         | **Xong trên máy** — chờ anh Dũng chạy thử                    |
-| Đ2  | Đợt 2 Thi công (NVO trước): 2A mốc, 2B nhật ký giọng nói, 2D biên bản ký hai bên, 2E bảng theo dõi, 2F phiếu bảo hành, 2G mẫu nháp (0182, 0190–0194) | **Xong trên máy** trừ 2C (chờ câu 6) và mốc NVC (chờ câu 15) |
+| Đ2  | Đợt 2 Thi công (NVO trước): 2A mốc, 2B nhật ký giọng nói, 2D biên bản ký hai bên, 2E bảng theo dõi, 2F phiếu bảo hành, 2G mẫu nháp (0182, 0190–0194) | **Xong trên máy** — 2C điểm danh tổ (0232) và 8 mốc NVC thêm 27/10/2026 |
 | Đ3  | Đợt 3 Tài chính: 3A đợt thu gắn mốc, 3B đề nghị thu tiền, 3C dòng tiền tuần, 3D lãi / lỗ quản trị, 3E bất thường KSNB (0195–0199)                  | **Xong trên máy** — anh Dũng chưa chạy thử                   |
 | Đ4  | Đợt 4 Mua hàng – Kho: 4A gom đề nghị, 4B so giá, 4C đơn sắp trễ, 4D tồn tối thiểu (0200–0203)                                                    | **Xong trên máy** — anh Dũng chưa chạy thử                   |
 | Đ5  | Đợt 5: 5A TK ghi âm + vòng ý kiến, 5B AI Design 4 bước, 5C-1/5/9 đấu thầu, 5D NVS, 5E nhắc HĐLĐ, 5F hành chính (0205–0209)                         | **Xong phần không bị chặn**; còn 5C khác (câu 14, 19), bảng công (câu 6) |
@@ -1134,7 +1134,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email.
 
-**Migration tiếp theo: 0232.** (Đã dùng tới 0231; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0233.** (Đã dùng tới 0232; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -1260,7 +1260,11 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 4. ĐÃ CHỐT: trượt thầu → cơ hội tự sang «Mất cơ hội» kèm lý do trượt, trừ khi còn gói thầu khác của cơ hội đang chạy (0217).
 5. ĐÃ CHỐT (anh Dũng 27/10/2026): cả Ban Giám đốc lẫn Trưởng phòng Thi công / Chỉ huy trưởng — 0230
    `contracts_awaiting_site` + khối «Hợp đồng đã ký chờ mở công trình» trên trang Công trình (không lộ giá trị).
-6. ĐÃ CHỐT (anh Dũng 27/10/2026): theo đề xuất của Claude Code, chỉnh được sau — xem quy tắc công ở mục 9.3 khi làm 2C.
+6. ĐÃ CHỐT (anh Dũng 27/10/2026, theo đề xuất, chỉnh được sau) — LÀM ở 0232: Chỉ huy trưởng điểm danh hộ theo tổ (ảnh tập thể,
+   Cả ngày = 1 công / Nửa ngày = 0,5 / Vắng, tăng ca theo giờ — tham số `tc.attendance_*_workday`, không hồi tố); GPS lấy lúc
+   chụp, xa tâm công trình > `tc.attendance_radius_m` (300 m) chỉ cảnh báo; công thời vụ ở bảng RIÊNG theo tổ × công trình ×
+   tháng (`crew_attendance*`, `crew_timesheet_months`) — Chỉ huy trưởng gửi, Trưởng phòng Thi công xác nhận / trả lại, đã gửi
+   thì khoá; Kế toán đọc bảng đã xác nhận ở `/kt/bang-cong-to-doi` (`kt_crew_timesheets`); quân số nhật ký tự điền.
 7. ĐÃ CHỐT: KSNB không xem lương / hồ sơ cá nhân.
 8. ĐÃ CHỐT: hợp đồng đã ký còn ≤ **90 ngày** tới ngày kết thúc là «sắp hết hạn» (`hd.expiring_soon_days`, `contracts_expiring_soon`, 0218) — cột «Hết hạn» ở danh sách hợp đồng + khối trên Tổng quan điều hành.
 9. ĐÃ CHỐT: «phê duyệt chờ lâu» = 3 ngày.

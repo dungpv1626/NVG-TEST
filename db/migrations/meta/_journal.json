@@ -1562,6 +1562,13 @@
       "when": 1791760000000,
       "tag": "0231_tham_so_da_chot_cau_17",
       "breakpoints": true
+    },
+    {
+      "idx": 231,
+      "version": "7",
+      "when": 1791770000000,
+      "tag": "0232_diem_danh_to_doi",
+      "breakpoints": true
     }
   ]
 }

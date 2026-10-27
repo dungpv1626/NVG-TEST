@@ -50,6 +50,7 @@ import { useStageReadiness } from '@/hooks/use-stage-readiness';
 import { useSiteMilestones } from '@/hooks/use-site-milestones';
 import { SITE_PREP_ANCHOR, SitePrepCard } from './site-prep-card';
 import { SubcontractorPanel } from './subcontractor-panel';
+import { CrewAttendancePanel } from './crew-attendance-panel';
 import { WarrantyPanel } from './warranty-panel';
 
 const EM_DASH = '—';
@@ -271,12 +272,15 @@ export function SiteDetailPage() {
             id: 'diem-danh',
             label: 'Điểm danh',
             content: (
-              <SiteCheckInPanel
-                siteId={site.id}
-                siteCode={site.code}
-                siteName={site.name}
-                readOnly={readOnly}
-              />
+              <>
+                <CrewAttendancePanel site={site} readOnly={readOnly} />
+                <SiteCheckInPanel
+                  siteId={site.id}
+                  siteCode={site.code}
+                  siteName={site.name}
+                  readOnly={readOnly}
+                />
+              </>
             ),
           },
           {

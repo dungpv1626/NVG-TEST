@@ -33,6 +33,7 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/states';
 import { useCreateSiteLog, useSiteLogs } from '@/hooks/use-construction-sites';
+import { useCrewSheets } from '@/hooks/use-crew-attendance';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { siteLogAudioUrl, uploadSiteLogAudio } from '@/hooks/use-site-log-voice';
 import { uploadConstructionPhotos } from '@/hooks/use-site-photos';
@@ -97,6 +98,17 @@ export function SiteLogPanel({
 
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<LogDraft>(() => readDraft(siteId));
+  // Quân số lấy từ điểm danh tổ đội của ngày ghi nhật ký (0232) — ô còn trống thì máy điền, người ghi sửa được.
+  const crewSheets = useCrewSheets(siteId, form.logDate);
+  const crewPresent = (crewSheets.data ?? []).reduce(
+    (n, sh) => n + sh.attendance.filter((a) => a.status !== 'vang').length,
+    0,
+  );
+  useEffect(() => {
+    if (crewPresent > 0 && !form.workforceCount) {
+      setForm((f) => (f.workforceCount ? f : { ...f, workforceCount: String(crewPresent) }));
+    }
+  }, [crewPresent, form.workforceCount]);
   const [photos, setPhotos] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
@@ -277,7 +289,11 @@ export function SiteLogPanel({
 
             <Field
               label="Quân số có mặt"
-              hint="Số người làm việc tại công trường trong ngày — để đối chiếu với bảng chấm công khối công trường."
+              hint={
+                crewPresent > 0
+                  ? `Điểm danh tổ đội ngày này: ${crewPresent} người có mặt (chưa gồm nhân viên công ty).`
+                  : 'Số người làm việc tại công trường trong ngày — để đối chiếu với bảng chấm công khối công trường.'
+              }
             >
               <Input
                 value={form.workforceCount}
