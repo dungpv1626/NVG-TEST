@@ -35,6 +35,7 @@ import {
   formatDateTime,
   MISSING_FIELD_SOURCE_LABELS,
   TEMPLATE_BLANK,
+  TEMPLATE_LOOPS,
   missingTemplateFieldsBySource,
   type MissingFieldSource,
   toNvgDateInput,
@@ -87,6 +88,7 @@ import {
   type WorkspaceTab,
 } from '@/components/ui/split-workspace';
 import { FullscreenFrame } from '@/components/ui/fullscreen-frame';
+import { followPreview, previewKeysOf, previewLabelOf } from './preview-follow';
 import { cn } from '@/lib/utils';
 
 /**
@@ -434,7 +436,11 @@ function InfoSection({
         {!editable && ' Chỉ sửa được khi hợp đồng còn Nháp, bởi người chịu trách nhiệm.'}
       </p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <Field label="Hình thức giá" hint="Luật Xây dựng 2025, Điều 82 khoản 2.">
+        <Field
+          previewKeys="hinh_thuc_gia"
+          label="Hình thức giá"
+          hint="Luật Xây dựng 2025, Điều 82 khoản 2."
+        >
           <select
             value={form.priceForm}
             disabled={!editable}
@@ -450,6 +456,7 @@ function InfoSection({
           </select>
         </Field>
         <Field
+          previewKeys="thue_suat gia_tri_truoc_thue tien_thue"
           label="Thuế suất GTGT (%)"
           hint="Giá trị hợp đồng đã gồm thuế này. Để trống thì văn bản không tách thuế."
         >
@@ -462,21 +469,21 @@ function InfoSection({
             }
           />
         </Field>
-        <Field label="Địa điểm thực hiện">
+        <Field previewKeys="dia_diem" label="Địa điểm thực hiện">
           <Input
             value={form.location}
             disabled={!editable}
             onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
           />
         </Field>
-        <Field label="Ngày bắt đầu">
+        <Field previewKeys="ngay_bat_dau" label="Ngày bắt đầu">
           <DateInput
             value={form.startDate}
             disabled={!editable}
             onChange={(v) => setForm((f) => ({ ...f, startDate: v }))}
           />
         </Field>
-        <Field label="Ngày kết thúc">
+        <Field previewKeys="ngay_ket_thuc" label="Ngày kết thúc">
           <DateInput
             value={form.endDate}
             disabled={!editable}
@@ -616,6 +623,23 @@ function FillSection({
       observer?.disconnect();
     };
   }, [filled, previewEl]);
+
+  // Bấm / đặt con trỏ vào một ô ở bất cứ đâu ngoài bản xem trước → bản xem trước cuộn tới chỗ ô ấy in ra.
+  useEffect(() => {
+    const el = previewEl;
+    if (!el) return;
+    function onTouch(e: Event) {
+      const target = e.target as Element | null;
+      if (!target || !el || el.contains(target) || !target.closest('main')) return;
+      followPreview(el, previewKeysOf(target, contract.type), previewLabelOf(target));
+    }
+    document.addEventListener('focusin', onTouch);
+    document.addEventListener('pointerdown', onTouch);
+    return () => {
+      document.removeEventListener('focusin', onTouch);
+      document.removeEventListener('pointerdown', onTouch);
+    };
+  }, [previewEl, contract.type]);
 
   if (templatesLoading) return <div className="h-24 animate-pulse rounded-lg bg-surface-hover" />;
 
@@ -1445,27 +1469,45 @@ function wrapForPreview(
   data: Record<string, TemplateValue>,
   manualKeys: ReadonlySet<string>,
 ): Record<string, TemplateValue> {
-  const wrap = (v: string, manualKey: string | null) =>
+  // Chỗ lấy từ hồ sơ cũng mang khoá (`data-src-key`) — để ô bên trái đang sửa kéo bản xem trước tới đúng chỗ
+  // (`preview-follow.ts`); bảng lặp mang khoá của bảng.
+  const wrap = (v: string, key: string, manual: boolean) =>
     v
       .split('\n')
       .map((line) =>
         line
-          ? manualKey
-            ? MAN_OPEN + manualKey + KEY_SEP + line + MAN_CLOSE
-            : REC_OPEN + line + REC_CLOSE
+          ? manual
+            ? MAN_OPEN + key + KEY_SEP + line + MAN_CLOSE
+            : REC_OPEN + key + KEY_SEP + line + REC_CLOSE
           : line,
       )
       .join('\n');
   const out: Record<string, TemplateValue> = {};
   for (const [key, value] of Object.entries(data)) {
     if (typeof value === 'string')
-      out[key] = /^pa_\d+_[a-z]_o$/.test(key)
-        ? value
-        : wrap(value, manualKeys.has(key) ? key : null);
+      out[key] = /^pa_\d+_[a-z]_o$/.test(key) ? value : wrap(value, key, manualKeys.has(key));
+    // Bảng điều khoản BẮT BUỘC chưa có dòng nào: bản xem trước hiện một dòng chấm vàng mang khoá của bảng — để nó
+    // có chỗ cho ô bên trái kéo tới, và đúng nghĩa «còn thiếu». Chỉ ở bản xem trước; tệp lưu / tải về không có dòng ấy.
+    else if (
+      Array.isArray(value) &&
+      value.length === 0 &&
+      TEMPLATE_LOOPS[key] &&
+      CONTRACT_REQUIRED_TERM_TYPES.includes(TEMPLATE_LOOPS[key].term)
+    )
+      out[key] = [
+        {
+          stt: '',
+          noi_dung: REC_OPEN + key + KEY_SEP + TEMPLATE_BLANK + REC_CLOSE,
+          ty_le: null,
+          so_tien: null,
+          so_tien_bang_chu: null,
+          han: null,
+        },
+      ];
     else if (Array.isArray(value))
       out[key] = value.map((row) =>
         Object.fromEntries(
-          Object.entries(row).map(([k, v]) => [k, typeof v === 'string' ? wrap(v, null) : v]),
+          Object.entries(row).map(([k, v]) => [k, typeof v === 'string' ? wrap(v, key, false) : v]),
         ),
       ) as TemplateValue;
     else out[key] = value;
@@ -1479,7 +1521,7 @@ function wrapForPreview(
  */
 function markPreview(root: HTMLElement) {
   const token = new RegExp(
-    `${REC_OPEN}([^${REC_CLOSE}]*)${REC_CLOSE}|${MAN_OPEN}([a-z0-9_]+)${KEY_SEP}([^${MAN_CLOSE}]*)${MAN_CLOSE}|${BLANK_OPEN}([a-z0-9_]+)${BLANK_CLOSE}|${TEMPLATE_BLANK}`,
+    `${REC_OPEN}([^${KEY_SEP}${REC_CLOSE}]+)${KEY_SEP}([^${REC_CLOSE}]*)${REC_CLOSE}|${MAN_OPEN}([a-z0-9_]+)${KEY_SEP}([^${MAN_CLOSE}]*)${MAN_CLOSE}|${BLANK_OPEN}([a-z0-9_]+)${BLANK_CLOSE}|${TEMPLATE_BLANK}`,
     'g',
   );
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -1496,19 +1538,24 @@ function markPreview(root: HTMLElement) {
       if (m.index > last) frag.append(text.slice(last, m.index).replace(HIDDEN_MARKS, ''));
       const mark = document.createElement('mark');
       if (m[1] !== undefined) {
-        mark.textContent = m[1];
-        mark.className = 'bg-status-completed-bg text-fg';
-      } else if (m[2] !== undefined) {
+        mark.textContent = m[2]!;
+        mark.dataset.srcKey = m[1];
+        // Dòng chấm của bảng điều khoản bắt buộc còn trống (`wrapForPreview`) — vàng như mọi chỗ còn thiếu.
+        mark.className =
+          m[2] === TEMPLATE_BLANK
+            ? 'bg-status-pending-bg text-fg'
+            : 'bg-status-completed-bg text-fg';
+      } else if (m[3] !== undefined) {
         // Đã điền tay — bấm để sửa ngay tại chỗ.
-        mark.textContent = m[3]!;
-        mark.dataset.key = m[2];
+        mark.textContent = m[4]!;
+        mark.dataset.key = m[3];
         mark.title = 'Bấm để sửa';
         mark.className =
           'cursor-pointer bg-status-progress-bg text-fg hover:outline hover:outline-1';
-      } else if (m[4] !== undefined) {
+      } else if (m[5] !== undefined) {
         // Chỗ trống điền được trên màn hình — bấm là mở ô điền ngay tại chỗ.
         mark.textContent = TEMPLATE_BLANK;
-        mark.dataset.key = m[4];
+        mark.dataset.key = m[5];
         mark.title = 'Bấm để điền';
         mark.className =
           'cursor-pointer bg-status-pending-bg text-fg hover:outline hover:outline-1';

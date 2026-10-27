@@ -27,6 +27,7 @@ export function Field({
   group,
   hint,
   className,
+  previewKeys,
   children,
 }: {
   label: string;
@@ -54,6 +55,8 @@ export function Field({
    */
   hint?: ReactNode;
   className?: string;
+  /** Khoá chỗ trống mà ô này in lên văn bản — bản xem trước hợp đồng cuộn theo (`pages/hd/preview-follow.ts`). */
+  previewKeys?: string;
   children: ReactNode;
 }) {
   const head = (
@@ -68,7 +71,10 @@ export function Field({
     // `min-w-0` cần cho fieldset: mặc định nó có `min-width: min-content`, nên một hàng nút
     // dài sẽ đẩy fieldset rộng ra khỏi cột thay vì xuống dòng.
     return (
-      <fieldset className={cn('block min-w-0 space-y-1.5', className)}>
+      <fieldset
+        className={cn('block min-w-0 space-y-1.5', className)}
+        data-preview-keys={previewKeys}
+      >
         <legend className="block font-medium">{head}</legend>
         {children}
         {/* `<span className="block">` chứ không phải `<p>`: chú thích có khi mang cả một nút
@@ -79,7 +85,7 @@ export function Field({
   }
 
   return (
-    <label className={cn('block space-y-1.5', className)}>
+    <label className={cn('block space-y-1.5', className)} data-preview-keys={previewKeys}>
       <span className="block font-medium">{head}</span>
       {children}
       {hint && <span className="block text-xs font-normal text-fg-subtle">{hint}</span>}

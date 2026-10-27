@@ -44,6 +44,7 @@ import {
 import { rankTemplates, useTemplatesForContract } from '@/hooks/use-contract-templates';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useContractTermSources } from '@/hooks/use-quotes';
+import { PREVIEW_KEYS_ATTR, PREVIEW_LABEL_ATTR, termPreviewKeys } from './preview-follow';
 
 interface TermForm {
   /** Ô số tiền (đồng). */
@@ -303,7 +304,14 @@ export function TermsPanel({
         const formOpen = editing?.type === type;
 
         return (
-          <section key={type} className="rounded-card bg-surface p-4">
+          <section
+            key={type}
+            className="rounded-card bg-surface p-4"
+            {...{
+              [PREVIEW_KEYS_ATTR]: termPreviewKeys(type),
+              [PREVIEW_LABEL_ATTR]: CONTRACT_TERM_TYPE_LABELS[type],
+            }}
+          >
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <p className="font-medium">{CONTRACT_TERM_TYPE_LABELS[type]}</p>
               {required && rows.length === 0 && (
