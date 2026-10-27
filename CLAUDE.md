@@ -1134,7 +1134,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email.
 
-**Migration tiếp theo: 0230.** (Đã dùng tới 0229; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0232.** (Đã dùng tới 0231; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -1258,8 +1258,9 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 2. ĐÃ CHỐT (anh Dũng 22/10/2026): **Tổng Giám đốc tự duyệt** hồ sơ do chính mình gửi (trong hạn mức của TGĐ; `user_may_self_approve`, 0218). Vai trò khác vẫn không tự duyệt; đơn nghỉ của chính mình vẫn không.
 3. ĐÃ CHỐT: Nhân sự tự lập rồi tự duyệt tuyển dụng — được.
 4. ĐÃ CHỐT: trượt thầu → cơ hội tự sang «Mất cơ hội» kèm lý do trượt, trừ khi còn gói thầu khác của cơ hội đang chạy (0217).
-5. Ai mở công trình từ hợp đồng? (Ban Giám đốc hoặc Trưởng phòng Thi công / Chỉ huy trưởng)
-6. Cho GĐ3b: cách tính công từ điểm danh, công lao động thời vụ ghi vào đâu, bán kính GPS bao nhiêu mét.
+5. ĐÃ CHỐT (anh Dũng 27/10/2026): cả Ban Giám đốc lẫn Trưởng phòng Thi công / Chỉ huy trưởng — 0230
+   `contracts_awaiting_site` + khối «Hợp đồng đã ký chờ mở công trình» trên trang Công trình (không lộ giá trị).
+6. ĐÃ CHỐT (anh Dũng 27/10/2026): theo đề xuất của Claude Code, chỉnh được sau — xem quy tắc công ở mục 9.3 khi làm 2C.
 7. ĐÃ CHỐT: KSNB không xem lương / hồ sơ cá nhân.
 8. ĐÃ CHỐT: hợp đồng đã ký còn ≤ **90 ngày** tới ngày kết thúc là «sắp hết hạn» (`hd.expiring_soon_days`, `contracts_expiring_soon`, 0218) — cột «Hết hạn» ở danh sách hợp đồng + khối trên Tổng quan điều hành.
 9. ĐÃ CHỐT: «phê duyệt chờ lâu» = 3 ngày.
@@ -1268,27 +1269,26 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     Gửi 1–2 mẫu Word thật (thi công NVC, thiết kế NVO) để thay mẫu ví dụ.
 12. ĐÃ CHỐT: không lưu CCCD — mẫu để dải chấm điền tay.
 13. Tách «thi công» thành thi công / thiết kế + thi công / EPC theo Luật Xây dựng 2025? (chưa tách; hình thức giá đã có)
-14. NVC có tự thiết kế công trình không? Bảng tổ chức của Ban Giám đốc ghi Phòng Dự án – Đấu thầu NVC làm «thiết kế»,
-    nhưng phiếu khảo sát của chính phòng chỉ ghi «phương án kỹ thuật sơ bộ, biện pháp thi công» và làm theo bản vẽ / BOQ
-    của chủ đầu tư. (Sơ đồ đang ghi: có bước phương án kỹ thuật; thiết kế chỉ khi gói thiết kế – thi công — chờ xác nhận)
-15. Thi công nhà xưởng NVC chia mốc nghiệm thu thế nào? (chưa có; 7 mốc hiện chỉ áp cho NVO)
+14. ĐÃ CHỐT (anh Dũng 27/10/2026): NVC thi công theo phương án / bản vẽ của chủ đầu tư — không tự thiết kế; đấu thầu có
+    bước phương án kỹ thuật, biện pháp thi công.
+15. ĐÃ CHỐT (anh Dũng 27/10/2026: «bạn đề xuất»): 8 mốc nhà xưởng NVC (`NVC_MILESTONE_SET` ở `shared/src/tc-milestones.ts`,
+    seed nạp) — Trưởng phòng Thi công NVC duyệt lại từng mục.
 16. CRM: số ngày nhắc gọi lại / chưa phản hồi / liên hệ lại khách M1 / chăm sóc khách cũ? Ai nhập data Marketing, có tự
     chia đầu mối cho Kinh doanh không? (để trống = chưa nhắc; người nhập là người phụ trách)
-17. Ngưỡng cảnh báo cho Kiểm soát nội bộ (duyệt sát hạn mức bao nhiêu %), mức tồn tối thiểu từng vật tư, bảng giá bồi
-    thường giàn giáo chính thức? (migration để trống; dữ liệu demo đang dùng số DEMO của kịch bản `mac-dinh`)
+17. ĐÃ CHỐT (anh Dũng 27/10/2026: «theo bạn đề xuất»): KSNB 90 % / 7 ngày, bảng giá bồi thường ba mã giàn giáo (0231).
+    Mức tồn tối thiểu là số từng vật tư — Kho đặt khi có vật tư thật (demo: 15 % tồn).
 18. Thư viện mẫu: tư liệu ban đầu (hồ sơ năng lực, brochure, ảnh công trình, Catalogue NVS mới) — chủ dự án gửi sau.
     ĐÃ CHỐT: mẫu NVC / NVS cũng do Phòng Thiết kế đưa vào; Kinh doanh tự đặt thời hạn thu hồi link. ĐÃ CHỐT: link không giới
     hạn thời hạn tối đa.
-19. Đấu thầu (5C): 1–2 bộ hồ sơ dự thầu NVC đã nộp + hồ sơ mời thầu; mẫu đơn dự thầu / thư chào giá; loại gói và giấy tờ
-    từng loại; ai theo dõi bảo lãnh dự thầu; có ghi đối thủ không. (chưa có — chặn 5C-3, 5C-6, 5C-9)
+19. ĐÃ CHỐT HƯỚNG (anh Dũng 27/10/2026): Claude Code dựng MỘT bộ hồ sơ dự thầu DEMO chi tiết, đủ để NVG nắm quy trình
+    chuẩn — thay bằng hồ sơ thật sau.
 20. Bộ nhận diện: ĐÃ QUYẾT (chủ dự án giao Claude Code, 17/10/2026) — dùng logo PNG + mã đo trên ảnh, giữ Be Vietnam Pro, nền
     xám trung tính, Module Thiết kế chỉ đổi màu nhấn; chi tiết và lý do ở mục 1b kế hoạch. NVG gửi vector / mã chuẩn thì thay.
 21. Pháp nhân (lấy từ website 17/10/2026, đã điền vào seed — chỉ điền ô trống): mã số thuế NVO 1001222166 + địa chỉ đăng ký;
     địa chỉ NVS. ĐÃ CHỐT: người đại diện NVS là **Lương Vân**; **được dùng logo đối tác** trên nhavietgroup.vn (Cotecons, Hòa
     Bình, CBRE…) làm kinh nghiệm / đối tác trong hồ sơ thầu. Còn thiếu: tên đầy đủ + mã số thuế NVC (site gọi «Nhà Việt
     Construction», app gọi «Nhà Việt Cons»); ảnh trên nhavietsteel.vn ghi «Công ty TNHH TM & SX Bảo Liên» là gì.
-22. Phiếu khảo sát riêng (0181): danh sách ô NVO / NVC rút từ hồ sơ khảo sát; ô NVS là ĐỀ XUẤT (hồ sơ chưa mô tả khảo sát
-    cho thuê giàn giáo) — Kinh doanh từng công ty xem và sửa `shared/src/survey-forms.ts`.
+22. ĐÃ CHỐT (anh Dũng 27/10/2026): dùng danh sách ô đề xuất cho NVS; Kinh doanh NVS sửa `shared/src/survey-forms.ts` khi cần.
 23. Pháp nhân ĐÃ CHỐT (anh Dũng 21/10/2026): địa chỉ chung ba công ty «Số nhà 587 đường Lê Quý Đôn, Phường Trần Lãm,
     Tỉnh Hưng Yên»; người đại diện NVS «Lương Thị Vân» (thay «Lương Vân» ở câu 21), NVC / NVO «Bùi Văn Thi»; chức vụ
     «Giám đốc» (tạm); tài khoản ngân hàng là số DEMO `9999 0000 000x` — thay số thật ở Mẫu hợp đồng → Thông tin pháp

@@ -35,6 +35,7 @@ interface Row {
 describeDb('3E — danh sách bất thường KSNB (0199)', () => {
   const ids: Record<string, string> = {};
   let ksnb: SupabaseClient;
+  let nearLimitBefore: string | null = null;
 
   beforeAll(async () => {
     await withSql(async (sql) => {
@@ -82,11 +83,18 @@ describeDb('3E — danh sách bất thường KSNB (0199)', () => {
         VALUES (${ap!.id}, 1, 'approved', 100000000, ${tgd!.id})`;
     });
     ksnb = await signInAs(ACCOUNTS.ksnb);
+    nearLimitBefore = await withSql(async (sql) => {
+      const [p] = await sql<{ value: unknown }[]>`
+        SELECT value FROM system_parameters
+         WHERE param_key = 'ksnb.near_limit_percent' AND scope_type = 'global'`;
+      return p?.value === null || p?.value === undefined ? null : JSON.stringify(p.value);
+    });
   });
 
   afterAll(async () => {
     await withSql(async (sql) => {
-      await sql`UPDATE system_parameters SET value = NULL
+      // Trả ngưỡng về đúng giá trị trước khi chạy (từ 0231 mặc định là 90 % — không xoá số đã chốt).
+      await sql`UPDATE system_parameters SET value = ${nearLimitBefore}::jsonb
                  WHERE param_key = 'ksnb.near_limit_percent' AND scope_type = 'global'`;
       await sql`DELETE FROM approvals WHERE title = ${TEST_PREFIX + ' Bất thường duyệt'}`;
       await sql`DELETE FROM construction_sites WHERE id = ${ids.site!}`;
@@ -126,6 +134,10 @@ describeDb('3E — danh sách bất thường KSNB (0199)', () => {
   it('chưa đặt ngưỡng thì không liệt kê duyệt sát hạn mức; đặt 90 % thì liệt kê ca 95 %', async () => {
     const near = (rows: Row[]) =>
       rows.filter((r) => r.kind === 'duyet_sat_han_muc' && r.entity_id === ids.approvalEntity);
+    await withSql(
+      (sql) => sql`UPDATE system_parameters SET value = NULL
+                    WHERE param_key = 'ksnb.near_limit_percent' AND scope_type = 'global'`,
+    );
     expect(near(await list())).toHaveLength(0);
     await withSql(
       (sql) => sql`UPDATE system_parameters SET value = '90'::jsonb

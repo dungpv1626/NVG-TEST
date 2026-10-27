@@ -12,8 +12,8 @@
  *  - NVC — hồ sơ khảo sát, Ban Giám đốc mục 3 (điều kiện thi công, nhà máy đang hoạt động, giao
  *    thông, điện nước, thời gian được phép thi công) và Phòng Thiết kế (dây chuyền, tải trọng máy,
  *    nhịp, chiều cao, nền công nghiệp, PCCC, điện công suất lớn).
- *  - NVS — hồ sơ khảo sát CHƯA mô tả khảo sát cho thuê giàn giáo; danh sách là ĐỀ XUẤT, chờ chủ
- *    dự án / Kinh doanh NVS sửa (CLAUDE.md 9.5).
+ *  - NVS — hồ sơ khảo sát CHƯA mô tả khảo sát cho thuê giàn giáo; danh sách là đề xuất của Claude Code,
+ *    anh Dũng chấp nhận 27/10/2026 (câu 22). Kinh doanh NVS sửa ở đây khi cần.
  *
  * Bỏ một ô thì đơn giản xoá dòng: dữ liệu cũ vẫn nằm trong jsonb và vẫn hiện (nhãn = khoá) ở
  * biên bản đã lưu. Đổi `key` của ô đã dùng thì dữ liệu cũ mất nhãn — đổi nhãn, đừng đổi khoá.

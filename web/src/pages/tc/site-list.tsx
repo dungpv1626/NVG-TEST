@@ -30,6 +30,7 @@ import { useSitesBudgetStatus } from '@/hooks/use-reports';
 import { useCan } from '@/lib/auth';
 import { APP_HELP } from '@/lib/help-texts';
 import { TcNav } from './tc-nav';
+import { ContractsAwaitingSite } from './contracts-awaiting-site';
 
 const BUDGET_FILTER_PARAM = 'ngan-sach';
 
@@ -84,6 +85,7 @@ export function SiteListPage() {
         breadcrumbs={[{ label: 'Thi công & Ngân sách' }, { label: 'Công trình' }]}
       />
       <TcNav />
+      <ContractsAwaitingSite />
 
       <EntityTable<SiteRow>
         rows={rows}

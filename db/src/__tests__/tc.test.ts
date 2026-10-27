@@ -36,6 +36,16 @@ interface Fixture {
  * có sẵn công trình để kiểm tra các hàng rào quanh nó, nên đi đường ngắn thay vì dựng lại
  * cả chuỗi cơ hội → gói thầu → dự toán → hợp đồng.
  */
+async function markMilestonesPassed(siteId: string): Promise<void> {
+  const { createConnection } = await import('../client');
+  const { sql } = createConnection();
+  try {
+    await sql`UPDATE site_milestones SET status = 'dat', passed_at = now() WHERE construction_site_id = ${siteId}`;
+  } finally {
+    await sql.end();
+  }
+}
+
 async function seedSites(): Promise<Fixture> {
   const { createConnection } = await import('../client');
   const { sql } = createConnection();
@@ -563,6 +573,9 @@ describeDb('TC — thứ tự các bước của công trình', () => {
       .select('id')
       .single();
     expect(prepError).toBeNull();
+    // Bộ mốc nhà xưởng NVC (câu 15, 27/10/2026) tự áp cho công trình mới và chặn sang nghiệm thu khi chưa đạt đủ mốc.
+    // Bài này kiểm THỨ TỰ bước — cổng mốc có phép thử riêng (tc-milestones, 2A) — nên coi như các mốc đã đạt.
+    await markMilestonesPassed(fixture.nvcSiteId);
 
     expect((await step('dang_thi_cong')).error).toBeNull();
     expect((await step('nghiem_thu')).error).toBeNull();

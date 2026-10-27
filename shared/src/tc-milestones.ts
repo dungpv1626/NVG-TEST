@@ -188,4 +188,135 @@ export const NVO_MILESTONE_SET: MilestoneSetSeed = {
   ],
 };
 
-export const MILESTONE_SET_SEEDS: readonly MilestoneSetSeed[] = [NVO_MILESTONE_SET];
+/**
+ * Tám mốc thi công nhà xưởng NVC — ĐỀ XUẤT của Claude Code theo câu 15 (anh Dũng 27/10/2026: «bạn đề xuất»), dựng theo
+ * trình tự tổng thầu nhà xưởng khung thép thông dụng. NVC thi công theo bản vẽ / phương án của chủ đầu tư (câu 14), nên
+ * mốc 1 kiểm bản vẽ thi công đã được chủ đầu tư duyệt chứ không phải thiết kế của NVC. Trưởng phòng Thi công NVC duyệt
+ * lại từng mục; sửa ở đây rồi seed lại.
+ *
+ * Lớp 3 (phụ trách kỹ thuật kiểm): mọi mốc kết cấu và hạ tầng ngầm — bu lông neo chân cột và mối hàn khung thép sai thì
+ * không sửa được sau khi lắp dựng. Mốc 8 là lượt kiểm trước bàn giao nên không thêm lớp nữa.
+ */
+export const NVC_MILESTONE_SET: MilestoneSetSeed = {
+  company: 'NVC',
+  name: 'Tám mốc thi công nhà xưởng Nhà Việt Cons',
+  steps: [
+    {
+      key: 'chuan_bi_dinh_vi',
+      label: 'Chuẩn bị, định vị, mốc cao độ',
+      requiresTechnicalCheck: true,
+      checklistName: 'Mốc 1 — Chuẩn bị mặt bằng, định vị (NVC)',
+      items: [
+        item('ban_giao_mat_bang', 'Biên bản nhận bàn giao mặt bằng từ chủ đầu tư'),
+        item(
+          'ban_ve_cdt',
+          'Bản vẽ thi công đã được chủ đầu tư phê duyệt (theo phương án của chủ đầu tư)',
+        ),
+        item('bien_phap', 'Biện pháp thi công và tiến độ đã được chủ đầu tư chấp thuận'),
+        item('moc_chuan', 'Hệ mốc toạ độ, cao độ chuẩn nhận từ chủ đầu tư', true),
+        item('luoi_cot', 'Tim trục, lưới cột đúng bản vẽ', true),
+        item('cong_truong', 'Hàng rào, lán trại, điện nước thi công, biển báo an toàn'),
+        item('kiem_lan_hai', 'Đã kiểm định vị lần hai trước khi thi công cọc / móng'),
+      ],
+    },
+    {
+      key: 'coc_mong',
+      label: 'Cọc, móng, giằng móng',
+      requiresTechnicalCheck: true,
+      checklistName: 'Mốc 2 — Cọc và móng, trước khi đổ bê tông (NVC)',
+      items: [
+        item('thi_nghiem_coc', 'Kết quả thí nghiệm cọc (nén tĩnh / PDA) nếu hồ sơ yêu cầu'),
+        item('dau_coc', 'Cao độ đầu cọc, đập đầu cọc, thép neo vào đài', true),
+        item('cot_thep_dai', 'Cốt thép đài, giằng móng: đường kính, khoảng cách đúng hồ sơ', true),
+        item('bu_long_neo', 'Bu lông neo chân cột: vị trí, cao độ, dưỡng định vị', true),
+        item('cop_pha', 'Cốp pha kín, chắc; lớp bê tông bảo vệ (con kê)', true),
+        item('ngam_dien_nuoc', 'Ống điện, nước, tiếp địa đi ngầm qua móng (nếu có)', true),
+        item('be_tong', 'Mác bê tông đúng hồ sơ, phiếu giao bê tông, lấy mẫu thí nghiệm'),
+      ],
+    },
+    {
+      key: 'nen_ha_tang',
+      label: 'San nền, hạ tầng ngầm',
+      requiresTechnicalCheck: true,
+      checklistName: 'Mốc 3 — San nền, hạ tầng ngầm, trước khi lấp (NVC)',
+      items: [
+        item('do_chat', 'Lu lèn nền đạt độ chặt thiết kế (kết quả thí nghiệm K)'),
+        item('thoat_nuoc', 'Cống, hố ga, thoát nước mưa ngầm', true),
+        item('dien_ngam', 'Ống luồn cáp điện ngầm, hệ tiếp địa', true),
+        item('cap_nuoc_pccc', 'Ống cấp nước, ống PCCC đi ngầm — thử áp lực trước khi lấp', true),
+        item('lop_lot', 'Lớp đá dăm / cát đệm, màng chống ẩm dưới nền'),
+      ],
+    },
+    {
+      key: 'ket_cau_thep',
+      label: 'Kết cấu thép, lắp dựng khung',
+      requiresTechnicalCheck: true,
+      checklistName: 'Mốc 4 — Gia công và lắp dựng kết cấu thép (NVC)',
+      items: [
+        item('chung_chi', 'Chứng chỉ vật liệu thép, bu lông cường độ cao, que hàn'),
+        item('moi_han', 'Kiểm tra mối hàn (siêu âm / thẩm thấu nếu hồ sơ yêu cầu)'),
+        item('son', 'Sơn chống gỉ, sơn chống cháy đúng độ dày'),
+        item('do_thang_dung', 'Độ thẳng đứng cột, cao độ vai cột, khẩu độ kèo', true),
+        item('bu_long', 'Siết bu lông liên kết đúng lực; vữa chèn chân cột', true),
+        item('giang', 'Giằng cột, giằng mái, xà gồ đủ và đúng vị trí', true),
+        item('an_toan_cao', 'An toàn làm việc trên cao: dây cứu sinh, lưới, cẩu lắp'),
+      ],
+    },
+    {
+      key: 'mai_bao_che',
+      label: 'Mái, bao che',
+      requiresTechnicalCheck: true,
+      checklistName: 'Mốc 5 — Mái và bao che (NVC)',
+      items: [
+        item('ton_mai', 'Tôn mái đúng chủng loại, độ dày; lớp cách nhiệt', true),
+        item('mang_xoi', 'Úp nóc, máng xối, ống thoát nước mái', true),
+        item('vach', 'Vách tôn / tường xây bao che, diềm, chống thấm chân tường'),
+        item('cua', 'Cửa cuốn, cửa đi, cửa sổ, lam / quả cầu thông gió'),
+        item('thu_nuoc', 'Thử nước mái, máng xối — không dột, không đọng'),
+      ],
+    },
+    {
+      key: 'nen_xuong',
+      label: 'Bê tông nền xưởng',
+      requiresTechnicalCheck: true,
+      checklistName: 'Mốc 6 — Bê tông nền xưởng, trước khi đổ (NVC)',
+      items: [
+        item('thep_nen', 'Lưới thép nền, thép tăng cường vùng chịu tải', true),
+        item('khe', 'Khe co giãn, khe thi công, thanh truyền lực', true),
+        item('cao_do_nen', 'Cao độ, độ phẳng nền theo hồ sơ'),
+        item('tai_trong', 'Chiều dày, mác bê tông theo tải trọng sàn của chủ đầu tư'),
+        item('phu_mat', 'Lớp phủ mặt sàn (hardener / epoxy) nếu hồ sơ yêu cầu'),
+      ],
+    },
+    {
+      key: 'co_dien_pccc',
+      label: 'Cơ điện, PCCC',
+      requiresTechnicalCheck: true,
+      checklistName: 'Mốc 7 — Cơ điện và PCCC (NVC)',
+      items: [
+        item('dien', 'Điện động lực, chiếu sáng — đo điện trở cách điện'),
+        item('chong_set', 'Chống sét, tiếp địa — đo điện trở nối đất'),
+        item('cap_thoat_nuoc', 'Cấp thoát nước, thiết bị vệ sinh'),
+        item('pccc', 'Hệ thống PCCC lắp đặt đúng hồ sơ đã thẩm duyệt; nghiệm thu với cơ quan PCCC'),
+        item('chay_thu', 'Chạy thử đồng bộ có biên bản (điện, bơm, quạt, PCCC)'),
+      ],
+    },
+    {
+      key: 'hoan_thien_ban_giao',
+      label: 'Hoàn thiện, hồ sơ bàn giao',
+      requiresTechnicalCheck: false,
+      checklistName: 'Mốc 8 — Hoàn thiện, hồ sơ trước bàn giao (NVC)',
+      items: [
+        item('ve_sinh', 'Vệ sinh công nghiệp, dọn mặt bằng', true),
+        item('ton_tai', 'Danh mục tồn tại của chủ đầu tư đã khắc phục'),
+        item('hoan_cong', 'Hồ sơ hoàn công, nhật ký, biên bản nghiệm thu các giai đoạn'),
+        item('van_hanh', 'Hướng dẫn vận hành, bảo trì; điều kiện bảo hành'),
+      ],
+    },
+  ],
+};
+
+export const MILESTONE_SET_SEEDS: readonly MilestoneSetSeed[] = [
+  NVO_MILESTONE_SET,
+  NVC_MILESTONE_SET,
+];
