@@ -84,17 +84,20 @@ $$;
 
 REVOKE ALL ON FUNCTION public.record_stage_transition() FROM PUBLIC, anon, authenticated;
 
+-- Không khai `UPDATE OF stage`: trigger cột chỉ chạy khi câu lệnh GHI cột `stage`, nên bước do trigger BEFORE đổi
+-- (vd gói thầu tự sang Khảo sát khi lưu ghi chú — 0226) sẽ lọt khỏi lịch sử. Hàm tự bỏ qua lần sửa không đổi bước.
+
 DROP TRIGGER IF EXISTS contracts_stage_transition ON public.contracts;
 CREATE TRIGGER contracts_stage_transition
-  AFTER INSERT OR UPDATE OF stage ON public.contracts
+  AFTER INSERT OR UPDATE ON public.contracts
   FOR EACH ROW EXECUTE FUNCTION public.record_stage_transition();
 
 DROP TRIGGER IF EXISTS bidding_projects_stage_transition ON public.bidding_projects;
 CREATE TRIGGER bidding_projects_stage_transition
-  AFTER INSERT OR UPDATE OF stage ON public.bidding_projects
+  AFTER INSERT OR UPDATE ON public.bidding_projects
   FOR EACH ROW EXECUTE FUNCTION public.record_stage_transition();
 
 DROP TRIGGER IF EXISTS construction_sites_stage_transition ON public.construction_sites;
 CREATE TRIGGER construction_sites_stage_transition
-  AFTER INSERT OR UPDATE OF stage ON public.construction_sites
+  AFTER INSERT OR UPDATE ON public.construction_sites
   FOR EACH ROW EXECUTE FUNCTION public.record_stage_transition();

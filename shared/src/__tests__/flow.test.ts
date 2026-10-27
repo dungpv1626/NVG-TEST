@@ -6,6 +6,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  BIDDING_FLOW,
+  BIDDING_STAGES,
   CONTRACT_FLOW,
   CONTRACT_STAGES,
   OPPORTUNITY_FLOW,
@@ -20,6 +22,7 @@ const FLOWS: [string, Flow<string>, readonly string[]][] = [
   ['cơ hội', OPPORTUNITY_FLOW as Flow<string>, OPPORTUNITY_STAGES],
   ['hợp đồng', CONTRACT_FLOW as Flow<string>, CONTRACT_STAGES],
   ['công trình', SITE_FLOW as Flow<string>, SITE_STAGES],
+  ['gói thầu', BIDDING_FLOW as Flow<string>, BIDDING_STAGES],
 ];
 
 describe.each(FLOWS)('Luồng %s', (_name, flow, stages) => {

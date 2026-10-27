@@ -152,6 +152,8 @@ export function useCreateEstimate() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['estimates'] });
+      // Lập dự toán đưa gói thầu sang «Lập dự toán» (0226).
+      void queryClient.invalidateQueries({ queryKey: ['bidding_projects'] });
     },
   });
 }
@@ -336,6 +338,8 @@ export function useCreateBoqItem() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['boq_items'] });
+      // Dòng khối lượng đầu tiên đưa gói thầu sang «Bóc tách khối lượng» (0226) — dải tiến trình phải theo.
+      void queryClient.invalidateQueries({ queryKey: ['bidding_projects'] });
     },
   });
 }

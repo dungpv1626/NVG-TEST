@@ -9,15 +9,19 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
+  BIDDING_FLOW,
   BIDDING_STAGE_META,
   BUTTONS,
   biddingDisplayStatus,
   formatCurrency,
   formatDate,
   formatDateTime,
+  type BiddingStage,
 } from '@nvg/shared';
 import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
+import { RecordChain } from '@/components/entity/record-chain';
 import { StageHistory } from '@/components/entity/stage-history';
+import { StepTrack } from '@/components/entity/step-track';
 import { Button } from '@/components/ui/button';
 import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
@@ -36,6 +40,19 @@ import { companyCodeOf, useAuth, useCan } from '@/lib/auth';
 import { BidDocumentsPanel } from './bid-documents-panel';
 import { BidCapabilityPanel, BidClarificationPanel, BidGuaranteePanel } from './bid-extras-panels';
 import { BudgetPanel } from './budget-panel';
+
+/** Tab mở sẵn theo bước — nơi làm việc của bước hiện tại (như trang công trình). */
+const STAGE_TAB: Record<BiddingStage, string> = {
+  tiep_nhan_ho_so: 'tong-quan',
+  khao_sat: 'khao-sat',
+  boc_tach: 'khoi-luong',
+  du_toan: 'du-toan',
+  cho_duyet_gia: 'du-toan',
+  da_duyet_gia: 'ho-so-thau',
+  nop_thau: 'tong-quan',
+  trung_thau: 'tong-quan',
+  truot_thau: 'tong-quan',
+};
 
 const EM_DASH = '—';
 
@@ -144,6 +161,17 @@ export function BiddingDetailPage() {
         responsiblePerson={project.responsible?.full_name ?? null}
         deadline={project.submission_deadline}
         actions={actions}
+        progress={
+          <>
+            <RecordChain kind="bidding" id={project.id} />
+            <StepTrack
+              flow={BIDDING_FLOW}
+              current={project.stage}
+              holder={project.responsible?.full_name ?? null}
+            />
+          </>
+        }
+        defaultTab={STAGE_TAB[project.stage]}
         tabs={[
           {
             id: 'tong-quan',

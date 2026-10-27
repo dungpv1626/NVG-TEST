@@ -11,6 +11,7 @@
  * đây: giao diện đọc thẳng `stage_readiness` của CSDL, để màn hình và hàm chặn không thể lệch.
  */
 
+import { BIDDING_STAGE_META, type BiddingStage } from './da';
 import { CONTRACT_STAGE_META, type ContractStage } from './hd';
 import { OPPORTUNITY_STAGE_META, type OpportunityStage } from './crm';
 import { SITE_STAGE_META, SITE_STAGE_TRANSITIONS, type SiteStage } from './tc';
@@ -152,6 +153,78 @@ export const SITE_FLOW: Flow<SiteStage> = {
       label: SITE_STAGE_META.tam_dung.label,
       owner: 'Đang tạm dừng — mở lại khi có quyết định tiếp tục',
       next: siteNext('tam_dung'),
+    },
+  },
+};
+
+/**
+ * Gói thầu — không bước nào bấm tay được: bước chỉ đổi qua hàm (0028). Bốn bước đầu đi theo việc thật (0226: ghi khảo
+ * sát, dòng khối lượng đầu tiên, dự toán); khảo sát bỏ qua được khi đã có BOQ của chủ đầu tư.
+ */
+export const BIDDING_FLOW: Flow<BiddingStage> = {
+  main: [
+    'tiep_nhan_ho_so',
+    'khao_sat',
+    'boc_tach',
+    'du_toan',
+    'cho_duyet_gia',
+    'da_duyet_gia',
+    'nop_thau',
+    'trung_thau',
+  ],
+  exits: ['truot_thau'],
+  steps: {
+    tiep_nhan_ho_so: {
+      label: BIDDING_STAGE_META.tiep_nhan_ho_so.label,
+      owner: 'Đấu thầu kiểm hồ sơ mời thầu, ghi nội dung cần làm rõ',
+      next: [],
+    },
+    khao_sat: {
+      label: BIDDING_STAGE_META.khao_sat.label,
+      owner: 'Đấu thầu khảo sát hiện trạng, ghi biện pháp và rủi ro',
+      next: [],
+      auto: 'Tự chuyển khi ghi kết quả khảo sát ở tab Khảo sát; đã có BOQ của chủ đầu tư thì bỏ qua được',
+    },
+    boc_tach: {
+      label: BIDDING_STAGE_META.boc_tach.label,
+      owner: 'Đấu thầu bóc tách khối lượng từ bản vẽ / BOQ',
+      next: [],
+      auto: 'Tự chuyển khi có dòng khối lượng đầu tiên ở tab Khối lượng',
+    },
+    du_toan: {
+      label: BIDDING_STAGE_META.du_toan.label,
+      owner: 'Đấu thầu lập dự toán và giá dự thầu, rồi gửi phê duyệt giá',
+      next: [],
+      auto: 'Tự chuyển khi lập dự toán ở tab Dự toán',
+    },
+    cho_duyet_gia: {
+      label: BIDDING_STAGE_META.cho_duyet_gia.label,
+      owner: 'Người có hạn mức phê duyệt giá dự thầu xem xét',
+      next: [],
+      auto: 'Tự chuyển khi gửi dự toán phê duyệt giá',
+    },
+    da_duyet_gia: {
+      label: BIDDING_STAGE_META.da_duyet_gia.label,
+      owner: 'Đấu thầu hoàn thiện hồ sơ thầu và nộp cho chủ đầu tư',
+      next: [],
+      auto: 'Tự chuyển khi giá được phê duyệt trong Hộp thư Phê duyệt',
+    },
+    nop_thau: {
+      label: BIDDING_STAGE_META.nop_thau.label,
+      owner: 'Đấu thầu theo dõi kết quả và ghi nhận trúng / trượt thầu',
+      next: [],
+      auto: 'Tự chuyển khi xác nhận đã nộp hồ sơ thầu',
+    },
+    trung_thau: {
+      label: BIDDING_STAGE_META.trung_thau.label,
+      owner: 'Lập hợp đồng và bàn giao ngân sách thi công',
+      next: [],
+      auto: 'Ghi nhận khi chủ đầu tư công bố kết quả',
+    },
+    truot_thau: {
+      label: BIDDING_STAGE_META.truot_thau.label,
+      owner: 'Đã ghi nhận trượt thầu kèm nguyên nhân',
+      next: [],
     },
   },
 };

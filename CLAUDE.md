@@ -770,8 +770,8 @@ chủ dự án nêu: (1) lãnh đạo / kiểm soát không thấy vấn đề n
   hỗ trợ NVC khi cần». CRM chưa có đầu mối trước cơ hội, nhật ký liên hệ (CRM-01), chăm sóc khách cũ (CRM-07); đã có
   báo cáo phễu (`bc/sales-effectiveness.tsx`) và bàn giao khách khi nghỉ việc (CRM-10).
 
-**GĐ1 còn thiếu:** dải tiến
-trình cho gói thầu; (lịch sử bước chung `stage_transitions` xong ở 0225 — trigger trên ba bảng, ghi kèm cột lý do vừa
+**GĐ1 còn thiếu:** (dải tiến trình gói thầu xong ở 0226 — `BIDDING_FLOW`, gói thầu tự sang Khảo sát / Bóc tách / Lập
+dự toán theo việc thật, mở sẵn tab của bước; lịch sử bước chung `stage_transitions` xong ở 0225 — trigger trên ba bảng, ghi kèm cột lý do vừa
 đổi, quyền đọc theo hồ sơ gốc, khối «Các lần chuyển bước» `components/entity/stage-history.tsx` ở tab Lịch sử); thanh lưu dính của biểu mẫu đầu bài, thẻ PWA trên hộp thoại, `ConfirmDialog` qua portal.
 
 ### 9.3 Trạng thái hiện tại và bước tiếp theo
@@ -1125,10 +1125,10 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    Trợ lý AI của bản demo; chạy thử bằng đúng vai.
 4. Việc nhỏ treo của Đợt 1: AI điền luôn các ô «Thông tin hiện trường» riêng từng công ty; nút «Gửi mẫu» trên đầu mối /
    cơ hội; nhập đầu mối từ Excel; Kinh doanh NVS sửa ô phiếu khảo sát (câu 22).
-5. Việc treo cũ, làm xen: dải tiến trình gói thầu; QĐ-6 giao dịch nội bộ; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
+5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; lối vào Tổng quan điều hành trên thanh dưới điện thoại; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0226.** (Đã dùng tới 0225; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0227.** (Đã dùng tới 0226; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -1242,6 +1242,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Đo mọi sửa bộ xếp bằng phát lại toàn bộ vòng đã ghi (đối chứng tắt thay đổi); không lợi thì gỡ; chỉ lưu phương án phát lại khi thật sự qua cổng | Không làm giả kết quả; một sửa giúp ca này có thể làm hỏng ca khác (T169 bỏ một điều kiện vì mất chính vòng 46d6eff3) |
 | Ban Giám đốc «Nhận soạn thay» hợp đồng Nháp thay vì có quyền sửa mọi hợp đồng | Anh Dũng đồng ý (25/10/2026). Giữ tách người thực hiện / người phê duyệt: lãnh đạo chỉ sửa ĐÚNG hợp đồng đã nhận, có nhật ký và báo người soạn trước |
 | Soạn hợp đồng: điền chỗ trống ngay trên bản xem trước + tải lên bản đã sửa trong Word; KHÔNG làm trình soạn thảo đầy đủ trên hệ thống | Anh Dũng chọn (25/10/2026): nhãn chỗ trống máy tự cắt từ câu văn nên khó hiểu; sửa câu chữ trong Word giữ đúng định dạng mẫu (bảng, đánh số). Hệ thống không đọc ngược Word nên bản ấy được đánh dấu riêng |
+| Gói thầu tự sang Khảo sát / Bóc tách / Lập dự toán khi ghi khảo sát, có dòng khối lượng đầu tiên, có dự toán; chỉ đi tới, khảo sát bỏ qua được (0226) | Trước 0226 không đường nào vào ba bước này — gói thầu đang lập dự toán vẫn ghi «Tiếp nhận hồ sơ», dải tiến trình sẽ nói sai. Áp quyết định «làm xong việc của bước thì tự sang bước kế»; NVC hay nhận sẵn BOQ của chủ đầu tư |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)

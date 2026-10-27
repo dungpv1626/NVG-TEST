@@ -1520,6 +1520,13 @@
       "when": 1791700000000,
       "tag": "0225_lich_su_chuyen_buoc",
       "breakpoints": true
+    },
+    {
+      "idx": 225,
+      "version": "7",
+      "when": 1791710000000,
+      "tag": "0226_goi_thau_tu_sang_buoc",
+      "breakpoints": true
     }
   ]
 }
