@@ -280,15 +280,25 @@ export function DocInputsSection({
                     editable={editable}
                   />
                 ))}
-                {visible.map((f) => (
-                  <FreeFieldInput
-                    key={f.key}
-                    field={f}
-                    value={values[freeKey(template.id, f.key)] ?? ''}
-                    onChange={(v) => setValue(freeKey(template.id, f.key), v)}
-                    editable={editable}
-                  />
-                ))}
+                {sentenceRuns(visible).map((run) =>
+                  run.length > 1 ? (
+                    <SentenceInputs
+                      key={run[0]!.key}
+                      fields={run}
+                      valueOf={(f) => values[freeKey(template.id, f.key)] ?? ''}
+                      onChange={(f, v) => setValue(freeKey(template.id, f.key), v)}
+                      editable={editable}
+                    />
+                  ) : (
+                    <FreeFieldInput
+                      key={run[0]!.key}
+                      field={run[0]!}
+                      value={values[freeKey(template.id, run[0]!.key)] ?? ''}
+                      onChange={(v) => setValue(freeKey(template.id, run[0]!.key), v)}
+                      editable={editable}
+                    />
+                  ),
+                )}
               </div>
             </details>
           );
@@ -340,6 +350,98 @@ function OptionGroup({
         </label>
       </div>
     </fieldset>
+  );
+}
+
+/**
+ * Gom các chỗ trống liền nhau của CÙNG một câu (anh Dũng 27/10/2026: «20.2. Đại diện liên lạc: Bên A: … – ĐT: … –
+ * Email: …» thành 6 ô, mỗi ô chép lại cả câu — «tách ra nhiều quá»). Chỗ sau cùng câu với chỗ trước khi câu văn đứng
+ * trước nó bắt đầu đúng bằng câu văn đứng trước chỗ trước (convert.py cắt câu từ đầu đoạn).
+ */
+export function sentenceRuns(fields: readonly TemplateFreeField[]): TemplateFreeField[][] {
+  const runs: TemplateFreeField[][] = [];
+  for (const f of fields) {
+    const run = runs[runs.length - 1];
+    const prev = run?.[run.length - 1];
+    if (
+      run &&
+      prev &&
+      !f.cell &&
+      !prev.cell &&
+      f.option === prev.option &&
+      f.party === prev.party &&
+      between(prev, f) !== null
+    )
+      run.push(f);
+    else runs.push([f]);
+  }
+  return runs;
+}
+
+/** Dải chấm (dài ngắn khác nhau giữa các chỗ trống của cùng câu) thu về một dấu «…» để so câu. */
+const squash = (s: string) => s.replace(/[.…]+/g, '…');
+
+/**
+ * Câu văn giữa hai chỗ trống liền nhau, hoặc `null` khi hai chỗ không cùng câu. Câu văn trước chỗ sau = câu văn trước
+ * chỗ trước + dải chấm + đoạn giữa; convert.py cắt bớt đầu câu dài, nên chỉ đòi phần cuối (≥ 12 ký tự) của «câu trước
+ * chỗ trước + dải chấm» khớp đầu câu trước chỗ sau.
+ */
+function between(prev: TemplateFreeField, next: TemplateFreeField): string | null {
+  const head = squash(prev.before);
+  if (!head.trim()) return null;
+  const p = `${head}…`;
+  const n = squash(next.before);
+  for (let i = 0; i <= p.length - 12; i++) {
+    if (n.startsWith(p.slice(i))) return n.slice(p.length - i);
+  }
+  return null;
+}
+
+/** Một câu, các chỗ trống thành ô nhỏ nằm ngay trong câu. */
+function SentenceInputs({
+  fields,
+  valueOf,
+  onChange,
+  editable,
+}: {
+  fields: TemplateFreeField[];
+  valueOf: (f: TemplateFreeField) => string;
+  onChange: (f: TemplateFreeField, v: string) => void;
+  editable: boolean;
+}) {
+  const first = fields[0]!;
+  const last = fields[fields.length - 1]!;
+  return (
+    <p className="text-sm leading-[2.75rem]">
+      {(first.party || first.option) && (
+        <span className="mr-1 font-medium">
+          {first.option ? `(phương án ${letterOf(first.option)}) ` : ''}
+          {first.party ? `${first.party}:` : ''}
+        </span>
+      )}
+      <span className="text-fg-subtle">…{first.before}</span>
+      {fields.map((f, i) => {
+        const value = valueOf(f);
+        return (
+          <span key={f.key}>
+            {i > 0 && <span className="text-fg-subtle">{between(fields[i - 1]!, f) ?? ' '}</span>}
+            <Input
+              id={`free-${f.key}`}
+              aria-label={`${f.before.slice(-40)}…`}
+              value={value}
+              disabled={!editable}
+              onChange={(e) => onChange(f, e.target.value)}
+              placeholder={f.default ?? ''}
+              className={cn(
+                'mx-1 inline-block h-9 w-40 align-middle',
+                value.trim() && 'border-status-progress',
+              )}
+            />
+          </span>
+        );
+      })}
+      <span className="text-fg-subtle">{last.after.replace(/…$/, '')}…</span>
+    </p>
   );
 }
 

@@ -832,11 +832,22 @@ function FillSection({
       );
       return;
     }
+    let leftover: string[] = [];
     try {
       const zip = new PizZip(await file.arrayBuffer());
-      if (!zip.file('word/document.xml')) throw new Error('not docx');
+      const xml = zip.file('word/document.xml')?.asText();
+      if (!xml) throw new Error('not docx');
+      leftover = unfilledTemplateTags(xml);
     } catch {
       setError('Tệp không mở được như văn bản Word — kiểm tra lại tệp rồi tải lên.');
+      return;
+    }
+    // Tệp còn chỗ trống dạng {so_hop_dong} là MẪU GỐC chưa điền, không phải văn bản đã sửa — người duyệt từng nhận
+    // đúng một tệp như vậy (anh Dũng 27/10/2026: «hợp đồng gửi đi cho giám đốc duyệt bị lỗi»).
+    if (leftover.length > 0) {
+      setError(
+        `Tệp này còn chỗ trống của mẫu chưa điền (${leftover.slice(0, 3).join(', ')}${leftover.length > 3 ? '…' : ''}) — đây là mẫu gốc, không phải văn bản đã điền. Bấm «Lưu phiên bản và tải về» để lấy văn bản đã điền, sửa trên tệp đó rồi tải lên.`,
+      );
       return;
     }
     const next = (versions?.[0]?.version ?? 0) + 1;
@@ -957,12 +968,14 @@ function FillSection({
         <div className="mt-3 rounded-field border border-status-pending bg-status-pending-bg p-3 text-sm">
           <p className="flex items-start gap-2 font-semibold">
             <FilePen className="mt-0.5 size-4 shrink-0" aria-hidden />
-            Bản {wordLatest.version} là bản sửa trong Word — gửi phê duyệt sẽ gửi đúng bản này.
+            Bản {wordLatest.version} là bản sửa trong Word, tải lên{' '}
+            {formatDateTime(wordLatest.created_at)}.
           </p>
           <p className="mt-1">Đã sửa: {wordLatest.change_reason}</p>
-          <p className="mt-1 text-fg-subtle">
-            Bản xem trước dưới đây dựng lại từ mẫu và các ô đã điền — không có các sửa trong Word.
-            Lưu phiên bản từ mẫu sẽ tạo bản mới không giữ các sửa đó.
+          <p className="mt-1">
+            Những gì điền trên màn hình sau lúc tải lên không có trong bản này. Gửi văn bản đúng như
+            màn hình: «Lưu và gửi phê duyệt» (bản mới từ mẫu — không giữ các sửa trong Word). Gửi
+            đúng tệp Word ấy: nút dưới.
           </p>
           {canSave && contract.stage === 'nhap' && (
             <Button
@@ -1005,6 +1018,37 @@ function FillSection({
         freeArticles={missingByArticle(chosen, values)}
         missingTerms={missingTerms}
       />
+      {/* Gửi phê duyệt ở cuối bước 4 — nút «Gửi phê duyệt» trên đầu trang mở tới đây (contract-detail), và ở đây
+          nói rõ gửi bản nào: bản mới đúng như màn hình, hay đúng tệp Word đã tải lên. */}
+      {canSave && contract.stage === 'nhap' && (
+        <section id="gui-phe-duyet" className="mt-4 rounded-card bg-surface p-4">
+          <h3 className="font-medium">Gửi phê duyệt</h3>
+          <p className="mt-1 text-sm text-ink-subtle">
+            Người duyệt xem đúng văn bản được gửi.
+            {wordLatest
+              ? ` Bản ${wordLatest.version} là tệp sửa trong Word, tải lên ${formatDateTime(wordLatest.created_at)} — những gì điền trên màn hình sau lúc ấy không có trong tệp đó.`
+              : ' Văn bản gửi đi là bản mới lập từ mẫu đúng như bản xem trước.'}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              variant={wordLatest ? 'secondary' : 'primary'}
+              disabled={save.isPending || submitApproval.isPending || stale || busy}
+              onClick={() => void saveAndSubmit()}
+            >
+              <Send className="size-4" aria-hidden /> Lưu bản mới như màn hình và gửi
+            </Button>
+            {wordLatest && (
+              <Button
+                variant="primary"
+                disabled={submitApproval.isPending}
+                onClick={() => void submitLatest()}
+              >
+                <Send className="size-4" aria-hidden /> Gửi tệp Word bản {wordLatest.version}
+              </Button>
+            )}
+          </div>
+        </section>
+      )}
     </>
   ) : null;
   const preview = filled ? (
@@ -1462,6 +1506,15 @@ function MissingBox({
       )}
     </section>
   );
+}
+
+/**
+ * Chỗ trống của mẫu còn nằm nguyên trong một tệp Word (`{so_hop_dong}`, `{#pa_1_a}`) — tệp ấy là mẫu gốc chưa điền.
+ * Đọc chữ của `word/document.xml` (bỏ thẻ XML vì Word hay cắt một chỗ trống thành nhiều đoạn chữ).
+ */
+export function unfilledTemplateTags(documentXml: string): string[] {
+  const text = documentXml.replace(/<[^>]+>/g, '');
+  return [...new Set([...text.matchAll(/\{[#/^]?([a-z][a-z0-9_]*)\}/g)].map((m) => `{${m[1]}}`))];
 }
 
 // Dấu ẩn (vùng ký tự riêng của Unicode) bọc giá trị trong tệp XEM TRƯỚC để tô màu theo nguồn.

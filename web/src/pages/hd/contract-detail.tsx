@@ -38,6 +38,7 @@ import {
   useTakeOverContract,
   useUpdateContract,
 } from '@/hooks/use-contracts';
+import { useTemplatesForContract } from '@/hooks/use-contract-templates';
 import {
   useContractHasSite,
   useOpenSiteFromContract,
@@ -58,7 +59,7 @@ import { SignContractDialog } from './sign-contract-dialog';
 import { SignedScanLink } from './signed-scan-link';
 import { SignedScanPanel } from './signed-scan-panel';
 import { LiquidationCard } from './liquidation-card';
-import { revealById } from '@/components/ui/split-workspace';
+import { openWorkspaceTab, revealById } from '@/components/ui/split-workspace';
 
 const EM_DASH = '—';
 
@@ -74,6 +75,8 @@ export function ContractDetailPage() {
 
   const { data, isLoading, error } = useContract(id);
   const isResponsible = useIsResponsible(data?.responsible_user_id);
+  // Mẫu Word của pháp nhân cho loại hợp đồng này — xem `sendsDocument` (nút «Gửi phê duyệt» trên đầu trang).
+  const contractTemplates = useTemplatesForContract(data?.company_id, data?.type);
   const { profile } = useAuth();
   const takeOver = useTakeOverContract();
   const { data: amendments } = useContractAmendments(id);
@@ -173,10 +176,22 @@ export function ContractDetailPage() {
 
   // Tab nơi làm việc của từng bước — mở hồ sơ là tới đúng chỗ (phản hồi chủ dự án).
   const stageTab = contract.stage === 'nhap' ? 'soan-thao' : 'tong-quan';
-  function openTab(tab: string, anchor?: string) {
+  function openTab(tab: string, anchor?: string, workspaceTab?: string) {
     const next = new URLSearchParams(searchParams);
     next.set('tab', tab);
     setSearchParams(next, { replace: true });
+    // Mở tab của khung hai ngăn (bước «4. Kiểm tra và gửi») rồi tới chỗ cần tới. Khung dựng sau khi tải mẫu và văn
+    // bản xem trước — thử lại tới khi chỗ ấy có mặt (tối đa ~6 giây), không đoán một khoảng chờ cố định.
+    if (workspaceTab && anchor) {
+      let tries = 0;
+      const tick = () => {
+        openWorkspaceTab(workspaceTab);
+        if (revealById(anchor) || ++tries > 30) return;
+        setTimeout(tick, 200);
+      };
+      requestAnimationFrame(tick);
+      return;
+    }
     if (anchor) {
       // Đích có thể nằm trong tab đang ẩn của khung hai ngăn «Soạn hợp đồng» — `revealById` mở tab ấy trước.
       requestAnimationFrame(() => revealById(anchor));
@@ -232,6 +247,11 @@ export function ContractDetailPage() {
   const pendingApproval = (approvals.data?.get(contract.id) ?? []).find(
     (a) => a.final_decision === null,
   );
+
+  // Pháp nhân có mẫu Word cho loại hợp đồng này → gửi phê duyệt luôn kèm văn bản. Nút trên đầu trang KHÔNG tự gửi bản
+  // đã lưu gần nhất (bản ấy có thể cũ hơn màn hình — anh Dũng 27/10/2026 gửi nhầm bản Word mẫu gốc cho giám đốc) mà
+  // đưa tới khối gửi của tab «Soạn hợp đồng», nơi nói rõ gửi bản nào.
+  const sendsDocument = (contractTemplates.data?.length ?? 0) > 0;
 
   async function run(action: () => Promise<unknown>) {
     setActionError(null);
@@ -294,7 +314,11 @@ export function ContractDetailPage() {
           variant="primary"
           disabled={submitApproval.isPending || missing.length > 0}
           title={missing.length > 0 ? `Cần: ${missing.map((m) => m.label).join('; ')}` : undefined}
-          onClick={() => void run(() => submitApproval.mutateAsync({ contractId: contract.id }))}
+          onClick={() =>
+            sendsDocument
+              ? openTab('soan-thao', 'gui-phe-duyet', 'kiem-tra')
+              : void run(() => submitApproval.mutateAsync({ contractId: contract.id }))
+          }
         >
           Gửi phê duyệt
         </Button>
