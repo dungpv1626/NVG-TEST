@@ -1062,7 +1062,8 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    Việc treo của bộ quét: (a) **giấy cong** — đề xuất thêm điểm giữa mỗi cạnh để uốn theo mép (máy tự đặt khi thấy mép),
    chờ anh Dũng quyết; tờ giấy tràn khung thì chỉ nắn được theo dòng chữ (khó hơn nhiều); (b) thử trên **điện thoại thật**
    (cần cho Vite / Worker nghe mạng nhà và tạm đổi `.env` sang IP máy `192.168.1.12` — chưa làm, anh Dũng chưa yêu cầu);
-   (c) đã gắn vào ký biên bản nghiệm thu (2D); còn đề nghị thanh toán ở Đợt 3; (d) ảnh đã qua Zalo /
+   (c) đã gắn vào ký biên bản nghiệm thu (2D) và đề nghị thanh toán (0228 — `payment_request_files`, kho `payment-files`,
+   khoá khi gửi duyệt, đã duyệt / đã chi chỉ thêm chứng từ chi); (d) ảnh đã qua Zalo /
    chỉnh sửa có thể mang thời điểm gửi chứ không phải lúc chụp → thứ tự lệch, dùng «Đảo thứ tự trang».
 2. **Đợt 2 — Thi công: xong trên máy, anh Dũng CHƯA chạy thử.** Hướng dẫn chạy thử đã gửi anh Dũng (22/10) theo
    thứ tự: 2B nhật ký nói (chỉ huy trưởng, 0901) → 2A mốc (0901) → 2E bảng theo dõi → 2D biên bản ký hai bên → Kế toán
@@ -1131,7 +1132,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email; thêm dữ liệu demo quá hạn ở cả ba công ty.
 
-**Migration tiếp theo: 0228.** (Đã dùng tới 0227; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0229.** (Đã dùng tới 0228; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 

@@ -50,6 +50,7 @@ import {
 } from '@/hooks/use-accounting';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useAuth, useCan } from '@/lib/auth';
+import { PaymentFilesPanel } from './payment-files-panel';
 import { AllocationPanel } from './allocation-panel';
 import { KtNav } from './kt-nav';
 import { paymentDisplayStatus } from './payment-list';
@@ -456,31 +457,45 @@ export function PaymentRequestDetailPage() {
           {
             id: 'chung-tu',
             label: 'Bộ chứng từ',
-            content:
-              related.length === 0 ? (
-                <EmptyState message="Khoản chi này không đi qua mua hàng hay hợp đồng nào. Chứng từ gốc lưu bản giấy theo quy định; hệ thống chỉ giữ phần quy trình." />
-              ) : (
-                <ul className="space-y-2">
-                  {related.flatMap((group) =>
-                    group.records.map((record) => (
-                      <li
-                        key={`${group.title}-${record.label}`}
-                        className="flex items-center justify-between rounded-card bg-surface px-4 py-3"
-                      >
-                        <div>
-                          <p className="font-medium">{record.label}</p>
-                          <p className="text-fg-subtle">{record.value}</p>
-                        </div>
-                        {record.to && (
-                          <Button variant="secondary" asChild>
-                            <Link to={record.to}>Mở hồ sơ</Link>
-                          </Button>
-                        )}
-                      </li>
-                    )),
-                  )}
-                </ul>
-              ),
+            content: (
+              <div className="space-y-4">
+                <PaymentFilesPanel
+                  requestId={request.id}
+                  requestCode={request.code ?? 'de-nghi-thanh-toan'}
+                  mode={
+                    isDraft && (canWorkKt || isRequester)
+                      ? 'draft'
+                      : canWorkKt && (request.stage === 'da_duyet' || request.stage === 'da_chi')
+                        ? 'paid'
+                        : 'view'
+                  }
+                />
+                {related.length === 0 ? (
+                  <EmptyState message="Khoản chi này không đi qua mua hàng hay hợp đồng nào. Chứng từ gốc lưu bản giấy theo quy định; hệ thống chỉ giữ phần quy trình." />
+                ) : (
+                  <ul className="space-y-2">
+                    {related.flatMap((group) =>
+                      group.records.map((record) => (
+                        <li
+                          key={`${group.title}-${record.label}`}
+                          className="flex items-center justify-between rounded-card bg-surface px-4 py-3"
+                        >
+                          <div>
+                            <p className="font-medium">{record.label}</p>
+                            <p className="text-fg-subtle">{record.value}</p>
+                          </div>
+                          {record.to && (
+                            <Button variant="secondary" asChild>
+                              <Link to={record.to}>Mở hồ sơ</Link>
+                            </Button>
+                          )}
+                        </li>
+                      )),
+                    )}
+                  </ul>
+                )}
+              </div>
+            ),
           },
         ]}
       />
