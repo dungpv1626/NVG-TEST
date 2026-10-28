@@ -8,6 +8,7 @@
  */
 
 import type { SiteLogVoiceDraft } from '@nvg/shared';
+import type { PrefillAccepted, PrefillRejected } from '@nvg/shared/design';
 import { supabase } from './supabase';
 
 const BASE = (import.meta.env.VITE_DESIGN_API_URL ?? '').replace(/\/+$/, '');
@@ -51,8 +52,26 @@ async function call<T>(
   return json;
 }
 
-export function aiStatus(): Promise<{ transcribe: AiMode; summary: AiMode; siteLog: AiMode }> {
+export function aiStatus(): Promise<{
+  transcribe: AiMode;
+  summary: AiMode;
+  siteLog: AiMode;
+  briefPrefill: AiMode;
+}> {
   return call('/status');
+}
+
+/** Kết quả «Điền sẵn từ khảo sát»: đề xuất đã kiểm theo biểu mẫu + đề xuất bị loại + nguồn đã đọc. */
+export interface BriefPrefillResult {
+  accepted: PrefillAccepted[];
+  rejected: PrefillRejected[];
+  used: { design_survey: boolean; transcripts: number; crm_survey: boolean; crm_linked: boolean };
+  fake: boolean;
+}
+
+/** Khảo sát thiết kế + khảo sát CRM đã duyệt → đề xuất câu trả lời đầu bài. Không ghi gì. */
+export function prefillBrief(projectId: string): Promise<BriefPrefillResult> {
+  return call('/brief-prefill', { method: 'POST', body: { project_id: projectId } });
 }
 
 export function transcribeRecording(

@@ -25,6 +25,7 @@ export * from './facade-brief-part';
 export * from './site-geometry';
 export * from './site-boundary-from-edges';
 export * from './site-boundary-from-coordinates';
+export * from './brief-prefill';
 
 // ---------------------------------------------------------------------------
 // Bộ môn — dùng lại enum `design_discipline` sẵn có (CLAUDE.md 8.5 T7)

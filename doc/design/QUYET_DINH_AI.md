@@ -4483,3 +4483,15 @@ CPU của Worker. **Giữ, 1 bước.** Lợi thật ở đường Workflow: b�
 
 **Chưa gỡ nhà ống THU5** (0 → 0). Lỗi còn lại của THU5 nằm ở bản phác tầng 2–4 (hành lang không chữ nhật, thiếu WC, đầu
 bước ra thang) — chỉ câu nhắc / lượt chạy thật sửa được (xin phép trước). Kết quả đo: `backup/ai-quay-lui/` (không commit).
+
+## T173 — Mở khoá thửa «Đa giác không đều» + bảng vẽ kéo đỉnh (27/10/2026)
+
+Anh Dũng mở khoá (27/10/2026: «có mở khoá»), sau khi đầu bài có bảng vẽ thửa kéo đỉnh (`web/src/pages/tk/site-polygon-editor.tsx`,
+lưới 1 m, bắt 0,1 m, Shift bắt 45°, «+» giữa cạnh chèn đỉnh, bấm đúp bỏ đỉnh, nhãn chiều dài cạnh, so diện tích giấy chứng nhận,
+cảnh báo tự cắt) và thẻ «Nhập theo chiều dài cạnh» (góc trong từng đỉnh → `polygonFromEdges`; không khép kín thì nói lệch bao
+nhiêu, không tự nắn). Gỡ khoá `unavailable` của lựa chọn `da_giac` trong `brief-form.json` — đúng cách T-khoá 22/09 đã ghi; cơ
+chế `unavailable` giữ nguyên cho lựa chọn khác sau này.
+
+**Rủi ro đã biết, chấp nhận:** bộ xếp dựng trên hình chữ nhật lớn nhất nội tiếp thửa (`siteGeometry`), CHƯA đo lại trên hồ sơ
+đa giác thật — thửa méo nhiều thì phần đất ngoài hình chữ nhật ấy không được dùng (màn hình đã hiện «còn … m² ngoài phần xây
+được»). Gặp hồ sơ thật lệch thì đo bằng phát lại như T96 trước khi sửa bộ xếp.

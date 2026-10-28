@@ -198,7 +198,9 @@ describe('Phân nhánh theo loại hình đi từ cấu hình ra DOM', () => {
     // sách "còn thiếu" — trường mới hiện thì đương nhiên chưa ai điền.
     expect(await screen.findAllByText('Khoảng lùi theo quy hoạch')).not.toHaveLength(0);
     expect(screen.getAllByText('Mật độ xây dựng tối đa')).not.toHaveLength(0);
-    expect(screen.getByRole('link', { name: /Khoảng lùi theo quy hoạch/ })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: /Khoảng lùi theo quy hoạch/ })).not.toHaveLength(
+      0,
+    );
   });
 });
 
@@ -226,9 +228,40 @@ describe('Thước độ đầy đủ', () => {
     state.surveys = [];
     await openForm();
 
-    const link = await screen.findByRole('link', { name: /Phong cách kiến trúc/ });
-    expect(link.getAttribute('href')).toBe('#brief-style');
-    expect(link.className).toContain('min-h-10');
+    const item = await screen.findByRole('button', { name: /Phong cách kiến trúc/ });
+    expect(item.className).toContain('min-h-10');
+  });
+
+  it('câu ngắn còn thiếu điền ngay trong khung, trả lời xong thì rời danh sách', async () => {
+    // Anh Dũng 27/10/2026: «thông tin thiếu nhưng không có phần nào điền thêm ngay tại đó».
+    state.briefs = [brief()];
+    state.surveys = [];
+    await openForm('Công trình và khu đất');
+    const item = screen.getByRole('button', { name: /Mật độ xây dựng tối đa/ });
+    expect(item).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(item);
+    // Câu tùy chọn đang gấp trong biểu mẫu → ô duy nhất là ô điền tại chỗ.
+    const input = screen.getByLabelText('Mật độ xây dựng tối đa');
+    await userEvent.type(input, '60');
+    expect(screen.queryByRole('button', { name: /Mật độ xây dựng tối đa/ })).toBeNull();
+  });
+
+  it('chế độ xem: bấm câu còn thiếu thì mở biểu mẫu ở đúng bước; người chỉ xem thấy chữ', async () => {
+    state.briefs = [brief({ structured: { building_type: 'nha_pho', floors: 3 } })];
+    state.surveys = [];
+    const { BriefPanel } = await import('../brief-panel');
+    const { unmount } = renderWithApp(
+      <BriefPanel projectId="p1" companyId="c1" projectName="x" projectCode="y" readOnly />,
+    );
+    expect(await screen.findAllByText(/Phong cách kiến trúc/)).not.toHaveLength(0);
+    expect(screen.queryByRole('button', { name: /Phong cách kiến trúc/ })).toBeNull();
+    unmount();
+
+    renderWithApp(
+      <BriefPanel projectId="p1" companyId="c1" projectName="x" projectCode="y" readOnly={false} />,
+    );
+    await userEvent.click(await screen.findByRole('button', { name: /Phong cách kiến trúc/ }));
+    expect(await screen.findByRole('heading', { name: /^Phong cách, vật liệu/ })).toBeTruthy();
   });
 
   it('chỉ dùng sáu màu trạng thái chuẩn, không tạo màu thứ bảy', async () => {
@@ -496,33 +529,19 @@ describe('Hình thửa đất', () => {
     expect(screen.queryAllByText('Ranh giới thửa đất')).toHaveLength(0);
   });
 
-  it('bấm «Đa giác không đều» thì NÓI RA là chưa hỗ trợ, không im lặng và không đổi hình thửa', async () => {
-    // Haan tắt tạm nhánh đa giác (22/09/2026). Cách tắt sai mà ai cũng làm: `disabled` — nút
-    // xám, bấm không có gì xảy ra, người dùng bấm ba lần rồi đi hỏi. Hoặc giấu hẳn lựa chọn,
-    // và người từng dùng nó đi tìm không thấy. Ở đây nút vẫn bấm được và cú bấm trả lời.
+  it('chọn «Đa giác không đều» thì mở bảng vẽ thửa, không hộp thoại chặn', async () => {
+    // Anh Dũng mở khoá 27/10/2026 (Haan khoá tạm 22/09/2026) sau khi có bảng vẽ kéo đỉnh.
     state.briefs = [brief()];
     state.surveys = [];
     await openForm('Công trình và khu đất');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Hình thang' }));
     await userEvent.click(screen.getByRole('button', { name: 'Đa giác không đều' }));
-
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText(/tạm thời chưa hỗ trợ/i)).toBeTruthy();
-    // Một lời báo thì chỉ cần MỘT nút — «Huỷ» và «Đã hiểu» cùng đóng hộp, cùng không làm gì.
-    expect(within(dialog).getAllByRole('button')).toHaveLength(1);
-
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Đã hiểu' }));
     expect(screen.queryByRole('dialog')).toBeNull();
-
-    // Hình thửa đất KHÔNG đổi, và ô toạ độ ranh giới không mở ra.
-    expect(screen.getByRole('button', { name: 'Hình thang' }).getAttribute('aria-pressed')).toBe(
-      'true',
-    );
     expect(
       screen.getByRole('button', { name: 'Đa giác không đều' }).getAttribute('aria-pressed'),
-    ).toBe('false');
-    expect(screen.queryAllByText('Ranh giới thửa đất')).toHaveLength(0);
+    ).toBe('true');
+    await userEvent.click(screen.getByRole('button', { name: /Bắt đầu từ hình chữ nhật/ }));
+    expect(screen.getAllByRole('button', { name: /^Đỉnh \d:/ })).toHaveLength(4);
   });
 
   it('đầu bài ĐÃ LƯU theo đa giác vẫn sửa được — khoá lựa chọn không khoá hồ sơ cũ', async () => {
@@ -1200,7 +1219,7 @@ describe('Biểu mẫu chia bước', () => {
     state.surveys = [];
     await openForm();
 
-    await userEvent.click(screen.getByRole('link', { name: /Phong cách kiến trúc/ }));
+    await userEvent.click(screen.getByRole('button', { name: /Phong cách kiến trúc/ }));
     expect(screen.getByRole('heading', { name: /^Phong cách, vật liệu/ })).toBeTruthy();
   });
 
@@ -1565,9 +1584,10 @@ describe('Đầu bài dễ dùng hơn (23/10/2026)', () => {
     // Câu bắt buộc vẫn ở ngoài.
     expect(screen.getByLabelText(/^Chiều rộng mặt tiền/)).toBeTruthy();
 
-    // Từ khung «Câu tùy chọn chưa trả lời» bấm thẳng vào mật độ → mục mở ra.
-    await userEvent.click(screen.getByRole('link', { name: /Mật độ xây dựng tối đa/ }));
-    expect(await screen.findByLabelText('Mật độ xây dựng tối đa')).toBeTruthy();
+    // Từ khung «Câu tùy chọn chưa trả lời»: mở ô tại chỗ rồi «Xem câu này trong biểu mẫu» → mục mở ra.
+    await userEvent.click(screen.getByRole('button', { name: /Mật độ xây dựng tối đa/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Xem câu này trong biểu mẫu' }));
+    expect(await screen.findAllByLabelText('Mật độ xây dựng tối đa')).toHaveLength(2);
     expect(screen.getByRole('button', { name: /^Gấp \d+ câu tùy chọn/ })).toHaveAttribute(
       'aria-expanded',
       'true',

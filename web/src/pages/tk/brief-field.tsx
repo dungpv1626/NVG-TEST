@@ -29,6 +29,7 @@ import {
   displayNumber,
   isBedroomType,
   memberWantsEnsuite,
+  polygonFromEdges,
   siteGeometry,
   storedNumber,
   type BriefAreaBudget,
@@ -38,6 +39,8 @@ import {
 } from '@nvg/shared/design';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { SitePolygonEditor } from './site-polygon-editor';
+import { edgeLengths, interiorAngles } from './site-polygon-math';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
@@ -399,6 +402,13 @@ export interface BriefFieldProps {
    * ngay dưới bảng. Tính ở màn hình cha từ CÙNG hàm bộ kiểm dùng (`briefAreaBudget`).
    */
   areaBudget?: BriefAreaBudget;
+  /**
+   * Neo để khung «Còn thiếu» cuộn tới. Mặc định `brief-<đường dẫn>`; bản sao điền tại chỗ trong khung bên phải
+   * truyền `null` để hai ô cùng câu không trùng `id`.
+   */
+  anchorId?: string | null;
+  /** Diện tích theo giấy chứng nhận — chỉ bảng vẽ thửa đa giác dùng để đối chiếu. */
+  siteAreaM2?: number;
 }
 
 export function BriefField({
@@ -410,11 +420,18 @@ export function BriefField({
   floors,
   family,
   areaBudget,
+  anchorId,
+  siteAreaM2,
 }: BriefFieldProps) {
   const hint = field.unit ? `${field.hint ?? ''} Đơn vị: ${field.unit}.`.trim() : field.hint;
 
   return (
-    <div id={`brief-${field.path.replace(/\./g, '-')}`} className="scroll-mt-24">
+    <div
+      id={
+        anchorId === undefined ? `brief-${field.path.replace(/\./g, '-')}` : (anchorId ?? undefined)
+      }
+      className="scroll-mt-24"
+    >
       <Field
         label={field.label}
         hint={hint}
@@ -429,6 +446,7 @@ export function BriefField({
           floors={floors}
           family={family}
           areaBudget={areaBudget}
+          siteAreaM2={siteAreaM2}
         />
       </Field>
       {issues.map((issue) => (
@@ -446,7 +464,8 @@ function BriefControl({
   floors,
   family,
   areaBudget,
-}: Omit<BriefFieldProps, 'issues'>) {
+  siteAreaM2,
+}: Omit<BriefFieldProps, 'issues' | 'anchorId'>) {
   switch (field.control) {
     case 'textarea':
       return (
@@ -864,6 +883,7 @@ function BriefControl({
           value={value as [number, number][] | undefined}
           onChange={onChange}
           projectId={projectId}
+          certificateAreaM2={siteAreaM2}
         />
       );
 
@@ -1052,13 +1072,17 @@ function PolygonControl({
   value,
   onChange,
   projectId,
+  certificateAreaM2,
 }: {
   value: [number, number][] | undefined;
   onChange: (value: unknown) => void;
   projectId: string;
+  certificateAreaM2?: number;
 }) {
   const points = value ?? [];
   const [extraction, setExtraction] = useState<SiteBoundaryExtractionResult | null>(null);
+  /** Cách nhập số bên dưới hình vẽ: bảng toạ độ đỉnh hoặc chiều dài cạnh + góc. */
+  const [entry, setEntry] = useState<'toa_do' | 'canh'>('toa_do');
 
   const update = (index: number, axis: 0 | 1, next: number | undefined) => {
     onChange(
@@ -1093,74 +1117,222 @@ function PolygonControl({
           </ul>
         </div>
       )}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[22rem] border-collapse">
-          <thead>
-            <tr className="border-b border-border text-left text-fg-subtle">
-              <th className="py-1 pr-2 font-normal">Đỉnh</th>
-              <th className="py-1 pr-2 font-normal">Ngang (m)</th>
-              <th className="py-1 pr-2 font-normal">Sâu (m)</th>
-              <th className="py-1 font-normal" />
-            </tr>
-          </thead>
-          <tbody>
-            {points.map((point, index) => {
-              const edge = matchesCurrentPoints ? extraction.edges[index] : undefined;
-              const needsReview =
-                matchesCurrentPoints &&
-                (edge?.confidence === 'low' || extraction.assumedAngleIndices.includes(index));
-              return (
-                <tr key={index} className="border-b border-border/60">
-                  <td className="py-1 pr-2 text-fg-subtle">
-                    {index + 1}
-                    {needsReview && (
-                      <span
-                        className="ml-1 rounded border border-status-pending px-1 text-[0.7em] font-normal text-status-pending"
-                        title="Đọc từ ảnh với độ tin cậy thấp — kiểm tra lại đỉnh này với thực địa."
-                      >
-                        kiểm tra lại
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-1 pr-2">
-                    <NumberField
-                      value={point[0]}
-                      label={`Đỉnh ${index + 1} — toạ độ ngang`}
-                      onChange={(next) => update(index, 0, next)}
-                    />
-                  </td>
-                  <td className="py-1 pr-2">
-                    <NumberField
-                      value={point[1]}
-                      label={`Đỉnh ${index + 1} — toạ độ sâu`}
-                      onChange={(next) => update(index, 1, next)}
-                    />
-                  </td>
-                  <td className="py-1">
-                    <Button variant="subtle" onClick={() => onChange(dropAt(points, index))}>
-                      Bỏ đỉnh
-                    </Button>
-                  </td>
+      <SitePolygonEditor
+        points={points}
+        onChange={(next) => onChange(next.map((p) => [p[0], p[1]] as [number, number]))}
+        certificateAreaM2={certificateAreaM2}
+      />
+      <div role="tablist" aria-label="Cách nhập số" className="flex flex-wrap gap-1">
+        {(
+          [
+            ['toa_do', 'Bảng toạ độ đỉnh'],
+            ['canh', 'Nhập theo chiều dài cạnh'],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={entry === key}
+            onClick={() => setEntry(key)}
+            className={cn(
+              'min-h-10 rounded-full border px-3',
+              entry === key
+                ? 'border-brand bg-brand-subtle font-semibold text-brand'
+                : 'border-border text-fg-subtle hover:bg-surface-hover',
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {entry === 'canh' ? (
+        <SiteEdgeEntry points={points} onApply={(next) => onChange(next)} />
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[22rem] border-collapse">
+              <thead>
+                <tr className="border-b border-border text-left text-fg-subtle">
+                  <th className="py-1 pr-2 font-normal">Đỉnh</th>
+                  <th className="py-1 pr-2 font-normal">Ngang (m)</th>
+                  <th className="py-1 pr-2 font-normal">Sâu (m)</th>
+                  <th className="py-1 font-normal" />
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <Button
-          variant="secondary"
-          onClick={() => onChange([...points, points[points.length - 1] ?? [0, 0]])}
-        >
-          Thêm đỉnh
-        </Button>
-        <SitePreview points={points} />
-      </div>
+              </thead>
+              <tbody>
+                {points.map((point, index) => {
+                  const edge = matchesCurrentPoints ? extraction.edges[index] : undefined;
+                  const needsReview =
+                    matchesCurrentPoints &&
+                    (edge?.confidence === 'low' || extraction.assumedAngleIndices.includes(index));
+                  return (
+                    <tr key={index} className="border-b border-border/60">
+                      <td className="py-1 pr-2 text-fg-subtle">
+                        {index + 1}
+                        {needsReview && (
+                          <span
+                            className="ml-1 rounded border border-status-pending px-1 text-[0.7em] font-normal text-status-pending"
+                            title="Đọc từ ảnh với độ tin cậy thấp — kiểm tra lại đỉnh này với thực địa."
+                          >
+                            kiểm tra lại
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-1 pr-2">
+                        <NumberField
+                          value={point[0]}
+                          label={`Đỉnh ${index + 1} — toạ độ ngang`}
+                          onChange={(next) => update(index, 0, next)}
+                        />
+                      </td>
+                      <td className="py-1 pr-2">
+                        <NumberField
+                          value={point[1]}
+                          label={`Đỉnh ${index + 1} — toạ độ sâu`}
+                          onChange={(next) => update(index, 1, next)}
+                        />
+                      </td>
+                      <td className="py-1">
+                        <Button variant="subtle" onClick={() => onChange(dropAt(points, index))}>
+                          Bỏ đỉnh
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => onChange([...points, points[points.length - 1] ?? [0, 0]])}
+            >
+              Thêm đỉnh
+            </Button>
+            <SitePreview points={points} />
+          </div>
+        </>
+      )}
       {matchesCurrentPoints && (
         <p className="text-fg-subtle">
           Ranh giới do AI đọc từ ảnh — bản nháp, đối chiếu với trích lục trước khi xác nhận đầu bài.
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * Nhập thửa theo chiều dài các cạnh + góc trong tại từng đỉnh — cách đọc thẳng từ trích lục (trích lục ghi chiều
+ * dài cạnh, ít khi ghi toạ độ). Dựng toạ độ bằng `polygonFromEdges` (cùng hàm bước đọc ảnh dùng). Hình không
+ * khép kín thì nói lệch bao nhiêu mét và KHÔNG áp — không tự nắn số đo người dùng đối chiếu được với thực địa.
+ */
+function SiteEdgeEntry({
+  points,
+  onApply,
+}: {
+  points: [number, number][];
+  onApply: (points: [number, number][]) => void;
+}) {
+  // Dựng sẵn từ hình đang có; chưa có hình thì bốn cạnh trống.
+  const [rows, setRows] = useState<{ length?: number; angle?: number }[]>(() => {
+    if (points.length < 3) return [{}, {}, {}, {}];
+    const lengths = edgeLengths(points);
+    const angles = interiorAngles(points);
+    // Góc của cạnh i là góc trong tại đỉnh cuối cạnh.
+    return lengths.map((length, i) => ({ length, angle: angles[(i + 1) % points.length] }));
+  });
+
+  let result: ReturnType<typeof polygonFromEdges> | null = null;
+  let problem: string | null = null;
+  if (rows.every((row) => row.length !== undefined && row.length > 0)) {
+    try {
+      result = polygonFromEdges(
+        rows.map((row) => ({
+          lengthM: row.length!,
+          turnDeg: row.angle === undefined ? null : 180 - row.angle,
+        })),
+      );
+      if (result.closureErrorM > 0.05)
+        problem = `Hình chưa khép kín: điểm cuối lệch đỉnh 1 ${formatNumber(result.closureErrorM)} m. Kiểm tra lại chiều dài hoặc góc.`;
+    } catch (error) {
+      problem = error instanceof Error ? error.message : 'Chưa dựng được hình từ các cạnh này.';
+    }
+  } else {
+    problem = 'Điền chiều dài mọi cạnh để dựng hình.';
+  }
+
+  const set = (index: number, key: 'length' | 'angle', next: number | undefined) =>
+    setRows((prev) => prev.map((row, i) => (i === index ? { ...row, [key]: next } : row)));
+
+  return (
+    <div className="space-y-2">
+      <p className="text-fg-subtle">
+        Cạnh 1 là cạnh giáp đường, đi tiếp ngược chiều kim đồng hồ khi nhìn từ trên xuống. Góc trong
+        90° là góc vuông; bỏ trống góc thì máy chia đều phần còn lại.
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[24rem] border-collapse">
+          <thead>
+            <tr className="border-b border-border text-left text-fg-subtle">
+              <th className="py-1 pr-2 font-normal">Cạnh</th>
+              <th className="py-1 pr-2 font-normal">Chiều dài (m)</th>
+              <th className="py-1 pr-2 font-normal">Góc trong ở đỉnh cuối cạnh (°)</th>
+              <th className="py-1 font-normal" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr key={index} className="border-b border-border/60">
+                <td className="py-1 pr-2 text-fg-subtle">
+                  {index + 1} (đỉnh {index + 1} → {((index + 1) % rows.length) + 1})
+                </td>
+                <td className="py-1 pr-2">
+                  <NumberField
+                    value={row.length}
+                    label={`Cạnh ${index + 1} — chiều dài`}
+                    onChange={(next) => set(index, 'length', next)}
+                  />
+                </td>
+                <td className="py-1 pr-2">
+                  <NumberField
+                    value={row.angle}
+                    label={`Cạnh ${index + 1} — góc trong`}
+                    placeholder="chia đều"
+                    onChange={(next) => set(index, 'angle', next)}
+                  />
+                </td>
+                <td className="py-1">
+                  <Button
+                    variant="subtle"
+                    disabled={rows.length <= 3}
+                    onClick={() => setRows((prev) => prev.filter((_, i) => i !== index))}
+                  >
+                    Bỏ cạnh
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="secondary" onClick={() => setRows((prev) => [...prev, {}])}>
+          Thêm cạnh
+        </Button>
+        <Button
+          variant="primary"
+          disabled={!result || problem !== null}
+          onClick={() =>
+            result && onApply(result.boundaryM.map((p) => [p[0], p[1]] as [number, number]))
+          }
+        >
+          Dựng hình từ các cạnh
+        </Button>
+        {problem && <span className="text-status-pending">{problem}</span>}
+      </div>
     </div>
   );
 }

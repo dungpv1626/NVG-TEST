@@ -180,7 +180,7 @@ export function DesignCreatePage() {
     <>
       <PageHeader title="Tạo dự án thiết kế mới" breadcrumbs={BREADCRUMBS} />
 
-      <form onSubmit={handleSubmit} noValidate className="max-w-2xl rounded-card bg-surface p-6">
+      <form onSubmit={handleSubmit} noValidate>
         {/* v2: khuôn biểu mẫu + «Sau khi lưu» — chỉ ghi việc hệ thống thật sự làm khi lưu. */}
         <FormLayout
           afterSave={[

@@ -29,6 +29,7 @@ import {
   FileDown,
   History,
   Ruler,
+  Sparkles,
 } from 'lucide-react';
 import { formatDateTime } from '@nvg/shared';
 import {
@@ -65,6 +66,9 @@ import { IssueBody, issueTone } from './brief-issue';
 import { describeField } from './brief-describe';
 import { printBrief } from './brief-print';
 import { BriefSummary } from './brief-summary';
+import { BriefPrefillPanel } from './brief-prefill-panel';
+import { prefillBrief, type BriefPrefillResult } from '@/lib/ai-api';
+import { useAiStatus } from '@/hooks/use-site-surveys';
 import { SitePlanPreview } from './site-plan-preview';
 import { SectionHelp } from '@/components/ui/section-help';
 import { DESIGN_HELP } from './help-texts';
@@ -186,6 +190,19 @@ export function BriefPanel({
   const [draftBriefId, setDraftBriefId] = useState<string | null>(null);
   /** Thời điểm ghi thành công gần nhất — để người dùng THẤY là đã lưu, không phải đoán. */
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  /** Câu cần cuộn tới ngay sau khi biểu mẫu mở (từ chế độ xem) — ô chưa có trong DOM lúc bấm. */
+  const [pendingFlash, setPendingFlash] = useState<string | null>(null);
+  /** Khối «Điền sẵn từ khảo sát» đang mở; `applied` = số câu vừa áp, để báo lại một dòng. */
+  const [prefillRequest, setPrefillRequest] = useState<Promise<BriefPrefillResult> | null>(null);
+  const [prefillApplied, setPrefillApplied] = useState<number | null>(null);
+  const { data: aiStatus } = useAiStatus();
+  const canPrefill = !readOnly && aiStatus !== undefined && aiStatus.briefPrefill !== 'off';
+  useEffect(() => {
+    if (!editing || !pendingFlash) return;
+    const id = `brief-${pendingFlash.replace(/\./g, '-')}`;
+    requestAnimationFrame(() => flashTo(id));
+    setPendingFlash(null);
+  }, [editing, pendingFlash]);
 
   // Chỉ nạp lại khi ĐỔI bản ghi, không phải mỗi lần vẽ lại: nạp lại giữa chừng là xoá những
   // gì người dùng vừa gõ (Webapp Flow 6.3).
@@ -218,8 +235,19 @@ export function BriefPanel({
   /** Bản đã xác nhận là bất biến — sửa nó nghĩa là lập phiên bản mới. */
   const needsNewVersion = Boolean(current?.confirmed_at);
 
-  function startEditing() {
-    setStepId(null);
+  /**
+   * Mở biểu mẫu. `at` = câu cần tới (bấm một dòng «Còn thiếu» ở chế độ xem): mở thẳng bước chứa câu ấy, mở
+   * câu tùy chọn đang gấp, rồi cuộn tới sau khi biểu mẫu đã vẽ (`pendingFlash`).
+   */
+  function startEditing(at?: { sectionId: string; path: string }) {
+    setStepId(at?.sectionId ?? null);
+    if (at) {
+      const target = form.sections
+        .find((section) => section.id === at.sectionId)
+        ?.fields.find((field) => field.path === at.path);
+      if (target?.optional) setShowOptional((prev) => ({ ...prev, [at.sectionId]: true }));
+      setPendingFlash(at.path);
+    }
     // Đồng bộ NGAY lúc mở, không chờ người dùng đụng vào phần Thành viên gia đình: đầu bài
     // đã lưu trước 07/09/2026 chưa có dòng phòng ngủ nào, nên mở ra sẽ thấy một danh sách
     // không gian thiếu hẳn phòng ngủ và không hiểu vì sao.
@@ -480,6 +508,32 @@ export function BriefPanel({
       requestAnimationFrame(() => flashTo(`brief-${path.replace(/\./g, '-')}`));
     };
 
+    /**
+     * Ô điền ngay trong khung «Còn thiếu» (anh Dũng 27/10/2026: «thông tin thiếu nhưng không có phần nào điền
+     * thêm ngay tại đó»). Cùng `draft` / `setField` với biểu mẫu nên đi chung đường tự lưu; trả lời xong thì dòng
+     * tự rời danh sách vì điểm tính lại. Ô lớn (bảng phòng, gia đình, đa giác, bốn mặt…) không nhét vừa cột
+     * 20rem — vẫn chuyển tới bước của nó.
+     */
+    const inlineField = (item: MissingItem) => {
+      const visible = shown.find((v) => v.field.path === item.path);
+      if (!visible || isWide(visible.field) || item.path.startsWith('legacy.')) return null;
+      return (
+        <BriefField
+          field={visible.field}
+          value={valueAtPath(draft, item.path)}
+          onChange={(value) => setField(item.path, value)}
+          issues={issuesFor(item.path)}
+          projectId={projectId}
+          floors={draft.floors ?? 1}
+          family={draft.family}
+          anchorId={null}
+        />
+      );
+    };
+    /** Câu bắt buộc còn thiếu đầu tiên của một bước — bấm bước có «thiếu n» là tới thẳng câu ấy. */
+    const firstMissingIn = (sectionId: string) =>
+      score.missing.find((item) => item.sectionId === sectionId && !item.optional)?.path;
+
     // Hai cột (07/10/2026): ô ngắn đứng cạnh nhau, ô lớn trải cả hàng — một bước ngắn đi gần nửa.
     const fieldsOf = (list: typeof step.fields) =>
       list.map(({ field }) => (
@@ -497,6 +551,9 @@ export function BriefPanel({
             floors={draft.floors ?? 1}
             family={draft.family}
             areaBudget={field.path === 'required_spaces' ? areaBudget : undefined}
+            siteAreaM2={
+              field.path === 'site.boundary_m' ? (draft.site?.area_m2 ?? undefined) : undefined
+            }
           />
         </div>
       ));
@@ -538,12 +595,45 @@ export function BriefPanel({
     return (
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-6">
+          {canPrefill && !prefillRequest && (
+            <div className="flex flex-wrap items-center gap-3 rounded-card bg-surface p-3">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setPrefillApplied(null);
+                  setPrefillRequest(prefillBrief(projectId));
+                }}
+              >
+                <Sparkles className="size-4" />
+                Điền sẵn từ khảo sát
+              </Button>
+              <span className="text-fg-subtle">
+                {prefillApplied !== null
+                  ? `Đã áp ${prefillApplied} câu. Phần còn thiếu ở khung «Còn thiếu» bên phải.`
+                  : 'Máy đọc biên bản khảo sát, lời chủ nhà và báo cáo của Kinh doanh rồi đề xuất câu trả lời — hoặc điền tay từ đầu.'}
+              </span>
+            </div>
+          )}
+          {prefillRequest && (
+            <BriefPrefillPanel
+              request={prefillRequest}
+              draft={draft}
+              onClose={() => setPrefillRequest(null)}
+              onApply={(entries) => {
+                for (const entry of entries) setField(entry.path, entry.value);
+                setPrefillApplied(entries.length);
+                setPrefillRequest(null);
+              }}
+            />
+          )}
           <StepBar
             parts={form.parts}
             steps={steps}
             index={index}
             missingIn={missingIn}
-            onGo={goTo}
+            onGo={(sectionId) =>
+              goTo(sectionId, sectionId === step.section.id ? undefined : firstMissingIn(sectionId))
+            }
           />
 
           <section
@@ -713,6 +803,7 @@ export function BriefPanel({
           issues={issues}
           threshold={threshold}
           onJump={(sectionId, path) => goTo(sectionId, path)}
+          inlineField={inlineField}
           onJumpPath={(paths) => {
             for (const path of paths) {
               const sectionId = sectionOfPath(path);
@@ -740,7 +831,7 @@ export function BriefPanel({
         message="Chưa có đầu bài. Ghi nhận khu đất, quy mô, nhu cầu của gia đình và ngân sách trước khi dựng phương án."
         action={
           readOnly ? undefined : (
-            <Button variant="primary" onClick={startEditing}>
+            <Button variant="primary" onClick={() => startEditing()}>
               Lập đầu bài
             </Button>
           )
@@ -794,7 +885,7 @@ export function BriefPanel({
                 </Button>
               )}
               {!readOnly && (
-                <Button variant="secondary" onClick={startEditing}>
+                <Button variant="secondary" onClick={() => startEditing()}>
                   {current.confirmed_at ? 'Điều chỉnh đầu bài' : 'Sửa đầu bài'}
                 </Button>
               )}
@@ -937,6 +1028,9 @@ export function BriefPanel({
         issues={issues}
         threshold={threshold}
         artifactId={current.artifact_id}
+        // Chế độ xem: bấm câu thiếu = mở biểu mẫu ở đúng câu ấy (trước đây liên kết trỏ neo của biểu mẫu, không
+        // có trên trang xem nên bấm không xảy ra gì). Người chỉ xem thì dòng là chữ (5.4).
+        onJump={readOnly ? undefined : (sectionId, path) => startEditing({ sectionId, path })}
         onJumpPath={(paths) => {
           for (const path of paths) if (flashTo(viewAnchor(path))) return;
         }}
@@ -1118,31 +1212,74 @@ export function splitMissing(missing: readonly MissingItem[]): {
 function MissingList({
   items,
   onJump,
+  inlineField,
 }: {
   items: MissingItem[];
   onJump?: (sectionId: string, path: string) => void;
+  inlineField?: (item: MissingItem) => React.ReactNode;
 }) {
+  // Câu đang mở ô điền tại chỗ. Trả lời xong thì câu rời danh sách — ô đóng theo.
+  const [open, setOpen] = useState<string | null>(null);
   return (
     <ul className="mt-2 space-y-1">
-      {items.map((item) => (
-        <li key={item.path}>
-          <a
-            href={`#brief-${item.path.replace(/\./g, '-')}`}
-            onClick={
-              onJump
-                ? (event) => {
-                    event.preventDefault();
-                    onJump(item.sectionId, item.path);
-                  }
-                : undefined
-            }
-            className="flex min-h-10 flex-wrap items-center gap-x-1 text-brand hover:underline"
-          >
+      {items.map((item) => {
+        const inline = inlineField?.(item) ?? null;
+        const title = (
+          <>
             {item.label}
             <span className="text-fg-subtle">— {item.sectionTitle}</span>
-          </a>
-        </li>
-      ))}
+          </>
+        );
+        if (inline) {
+          const expanded = open === item.path;
+          return (
+            <li key={item.path}>
+              <button
+                type="button"
+                aria-expanded={expanded}
+                onClick={() => setOpen(expanded ? null : item.path)}
+                className="flex min-h-10 w-full flex-wrap items-center gap-x-1 text-left text-brand hover:underline"
+              >
+                {expanded ? (
+                  <ChevronUp className="size-4 shrink-0" />
+                ) : (
+                  <ChevronDown className="size-4 shrink-0" />
+                )}
+                {title}
+              </button>
+              {expanded && (
+                <div className="mt-1 mb-2 rounded-sm bg-surface-sunken p-3">
+                  {inline}
+                  {onJump && (
+                    <button
+                      type="button"
+                      onClick={() => onJump(item.sectionId, item.path)}
+                      className="mt-2 text-sm text-fg-subtle hover:text-fg hover:underline"
+                    >
+                      Xem câu này trong biểu mẫu
+                    </button>
+                  )}
+                </div>
+              )}
+            </li>
+          );
+        }
+        return (
+          <li key={item.path}>
+            {onJump ? (
+              <button
+                type="button"
+                onClick={() => onJump(item.sectionId, item.path)}
+                className="flex min-h-10 w-full flex-wrap items-center gap-x-1 text-left text-brand hover:underline"
+              >
+                {title}
+              </button>
+            ) : (
+              <p className="flex min-h-10 flex-wrap items-center gap-x-1">{title}</p>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -1161,8 +1298,11 @@ function CompletenessPanel({
   artifactId,
   onJump,
   onJumpPath,
+  inlineField,
   children,
 }: {
+  /** Ô điền tại chỗ cho một câu thiếu (chế độ nhập); `null` = câu ấy phải sang bước của nó. */
+  inlineField?: (item: MissingItem) => React.ReactNode;
   /** Khối thêm dưới cùng của cột (tóm tắt đầu bài). */
   children?: React.ReactNode;
   score: ReturnType<typeof scoreBrief>;
@@ -1221,7 +1361,8 @@ function CompletenessPanel({
       {requiredMissing.length > 0 && (
         <div className="rounded-card bg-surface p-4">
           <p className="font-medium">Còn thiếu ({requiredMissing.length})</p>
-          <MissingList items={requiredMissing} onJump={onJump} />
+          {inlineField && <p className="mt-1 text-fg-subtle">Bấm một câu để điền ngay tại đây.</p>}
+          <MissingList items={requiredMissing} onJump={onJump} inlineField={inlineField} />
         </div>
       )}
       {optionalMissing.length > 0 && (
@@ -1232,7 +1373,7 @@ function CompletenessPanel({
           <p className="mt-1 text-fg-subtle">
             Bỏ trống vẫn dựng được phương án; trả lời thêm thì mức độ đầy đủ tăng.
           </p>
-          <MissingList items={optionalMissing} onJump={onJump} />
+          <MissingList items={optionalMissing} onJump={onJump} inlineField={inlineField} />
         </details>
       )}
 

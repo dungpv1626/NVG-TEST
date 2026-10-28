@@ -86,8 +86,12 @@ routes:
 
   kb_label_normalize:
     provider: gemini
-    model: gemini-2.5-flash
-    pricing: { input_per_1m_usd: 0.3, output_per_1m_usd: 2.5 }
+    # 27/10/2026: anh Dũng thay khoá gói miễn phí; khoá mới (project mới) bị Google trả 404 «gemini-2.5-flash is no
+    # longer available to new users» → chuyển sang gemini-3.8-flash (đo bằng countTokens: 200). Mức nghĩ thấp như
+    # các tuyến 3.8 khác — mặc định `high` từng ăn hết ngân sách token.
+    model: gemini-3.8-flash
+    thinking_level: low
+    pricing: { input_per_1m_usd: 0.75, output_per_1m_usd: 3.75 }
     max_data_class: 3
     enabled: true
     purpose: Chuẩn hoá nhãn phòng trích từ bản vẽ cũ.
@@ -106,8 +110,12 @@ routes:
   # 3 trước khi có ảnh thật của khách chạm vào route này, hoặc trước khi triển khai production.
   site_boundary_extract:
     provider: gemini
-    model: gemini-2.5-flash
-    pricing: { input_per_1m_usd: 0.3, output_per_1m_usd: 2.5 }
+    # 27/10/2026: anh Dũng thay khoá gói miễn phí; khoá mới (project mới) bị Google trả 404 «gemini-2.5-flash is no
+    # longer available to new users» → chuyển sang gemini-3.8-flash (đo bằng countTokens: 200). Mức nghĩ thấp như
+    # các tuyến 3.8 khác — mặc định `high` từng ăn hết ngân sách token.
+    model: gemini-3.8-flash
+    thinking_level: low
+    pricing: { input_per_1m_usd: 0.75, output_per_1m_usd: 3.75 }
     max_data_class: 2
     enabled: true
     purpose: Đọc ảnh trích lục/sổ đỏ thành danh sách cạnh có cấu trúc để dựng ranh giới thửa đất.

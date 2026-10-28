@@ -47,12 +47,21 @@ const FEATURES = [
       'Chỉ huy trưởng nói nhật ký → máy xếp việc đã làm, vật tư, vướng mắc, an toàn, quân số, thời tiết; tắt thì đưa nguyên lời đã chép vào ô Nội dung.',
     provider: 'Google Gemini Flash — gói trả phí (không dùng dữ liệu để huấn luyện)',
   },
+  {
+    key: 'briefPrefill' as const,
+    param: 'ai.brief_prefill_enabled',
+    label: 'Điền sẵn đầu bài thiết kế từ khảo sát',
+    detail:
+      'Đọc biên bản khảo sát thiết kế, lời chủ nhà đã chép chữ và báo cáo khảo sát đã duyệt của Kinh doanh → đề xuất câu trả lời; kiến trúc sư chọn câu nào dùng. Tắt thì điền tay.',
+    provider: 'Google Gemini Flash — gói trả phí (không dùng dữ liệu để huấn luyện)',
+  },
 ];
 
 const FEATURE_LABEL: Record<string, string> = {
   transcribe: 'Chuyển giọng nói',
   survey_summary: 'Viết báo cáo khảo sát',
   site_log_draft: 'Xếp mục nhật ký công trường',
+  brief_prefill: 'Điền sẵn đầu bài thiết kế',
 };
 
 const MODE_TEXT: Record<AiMode, string> = {

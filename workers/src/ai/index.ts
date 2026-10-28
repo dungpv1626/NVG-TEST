@@ -8,6 +8,8 @@
  *   POST /ai/site-log-draft  — một đoạn ghi âm nhật ký công trường → chữ → nháp các mục (Đợt 2 — 2B);
  *                              `purpose: 'transcript'` chỉ chép chữ (lời khách báo bảo hành — 2F)
  *   POST /ai/design-transcribe — một đoạn ghi âm của Thiết kế (khảo sát, ý kiến khách) → chữ (5A)
+ *   POST /ai/brief-prefill   — khảo sát thiết kế + khảo sát CRM đã duyệt → ĐỀ XUẤT câu trả lời đầu bài
+ *                              (không ghi gì; kiến trúc sư chọn rồi áp vào bản nháp — `brief-prefill.ts`)
  *
  * Hàng rào chi phí (CLAUDE.md 6.4, chủ dự án chốt «AI làm bằng giả lập trước»):
  *   · `AI_FAKE=1` (chỉ đặt trong `workers/.dev.vars`) → trả kết quả MẪU, không gọi ai cả.
@@ -27,6 +29,21 @@ import {
   type SiteLogVoiceDraft,
 } from '@nvg/shared';
 import { stripWhisperHallucinations } from './whisper-hallucination';
+import {
+  aiBriefPrefillSchema,
+  normalizePrefill,
+  type AiBriefPrefillSuggestion,
+} from '@nvg/shared/design';
+import { filledSiteDetails } from '@nvg/shared';
+import { readEffectiveBriefForm } from '../design/brief/form-config';
+import {
+  customerIdentities,
+  fakePrefill,
+  prefillDocument,
+  prefillPrompt,
+  PREFILL_RESPONSE_SCHEMA,
+  type PrefillSources,
+} from './brief-prefill';
 
 export interface AiEnv extends DesignEnv {
   /**
@@ -76,22 +93,26 @@ async function switchOn(env: AiEnv, key: string): Promise<boolean> {
   return Number(data) === 1;
 }
 
-async function modes(env: AiEnv): Promise<{ transcribe: Mode; summary: Mode; siteLog: Mode }> {
+async function modes(
+  env: AiEnv,
+): Promise<{ transcribe: Mode; summary: Mode; siteLog: Mode; briefPrefill: Mode }> {
   const fake = (name: string) =>
     env.AI_FAKE === '1' ||
     (env.AI_FAKE ?? '')
       .split(',')
       .map((v) => v.trim())
       .includes(name);
-  const [t, s, l] = await Promise.all([
+  const [t, s, l, b] = await Promise.all([
     switchOn(env, 'ai.transcribe_enabled'),
     switchOn(env, 'ai.survey_summary_enabled'),
     switchOn(env, 'ai.site_log_enabled'),
+    switchOn(env, 'ai.brief_prefill_enabled'),
   ]);
   return {
     transcribe: fake('transcribe') ? 'fake' : t && env.AI ? 'on' : 'off',
     summary: fake('summary') ? 'fake' : s && env.GEMINI_PAID_API_KEY ? 'on' : 'off',
     siteLog: fake('site_log') ? 'fake' : l && env.GEMINI_PAID_API_KEY ? 'on' : 'off',
+    briefPrefill: fake('brief_prefill') ? 'fake' : b && env.GEMINI_PAID_API_KEY ? 'on' : 'off',
   };
 }
 
@@ -477,6 +498,222 @@ assistantApp.post('/site-log-draft', async (c) => {
 // ---------------------------------------------------------------------------------------------
 // Ghi âm của Thiết kế → chữ (Đợt 5 — 5A): lời chủ nhà lúc khảo sát, ý kiến khách từng vòng
 // ---------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------
+// Khảo sát → đề xuất câu trả lời đầu bài thiết kế (anh Dũng 27/10/2026)
+// ---------------------------------------------------------------------------------------------
+/**
+ * Đọc mọi nguồn qua RLS của người gọi: khảo sát CRM người gọi không xem được thì đơn giản là không có, và màn
+ * hình nói rõ. Người gọi phải sửa được hồ sơ thiết kế (đề xuất chỉ có ích cho người điền đầu bài). Không ghi gì.
+ */
+assistantApp.post('/brief-prefill', async (c) => {
+  const token = bearer(c);
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  const body = (await c.req.json().catch(() => ({}))) as { project_id?: string };
+  if (!body.project_id) return c.json({ error: 'Thiếu hồ sơ thiết kế.' }, 400);
+
+  const db = await asUser(c.env, token);
+  const { data: writable } = await db.rpc('rls_design_project_writable', {
+    p_project_id: body.project_id,
+  });
+  if (!writable) {
+    return c.json(
+      { error: 'Chỉ người sửa được hồ sơ thiết kế này mới điền sẵn được đầu bài.' },
+      403,
+    );
+  }
+
+  const mode = (await modes(c.env)).briefPrefill;
+  if (mode === 'off') {
+    return c.json(
+      {
+        error:
+          'Chức năng điền sẵn đầu bài chưa bật — điền tay như thường. Quản trị bật ở trang Trợ lý AI khi chủ dự án duyệt chi phí.',
+      },
+      409,
+    );
+  }
+
+  const [{ data: project }, { data: surveys }, { data: recs }, { data: brief }] = await Promise.all(
+    [
+      db
+        .from('design_projects')
+        .select('id, company_id, opportunity_id, customer:customers(name, phone, address)')
+        .eq('id', body.project_id)
+        .maybeSingle(),
+      db
+        .from('design_surveys')
+        .select(
+          'land_width, land_depth, land_area, orientation, measurement_notes, surrounding_notes, usage_notes, notes, surveyed_at, created_at',
+        )
+        .eq('design_project_id', body.project_id)
+        .is('deleted_at', null)
+        .order('surveyed_at', { ascending: false, nullsFirst: false })
+        .limit(1),
+      db
+        .from('design_survey_recordings')
+        .select('transcript, created_at')
+        .eq('design_project_id', body.project_id)
+        .eq('transcript_status', 'xong')
+        .order('created_at', { ascending: true }),
+      db
+        .from('design_briefs')
+        .select('design_task, functional_needs, style_note, site_condition')
+        .eq('design_project_id', body.project_id)
+        .eq('is_current_version', true)
+        .is('deleted_at', null)
+        .maybeSingle(),
+    ],
+  );
+  if (!project) return c.json({ error: 'Không tìm thấy hồ sơ thiết kế.' }, 404);
+
+  // Báo cáo khảo sát CRM ĐÃ DUYỆT của cơ hội gắn với hồ sơ — qua RLS của người gọi.
+  let crm: PrefillSources['crm'] = null;
+  const opportunityId = (project as { opportunity_id?: string | null }).opportunity_id;
+  if (opportunityId) {
+    const { data: site } = await db
+      .from('site_surveys')
+      // `site_surveys` không có `company_id` — mã pháp nhân (chọn bộ ô phiếu riêng) lấy qua cơ hội.
+      .select('needs, notes, site_details, opportunity:opportunities(company:companies(code))')
+      .eq('opportunity_id', opportunityId)
+      .eq('report_status', 'da_duyet')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (site) {
+      const row = site as unknown as {
+        needs: string | null;
+        notes: string | null;
+        site_details: Record<string, unknown> | null;
+        opportunity: { company: { code?: string } | null } | null;
+      };
+      crm = {
+        needs: row.needs,
+        notes: row.notes,
+        details: filledSiteDetails(row.opportunity?.company?.code, row.site_details),
+      };
+    }
+  }
+
+  const sources: PrefillSources = {
+    designSurvey: ((surveys ?? [])[0] ?? null) as PrefillSources['designSurvey'],
+    transcripts: (recs ?? []).map((r) => (r.transcript as string) ?? '').filter(Boolean),
+    legacy: (brief ?? null) as PrefillSources['legacy'],
+    crm,
+  };
+  const customer = (
+    project as { customer?: { name?: string; phone?: string; address?: string } | null }
+  ).customer;
+  const document = prefillDocument(sources, customerIdentities(customer));
+  const used = {
+    design_survey: sources.designSurvey !== null,
+    transcripts: sources.transcripts.length,
+    crm_survey: crm !== null,
+    crm_linked: Boolean(opportunityId),
+  };
+  if (!document) {
+    return c.json(
+      {
+        error:
+          'Chưa có gì để đọc: hồ sơ chưa có biên bản khảo sát, ghi âm đã chép chữ hay báo cáo khảo sát đã duyệt của Kinh doanh.',
+      },
+      400,
+    );
+  }
+
+  const form = await readEffectiveBriefForm(db);
+  const user = await actorId(db);
+  const base = {
+    company_id: (project as { company_id: string }).company_id,
+    user_id: user,
+    feature: 'brief_prefill',
+    entity_type: 'design_projects',
+    entity_id: body.project_id,
+  };
+
+  let suggestions: AiBriefPrefillSuggestion[];
+  if (mode === 'fake') {
+    suggestions = fakePrefill(sources);
+    await logCall(c.env, { ...base, provider: 'gia_lap', model: null, is_fake: true, ok: true });
+  } else {
+    try {
+      const result = await geminiBriefPrefill(
+        c.env.GEMINI_PAID_API_KEY!,
+        prefillPrompt(form.config, document),
+      );
+      suggestions = result.suggestions;
+      await logCall(c.env, {
+        ...base,
+        provider: 'gemini_paid',
+        model: SUMMARY_MODEL,
+        is_fake: false,
+        input_units: result.inputTokens,
+        output_units: result.outputTokens,
+        cost_usd:
+          (result.inputTokens * GEMINI_USD_PER_MTOK.input +
+            result.outputTokens * GEMINI_USD_PER_MTOK.output) /
+          1_000_000,
+        ok: true,
+      });
+    } catch (e) {
+      await logCall(c.env, {
+        ...base,
+        provider: 'gemini_paid',
+        model: SUMMARY_MODEL,
+        is_fake: false,
+        ok: false,
+        error: e instanceof Error ? e.message : String(e),
+      });
+      // 503 / 429 = Gemini đang quá tải (gặp thật 27/10/2026), lượt hỏng không tính tiền — nói người dùng thử lại.
+      const busy = e instanceof Error && /Gemini trả (503|429)/.test(e.message);
+      return c.json(
+        {
+          error: busy
+            ? 'Dịch vụ AI đang quá tải. Thử lại sau ít phút, hoặc điền tay đầu bài như thường.'
+            : 'Máy chưa đọc được khảo sát. Điền tay đầu bài như thường.',
+        },
+        502,
+      );
+    }
+  }
+
+  const { accepted, rejected } = normalizePrefill(form.config, suggestions);
+  return c.json({ accepted, rejected, used, fake: mode === 'fake' });
+});
+
+async function geminiBriefPrefill(
+  key: string,
+  prompt: string,
+): Promise<{ suggestions: AiBriefPrefillSuggestion[]; inputTokens: number; outputTokens: number }> {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${SUMMARY_MODEL}:generateContent?key=${key}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: PREFILL_RESPONSE_SCHEMA,
+          temperature: 0.1,
+        },
+      }),
+    },
+  );
+  if (!res.ok) throw new Error(`Gemini trả ${res.status}`);
+  const json = (await res.json()) as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+  };
+  const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
+  // Kiểm theo hợp đồng: sai hình thì coi như lượt hỏng, không đoán.
+  const parsed = aiBriefPrefillSchema.parse(JSON.parse(text));
+  return {
+    suggestions: parsed.suggestions,
+    inputTokens: json.usageMetadata?.promptTokenCount ?? 0,
+    outputTokens: json.usageMetadata?.candidatesTokenCount ?? 0,
+  };
+}
+
 /**
  * Chỉ chép chữ, không tóm tắt. Tệp ở kho `design-audio`, thư mục đầu = dự án thiết kế; người gọi
  * phải sửa được hồ sơ thiết kế đó. Không ghi gì vào CSDL — giao diện đặt chữ vào ô để người ghi

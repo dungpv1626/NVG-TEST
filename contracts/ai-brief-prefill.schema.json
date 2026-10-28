@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-brief-prefill.schema.json",
+  "title": "AiBriefPrefill",
+  "description": "Gemini đọc khảo sát thiết kế (số đo, ghi chú, lời chủ nhà đã chép chữ) và báo cáo khảo sát CRM đã duyệt rồi ĐỀ XUẤT câu trả lời cho các câu của đầu bài (anh Dũng 27/10/2026). Không phải artifact bất biến và không ghi thẳng vào đầu bài: Worker kiểm từng giá trị theo `BRIEF_FORM` (đúng mã lựa chọn, đúng khoảng số), loại giá trị sai; kiến trúc sư chọn câu nào dùng rồi mới gộp vào bản nháp. `value` luôn là CHUỖI để một lược đồ phủ mọi kiểu ô — Worker đổi kiểu theo ô. Mỗi đề xuất kèm câu gốc làm căn cứ: không có căn cứ trong lời đã nói thì không đề xuất (\"chưa hỏi\" khác \"trả lời không\", T65).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["suggestions"],
+  "properties": {
+    "suggestions": {
+      "type": "array",
+      "maxItems": 120,
+      "items": { "$ref": "#/$defs/suggestion" }
+    }
+  },
+  "$defs": {
+    "suggestion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "value", "quote"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Đường dẫn câu hỏi trong `BRIEF_FORM`, ví dụ `site.width_m`, `household.religion`."
+        },
+        "value": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Ô số: con số theo đơn vị của câu (dấu chấm thập phân). Ô chọn: đúng MÃ lựa chọn. Ô chọn nhiều: các mã cách nhau bởi dấu phẩy. Ô có / không: `true` hoặc `false`. Ô chữ: nguyên văn."
+        },
+        "quote": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Câu gốc trong tài liệu khảo sát làm căn cứ cho giá trị — chép nguyên văn, ngắn."
+        }
+      }
+    }
+  }
+}

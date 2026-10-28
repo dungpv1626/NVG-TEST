@@ -1042,6 +1042,32 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
     bản, đề nghị thu tiền, kết thúc chờ hết bảo hành, 7 mục đầu bài, NVS phiếu giao + báo giá thuê. Chỗ hổng CÒN ĐÚNG: công
     trình mở từ hợp đồng của cơ hội (không gói thầu / thiết kế) KHÔNG có ngân sách (`project_budgets` chỉ dựng từ gói thầu
     trúng hoặc hồ sơ thiết kế) → đề nghị mua gắn công trình nhiều khả năng bị chặn ở mã chi phí (chưa chạy thử). Chưa sửa PDF.
+- **Đầu bài AI Design dễ điền hơn (27/10/2026 khuya, anh Dũng điền thử bộ mẫu biệt thự 15 × 20 m):** trang «Tạo dự án thiết
+  kế mới» (cùng Khiếu nại, Gói thầu) bỏ thẻ `max-w-2xl` bọc ngoài `FormLayout` — cột ô nhập bị ép còn ~290 px; khung
+  «Còn thiếu» điền NGAY tại chỗ (ô ngắn mở `BriefField` trong khung phải, ô bảng vẫn sang bước của nó; chế độ xem bấm câu
+  thiếu = mở biểu mẫu đúng câu; bấm bước có «thiếu n» tới câu thiếu đầu tiên); bảng vẽ thửa đa giác kéo đỉnh
+  (`pages/tk/site-polygon-editor.tsx`, toán ở `site-polygon-math.ts`) + thẻ «Nhập theo chiều dài cạnh» (dùng
+  `polygonFromEdges`) — anh Dũng MỞ KHOÁ «Đa giác không đều» cùng ngày (gỡ `unavailable` ở `brief-form.json`, T173); 0233 «Điền sẵn từ khảo sát»: Worker `POST /ai/brief-prefill`
+  (`workers/src/ai/brief-prefill.ts`) đọc khảo sát thiết kế + lời chủ nhà đã chép + báo cáo khảo sát CRM ĐÃ DUYỆT của cơ
+  hội gắn hồ sơ (qua RLS người gọi, lược danh tính), Gemini trả ĐỀ XUẤT theo hợp đồng `contracts/ai-brief-prefill`,
+  `normalizePrefill` (`shared/src/design/brief-prefill.ts`) kiểm mã lựa chọn / khoảng số / kiểu lưu; khối
+  `brief-prefill-panel.tsx` cho chọn câu, câu đã có trả lời không chọn sẵn; công tắc `ai.brief_prefill_enabled` TRỐNG (tắt),
+  giả lập `AI_FAKE=brief_prefill`. Chỉ ô đơn — bảng gia đình / không gian / đa giác để người khai. Lời gọi bắt đầu từ CÚ
+  BẤM (không từ `useEffect` — chế độ kiểm tra của React gọi hai lần, đo thật). Đo thật (anh Dũng cho): lượt 1 THU5 3.982
+  token vào / 39 ra ≈ 0,0013 USD, 1 đề xuất đúng có căn cứ; lượt 2 Gemini 503 quá tải (không tính tiền) — câu báo «quá tải,
+  thử lại». Công tắc đang BẬT trên CSDL máy. Cùng tối: anh Dũng thay hai khoá Gemini trong `workers/.dev.vars` (kiểm bằng
+  `countTokens`, miễn phí); khoá gói miễn phí mới bị Google trả 404 với `gemini-2.5-flash` («không mở cho người dùng mới») nên
+  `kb_label_normalize` + `site_boundary_extract` (nút «Tải ảnh trích lục») chuyển sang `gemini-3.8-flash`, `thinking_level: low`.
+  Dữ liệu thử cho anh Dũng: hồ sơ `NVO-TK-2026-9271` (`4cff7077-bbbd-4756-b52f-ad46f0a41481`, đầu bài trống) gắn cơ hội
+  `NVO-CH-2026-9271` có báo cáo khảo sát ĐÃ DUYỆT, biên bản khảo sát thiết kế lô méo 8 × 20 m và một đoạn lời chủ nhà đã chép
+  (`backup/tk-dau-bai-de-dien/du-lieu-thu.sql`). Dựng dữ liệu lộ hai lỗi, đã sửa: câu đọc CRM chọn `company` trên
+  `site_surveys` (bảng không có cột ấy — phần CRM bị bỏ im lặng; nay qua `opportunity`), và lời chủ nhà «anh Mẫu» lọt tên sang
+  mô hình (nay lược thêm tên gọi — `customerIdentities`). Test case thật trên hồ sơ ấy (≈ 0,0036 USD, 4.579 / 901 token, kết quả
+  `backup/tk-dau-bai-de-dien/7-test-case.json`): 17 câu nhận đúng có căn cứ, nhưng 13 ô số / có-không bị loại vì Gemini trả «: 3,»
+  và lọt «Người quyết định = anh [đã lược]» → đã gọt dấu hai đầu giá trị (`trimValue`), loại giá trị chứa «[đã lược]», bỏ ô tên
+  người khỏi điền sẵn, lời dẫn nói rõ dạng giá trị. Phát lại câu trả lời đã ghi qua bộ kiểm mới (không tốn tiền,
+  `phat-lai.ts`): 29 câu nhận, 1 loại.
+  Ảnh: `backup/tk-dau-bai-de-dien/`.
 - Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
@@ -1068,6 +1094,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Điểm danh tổ đội (0232, câu 6) | Xong trên máy: tab «Điểm danh» → «Điểm danh tổ đội», `/kt/bang-cong-to-doi`. Quy tắc công là ĐỀ XUẤT anh Dũng nhận, chỉnh tham số được. Chưa thử trên điện thoại thật |
 | Bộ hồ sơ dự thầu demo (câu 19) | Có kịch bản `dau-thau` (`NVC-DA-2026-0648` trên máy) + tài liệu quy trình. CÒN: bộ mẫu Word hồ sơ dự thầu tự điền |
 | Soạn hợp đồng — tối 27/10 | Xong trên máy, kiểm trên trình duyệt (`backup/hd-khung-cao/`), phép thử `preview-follow`, `sentence-runs`. Hợp đồng thử `NVC-HD-2026-WORD1` đang CHỜ DUYỆT với bản 1 là mẫu gốc chưa điền (tải lên ngày 25/10) — cần TGĐ «Từ chối» rồi Kinh doanh gửi lại bằng «Lưu bản mới như màn hình và gửi»; giá trị đã đổi thành 3.000.000.000 đồng (anh Dũng bấm) |
+| Đầu bài dễ điền (0233)                | Xong trên máy, kiểm trên trình duyệt bằng `thietke.nvo@…`: ô thiếu điền tại chỗ, bảng vẽ đa giác (đã mở khoá), điền sẵn (giả lập + 1 lượt Gemini thật ≈ 0,0013 USD). Chưa có lượt thật trên biên bản khảo sát đầy đủ (lượt 2 gặp 503). Công tắc `ai.brief_prefill_enabled` = 1 trên máy |
 | Bộ mẫu hợp đồng                       | Bản DỰ THẢO (anh Dũng gửi, dùng như chính thức) — chờ pháp chế NVG rà; bảng hỏi mục 6 trong tệp «00_Huong_dan» từng bộ chờ NVG trả lời. Tài khoản ngân hàng ba công ty là số DEMO                                                                                                                                                                                               |
 | AI trên máy                           | **Chạy THẬT**: Whisper (Workers AI) + Gemini 2.5 Flash trả phí — `workers/.dev.vars` `AI_FAKE=` rỗng, công tắc `ai.transcribe_enabled` / `ai.survey_summary_enabled` = 1 ở CSDL máy. Muốn quay về giả lập: `AI_FAKE=1`                                                                                                                                                          |
 | Bản demo cũ `nvg.tests99.workers.dev` | Vẫn chạy bản trước GĐ1, CSDL `awaiwegmuykhctnysvou` — ở tài khoản khác, máy này KHÔNG vào được                                                                                                                                                                                                                                                                                  |
@@ -1095,6 +1122,9 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    gói thầu tạo từ cơ hội ở bước nào / ai làm; ai được gửi yêu cầu làm rõ / thay đổi ở NVO.
    (g) Có bỏ nhóm «Giá trị hợp đồng» ở tab Điều khoản, chỉ sửa giá trị ở «1. Thông tin» (một nơi nhập) không — đã hỏi anh Dũng.
    (h) Cập nhật PDF «Luồng nghiệp vụ 3 công ty» theo app hiện tại nếu anh Dũng muốn.
+   (i) Thửa đa giác ĐÃ MỞ (T173) — gặp hồ sơ đa giác thật thì đo bộ xếp bằng phát lại (dùng hình chữ nhật lớn nhất nội
+   tiếp, phần đất ngoài không dùng). (j) Điền sẵn từ khảo sát: thử thêm trên biên bản đầy đủ khi anh Dũng cho (lượt 2 gặp
+   503); cân nhắc mở rộng sang bảng gia đình / không gian (đề xuất từng dòng).
 1. **Anh Dũng đang chạy thử trên máy** — đã đi trọn: đầu mối → phân loại → khảo sát → duyệt → báo giá → gửi khách →
    Đàm phán → soạn hợp đồng (bộ mẫu NVC-HĐ-01) → duyệt → ký → công trình đã mở → quét bản đã ký. Hợp đồng «AB»
    `NVC-HD-2026-0501` (`ce44609b-3977-474c-887d-a747255bbd3a`, Đã ký, người chịu trách nhiệm Nguyễn Văn A — Kinh doanh
@@ -1187,7 +1217,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email.
 
-**Migration tiếp theo: 0233.** (Đã dùng tới 0232; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0234.** (Đã dùng tới 0233; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -1316,6 +1346,8 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Bản xem trước hợp đồng chạy theo ô đang sửa bằng khoá chỗ trống của mẫu; mẫu không in khoá thì tới đoạn có tên phần | Anh Dũng: «ấn vào phần nào thì preview phần đó cũng nhảy theo». Khoá là nguồn chung của hai chiều (bấm văn bản → ô, bấm ô → văn bản) |
 | Nhóm điều khoản mẫu không in: nói rõ «chỉ lưu trên hồ sơ», không tự chép vào văn bản; giá trị hợp đồng chỉ đổi khi người soạn bấm | Mẫu NVG viết sẵn câu chữ / phương án cho các phần ấy — tự chèn sẽ phá văn bản; giá trị hợp đồng dùng cho hạn mức duyệt nên không đổi ngầm |
 | Nút «Gửi phê duyệt» đầu trang KHÔNG gửi ngay khi pháp nhân có mẫu: mở khối gửi ở bước 4 nói rõ gửi bản nào; tệp Word còn `{…}` bị từ chối | Lỗi thật 27/10: giám đốc nhận mẫu gốc chưa điền vì nút gửi bản đã lưu gần nhất (tệp tải lên 25/10), mọi thứ điền sau không đi kèm |
+| Điền sẵn đầu bài từ khảo sát: máy chỉ ĐỀ XUẤT kèm câu gốc, kiến trúc sư chọn; không đè câu đã trả lời; chỉ ô đơn; tuyến ở khối AI chung (`/ai/*`, sổ `ai_calls`), không ở «AI Design» | Anh Dũng chọn nguồn khảo sát thiết kế + CRM (27/10). AI Design độc lập, chỉ ĐỌC đầu bài (8); đề xuất sai một dòng trong bảng khó thấy hơn một ô đơn; PRD 2.3 |
+| Mở khoá thửa đa giác khi đã có bảng vẽ (T173) — nhưng chỉ khi anh Dũng quyết, không tự mở | Haan khoá 22/09 vì bộ xếp chưa đo trên hồ sơ thật; anh Dũng chấp nhận rủi ro 27/10 |
 | Chỗ trống tự do liền nhau của cùng câu gộp một câu, ô nằm trong câu | Anh Dũng: «tách ra nhiều quá» — câu 20.2 thành 7 ô, mỗi ô chép lại cả câu |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 

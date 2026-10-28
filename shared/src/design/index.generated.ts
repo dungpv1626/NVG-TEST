@@ -3,6 +3,7 @@
  */
 
 export * from './ai-brief-digest.generated';
+export * from './ai-brief-prefill.generated';
 export * from './ai-facade-brief.generated';
 export * from './ai-facade-concept.generated';
 export * from './ai-facade-image.generated';
@@ -40,4 +41,4 @@ export * from './kb.generated';
  * hai phiên bản hợp đồng dữ liệu khác nhau — nói thẳng điều đó còn hơn để người dùng đọc một
  * câu lỗi kiểm kiểu không dẫn tới đâu.
  */
-export const CONTRACTS_FINGERPRINT = 'd416db3a97d1';
+export const CONTRACTS_FINGERPRINT = '759ba88efe32';
