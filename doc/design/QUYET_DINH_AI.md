@@ -4648,3 +4648,119 @@ credits are depleted`, `insufficient_quota` của OpenAI, `credit balance is too
 chưa có mức — chỉ được giới hạn token ra của tuyến chặn. (4) Lượt Sonnet 5 cũ (17–26/09, `medium`) từng ra 58.000–117.000 token —
 cao hơn giới hạn 45.000 mới; ở `low` chưa có số đo. Fable / Astra 8.000 token chưa có lượt thật nào — dễ bị cắt. (5) Phép kiểm
 cuối Workflow (`ai-design.ts`) không có phép thử chạy được (cần runtime Workers); phép thử phủ `proposeHouse` + client bọc.
+
+## T177 — Chương trình tự dời vách bản phác khi phòng mất lối vào / hụt sàn mà tầng còn dư (28/10/2026, anh Dũng đồng ý)
+
+**Bối cảnh.** Hồ sơ `NVO-TK-2026-9272` (biệt thự 15 × 20 m, 2 tầng), ba lượt thật 28/10 — Terra sáng (`1dd74b99`), Terra chiều
+(`2f443166`, 5 lời gọi), Gemini 3.1 Pro (`d919051b`, 3 lời gọi ok đầu) — đều qua tầng 1, hỏng ở tầng 2 vì đúng hai lỗi đổi qua đổi
+lại: phòng không lối vào (`sketch_room_no_access`) và phòng hụt sàn đầu bài (`arrange_room_below_brief_area`). Tầng 2 ~192 m², đầu
+bài đòi ~150 m²; phần dư nằm gần hết ở hành lang mô hình vẽ rộng 3–4 ô. Hai lượt mới chép thành fixture `ai-run-2f443166.json`,
+`ai-run-d919051b.json` (câu trả lời `output` lưu ở `design-artifacts/<hồ sơ>/ai_calls`, digest của `46d6eff3` như T174; không
+danh tính). Không gọi mô hình nào.
+
+**Làm** (`workers/src/design/ai/arrange/sketch-repair.ts`, nối ở `arrangeLevelCore`): bản phác hỏng một trong hai lỗi ấy (sau bước
+tha sàn T91 — tức tầng còn chỗ) thì chương trình sửa trên lưới rồi xếp lại tầng bằng bản đã sửa; không qua cổng thì như cũ, câu
+nhắc vẫn nói lỗi của bản phác MÔ HÌNH vẽ. Trước khi sửa, phòng lồi nắn về chữ nhật như bước đầu `sketchTrees`, hành lang lồi tách
+thành các đoạn chữ nhật (không cắt — cắt thì đứt lối đi); ô thang / thang máy / giếng trời không nhận, không mất ô nào. Ba phép,
+mỗi phép giữ mọi phòng là chữ nhật:
+- dời một đoạn vách thẳng một ô (đoạn nhỏ nhất mà mọi phòng hai phía có trọn cạnh trên đó);
+- phòng lấn một dải vào hành lang kề, phần hành lang còn lại tách hai đoạn chữ nhật đủ bề rộng;
+- phòng nhường một dải rộng đủ lọt lòng hành lang làm đoạn hành lang mới, nối hành lang sẵn có tới phòng mất lối vào.
+Phòng nhường chỗ không xuống dưới mức của nó (`roomMinimumM2`: sàn đầu bài là sàn cứng), cạnh ≥ 2 ô; hành lang còn đủ
+`corridor_clear_m`. Đoạn hành lang mới thành không gian thật của chương trình (như hành lang chương trình tự thêm, T48) — không
+thêm / bớt phòng nào của đầu bài. Tìm theo chùm, điểm từ điển: số phòng mất lối vào + chỉ vào qua ô thang; phần hụt dưới ngưỡng
+soát sàn; như trên nhưng đủ một cửa; khoảng cách tới hành lang đã nối thang; phần hụt tới đủ sàn. Chỉ nhận khi hết cả hai lỗi
+của phép soát trước khi xếp; cổng, luật bắt buộc T71, thang máy chồng khít vẫn do các bước sau quyết. Tầng qua nhờ sửa mang ghi chú
+`sketch_walls_moved`, vd «Bản phác tầng 2: "study_1" chỉ vào được qua ô thang; "study_1" chỉ vẽ khoảng 8,35 m² (đầu bài tối thiểu
+13 m²) — chương trình dời 3 đoạn vách rồi xếp lại, không gọi lại mô hình: "balcony_2" bớt 3 ô (còn khoảng 5,46 m²); "laundry_1" thêm
+2 ô …; "master_bedroom_1" bớt 5 ô (còn khoảng 28,8 m² ≥ 25 m² đầu bài); "study_1" thêm 6 ô (còn khoảng 14,13 m² ≥ 13 m² đầu bài).»
+Cấu hình: `kb/construction_norms.yaml` `sketch.repair_walls` (`max_moves` 40, `max_new_corridors` 4, `beam` 8, `patience` 4; vắng
+hoặc `max_moves: 0` = tắt).
+
+**Đo** (phát lại 61 lượt ghi / 256 vòng, ngữ cảnh Workflow, một tiến trình; đối chứng = cùng mã, `max_moves: 0`):
+
+| | Đối chứng | Dời vách |
+| --- | --- | --- |
+| Vòng qua cổng | 15 | **16** (+ `7c6de305` vòng 5, 69,3 điểm) |
+| Vòng mất qua cổng | — | 0 |
+| Vòng đổi lỗi (vẫn hỏng) | — | 15 (vd `182665ea` v1, `4a25b460` v2, `8eaaee7b` v2: hết lỗi tầng, còn lỗi cả nhà) |
+| Cả bộ / vòng lâu nhất | 1.584 s / 53 s | 1.763 s / 52 s (14 vòng chậm thêm > 5 s, lâu nhất `4b0268b1` v2 3,9 → 38,8 s) |
+| **3 lượt 28/10** (`1dd74b99`, `2f443166`, `d919051b`) | 0 / 12 vòng | **0 / 12** — không đổi |
+| `46d6eff3` | vòng 1 qua | vòng 1 qua, không đổi |
+
+**Giữ** (có lợi đo được, không vòng nào tụt, trong trần CPU). Nhưng **không gỡ được ba lượt hôm nay**: bản phác tầng 2 của chúng
+hụt cục bộ quá lớn (tổng phần hụt dưới ngưỡng soát 10–25 m²) — vd `2f443166`: dải sau chỉ 2 hàng ô giữa ô thang (mốc tầng 1) và
+mép nhà, `bedroom_3` / `bedroom_5` 6 ô cho sàn 17 / 15 m², phòng dư (`bedroom_4`, hành lang) ở bên kia ô thang và bị phòng phụ 1–2
+cột (giặt, WC) chặn mọi đường dời vách. Tìm cục bộ dừng ở điểm hụt 2,8–16 m²; muốn gỡ phải dựng lại cả dải sau (việc của khung
+xương T102 — khung cũng hỏng ở đây vì «dải sau sâu 2,7 m không chứa ba phòng ngủ») hoặc mô hình vẽ lại. Lượt `4a25b460` (THU5) nay
+dừng sớm sau lời gọi 4 thay vì 5 (lỗi tầng 4 hết, lỗi chính cả nhà lặp lại — T174), phép thử `ai-live-thu5-nhapho` đổi theo.
+
+Phép thử: `sketch-repair.test.ts` (6, lưới dựng tay: nới phòng hụt; không lấy của phòng đã ở mức; dải hành lang mới cho phòng mất
+lối vào; tắt tách hành lang; ô thang không đổi; lấn một phần hành lang), `ai-live-sketch-repair.test.ts` (7c6de305 vòng 5: tắt →
+hỏng tầng 2, bật → qua kèm ghi chú). Đột biến M249 (bỏ kiểm phòng nhường chỗ), M250 (dời cả vách ô thang): đo tay, cả hai ĐỎ.
+Bản vá + hai tệp kết quả phát lại: `backup/gd1-mat-bang/t177-doi-vach.patch`, `replay-t177new-0.jsonl`, `replay-t177ctl-0.jsonl`.
+
+**Còn hở.** (1) Đoạn hành lang mới làm hành lang tầng thành nhiều mẩu — cổng và thước chấm quyết có dùng được không; chưa đo riêng
+điểm C10 (hành lang phục vụ mấy phòng). (2) Phép sửa chạy lại ở mọi biến thể / bước quay lui của cùng một vòng (không nhớ kết
+quả) — nguồn chính của +11 % thời gian. (3) Kiểm thật cần một lượt mô hình mới trên 9272 sau khi đổi câu nhắc / đầu bài; phát lại
+không thay được.
+
+## T178 — Ô thang có chỗ trong cả nhà không: báo trước lời gọi mô hình (GIỮ); chọn ô thang tầng 1 theo cả nhà (ĐÃ THỬ, GỠ) (28/10/2026)
+
+**Bối cảnh.** Hồ sơ `NVO-TK-2026-9272` (biệt thự 15 × 20 m, khối xây được 12 × 16 m, 2 tầng): ba lượt thật 28/10 (`1dd74b99`,
+`2f443166`, `d919051b`) đều hỏng tầng 2 — phòng không lối vào / phòng ngủ hụt sàn. Giả thuyết: tầng 1 chọn ô thang theo điểm riêng
+tầng 1, tầng 2 chỉ còn dải sau ~2,7 m.
+
+**Đo giả thuyết trước (máy dò, không gọi mô hình).** Cài tạm một móc trong `evaluateHouse`: giữ nguyên tầng 1 đã xếp, đặt ô thang
+(cùng cỡ 3 × 5 m) ở MỌI chỗ trên lưới 1 m của khối (120 chỗ) rồi xếp tầng 2. Năm vòng đại diện (`2f443166` v1, v5; `1dd74b99` v2,
+v4; `d919051b` v1, v3): **0 / 120 chỗ** cho tầng 2 xếp được, lỗi y hệt ở mọi chỗ (`sketch_room_no_access` hoặc
+`arrange_room_below_brief_area`). Khung xương T102 dựng lại tầng 2 quanh ô thang ở chỗ mới cũng hỏng ở mọi chỗ: dải sau sâu 4–4,65 m
+cần 1.370–1.450 cm bề ngang cho ba phòng ngủ + giặt + WC trên 1.200 cm; dải trước cần 1.225–1.355 cm cho phòng ngủ chính + làm việc +
+thờ. Chỗ chặn không phải vị trí ô thang mà là: bản phác tầng 2 của mô hình (lỗi lối vào của chính nó) và khung xương chỉ biết dải một
+hàng phòng (túi giữa cạnh thang chỉ một chỗ chạm hành lang). Một lượt dò trên cả bộ ghi (lưới 2 m rồi 4 m) quá chậm (200–290 s mỗi vòng)
+— đã dừng; `02982bd7` v1–v2 có chỗ cho tầng trên xếp được nhưng bước quay lui cũ đã tìm ra, vòng ấy hỏng ở kiểm cả nhà.
+
+**Việc 1 — chọn ô thang tầng 1 theo cả nhà. ĐÃ THỬ, GỠ.** Đã dựng: sau bước dời T172 (1 ô), dời ô thang tầng 1 xa hơn tới
+`sketch.stair_fit.ground_choice.max_steps` (3) ô mỗi phía, chỉ ở chỗ ước lượng từ ĐẦU BÀI (phòng ghim tầng, diện tích + cạnh tối thiểu,
+bốn vùng quanh ô thang — `positionFit`) còn đủ chỗ cho mọi tầng trên, chỗ dư nhiều trước, tối đa `max_tries` (4) chỗ, chỉ nhận khi mọi
+tầng trên xếp được. Đo (phát lại 61 lượt / 256 vòng, ngữ cảnh Workflow, một tiến trình; đối chứng = cùng mã, bỏ `ground_choice`; đối
+chứng trùng từng vòng với kết quả T177):
+
+| | Đối chứng | Chọn theo cả nhà |
+| --- | --- | --- |
+| Vòng qua cổng | 16 | 16 |
+| Vòng đổi kết quả | — | 0 |
+| Cả bộ / vòng lâu nhất | 1.985 s / 63,5 s | 2.187 s / 81,5 s (32 vòng chậm thêm > 2 s, `02982bd7` v4–v5 53 → 81 s) |
+| Ba lượt 9272 | 0 / 12 vòng | 0 / 12 |
+| `46d6eff3` v1, `7c6de305` v5 | qua | qua, không đổi |
+
+Không có lợi, chậm thêm ~10 % — gỡ theo luật đo. Bản vá: `backup/gd1-mat-bang/t178-viec1-chon-o-thang-theo-ca-nha.patch`, kịch bản
+`zz-replay-t178.test.ts.keep` (biến `CTL=1` = đối chứng), kết quả `replay-t178ctl-0.jsonl`, `replay-t178new-0.jsonl`.
+
+**Việc 3 — báo trước lời gọi mô hình khi đầu bài chắc chắn không vừa. GIỮ.** `ai/stair-fit.ts` (hàm thuần): ô thang thẳng trục mọi tầng
+nên mỗi tầng có một chữ nhật cố định `sw × sl` trong khối `W × D`; phòng không đè ô thang nằm hẳn bên cạnh (bề ngang ≤ `W − sw`) hoặc
+trước / sau (chiều sâu ≤ `D − sl`) — định lý trục tách, không phải ước lượng. Với mỗi hướng thang: phòng có cạnh tối thiểu lớn hơn cả hai
+khoảng thì không có chỗ; phòng chỉ đặt được trước / sau phải vừa `W × (D − sl)`, phòng chỉ đặt được cạnh thang vừa `(W − sw) × D`, tổng
+vừa sàn còn lại. Tầng bị CHẶN chỉ khi HAI hướng đều hỏng. Cố ý đếm thiếu: cạnh / diện tích lọt lòng, ô thang nhỏ nhất theo loại thang,
+diện tích trừ dung sai cổng, chỉ phòng đầu bài ghim tầng; hành lang, tường, thang máy không cộng — nên không chặn hành lang (không chắc).
+- Nối vào `briefInfeasible` sau T112 (`ai/feasibility.ts` `stairFitIssue`) — Workflow và `generateAiPlan` dừng TRƯỚC lời gọi đầu.
+- Tuyến khởi động `POST /plan/runs` (và phát lại) chặn bằng cùng câu, 409, không mở dòng lượt chạy (`preparePlanStart` →
+  `ai/plan-preflight.ts`). Tuyến mới `GET /design/ai/plan/:projectId/preflight` trả `{ blocking, warnings }`; bước Mặt bằng
+  (`ai-plan-step.tsx`, hook `useAiPlanPreflight`) hiện câu chặn dưới nút «Xếp mặt bằng» và khoá nút, hoặc hiện cảnh báo «khá chật»
+  mà nút vẫn bấm được. Không gắn vào `briefConfirmBlock`: cổng xác nhận chỉ có đầu bài, không có kb (loại thang, cạnh dùng được).
+- Câu chặn ví dụ (lô 3,5 × 7 m): «Chưa tạo được mặt bằng vì đầu bài không xếp vừa khối nhà dù đặt ô thang ở đâu — tầng 1: Phòng
+  khách cần cạnh tối thiểu 2,7 m mà cạnh ô thang chỉ còn 1,3 m bề ngang, trước và sau ô thang chỉ còn 1,9 m chiều sâu; … Cần nới đầu
+  bài trước khi chạy: giảm diện tích tối thiểu hoặc số phòng ở tầng ấy, dời bớt phòng lên tầng khác, thu hẹp sân hoặc khoảng lùi, hoặc
+  tăng số tầng.»
+- Cấu hình `kb/construction_norms.yaml` `sketch.stair_fit` (`block: true`, `warn_share: 0.75`; bỏ mục = tắt). `warn_share` là số đề
+  xuất — trên 62 đầu bài ghi, vùng chặt nhất cao nhất 59 %, nên chưa đầu bài ghi nào chạm cảnh báo.
+- **Không chặn, không cảnh báo đầu bài ghi nào** (62 lượt, gồm `46d6eff3`, `7c6de305` đã qua cổng). **9272 không bị chặn, không bị
+  cảnh báo** (tầng 2 dùng ~52 % vùng chặt nhất): đầu bài ấy vừa khối nhà về diện tích và cạnh; nó hỏng vì bản phác và cách dựng tầng,
+  không vì đầu bài — báo là sai.
+- Phép thử `stair-fit.test.ts` (8); `ai-plan-step.test.tsx` thêm 2. Đột biến M251 (chặn khi MỘT hướng thang hỏng), M252 (quên bề ngang
+  còn lại cạnh thang): đo tay, cả hai ĐỎ.
+
+**Còn mở.** (1) 9272 cần câu nhắc / lượt mô hình mới (lỗi lối vào trên chính bản phác tầng 2) hoặc khung xương biết xếp HAI hàng phòng
+ở dải sau và phòng trong túi cạnh thang — đều chưa làm. (2) Kiểm chặn không biết hành lang; một đầu bài «vừa đủ» về diện tích vẫn có thể
+không dựng được — phần ấy chỉ thước chấm / cổng sau mới biết. (3) Chưa ghi vị trí ô thang đã chọn + độ sâu các dải thành dữ kiện cho
+câu nhắc (việc 1 gỡ nên không làm).

@@ -411,6 +411,23 @@ export function useAiDesignState(projectId: string, enabled = true) {
   });
 }
 
+/** Kiểm đầu bài trước khi xếp mặt bằng (T178): câu chặn + câu cảnh báo, không mở lượt, không gọi mô hình. */
+export interface AiPlanPreflight {
+  briefArtifactId: string | null;
+  blocking: string | null;
+  warnings: string[];
+}
+
+/** Đọc lại theo đầu bài đã xác nhận — xác nhận bản mới thì khoá đổi, câu kiểm đổi theo. */
+export function useAiPlanPreflight(projectId: string, briefArtifactId: string | null) {
+  return useQuery<AiPlanPreflight, Error>({
+    queryKey: ['ai_plan_preflight', projectId, briefArtifactId],
+    queryFn: () => designApi<AiPlanPreflight>(`/design/ai/plan/${projectId}/preflight`),
+    enabled: Boolean(projectId) && Boolean(briefArtifactId),
+    staleTime: 5 * 60_000,
+  });
+}
+
 /** Đánh dấu trạng thái nhánh AI đã cũ — gọi sau mỗi bước sinh ra kết quả mới. */
 export function useInvalidateAiDesign() {
   const queryClient = useQueryClient();

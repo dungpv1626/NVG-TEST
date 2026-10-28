@@ -13,9 +13,17 @@
  * không xếp được — cái sau chỉ tốn tiền, cái trước chặn người dùng.
  */
 
+import { usableMinSide, type ConstructionNorms } from '../kb/construction';
 import type { HouseKnowledge } from './plan';
 import type { PlanQuality } from './plan-quality';
 import { minSketchCells } from './sketch-cells';
+import {
+  stairFit,
+  stairFitBlockMessage,
+  stairFitWarnings,
+  type FitLevel,
+  type LevelFit,
+} from './stair-fit';
 
 export interface StoreyShortfall {
   level: number;
@@ -108,6 +116,75 @@ export function feasibilityIssue(
   return shortfalls.length
     ? shortfallMessage(shortfalls, labels, knowledge.sketch_grid.cell_m)
     : null;
+}
+
+/**
+ * Ô thang có chỗ trong cả nhà không (T178) — `ai/stair-fit.ts` trên đúng các số cổng dùng: phòng đầu bài GHIM tầng có
+ * diện tích (trừ dung sai cổng `sketch.floor_tolerance_ratio`), cạnh dùng được `usable.min_side_m` (đã theo loại nhà),
+ * ô thang nhỏ nhất theo loại thang của lượt. `null` khi không kiểm: nhà một tầng, lượt không mang loại thang, hoặc
+ * `sketch.stair_fit` vắng.
+ */
+export function stairFitOf(
+  k: HouseKnowledge,
+  construction: ConstructionNorms,
+  cars: number,
+): LevelFit[] | null {
+  const shape = k.stair_geometry.shape;
+  if (k.floors < 2 || !shape || !construction.sketch?.stair_fit) return null;
+  return stairFit({
+    widthM: k.block_m.width,
+    depthM: k.block_m.depth,
+    stair: { shortM: shape.short_m, longM: shape.long_m },
+    levels: fitLevelsOf(k, construction, cars),
+  });
+}
+
+/**
+ * Phòng đầu bài GHIM tầng có diện tích, theo tầng — diện tích trừ dung sai cổng (`sketch.floor_tolerance_ratio`), cạnh
+ * dùng được `usable.min_side_m` (đã theo loại nhà) — đầu vào của `stairFitOf` (T178).
+ */
+export function fitLevelsOf(
+  k: HouseKnowledge,
+  construction: ConstructionNorms,
+  cars: number,
+): FitLevel[] {
+  const tolerance = construction.sketch?.floor_tolerance_ratio ?? 0;
+  const levels: FitLevel[] = [];
+  for (let level = 1; level <= k.floors; level += 1) {
+    const rooms = k.min_cells
+      .filter((row) => (row.floor ?? (row.type === 'garage' ? 1 : null)) === level)
+      .map((row) => ({
+        type: row.type,
+        minM2: row.min_m2 * (1 - tolerance),
+        minSideM: usableMinSide(construction, row.type, { cars }) ?? 0,
+      }));
+    levels.push({ level, rooms, plateM2: k.buildable_per_level_m2[level - 1] ?? 0 });
+  }
+  return levels;
+}
+
+/** Câu chặn của `stairFitOf` khi `sketch.stair_fit.block` bật; `null` = đi tiếp. */
+export function stairFitIssue(
+  k: HouseKnowledge,
+  construction: ConstructionNorms,
+  cars: number,
+  labels: Record<string, string>,
+): string | null {
+  if (!construction.sketch?.stair_fit?.block) return null;
+  const fits = stairFitOf(k, construction, cars);
+  return fits ? stairFitBlockMessage(fits, (type) => labels[type] ?? type) : null;
+}
+
+/** Câu cảnh báo «khá chật» (không chặn) — rỗng khi không kiểm hoặc `warn_share` trống. */
+export function stairFitAdvice(
+  k: HouseKnowledge,
+  construction: ConstructionNorms,
+  cars: number,
+): string[] {
+  const share = construction.sketch?.stair_fit?.warn_share ?? null;
+  if (share === null) return [];
+  const fits = stairFitOf(k, construction, cars);
+  return fits ? stairFitWarnings(fits, share) : [];
 }
 
 /** Tải một tầng theo mức TỐI THIỂU (đường dải v6) — dòng `knowledge.feasibility` và cổng chặn dùng chung. */

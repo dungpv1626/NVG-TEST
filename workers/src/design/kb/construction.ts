@@ -68,6 +68,17 @@ export interface SketchNorms {
    * Vắng = tắt.
    */
   ground_core_shift?: { max_steps: number };
+  /**
+   * Dời vách bản phác T177 (`arrange/sketch-repair.ts`): phòng không lối vào / hụt sàn đầu bài mà tầng còn dư thì chương
+   * trình dời tối đa bấy nhiêu đoạn vách một ô lưới trước khi gửi lại mô hình. Vắng = tắt.
+   */
+  repair_walls?: { max_moves: number; max_new_corridors: number; beam: number; patience: number };
+  /**
+   * Ô thang có chỗ trong cả nhà không (T178, `ai/stair-fit.ts`), kiểm trước lời gọi mô hình đầu tiên: `block` — chặn khi
+   * chắc chắn không tầng nào dựng được dù đặt ô thang ở đâu; `warn_share` — cảnh báo «khá chật» khi vùng chặt nhất quanh
+   * ô thang đã dùng từ tỉ lệ này (`null` = không cảnh báo). Vắng = không kiểm.
+   */
+  stair_fit?: { block: boolean; warn_share: number | null };
 }
 
 export interface EntryStepNorms {
@@ -332,12 +343,62 @@ function parseSketch(raw: unknown): SketchNorms {
     }
     shift = { max_steps: steps };
   }
+  const repairRaw = (raw as Record<string, unknown>).repair_walls as
+    Record<string, unknown> | undefined;
+  let repair: SketchNorms['repair_walls'];
+  if (repairRaw !== undefined) {
+    const moves = repairRaw?.max_moves;
+    if (typeof moves !== 'number' || !Number.isInteger(moves) || moves < 0) {
+      throw new ConstructionNormsError(
+        '"sketch.repair_walls.max_moves" phải là số nguyên không âm',
+      );
+    }
+    const pieces = repairRaw?.max_new_corridors ?? 0;
+    if (typeof pieces !== 'number' || !Number.isInteger(pieces) || pieces < 0) {
+      throw new ConstructionNormsError(
+        '"sketch.repair_walls.max_new_corridors" phải là số nguyên không âm',
+      );
+    }
+    const beam = repairRaw?.beam ?? 1;
+    const patience = repairRaw?.patience ?? 1;
+    for (const [name, value] of [
+      ['beam', beam],
+      ['patience', patience],
+    ] as const) {
+      if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
+        throw new ConstructionNormsError(`"sketch.repair_walls.${name}" phải là số nguyên dương`);
+      }
+    }
+    repair = {
+      max_moves: moves,
+      max_new_corridors: pieces,
+      beam: beam as number,
+      patience: patience as number,
+    };
+  }
+  const fitRaw = (raw as Record<string, unknown>).stair_fit as Record<string, unknown> | undefined;
+  let fit: SketchNorms['stair_fit'];
+  if (fitRaw !== undefined) {
+    const block = fitRaw?.block;
+    if (typeof block !== 'boolean') {
+      throw new ConstructionNormsError('"sketch.stair_fit.block" phải là true hoặc false');
+    }
+    const warn = fitRaw?.warn_share ?? null;
+    if (warn !== null && (typeof warn !== 'number' || !(warn > 0))) {
+      throw new ConstructionNormsError(
+        '"sketch.stair_fit.warn_share" phải là số dương hoặc bỏ trống',
+      );
+    }
+    fit = { block, warn_share: warn as number | null };
+  }
   return {
     area_slack_ratio: ratio,
     grow_tries: tries,
     floor_tolerance_ratio: tolerance,
     ...(absorb ? { absorb_stranded: absorb } : {}),
     ...(shift ? { ground_core_shift: shift } : {}),
+    ...(repair ? { repair_walls: repair } : {}),
+    ...(fit ? { stair_fit: fit } : {}),
   };
 }
 

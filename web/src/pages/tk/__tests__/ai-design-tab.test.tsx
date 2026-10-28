@@ -24,6 +24,7 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock('@/hooks/use-ai-design', () => ({
+  useAiPlanPreflight: () => ({ data: undefined }),
   useAiDesignState: () => ({
     data: state.design,
     isLoading: false,

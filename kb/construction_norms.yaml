@@ -429,3 +429,22 @@ sketch:
   # của nó. Mỗi bước tốn một lượt xếp tầng 1 + các tầng trên. Bỏ mục này là tắt.
   ground_core_shift:
     max_steps: 1
+  # Bản phác hỏng vì phòng không lối vào / phòng hụt sàn đầu bài mà tầng còn chỗ: chương trình dời vách bản phác một ô
+  # lưới mỗi lần, tối đa `max_moves` lần, rồi xếp lại tầng trước khi gọi lại mô hình (T177). Phòng nhường chỗ không xuống
+  # dưới mức của nó (sàn đầu bài là sàn cứng), hành lang còn đủ bề rộng; ô thang, thang máy, giếng trời không đổi.
+  # `max_new_corridors`: số đoạn hành lang tối đa được tách ra (phòng lấn một phần hành lang, hoặc nhường một dải làm lối
+  # đi tới phòng mất lối vào) — 0 = chỉ dời vách. Bỏ mục này là tắt.
+  repair_walls:
+    max_moves: 40
+    max_new_corridors: 4
+    beam: 8
+    patience: 4
+  # Ô thang có chỗ trong cả nhà không (T178, `ai/stair-fit.ts`) — kiểm trước lời gọi mô hình đầu tiên, không tốn tiền.
+  # Ô thang thẳng trục mọi tầng; phòng không đè ô thang thì nằm hẳn bên cạnh (bề ngang ≤ khối − cạnh thang) hoặc
+  # trước / sau (chiều sâu ≤ khối − cạnh kia). `block`: tầng nào CHẮC CHẮN không dựng được dù đặt ô thang ở đâu, theo cả hai
+  # hướng thang (phòng đầu bài ghim tầng, cạnh dùng được, diện tích tối thiểu trừ dung sai — cố ý đếm thiếu) thì dừng và
+  # báo, không gọi mô hình. `warn_share`: tầng còn dựng được nhưng vùng chặt nhất quanh ô thang đã dùng từ tỉ lệ này thì chỉ
+  # CẢNH BÁO trên màn hình (trống = không cảnh báo). Bỏ cả mục là tắt.
+  stair_fit:
+    block: true
+    warn_share: 0.75

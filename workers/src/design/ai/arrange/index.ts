@@ -91,10 +91,18 @@ import { widenRooms } from './room-widen';
 import { swapTowardOpenFace } from './open-face';
 import { skeletonCandidates } from './skeleton';
 import {
+  baseId,
+  cellBoxes,
+  repairSketchGrid,
+  type CellBox,
+  type RepairMove,
+} from './sketch-repair';
+import {
   copySketch,
   forceSketchRect,
   growSketchRoom,
   forcedCellBox,
+  rectangularSketch,
   sketchIds,
   prepareSketch,
   sketchRectOf,
@@ -206,6 +214,11 @@ export interface ArrangeInput {
    * hỏng — mỗi tầng tốn một lượt gọi.
    */
   precheckOnly?: boolean;
+  /**
+   * Bản phác đã dời vách (T177, `sketch-repair.ts`) — lượt xếp lại của chính tầng này dùng bản ấy thay cho `sketch`.
+   * Chỉ `arrangeLevelCore` đặt; có mặt thì không dời vách lần nữa.
+   */
+  sketchRepaired?: PreparedSketch;
   /** Yêu cầu ban công của đầu bài (T65) — dùng cho phần đua ra ngoài ranh. */
   balcony?: BalconyDemand | null;
   /** Ban công đua không chiếm sàn của tầng này (chế độ hình chữ nhật) — bộ dựng ô gắn ngoài khối. */
@@ -548,16 +561,18 @@ function bandLevel(input: ArrangeInput, tree: AiPlanTree): ArrangeResult {
 
 function arrangeLevelCore(input: ArrangeInput): ArrangeResult {
   const spaces = input.program.spaces.filter((space) => space.level === input.level);
-  let sketch = input.sketch?.length
-    ? prepareSketch({
-        rows: input.sketch,
-        level: input.level,
-        footprint: input.anchors?.footprint ?? input.buildableCm,
-        known: new Set(spaces.map((space) => space.id)),
-        trim: input.anchors ? 'fit' : 'shrink',
-        streetSides: input.accessFaces.map((face) => FACE_SIDE[face]),
-      })
-    : null;
+  let sketch = input.sketchRepaired
+    ? copySketch(input.sketchRepaired)
+    : input.sketch?.length
+      ? prepareSketch({
+          rows: input.sketch,
+          level: input.level,
+          footprint: input.anchors?.footprint ?? input.buildableCm,
+          known: new Set(spaces.map((space) => space.id)),
+          trim: input.anchors ? 'fit' : 'shrink',
+          streetSides: input.accessFaces.map((face) => FACE_SIDE[face]),
+        })
+      : null;
   const footprints = footprintOptions(input, spaces);
   if (sketch && !footprints.some((f) => sameRect(f, sketch!.footprint))) {
     footprints.unshift(sketch.footprint);
@@ -655,6 +670,44 @@ function arrangeLevelCore(input: ArrangeInput): ArrangeResult {
       ...(floorOf ? { briefMinAreaM2: (id: string) => (waived.has(id) ? null : floorOf(id)) } : {}),
     };
     shortDrawn = sketchNoAccess(input, intent, sketch) ?? sketchBelowBrief(input, intent, sketch);
+  }
+  // Còn chỗ mà bản phác hỏng lối vào / sàn (T177): chương trình dời vách rồi xếp lại tầng bằng bản đã dời. Không qua
+  // cổng thì như cũ — câu nhắc nói lỗi của bản phác MÔ HÌNH vẽ, không phải của bản chương trình thử.
+  const repairWalls = input.construction.sketch?.repair_walls;
+  if (
+    sketch &&
+    shortDrawn &&
+    repairWalls &&
+    repairWalls.max_moves > 0 &&
+    !input.precheckOnly &&
+    !input.sketchRepaired &&
+    (shortDrawn.code === 'sketch_room_no_access' ||
+      shortDrawn.code === 'arrange_room_below_brief_area')
+  ) {
+    const repaired = repairSketchFor(input, intent, sketch, repairWalls);
+    input.trace?.(
+      `tầng ${input.level} dời vách: ${repaired ? `${repaired.moves.length} lần → thử xếp` : 'không sửa được'}`,
+    );
+    if (repaired) {
+      const again = arrangeLevelCore({
+        ...input,
+        sketchRepaired: repaired.sketch,
+        ...(repaired.program ? { program: repaired.program } : {}),
+      });
+      input.trace?.(`tầng ${input.level} dời vách: ${again.layout?.level ? 'qua' : 'vẫn hỏng'}`);
+      if (again.layout?.level) {
+        const failure = [withSketchCells(shortDrawn, sketch)].filter((issue) =>
+          SKETCH_FAILURE_CODES.has(issue.code),
+        );
+        const program = again.program ?? repaired.program;
+        return {
+          ...again,
+          ...(program ? { program } : {}),
+          notes: [repaired.note, ...again.notes],
+          ...(failure.length ? { sketchFailure: failure } : {}),
+        };
+      }
+    }
   }
   if (shortDrawn) {
     // Hỏng vì lý do khác (vd hụt diện tích đầu bài) thì kèm luôn phòng chỉ vào được qua ô thang.
@@ -991,37 +1044,16 @@ function arrangeLevelCore(input: ArrangeInput): ArrangeResult {
 }
 
 /**
- * Phòng không có lối vào NGAY TRÊN BẢN PHÁC — `null` khi mọi phòng có (T73, lượt đo 6c35ed79).
- *
- * Một phòng cần cửa phải có ít nhất một ô chung cạnh với ô của phòng đi xuyên được (`walk_through`), của
- * loại phòng được phép phục vụ nó (`served_from`), hoặc — phòng khép kín — của phòng mẹ. Đúng luật lời
- * dẫn đã nói với mô hình («Every other room shares a wall in the sketch with a walk-through room or with
- * a type listed for it in `knowledge.served_from`»), đo thẳng trên lưới ô nên chỉ bắt chỗ CHẮC CHẮN sai.
- * Không kiểm: phòng đi xuyên được, phòng vào từ ngoài (`entry_through`: gara, hiên), ban công / sân,
- * phòng không cần cửa (`no_door_required`: hộp kỹ thuật, giếng trời).
- *
- * Lượt 6c35ed79: năm phòng tầng 2 không giáp hành lang nào trên bản phác. Bộ xếp bỏ bản phác, mọi cây dự
- * phòng hỏng «phòng không giáp phòng giao thông» — lỗi hình học, không gửi mô hình — nên ba lượt sửa chỉ
- * nhận câu nhắc diện tích và không sửa bố cục.
+ * Tập lối vào của bản phác một tầng — phần đo chung của `sketchNoAccess` và bộ dời vách T177: phòng mất lối vào
+ * (`cut`), phòng có lối vào (`fine`), phòng chỉ vào được qua ô thang (`stairOnly`), các phòng đi xuyên đã nối về
+ * thang (`linked`). `null` khi tệp dữ liệu không khai nhóm lối đi hay mục `sketch`.
  */
-function sketchNoAccess(
+function sketchAccess(
   input: ArrangeInput,
   intent: LevelIntent,
   sketch: PreparedSketch,
-  /**
-   * `touch` — trước khi xếp: hai phòng «nối» khi chạm nhau một ô trở lên; chỉ bắt chỗ CHẮC CHẮN sai.
-   * `door` — sau khi tầng đã hỏng: phải chung một đoạn liền đủ đặt cửa. Đoạn một ô trên bản phác chưa chắc
-   * hỏng (bộ xếp căn vách theo diện tích có thể nới ra — tầng 1 lượt 9d3cc059 qua với hành lang chạm thang
-   * một ô), nên chỉ nói ra khi tầng đã hỏng.
-   */
-  mode: 'touch' | 'door' = 'touch',
-  /**
-   * `true` — không phòng nào mất lối vào nhưng có phòng CHỈ vào được qua ô thang (ngoài
-   * `passage.stair_opens_to`) thì trả `sketch_stair_only`. Chỉ gọi khi tầng ĐÃ hỏng vì lý do khác: bản phác
-   * chưa phải hình cuối, bộ xếp còn nắn được, nên tự nó không đủ để bác (lượt 9d3cc059, 6c35ed79).
-   */
-  stairOnlyAlone = false,
-): PlanIssue | null {
+  mode: 'touch' | 'door',
+) {
   const passage = input.groups.passage;
   // Cùng mục `sketch` của `kb/construction_norms.yaml` với phép kiểm diện tích: vắng mục ấy (phương án
   // lưu trước T73) thì không kiểm bản phác trước khi xếp.
@@ -1143,6 +1175,76 @@ function sketchNoAccess(
       stairOnly.push(leaf.id);
     } else fine.push(leaf.id);
   }
+  return {
+    cut,
+    fine,
+    stairOnly,
+    stairs,
+    linked,
+    touching,
+    walk,
+    cells,
+    rows,
+    cols,
+    leafOf,
+    stairLeafIds,
+    marginCm,
+    wallCm,
+    cellCm,
+  };
+}
+
+/**
+ * Phòng không có lối vào NGAY TRÊN BẢN PHÁC — `null` khi mọi phòng có (T73, lượt đo 6c35ed79).
+ *
+ * Một phòng cần cửa phải có ít nhất một ô chung cạnh với ô của phòng đi xuyên được (`walk_through`), của
+ * loại phòng được phép phục vụ nó (`served_from`), hoặc — phòng khép kín — của phòng mẹ. Đúng luật lời
+ * dẫn đã nói với mô hình («Every other room shares a wall in the sketch with a walk-through room or with
+ * a type listed for it in `knowledge.served_from`»), đo thẳng trên lưới ô nên chỉ bắt chỗ CHẮC CHẮN sai.
+ * Không kiểm: phòng đi xuyên được, phòng vào từ ngoài (`entry_through`: gara, hiên), ban công / sân,
+ * phòng không cần cửa (`no_door_required`: hộp kỹ thuật, giếng trời).
+ *
+ * Lượt 6c35ed79: năm phòng tầng 2 không giáp hành lang nào trên bản phác. Bộ xếp bỏ bản phác, mọi cây dự
+ * phòng hỏng «phòng không giáp phòng giao thông» — lỗi hình học, không gửi mô hình — nên ba lượt sửa chỉ
+ * nhận câu nhắc diện tích và không sửa bố cục.
+ */
+function sketchNoAccess(
+  input: ArrangeInput,
+  intent: LevelIntent,
+  sketch: PreparedSketch,
+  /**
+   * `touch` — trước khi xếp: hai phòng «nối» khi chạm nhau một ô trở lên; chỉ bắt chỗ CHẮC CHẮN sai.
+   * `door` — sau khi tầng đã hỏng: phải chung một đoạn liền đủ đặt cửa. Đoạn một ô trên bản phác chưa chắc
+   * hỏng (bộ xếp căn vách theo diện tích có thể nới ra — tầng 1 lượt 9d3cc059 qua với hành lang chạm thang
+   * một ô), nên chỉ nói ra khi tầng đã hỏng.
+   */
+  mode: 'touch' | 'door' = 'touch',
+  /**
+   * `true` — không phòng nào mất lối vào nhưng có phòng CHỈ vào được qua ô thang (ngoài
+   * `passage.stair_opens_to`) thì trả `sketch_stair_only`. Chỉ gọi khi tầng ĐÃ hỏng vì lý do khác: bản phác
+   * chưa phải hình cuối, bộ xếp còn nắn được, nên tự nó không đủ để bác (lượt 9d3cc059, 6c35ed79).
+   */
+  stairOnlyAlone = false,
+): PlanIssue | null {
+  const access = sketchAccess(input, intent, sketch, mode);
+  if (!access) return null;
+  const {
+    cut,
+    fine,
+    stairOnly,
+    stairs,
+    linked,
+    touching,
+    walk,
+    cells,
+    rows,
+    cols,
+    leafOf,
+    stairLeafIds,
+    marginCm,
+    wallCm,
+    cellCm,
+  } = access;
   const quote = (ids: string[]) => ids.map((id) => `"${id}"`).join(', ');
   // CHỖ của một phòng không lối vào, bằng ô bản phác (tổng hợp 37 lượt thật 23–30/09/2026: lỗi lối vào có ở
   // 30/37 lượt, 35 % câu nhắc lặp nguyên văn ở lượt sau): phòng nằm hàng/cột nào, đang giáp những gì, và
@@ -1235,6 +1337,230 @@ function sketchNoAccess(
     },
     cut[0],
   );
+}
+
+/**
+ * Dời vách bản phác cho tới khi hết phòng mất lối vào và phòng hụt sàn đầu bài (T177) — `null` khi không sửa hết được.
+ *
+ * Điểm từ điển: (1) số phòng mất lối vào + chỉ vào được qua ô thang (chế độ chạm, như phép soát trước khi xếp);
+ * (2) phần hụt dưới ngưỡng soát của sàn đầu bài (`area_slack_ratio`); (3) như (1) nhưng phải chung đủ một cửa;
+ * (4) khoảng cách ô từ phòng mất lối vào tới hành lang / khu chung gần nhất đã nối thang — để dời từng bước có
+ * hướng; (5) phần hụt tới đủ sàn đầu bài. Phòng hẹp đi phải còn trên mức tối thiểu của nó (`roomMinimumM2`: sàn đầu
+ * bài là sàn cứng), cạnh ≥ 2 ô; hành lang còn đủ bề rộng lọt lòng. Ô thang, thang máy, giếng trời, sân trong, phòng
+ * gộp mở không đổi.
+ */
+function repairSketchFor(
+  input: ArrangeInput,
+  intent: LevelIntent,
+  sketch: PreparedSketch,
+  repair: { max_moves: number; max_new_corridors?: number; beam?: number; patience?: number },
+): {
+  sketch: PreparedSketch;
+  moves: RepairMove[];
+  note: DrawNote;
+  program: AiSpaceProgram | null;
+} | null {
+  const passage = input.groups.passage;
+  if (!passage) return null;
+  const drawn = sketch;
+  // Phòng lồi nắn về chữ nhật trước, như bước đầu của `sketchTrees` — chỉ phòng chữ nhật mới dời vách được.
+  const fixed = new Set([...input.stairTypes, 'elevator', 'core', ...INNER_OPEN]);
+  const typeOf = (id: string) => input.program.spaces.find((space) => space.id === id)?.type;
+  sketch = rectangularSketch(
+    sketch,
+    (id) => fixed.has(typeOf(id) ?? ''),
+    (id) => corridorTypesOf(input).has(typeOf(id) ?? ''),
+  ).sketch;
+  const { footprint, grid } = sketch;
+  const cellW = (footprint.x1 - footprint.x0) / grid.cols;
+  const cellH = (footprint.y1 - footprint.y0) / grid.rows;
+  const wallCm = Math.round(input.construction.walls.partition_m * 100);
+  const clearCorridor =
+    (input.construction.circulation?.corridor_clear_m ??
+      input.construction.openings.door?.width_m ??
+      0.9) * 100;
+  const slack = input.construction.sketch?.area_slack_ratio ?? 0;
+  const corridorTypes = corridorTypesOf(input);
+  const leafOf = (id: string) =>
+    intent.leaves.find((leaf) => leaf.id === (intent.hostOf.get(id) ?? id));
+  const movable = (id: string) => {
+    const type = typeOf(id);
+    const leaf = leafOf(id);
+    return !!type && !!leaf && !leaf.merged.length && !fixed.has(type);
+  };
+  const corridor = (id: string) => corridorTypes.has(typeOf(id) ?? '');
+  const clearOf = (box: CellBox) =>
+    clearAreaM2((box.c1 - box.c0) * cellW, (box.r1 - box.r0) * cellH, wallCm);
+  const shrinkOk = (id: string, box: CellBox) => {
+    const type = typeOf(id);
+    if (!type) return false;
+    const w = (box.c1 - box.c0) * cellW;
+    const h = (box.r1 - box.r0) * cellH;
+    if (corridorTypes.has(type)) return Math.min(w, h) - wallCm >= clearCorridor;
+    const outdoor = input.groups.outdoor.has(type);
+    if (!outdoor && Math.min(box.c1 - box.c0, box.r1 - box.r0) < 2) return false;
+    const min = roomMinimumM2(input, id);
+    return min === null || clearOf(box) >= min;
+  };
+  // Đoạn hành lang mới quy về hành lang gốc khi đo lối vào: cùng một lá, nối liền.
+  const aliased = (next: typeof grid) => ({
+    ...sketch,
+    grid: { ...next, cells: next.cells.map((row) => row.map((id) => (id ? baseId(id) : id))) },
+  });
+  const floors = intent.leaves
+    .filter((leaf) => !leaf.merged.length)
+    .map((leaf) => ({ id: leaf.id, floor: input.briefMinAreaM2?.(leaf.id) ?? null }))
+    .filter((item): item is { id: string; floor: number } => !!item.floor);
+  const score = (next: typeof grid) => {
+    const trial = aliased(next);
+    const touch = sketchAccess(input, intent, trial, 'touch');
+    const door = sketchAccess(input, intent, trial, 'door');
+    if (!touch || !door) return [Infinity];
+    const boxes = cellBoxes(trial.grid);
+    let hard = 0;
+    let soft = 0;
+    for (const { id, floor } of floors) {
+      const box = boxes.get(id);
+      const area = box ? clearOf(box) : 0;
+      hard += Math.max(0, floor * (1 - slack) - area);
+      soft += Math.max(0, floor - area);
+    }
+    let gap = 0;
+    for (const id of touch.cut) {
+      const box = boxes.get(id);
+      if (!box) continue;
+      let nearest = Infinity;
+      for (const leaf of intent.leaves) {
+        if (!touch.linked.has(leaf.id) || !touch.walk(leaf) || touch.stairLeafIds.has(leaf.id)) {
+          continue;
+        }
+        trial.grid.cells.forEach((row, r) =>
+          row.forEach((other, c) => {
+            if (other !== leaf.id) return;
+            nearest = Math.min(
+              nearest,
+              Math.max(0, r - box.r1 + 1, box.r0 - r) + Math.max(0, c - box.c1 + 1, box.c0 - c),
+            );
+          }),
+        );
+      }
+      gap += Number.isFinite(nearest) ? nearest : grid.rows + grid.cols;
+    }
+    return [
+      touch.cut.length + touch.stairOnly.length,
+      Math.round(hard * 100),
+      door.cut.length + door.stairOnly.length,
+      gap,
+      Math.round(soft * 100),
+    ];
+  };
+  const result = repairSketchGrid(grid, {
+    movable,
+    corridor,
+    shrinkOk,
+    score,
+    maxMoves: repair.max_moves,
+    maxNewCorridors: repair.max_new_corridors ?? 0,
+    beam: repair.beam ?? 1,
+    patience: repair.patience ?? 1,
+    stubCells: Math.ceil((clearCorridor + wallCm) / Math.min(cellW, cellH) - 1e-9),
+  });
+  input.trace?.(
+    `  dời vách: điểm ${JSON.stringify(score(grid))} → ${result ? `${JSON.stringify(result.score)} sau ${result.moves.map((m) => m.kind).join(', ')}` : 'không lần nào giảm'}`,
+  );
+  if (!result) return null;
+  const check = aliased(result.grid);
+  if (sketchNoAccess(input, intent, check) || sketchBelowBrief(input, intent, check)) return null;
+
+  // Đoạn hành lang mới thành phòng thật của chương trình — như hành lang chương trình tự thêm (A, T48).
+  let program: AiSpaceProgram | null = null;
+  const rename = new Map<string, string>();
+  const finalBoxes = cellBoxes(result.grid);
+  for (const id of [...finalBoxes.keys()].filter((key) => key.includes('#')).sort()) {
+    const base = baseId(id);
+    const type = typeOf(base)!;
+    const current: AiSpaceProgram = program ?? input.program;
+    const real = nextSpaceId(current, type);
+    rename.set(id, real);
+    program = {
+      ...current,
+      spaces: [
+        ...current.spaces,
+        {
+          id: real,
+          type,
+          level: input.level,
+          target_area_m2: round1(clearOf(finalBoxes.get(id)!)),
+          ensuite_of: null,
+        },
+      ],
+    };
+  }
+  const cells = result.grid.cells.map((row) => row.map((id) => (id ? (rename.get(id) ?? id) : id)));
+  const streetSides = input.accessFaces.map((face) => FACE_SIDE[face]);
+  const rooms = new Map<string, { zone: Zone; street: boolean }>();
+  for (const [id, box] of cellBoxes({ ...result.grid, cells })) {
+    const rect = {
+      x0: footprint.x0 + box.c0 * cellW,
+      y0: footprint.y0 + box.r0 * cellH,
+      x1: footprint.x0 + box.c1 * cellW,
+      y1: footprint.y0 + box.r1 * cellH,
+    };
+    rooms.set(id, {
+      zone: zoneOfRect(footprint, rect),
+      street: streetSides.some((side) => rect[side] === footprint[side]),
+    });
+  }
+  const repaired: PreparedSketch = {
+    ...copySketch(sketch),
+    grid: { ...result.grid, cells },
+    rooms,
+  };
+
+  const before = cellBoxes(drawn.grid);
+  const after = cellBoxes(repaired.grid);
+  const changed = [...after.keys()]
+    .filter((id) => after.get(id)!.cells !== (before.get(id)?.cells ?? 0))
+    .sort();
+  const m2 = (value: number) => String(round2(value)).replace('.', ',');
+  const parts = changed.map((id) => {
+    const box = after.get(id)!;
+    const delta = box.cells - (before.get(id)?.cells ?? 0);
+    const floor = input.briefMinAreaM2?.(id) ?? null;
+    const clear = clearOf(box);
+    const type = (program ?? input.program).spaces.find((space) => space.id === id)?.type ?? '';
+    const added = !before.has(id);
+    const tail = corridorTypes.has(type)
+      ? `rộng ${m2(Math.min((box.c1 - box.c0) * cellW, (box.r1 - box.r0) * cellH) / 100)} m theo tim tường`
+      : `còn khoảng ${m2(clear)} m²${floor ? ` ${clear >= floor ? '≥' : '<'} ${m2(floor)} m² đầu bài` : ''}`;
+    if (added) return `thêm đoạn hành lang "${id}" ${box.cells} ô (${tail})`;
+    return `"${id}" ${delta > 0 ? `thêm ${delta}` : `bớt ${-delta}`} ô (${tail})`;
+  });
+  return {
+    sketch: repaired,
+    moves: result.moves,
+    program,
+    note: {
+      code: 'sketch_walls_moved',
+      message: `Bản phác tầng ${input.level}: ${sketchProblemVi(input, intent, drawn)} — chương trình dời ${result.moves.length} đoạn vách rồi xếp lại, không gọi lại mô hình: ${parts.join('; ')}.`,
+    },
+  };
+}
+
+/** Lỗi bản phác chương trình đã sửa bằng dời vách, tiếng Việt cho ghi chú. */
+function sketchProblemVi(input: ArrangeInput, intent: LevelIntent, sketch: PreparedSketch): string {
+  const access = sketchAccess(input, intent, sketch, 'touch');
+  const out: string[] = [];
+  const quote = (ids: string[]) => ids.map((id) => `"${id}"`).join(', ');
+  if (access?.cut.length) out.push(`${quote(access.cut)} không có lối vào`);
+  if (access?.stairOnly.length) out.push(`${quote(access.stairOnly)} chỉ vào được qua ô thang`);
+  const short = sketchBelowBrief(input, intent, sketch);
+  if (short?.ref) {
+    out.push(
+      `"${short.ref}" chỉ vẽ khoảng ${String(short.params?.area_m2).replace('.', ',')} m² (đầu bài tối thiểu ${String(short.params?.min_m2).replace('.', ',')} m²)`,
+    );
+  }
+  return out.join('; ') || 'bản phác hỏng lối vào / sàn đầu bài';
 }
 
 /**

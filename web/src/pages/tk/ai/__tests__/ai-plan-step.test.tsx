@@ -53,6 +53,8 @@ const state = vi.hoisted(() => ({
   edit: vi.fn((_input: unknown) => Promise.resolve({ runId: 'r-edit' })),
   hide: vi.fn((_input: unknown, _options?: unknown) => undefined),
   costHistory: { runs: [], calls: [] } as unknown,
+  /** Kiểm đầu bài trước khi xếp (T178) — `null` = chưa có dữ liệu. */
+  preflight: null as unknown,
   /** Mức chi phí chặn thật (T164) máy chủ trả — `undefined` = máy chủ cũ không nói. */
   capUsd: undefined as number | null | undefined,
   drawSheetImage: vi.fn((_input: unknown) =>
@@ -78,6 +80,7 @@ vi.mock('@/hooks/use-ai-design', () => ({
     error: null,
   }),
   useAiRun: () => ({ data: state.run }),
+  useAiPlanPreflight: () => ({ data: state.preflight }),
   useChooseAiPlan: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false, error: null }),
   useHideAiPlan: () => ({ mutate: state.hide, isPending: false, isError: false, error: null }),
   useInvalidateAiDesign: () => vi.fn(),
@@ -1189,5 +1192,36 @@ describe('Chưa có mặt bằng thì không bày khối ảnh nội thất (23/
     expect(screen.getByText('Chưa có phương án mặt bằng')).toBeInTheDocument();
     expect(screen.getByText(/Đã có bản vẽ mặt bằng của kỹ sư\?/)).toBeInTheDocument();
     expect(screen.getByText('Ảnh mặt bằng có nội thất')).not.toBeVisible();
+  });
+});
+
+describe('Đầu bài không xếp vừa khối nhà: báo trước khi bấm (T178)', () => {
+  it('câu chặn hiện ngay dưới nút, nút khoá, không gọi gì', async () => {
+    state.review = null;
+    state.run = null;
+    state.start.mockClear();
+    state.preflight = {
+      briefArtifactId: 'b1',
+      blocking:
+        'Chưa tạo được mặt bằng vì đầu bài không xếp vừa khối nhà dù đặt ô thang ở đâu — tầng 2: …',
+      warnings: [],
+    };
+    show();
+    expect(screen.getByRole('alert')).toHaveTextContent(/dù đặt ô thang ở đâu/);
+    const button = screen.getByRole('button', { name: 'Xếp mặt bằng' });
+    expect(button).toBeDisabled();
+    await userEvent.click(button);
+    expect(state.start).not.toHaveBeenCalled();
+    state.preflight = null;
+  });
+
+  it('chỉ «khá chật»: hiện cảnh báo, nút vẫn bấm được', () => {
+    state.review = null;
+    state.run = null;
+    state.preflight = { briefArtifactId: 'b1', blocking: null, warnings: ['Tầng 2 khá chật: …'] };
+    show();
+    expect(screen.getByText(/Tầng 2 khá chật/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Xếp mặt bằng' })).toBeEnabled();
+    state.preflight = null;
   });
 });

@@ -529,7 +529,12 @@ const NEIGHBOURS = [
  * nhật), rồi phòng kề nhiều cạnh nhất, hoà thì mã nhỏ. `exclude[ô]` = phòng không được nhận lại ô ấy.
  * Trả số ô đã lấp.
  */
-function fillHoles(grid: SketchGrid, exclude: ReadonlySet<string>): number {
+function fillHoles(
+  grid: SketchGrid,
+  exclude: ReadonlySet<string>,
+  /** Phòng không nhận ô lấp nào (T177: ô thang khi nắn trước bộ dời vách). Vắng = mọi phòng nhận được. */
+  frozen?: (id: string) => boolean,
+): number {
   let filled = 0;
   for (;;) {
     const box = boxes(grid);
@@ -540,7 +545,9 @@ function fillHoles(grid: SketchGrid, exclude: ReadonlySet<string>): number {
         const tally = new Map<string, number>();
         for (const [dr, dc] of NEIGHBOURS) {
           const id = grid.cells[r + dr]?.[c + dc];
-          if (id && !exclude.has(`${r},${c},${id}`)) tally.set(id, (tally.get(id) ?? 0) + 1);
+          if (id && !exclude.has(`${r},${c},${id}`) && !frozen?.(id)) {
+            tally.set(id, (tally.get(id) ?? 0) + 1);
+          }
         }
         if (!tally.size) continue;
         const inside = (id: string) => {
@@ -788,6 +795,60 @@ export function growSketchRoom(
   return { sketch: copy, from: pick.from, cells: pick.cells.length };
 }
 
+/**
+ * Bản sao lưới đã lấp ô trống giữa nhà và nắn phòng lồi về chữ nhật — đúng hai bước đầu `sketchTrees` làm (T177: bộ dời
+ * vách chỉ dời vách giữa các phòng chữ nhật). Trả mã phòng đã nắn.
+ */
+export function rectangularSketch(
+  sketch: PreparedSketch,
+  /** Phòng không được đổi ô (ô thang, thang máy…): nắn phòng khác không lấy ô của nó. */
+  keep: (id: string) => boolean = () => false,
+  /**
+   * Hành lang lồi (chữ L, chữ T) tách thành các đoạn chữ nhật mang mã tạm `<mã>#n` thay vì cắt phần lồi — cắt thì
+   * hành lang đứt, phòng mất lối vào. Vắng = nắn như mọi phòng.
+   */
+  corridor: (id: string) => boolean = () => false,
+): { sketch: PreparedSketch; reshaped: string[] } {
+  const copy = copySketch(sketch);
+  fillHoles(copy.grid, new Set(), keep);
+  for (const [id, box] of boxes(copy.grid)) {
+    if (!corridor(id) || area(box) === countCells(copy.grid, id)) continue;
+    const hole = '#';
+    let piece = 0;
+    for (;;) {
+      const rect = largestRectangle(copy.grid, id);
+      if (area(rect) === 0) break;
+      const label = piece === 0 ? hole : `${id}#${piece}`;
+      for (let r = rect.r0; r < rect.r1; r += 1) {
+        for (let c = rect.c0; c < rect.c1; c += 1) copy.grid.cells[r]![c] = label;
+      }
+      piece += 1;
+    }
+    for (const row of copy.grid.cells) {
+      for (let c = 0; c < row.length; c += 1) if (row[c] === hole) row[c] = id;
+    }
+  }
+  const original = boxes(copy.grid);
+  const same = (p: Box, q: Box) => p.c0 === q.c0 && p.c1 === q.c1 && p.r0 === q.r0 && p.r1 === q.r1;
+  const reshaped = rectangularise(
+    copy.grid,
+    original.size,
+    (id, box) => {
+      if (!keep(id)) return true;
+      const was = original.get(id);
+      return !was || same(was, box);
+    },
+    keep,
+  );
+  // Phòng giữ nguyên mà vẫn bị đổi (nắn chính nó) thì thôi nắn — bộ dời vách làm trên bản phác gốc.
+  const after = boxes(copy.grid);
+  for (const [id, was] of original) {
+    const now = after.get(id);
+    if (keep(id) && (!now || !same(was, now))) return { sketch: copySketch(sketch), reshaped: [] };
+  }
+  return { sketch: copy, reshaped };
+}
+
 /** Bản sao dùng riêng, để thử một cách chia khác mà không đụng bản gốc. */
 export function copySketch(sketch: PreparedSketch): PreparedSketch {
   return {
@@ -893,6 +954,8 @@ function rectangularise(
   rooms: number,
   /** Chữ nhật ô `box` có đủ cạnh tối thiểu cho phòng `id` không — vắng thì không kiểm (T166). */
   fits?: (id: string, box: Box) => boolean,
+  /** Phòng không nhận ô lấp (`fillHoles`). Vắng = mọi phòng nhận được. */
+  frozen?: (id: string) => boolean,
 ): string[] {
   const touched = new Set<string>();
   const exclude = new Set<string>();
@@ -921,7 +984,7 @@ function rectangularise(
         exclude.add(`${r},${c},${id}`);
       }
     }
-    fillHoles(grid, exclude);
+    fillHoles(grid, exclude, frozen);
     // Ô không phòng nào khác nhận được (phòng bị bao kín) thì trả lại: thà còn một phòng lồi, bộ xếp
     // lấy vùng từ bản phác, còn hơn một ô trống giữa nhà.
     for (let r = 0; r < grid.rows; r += 1) {

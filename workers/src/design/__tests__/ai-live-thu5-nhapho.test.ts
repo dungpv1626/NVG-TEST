@@ -246,7 +246,9 @@ describe('phát lại 4eade9b1 — phòng lồi không được ăn cột của 
 describe('phát lại 4a25b460 và b1859741 — lỗi tầng trên tới mô hình đúng chỗ (T168)', () => {
   it('4a25b460: lời gọi 4 nói hàng thang + phòng ngủ tầng 3 quá hẹp, ban công khối góc là hệ quả của việc chia lại', async () => {
     const { prompts: sent } = await replayLoop('4a25b460');
-    expect(sent).toHaveLength(5);
+    // T177: dời vách bản phác gỡ lỗi lối vào tầng 4, cả nhà còn hỏng ở ban công khối góc — lỗi chính lặp lại nên dừng
+    // sớm theo T174 sau lời gọi 4 (đối chứng không dời vách gọi đủ 5; lời gọi 5 của lượt thật cũng không qua).
+    expect(sent).toHaveLength(4);
     // Ba lời gọi đầu không đổi so với lượt thật — vẽ lại tầng giữ (T86) không được mang lỗi ban công của cách chia lại.
     expect(sent[2]).not.toContain('is on the right side');
     const fourth = sent[3]!;

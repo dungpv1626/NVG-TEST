@@ -2048,6 +2048,39 @@ const MUTATIONS: Mutation[] = [
     find: "  return lower.includes('free_tier') && /limit:\\s*0(?!\\d)/.test(lower);",
     replace: "  return false && lower.includes('free_tier');",
   },
+  {
+    id: 'M249',
+    axis: 'số đo bản vẽ',
+    file: 'workers/src/design/ai/arrange/sketch-repair.ts',
+    bug: 'Dời vách bản phác (T177) không kiểm phòng nhường chỗ — phòng kề bị lấy ô xuống dưới mức tối thiểu / sàn đầu bài của nó',
+    find: 'if (candidate.move.shrunk.some((id) => !rules.shrinkOk(baseId(id), after.get(id)!))) {',
+    replace:
+      'if (false && candidate.move.shrunk.some((id) => !rules.shrinkOk(baseId(id), after.get(id)!))) {',
+  },
+  {
+    id: 'M250',
+    axis: 'số đo bản vẽ',
+    file: 'workers/src/design/ai/arrange/sketch-repair.ts',
+    bug: 'Dời vách bản phác (T177) dời cả vách ô thang — ô thang lệch mốc tầng dưới',
+    find: 'if (!isRect(lb) || !isRect(hb) || !movable(lo) || !movable(hi)) ok = false;',
+    replace: 'if (!isRect(lb) || !isRect(hb)) ok = false;',
+  },
+  {
+    id: 'M251',
+    axis: 'tiền gọi mô hình',
+    file: 'workers/src/design/ai/stair-fit.ts',
+    bug: 'Kiểm ô thang trước lời gọi mô hình (T178) chặn khi MỘT hướng thang hỏng — chặn oan đầu bài vẫn dựng được bằng hướng kia',
+    find: 'blocked: orientations.every((o) => o.problems.length > 0),',
+    replace: 'blocked: orientations.some((o) => o.problems.length > 0),',
+  },
+  {
+    id: 'M252',
+    axis: 'tiền gọi mô hình',
+    file: 'workers/src/design/ai/stair-fit.ts',
+    bug: 'Kiểm ô thang (T178) quên bề ngang còn lại cạnh thang — phòng không lọt cạnh thang vẫn tính là đặt được, đầu bài chắc chắn hỏng vẫn gửi mô hình',
+    find: 'const canSide = s <= beside + EPS && s <= D + EPS && a <= besideArea + EPS;',
+    replace: 'const canSide = s <= D + EPS && a <= besideArea + EPS;',
+  },
 ];
 
 /** Thư mục mã nguồn được băm trước và sau khi chạy. `db/` không đụng tới nên không băm. */

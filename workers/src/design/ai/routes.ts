@@ -62,6 +62,7 @@ import {
 import { ruleMessages } from './plan-messages-data';
 import { aiPrompts } from './prompts-data';
 import { checkPlan } from './plan-check';
+import { planPreflight } from './plan-preflight';
 import { houseRevisionsMax } from './plan';
 import { parseCostCap, readRunCostCap, RUN_COST_CAP_KEY } from './cost-cap';
 import { planQuality } from './plan-quality-data';
@@ -1500,6 +1501,13 @@ async function preparePlanStart(
   // thoại khách hàng để lược đi, và Workflow chỉ có khoá `service_role` (vượt RLS).
   const digest = anonymiseForAi(await aiDigestInputs(db, projectId, brief.payload as DesignBrief));
 
+  // Đầu bài chắc chắn không xếp vừa khối nhà (T112 diện tích, T178 ô thang): không mở lượt nào — cùng câu Workflow sẽ
+  // dừng ở trước lời gọi đầu, nhưng ở đây người bấm thấy ngay và không có dòng lượt chạy «hỏng» nào.
+  const preflight = planPreflight(digest, pipelineFlags(env));
+  if (preflight.blocking) {
+    return { error: { body: { error: preflight.blocking, retryable: false }, status: 409 } };
+  }
+
   return {
     ok: {
       repo,
@@ -1515,6 +1523,35 @@ async function preparePlanStart(
     },
   };
 }
+
+/** Cờ đường lời dẫn theo cấu hình Worker — cùng cách `launchPlanRun` đặt vào params. */
+function pipelineFlags(env: DesignEnv): { geometry?: 'rect'; pipeline?: 'v6' } {
+  return {
+    ...(env.AI_PROMPT_PIPELINE === 'v5' || env.AI_PROMPT_PIPELINE === 'v6'
+      ? { geometry: 'rect' as const }
+      : {}),
+    ...(env.AI_PROMPT_PIPELINE === 'v6' ? { pipeline: 'v6' as const } : {}),
+  };
+}
+
+/**
+ * Kiểm đầu bài trước khi bấm «Xếp mặt bằng» (T178): câu chặn (đầu bài chắc chắn không xếp vừa khối nhà) và câu cảnh báo
+ * «khá chật». Chỉ đọc — không mở lượt, không gọi mô hình. Chưa có đầu bài đã xác nhận thì cả hai rỗng.
+ */
+aiApp.get('/plan/:projectId/preflight', async (c) => {
+  const token = bearer(c.req.header('Authorization'));
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  const projectId = c.req.param('projectId');
+  const db = await asUser(c.env, token);
+  const scope = await projectScope(db, projectId);
+  if (!scope) return c.json({ error: PROJECT_NOT_VISIBLE }, 404);
+  const denied = await denyUnlessReadable(db, scope.tenantId, projectId);
+  if (denied) return c.json({ error: denied.error }, denied.status);
+  const brief = await new ArtifactRepository(c.env).head(projectId, DISCIPLINE, 'design_brief');
+  if (!brief) return c.json({ briefArtifactId: null, blocking: null, warnings: [] });
+  const digest = anonymiseForAi(await aiDigestInputs(db, projectId, brief.payload as DesignBrief));
+  return c.json({ briefArtifactId: brief.id, ...planPreflight(digest, pipelineFlags(c.env)) });
+});
 
 /** Phần params do từng tuyến tự đặt — phần còn lại `launchPlanRun` dựng từ `PlanStart`. */
 type PlanRunOptions = Pick<
@@ -1541,10 +1578,7 @@ async function launchPlanRun(
     ...start.runScope,
     stage: 'plan',
     ...options,
-    ...(env.AI_PROMPT_PIPELINE === 'v5' || env.AI_PROMPT_PIPELINE === 'v6'
-      ? { geometry: 'rect' as const }
-      : {}),
-    ...(env.AI_PROMPT_PIPELINE === 'v6' ? { pipeline: 'v6' as const } : {}),
+    ...pipelineFlags(env),
     briefRef: start.briefRef,
     digest: start.digest,
     variants,

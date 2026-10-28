@@ -61,6 +61,7 @@ import {
   useHideAiPlan,
   useInvalidateAiDesign,
   useStartAiRun,
+  useAiPlanPreflight,
   type AiDesignState,
   type AiPlanIssue,
   type AiPlanLevelView,
@@ -174,6 +175,10 @@ export function AiPlanStep({
 
   // Mặt bằng đọc ĐẦU BÀI + KHẢO SÁT, không đọc chương trình không gian (T45, 15/09/2026).
   const blocked = !state.briefArtifactId;
+  // Đầu bài chắc chắn không xếp vừa khối nhà (T112, T178): khoá nút trước khi bấm — Worker cũng chặn ở tuyến khởi động.
+  const preflight = useAiPlanPreflight(projectId, state.briefArtifactId);
+  const infeasible = preflight.data?.blocking ?? null;
+  const tightWarnings = preflight.data?.warnings ?? [];
   const runResult = (run.data?.result ?? null) as PlanRunResult | null;
   const running = run.data?.status === 'queued' || run.data?.status === 'running';
 
@@ -275,7 +280,7 @@ export function AiPlanStep({
               variant="primary"
               className="w-full"
               onClick={() => setAskRun(true)}
-              disabled={running || start.isPending || !ai.choice.route}
+              disabled={running || start.isPending || !ai.choice.route || !!infeasible}
             >
               {start.isPending
                 ? 'Đang gửi…'
@@ -283,6 +288,24 @@ export function AiPlanStep({
                   ? 'Đang xếp…'
                   : `Xếp mặt bằng${costOnButton(cost.estimate, Number(count))}`}
             </Button>
+            {infeasible && (
+              <p role="alert" className="text-status-overdue">
+                {infeasible}
+              </p>
+            )}
+            {!infeasible && tightWarnings.length > 0 && (
+              <ul className="space-y-1">
+                {tightWarnings.map((text) => (
+                  <li key={text} className="flex items-start gap-2">
+                    <AlertTriangle
+                      className="mt-0.5 size-4 shrink-0 text-status-pending"
+                      aria-hidden
+                    />
+                    <span>{text}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
             <CostEstimateLine
               estimate={cost.estimate}
               loading={cost.loading}

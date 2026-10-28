@@ -121,6 +121,8 @@ import { placeEntrySteps } from './entry-steps';
 import {
   bandMinDepth,
   feasibilityIssue,
+  stairFitAdvice,
+  stairFitIssue,
   loadsIssue,
   loadsKnowledge,
   storeyLoads,
@@ -5535,16 +5537,38 @@ interface FailedRound {
 export function briefInfeasible(
   input: Pick<PlanContextInput, 'construction' | 'labels'> & {
     quality: Pick<PlanQuality, 'feasibilityMaxPercent'>;
+    digest?: Pick<AiBriefDigest, 'parking'>;
   },
   context: PlanContext,
 ): string | null {
   if (context.bands && context.layout?.loads) return loadsIssue(context.layout.loads, input.labels);
-  return feasibilityIssue(
-    context.knowledge,
-    input.construction.walls.exterior_m,
-    input.quality,
-    input.labels,
+  return (
+    feasibilityIssue(
+      context.knowledge,
+      input.construction.walls.exterior_m,
+      input.quality,
+      input.labels,
+    ) ??
+    // Ô thang không có chỗ dù đặt ở đâu (T178) — chặn trước lời gọi đầu, cùng đường với T112.
+    stairFitIssue(
+      context.knowledge,
+      input.construction,
+      input.digest?.parking?.cars ?? 0,
+      input.labels,
+    )
   );
+}
+
+/**
+ * Cảnh báo trước khi chạy (không chặn): tầng còn dựng được nhưng khá chật quanh ô thang (T178). Đường dải (v6) đã có
+ * dòng chật / vượt riêng (`storeyLoads`) nên không thêm.
+ */
+export function briefAdvice(
+  input: Pick<PlanContextInput, 'construction'> & { digest?: Pick<AiBriefDigest, 'parking'> },
+  context: PlanContext,
+): string[] {
+  if (context.bands) return [];
+  return stairFitAdvice(context.knowledge, input.construction, input.digest?.parking?.cars ?? 0);
 }
 
 /**
