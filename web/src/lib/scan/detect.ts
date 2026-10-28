@@ -12,7 +12,7 @@
  * vốn đã không có trong ảnh.
  */
 
-import type { Quad } from './perspective';
+import { straightMids, type EdgeMids, type Point, type Quad } from './perspective';
 
 /** Ngưỡng Otsu trên lược đồ xám. */
 function otsu(g: Uint8ClampedArray): number {
@@ -72,6 +72,8 @@ function isConvex(q: Quad): boolean {
 /** Kết quả tìm giấy, theo toạ độ của chính ảnh đầu vào. */
 export interface PaperDetection {
   quad: Quad;
+  /** Điểm giữa 4 cạnh — lệch khỏi trung điểm khi thấy rõ mép giấy cong, không thì cạnh thẳng. */
+  mids: EdgeMids;
   /**
    * 1 = điểm NGOÀI tờ giấy (mặt bàn): vùng tối, ít màu, thông ra mép ảnh. Tờ giấy tràn khung thì
    * 4 góc không cắt hết được mặt bàn — bộ quét tô trắng các điểm này. Chữ (lọt trong giấy) và dấu
@@ -176,14 +178,94 @@ export function detectPaper(img: ImageData): PaperDetection | null {
   const area = quadArea(quad);
   if (area < 0.25 * n || bestSize < 0.8 * area) return null;
 
-  // Lùi vào trong ~1 % để không dính viền mặt bàn ở mép giấy.
+  const paper = (x: number, y: number) => {
+    const xi = Math.floor(x);
+    const yi = Math.floor(y);
+    if (xi < 0 || yi < 0 || xi >= w || yi >= h) return null;
+    return label[yi * w + xi] === bestLabel;
+  };
+  const mids = findEdgeMids(quad, paper);
+
+  // Lùi vào trong ~1 % để không dính viền mặt bàn ở mép giấy. Lùi là phép co quanh tâm (affine),
+  // nên điểm giữa co theo cùng cách vẫn là điểm giữa của cạnh đã lùi, độ cong giữ tỉ lệ.
   const cx = quad.reduce((s, p) => s + p.x, 0) / 4;
   const cy = quad.reduce((s, p) => s + p.y, 0) / 4;
-  const inset = quad.map((p) => ({
+  const shrink = (p: Point): Point => ({
     x: p.x + (cx - p.x) * 0.01,
     y: p.y + (cy - p.y) * 0.01,
-  })) as Quad;
-  return { quad: inset, outside: outsideMask(img, g, t), width: w, height: h };
+  });
+  return {
+    quad: quad.map(shrink) as Quad,
+    mids: mids.map(shrink) as EdgeMids,
+    outside: outsideMask(img, g, t),
+    width: w,
+    height: h,
+  };
+}
+
+/** Khoảng dò mép quanh trung điểm, theo tỉ lệ chiều dài cạnh — giấy cong hơn mức này thì không bắt. */
+export const EDGE_SEARCH_RATIO = 0.12;
+
+/**
+ * Điểm giữa thật của 4 cạnh: tại trung điểm mỗi dây cung, dò theo pháp tuyến ±`EDGE_SEARCH_RATIO`
+ * chiều dài cạnh, tìm chỗ chuyển từ «ngoài giấy» sang «trong giấy». Chỉ nhận khi mép RÕ: phía ngoài
+ * gần hết không phải giấy, phía trong gần hết là giấy, và phía ngoài có đủ điểm nằm trong ảnh. Không
+ * rõ (bóng, chữ sát mép, tờ giấy tràn khung — mép nằm ngoài ảnh) thì giữ trung điểm thẳng, không
+ * đoán. `paper` trả `null` cho điểm ngoài ảnh.
+ */
+export function findEdgeMids(
+  quad: Quad,
+  paper: (x: number, y: number) => boolean | null,
+): EdgeMids {
+  const cx = quad.reduce((s, p) => s + p.x, 0) / 4;
+  const cy = quad.reduce((s, p) => s + p.y, 0) / 4;
+  return straightMids(quad).map((m, i) => {
+    const a = quad[i]!;
+    const b = quad[(i + 1) % 4]!;
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    // Pháp tuyến hướng RA NGOÀI tờ giấy (ra xa tâm tứ giác).
+    let nx = -(b.y - a.y) / len;
+    let ny = (b.x - a.x) / len;
+    if (nx * (m.x - cx) + ny * (m.y - cy) < 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    const reach = Math.max(4, Math.round(EDGE_SEARCH_RATIO * len));
+    // Mẫu từ ngoài vào trong: k = +reach (ngoài cùng) → −reach (trong cùng), bước 1 điểm ảnh.
+    const samples: (boolean | null)[] = [];
+    for (let k = reach; k >= -reach; k--) samples.push(paper(m.x + nx * k, m.y + ny * k));
+    // Chỗ chuyển e: mẫu [0, e) là phía ngoài, [e, cuối] là phía trong. Chọn e khớp nhất.
+    let best = -1;
+    let bestScore = -1;
+    let outsideKnown = 0;
+    const insideTotal = samples.filter((v) => v === true).length;
+    let outsideHits = 0;
+    let insideHits = insideTotal;
+    for (let e = 0; e <= samples.length; e++) {
+      const score = outsideHits + insideHits;
+      if (score > bestScore) {
+        bestScore = score;
+        best = e;
+      }
+      const v = samples[e];
+      if (v === false) outsideHits++;
+      if (v === true) insideHits--;
+    }
+    for (let k = 0; k < best; k++) if (samples[k] !== null) outsideKnown++;
+    const known = samples.filter((v) => v !== null).length;
+    const insideCount = samples.length - best;
+    const clear =
+      outsideKnown >= 3 &&
+      insideCount >= 3 &&
+      bestScore >= 0.92 * known &&
+      samples.slice(best).every((v) => v !== null);
+    if (!clear) return m;
+    // Mẫu thứ e ứng với k = reach − e; mép nằm giữa mẫu ngoài cuối và mẫu trong đầu.
+    const offset = reach - best + 0.5;
+    // Lệch dưới 1,5 điểm ảnh (ở cỡ dò ~480 px) là nhiễu răng cưa của mặt nạ, không phải cong.
+    if (Math.abs(offset) < 1.5) return m;
+    return { x: m.x + nx * offset, y: m.y + ny * offset };
+  }) as EdgeMids;
 }
 
 /** Mặt bàn: điểm tối + ít màu, nối liền ra mép ảnh; nới thêm để mất viền tối ở mép giấy. */

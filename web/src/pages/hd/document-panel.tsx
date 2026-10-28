@@ -2,7 +2,8 @@
  * Tab «Văn bản» của Chi tiết Hợp đồng — điền mẫu Word từ hồ sơ (GĐ4, vấn đề 5 của chủ dự án).
  *
  * Ba khối, theo đúng thứ tự người soạn làm việc:
- *   1. Thông tin in lên văn bản mà hồ sơ chưa có (hình thức giá, thuế suất, địa điểm, thời gian).
+ *   1. Thông tin in lên văn bản: giá trị hợp đồng (nơi DUY NHẤT nhập, 0234), hình thức giá, thuế suất, địa điểm,
+ *      thời gian.
  *   2. Chọn mẫu → điền và xem trước → lưu phiên bản và tải về. Ô chưa có dữ liệu được liệt kê
  *      TRƯỚC khi lưu và in dải chấm trên văn bản — không bịa số (CLAUDE.md 5.2).
  *   3. Các phiên bản đã lưu — bất biến; hợp đồng đã ký thì khoá, không lập thêm.
@@ -32,7 +33,9 @@ import {
   CONTRACT_PRICE_FORM_LABELS,
   CONTRACT_TYPE_LABELS,
   buildTemplateData,
+  formatCurrency,
   formatDateTime,
+  suggestContractTerms,
   MISSING_FIELD_SOURCE_LABELS,
   TEMPLATE_BLANK,
   TEMPLATE_LOOPS,
@@ -47,6 +50,7 @@ import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { FIELD_BOX } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/money-input';
 import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import {
   DOCUMENT_BUCKET,
@@ -69,6 +73,7 @@ import {
   type ContractDetailRecord,
 } from '@/hooks/use-contracts';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { useContractTermSources } from '@/hooks/use-quotes';
 import { fillTemplate, inspectTemplate, safeFileName, saveBlob } from '@/lib/docx-template';
 import {
   DocInputsSection,
@@ -402,7 +407,14 @@ function InfoSection({
   editable: boolean;
 }) {
   const update = useUpdateContract();
+  // Giá trị hợp đồng nhập ở MỘT nơi là ô này (0234, anh Dũng 28/10/2026) — văn bản, hạn mức duyệt, đợt thu đều
+  // đọc `contracts.value`. Hợp đồng từ cơ hội thì gợi ý giá trị báo giá đã gửi khách, người soạn bấm mới dùng.
+  const sources = useContractTermSources(
+    editable && contract.source_type === 'opportunities' ? contract.source_id : null,
+  );
+  const quoteValue = sources.data ? suggestContractTerms(sources.data.quote, null).gia_tri : null;
   const [form, setForm] = useState({
+    value: contract.value != null ? String(contract.value) : '',
     priceForm: contract.price_form ?? '',
     vatRate: contract.vat_rate ? String(Number(contract.vat_rate)) : '',
     location: contract.project_location ?? '',
@@ -422,10 +434,15 @@ function InfoSection({
       setMessage({ ok: false, text: 'Ngày kết thúc phải sau ngày bắt đầu.' });
       return;
     }
+    if (!/^\d*$/.test(form.value) || (form.value !== '' && BigInt(form.value) <= 0n)) {
+      setMessage({ ok: false, text: 'Giá trị hợp đồng phải là số tiền lớn hơn 0.' });
+      return;
+    }
     try {
       await update.mutateAsync({
         id: contract.id,
         changes: {
+          value: form.value || null,
           price_form: (form.priceForm || null) as ContractPriceForm | null,
           vat_rate: vat || null,
           project_location: form.location.trim() || null,
@@ -443,10 +460,35 @@ function InfoSection({
     <section className="rounded-card bg-surface p-4">
       <h3 className="font-medium">Thông tin in lên văn bản</h3>
       <p className="mt-1 text-sm text-fg-subtle">
-        Giá trị, đối tác và điều khoản lấy từ hồ sơ. Các ô dưới đây hồ sơ chưa có.
+        Đối tác và điều khoản lấy từ hồ sơ. Giá trị hợp đồng sửa ở ô đầu tiên — đây là nơi duy nhất
+        nhập giá trị.
         {!editable && ' Chỉ sửa được khi hợp đồng còn Nháp, bởi người chịu trách nhiệm.'}
       </p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <Field
+          previewKeys="gia_tri gia_tri_bang_chu gia_tri_truoc_thue tien_thue"
+          label="Giá trị hợp đồng (đồng, đã gồm thuế)"
+          hint="Nhập ở đây là đủ: văn bản in số này kèm bằng chữ, tỷ lệ các đợt thanh toán tính theo số này."
+          className="sm:col-span-2"
+        >
+          <MoneyInput
+            value={form.value}
+            disabled={!editable}
+            onChange={(v) => setForm((f) => ({ ...f, value: v }))}
+          />
+          {quoteValue?.amount && quoteValue.amount !== form.value && (
+            <p className="mt-1 text-sm text-ink-subtle">
+              {quoteValue.source}: {formatCurrency(quoteValue.amount)}.{' '}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setForm((f) => ({ ...f, value: quoteValue.amount! }))}
+              >
+                Dùng số này
+              </Button>
+            </p>
+          )}
+        </Field>
         <Field
           previewKeys="hinh_thuc_gia"
           label="Hình thức giá"

@@ -204,6 +204,14 @@ export const CONTRACT_TERM_TYPES = [
 
 export type ContractTermType = (typeof CONTRACT_TERM_TYPES)[number];
 
+/**
+ * Nhóm điều khoản còn ghi được trên tab Điều khoản. `gia_tri` bỏ ra từ 0234: giá trị hợp đồng chỉ nhập một nơi
+ * (`contracts.value`, bước «1. Thông tin»); dòng `gia_tri` cũ vẫn đọc được, không hiện ở cột sửa.
+ */
+export const EDITABLE_CONTRACT_TERM_TYPES: readonly ContractTermType[] = CONTRACT_TERM_TYPES.filter(
+  (t) => t !== 'gia_tri',
+);
+
 /** Điều khoản là một ĐỢT THU TIỀN của khách — khớp danh sách trong `cash_flow_forecast_items` (0197) và 0227. */
 export const COLLECTION_TERM_TYPES: readonly ContractTermType[] = [
   'tam_ung',

@@ -1076,6 +1076,17 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   dừng theo hẹn, chưa chạy Mặt ngoài / Phối cảnh (khoá khi chưa có mặt bằng). Bản phác ô lưới của mô hình dựng thành hình để
   xem lỗi (`backup/ai-tron/ban-phac.svg`, `ve-ban-phac.py`), báo cáo `backup/ai-tron/bao-cao-luot-hong.md`. Bản phác KHÔNG
   phải bản vẽ, không đưa khách được. Cùng lượt này cùng đầu bài, lần trước qua cổng vòng 1 — mô hình không lặp lại.
+- **28/10/2026 (anh Dũng chốt «làm luôn» các việc treo):** 0234 giá trị hợp đồng nhập MỘT nơi — ô ở bước «1. Thông tin»
+  (gợi ý từ báo giá), nhóm điều khoản `gia_tri` bỏ khỏi tab Điều khoản và khỏi điều kiện gửi duyệt; 0235 ngân sách gắn thẳng
+  công trình (`build_site_budget_from_quote`, `save_site_budget_line`, `delete_site_budget_line`; Trưởng phòng Thi công / BGĐ;
+  một dòng tổng 0 đồng — không lấy giá bán làm chi phí; vá chỉ huy trưởng đọc ngân sách ngoài phạm vi); 0236 bộ mẫu Word hồ
+  sơ dự thầu từ `NVC-DT-01` (`db/seed-assets/bid-templates/convert_bid.py`, `contract_templates.document_kind` thêm
+  `ho_so_du_thau` / `thuong_thao`, văn bản bất biến `bid_form_documents`, nháp `bid_form_inputs`, khối soạn ở tab «Hồ sơ thầu»);
+  bộ quét có điểm giữa mỗi cạnh để nắn giấy cong (`findEdgeMids`, `warpQuad`); bật `ai.site_log_enabled` trên máy; PDF «Luồng
+  nghiệp vụ 3 công ty» bản 2 (`backup/luong-nghiep-vu/`, không commit). AI Design `9272`: phát lại 46d6eff3 đã LƯU mặt bằng
+  AI-A (70,2 điểm, dưới sàn nhóm D, E); ảnh nội thất / mặt đứng / phối cảnh CHƯA chạy — bộ lọc an toàn chặn Claude tự bấm lệnh
+  trả phí, anh Dũng tự bấm trên giao diện hoặc thêm quyền. Câu hỏi mở: ngân sách công trình có cần BGĐ duyệt / bắt buộc trước
+  khởi công; giá dự thầu đã gồm thuế chưa; danh mục kiểm tra có tách khỏi bộ nộp.
 - Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
@@ -1233,7 +1244,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email.
 
-**Migration tiếp theo: 0234.** (Đã dùng tới 0233; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0237.** (Đã dùng tới 0236; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 

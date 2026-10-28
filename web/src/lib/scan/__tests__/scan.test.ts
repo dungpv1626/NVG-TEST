@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import { A4_POINTS, buildPdf } from '../build-pdf';
-import { detectPaper, detectPaperQuad } from '../detect';
+import { detectPaper, detectPaperQuad, findEdgeMids } from '../detect';
 import { deskewAngle, rotateImage } from '../deskew';
 import { enhance } from '../enhance';
 import { isBlurry, sharpnessOfImage } from '../quality';
@@ -9,10 +9,13 @@ import {
   applyHomography,
   createImageData,
   defaultQuad,
+  hasBentEdge,
   homography,
   pageSize,
   rotateQuadClockwise,
+  straightMids,
   warpQuad,
+  type EdgeMids,
   type Quad,
 } from '../perspective';
 
@@ -340,5 +343,111 @@ describe('dọn mép trang và báo ảnh mờ', () => {
       }
     expect(isBlurry(sharpnessOfImage(sharp))).toBe(false);
     expect(isBlurry(sharpnessOfImage(blurred))).toBe(true);
+  });
+});
+
+describe('giấy cong — điểm giữa cạnh', () => {
+  /** Ảnh xám w×h từ hàm độ sáng. */
+  function gray(w: number, h: number, lum: (x: number, y: number) => number) {
+    const img = createImageData(w, h);
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = lum(x, y);
+        img.data[i + 3] = 255;
+      }
+    return img;
+  }
+
+  it('điểm giữa đúng trung điểm (hoặc lệch dưới nửa điểm ảnh) thì ra y hệt phép phối cảnh cũ', () => {
+    // Nền có vân để mọi sai lệch lấy mẫu đều lộ ra.
+    const src = gray(240, 300, (x, y) => (x * 37 + y * 91 + ((x * y) % 13) * 17) % 256);
+    const quad: Quad = [
+      { x: 30, y: 20 },
+      { x: 210, y: 40 },
+      { x: 200, y: 280 },
+      { x: 15, y: 260 },
+    ];
+    const old = warpQuad(src, quad, 120, 170, undefined, 2);
+    const mids = straightMids(quad);
+    expect(warpQuad(src, quad, 120, 170, undefined, 2, mids).data).toEqual(old.data);
+    const nudged = mids.map((m) => ({ x: m.x + 0.2, y: m.y - 0.25 })) as EdgeMids;
+    expect(warpQuad(src, quad, 120, 170, undefined, 2, nudged).data).toEqual(old.data);
+    expect(hasBentEdge(quad, nudged)).toBe(false);
+  });
+
+  it('cạnh trên cong: nắn theo điểm giữa thì dòng chữ sát mép ra thẳng, nắn thẳng thì vẫn cong', () => {
+    // Tờ giấy 200 × 300 trên bàn tối, mép trên vồng lên 25 px ở giữa; một dòng chữ chạy song song
+    // mép trên, cách 12 px — đúng kiểu trang sổ bị cong ở gáy.
+    const top = (x: number) => 60 - 25 * (1 - ((x - 150) / 100) ** 2);
+    const src = gray(300, 400, (x, y) => {
+      if (x < 50 || x >= 250 || y >= 360 || y + 0.5 < top(x + 0.5)) return 30;
+      const line = y + 0.5 - top(x + 0.5);
+      return line >= 12 && line < 15 && x >= 60 && x < 240 ? 20 : 230;
+    });
+    const quad: Quad = [
+      { x: 50, y: 60 },
+      { x: 250, y: 60 },
+      { x: 250, y: 360 },
+      { x: 50, y: 360 },
+    ];
+    const mids = straightMids(quad);
+    mids[0] = { x: 150, y: 35 };
+    /** Hàng của dòng chữ ở từng cột trang đã nắn (hàng tối đầu tiên dưới mép). */
+    const lineRows = (img: ImageData) => {
+      const rows: number[] = [];
+      for (let x = 15; x < 185; x += 5) {
+        for (let y = 3; y < 120; y++) {
+          if (img.data[(y * img.width + x) * 4]! < 100) {
+            rows.push(y);
+            break;
+          }
+        }
+      }
+      return rows;
+    };
+    const curved = warpQuad(src, quad, 200, 300, undefined, 0, mids);
+    const rows = lineRows(curved);
+    expect(rows.length).toBe(34);
+    expect(Math.max(...rows) - Math.min(...rows)).toBeLessThanOrEqual(2);
+    // Mép trên nằm đúng trên đường cong: hàng đầu trang là giấy, không dính mặt bàn.
+    for (let x = 2; x < 198; x++) expect(curved.data[(1 * 200 + x) * 4]!).toBeGreaterThan(200);
+    // Đối chứng: nắn bằng 4 góc thẳng thì phần giấy vồng lên trên dây cung bị cắt — đoạn giữa của
+    // dòng chữ mất khỏi trang.
+    expect(lineRows(warpQuad(src, quad, 200, 300)).length).toBeLessThan(20);
+  });
+
+  it('tự tìm mép: thấy cạnh trên cong thì đặt điểm giữa lên mép thật, cạnh thẳng giữ trung điểm', () => {
+    const top = (x: number) => 80 - 20 * (1 - ((x - 200) / 120) ** 2);
+    const img = gray(400, 480, (x, y) => {
+      const inside = x >= 80 && x < 320 && y < 420 && y + 0.5 >= top(x + 0.5);
+      if (!inside) return 60;
+      return y > 140 && y % 20 < 3 && x > 100 && x < 300 && x % 7 < 5 ? 40 : 235;
+    });
+    const r = detectPaper(img);
+    expect(r).not.toBeNull();
+    const straight = straightMids(r!.quad);
+    // Mép thật ở giữa cạnh trên là y = 60 (lùi vào 1 % như 4 góc thì thêm ~2 px).
+    expect(Math.abs(r!.mids[0].x - 200)).toBeLessThan(2);
+    expect(Math.abs(r!.mids[0].y - 60)).toBeLessThan(3.5);
+    expect(straight[0].y - r!.mids[0].y).toBeGreaterThan(15);
+    for (const i of [1, 2, 3]) expect(r!.mids[i]).toEqual(straight[i]);
+  });
+
+  it('không thấy mép rõ thì giữ trung điểm: giấy tràn khung, hay mép lổn nhổn không ra ranh giới', () => {
+    // Tờ giấy chạm mép trên của ảnh: phía ngoài cạnh trên không có trong ảnh.
+    const img = gray(400, 480, (x, y) => (x >= 40 && x < 360 && y < 440 ? 235 : 60));
+    const r = detectPaper(img);
+    expect(r).not.toBeNull();
+    expect(r!.mids[0]).toEqual(straightMids(r!.quad)[0]);
+    // Mặt nạ lốm đốm (bóng, vân bàn) quanh cả 4 cạnh: không có chỗ chuyển rõ nào.
+    const quad: Quad = [
+      { x: 100, y: 100 },
+      { x: 300, y: 100 },
+      { x: 300, y: 400 },
+      { x: 100, y: 400 },
+    ];
+    const speckle = (x: number, y: number) => (Math.floor(x) * 7 + Math.floor(y) * 3) % 5 < 2;
+    expect(findEdgeMids(quad, speckle)).toEqual(straightMids(quad));
   });
 });

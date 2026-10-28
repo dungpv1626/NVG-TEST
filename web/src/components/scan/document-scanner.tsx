@@ -22,6 +22,7 @@ import {
   ImagePlus,
   RotateCw,
   ScanSearch,
+  Spline,
   Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,11 +33,16 @@ import { detectPaper } from '@/lib/scan/detect';
 import { isBlurry, SHARPNESS_SIDE, sharpnessOfImage } from '@/lib/scan/quality';
 import { enhance, SCAN_MODE_LABELS, type ScanMode } from '@/lib/scan/enhance';
 import {
+  bezierControl,
   defaultQuad,
+  followCorners,
+  hasBentEdge,
   MAX_PAGE_SIDE,
   pageSize,
   rotateQuadClockwise,
+  straightMids,
   warpQuad,
+  type EdgeMids,
   type Quad,
 } from '@/lib/scan/perspective';
 import { cn } from '@/lib/utils';
@@ -59,8 +65,10 @@ interface OutsideMask {
   k: number;
 }
 
-/** 4 góc gợi ý + vùng mặt bàn, theo toạ độ ảnh nguồn; `null` khi máy không chắc. */
-function autoDetect(source: HTMLCanvasElement): { quad: Quad; outside: OutsideMask } | null {
+/** 4 góc + điểm giữa cạnh gợi ý + vùng mặt bàn, theo toạ độ ảnh nguồn; `null` khi máy không chắc. */
+function autoDetect(
+  source: HTMLCanvasElement,
+): { quad: Quad; mids: EdgeMids; outside: OutsideMask } | null {
   const k = Math.min(1, DETECT_SIDE / Math.max(source.width, source.height));
   const c = canvasOf(Math.round(source.width * k), Math.round(source.height * k));
   const ctx = c.getContext('2d')!;
@@ -69,6 +77,7 @@ function autoDetect(source: HTMLCanvasElement): { quad: Quad; outside: OutsideMa
   if (!r) return null;
   return {
     quad: r.quad.map((p) => ({ x: p.x / k, y: p.y / k })) as Quad,
+    mids: r.mids.map((p) => ({ x: p.x / k, y: p.y / k })) as EdgeMids,
     outside: { mask: r.outside, width: r.width, height: r.height, k },
   };
 }
@@ -77,9 +86,10 @@ function autoDetect(source: HTMLCanvasElement): { quad: Quad; outside: OutsideMa
 function detectedFields(source: HTMLCanvasElement) {
   const r = autoDetect(source);
   return r
-    ? { quad: r.quad, outside: r.outside, quadSource: 'auto' as const }
+    ? { quad: r.quad, mids: r.mids, outside: r.outside, quadSource: 'auto' as const }
     : {
         quad: defaultQuad(source.width, source.height),
+        mids: straightMids(defaultQuad(source.width, source.height)),
         outside: null,
         quadSource: 'default' as const,
       };
@@ -120,6 +130,8 @@ type Page =
       source: HTMLCanvasElement;
       sourceUrl: string;
       quad: Quad;
+      /** Điểm giữa 4 cạnh — giấy cong thì lệch khỏi trung điểm, viền uốn theo mép. */
+      mids: EdgeMids;
       mode: ScanMode;
       thumbUrl: string | null;
       /** 4 góc từ đâu: máy tự tìm, mặc định (không tìm được), hay người dùng đã kéo. */
@@ -184,11 +196,11 @@ function renderPage(page: Extract<Page, { kind: 'image' }>, maxSide: number): HT
   // rồi nắn + xoay trong MỘT lần lấy mẫu ở cỡ thật (lấy mẫu hai lần làm chữ nhòe).
   const probeSize = pageSize(page.quad, Math.min(maxSide, DESKEW_SIDE));
   const probe = enhance(
-    warpQuad(src, page.quad, probeSize.width, probeSize.height, keep),
+    warpQuad(src, page.quad, probeSize.width, probeSize.height, keep, 0, page.mids),
     page.mode,
   );
   const angle = deskewAngle(probe);
-  const out = enhance(warpQuad(src, page.quad, width, height, keep, -angle), page.mode);
+  const out = enhance(warpQuad(src, page.quad, width, height, keep, -angle, page.mids), page.mode);
   const c = canvasOf(width, height);
   c.getContext('2d')!.putImageData(out, 0, 0);
   return c;
@@ -317,6 +329,7 @@ export function DocumentScanner({
         source: c,
         sourceUrl: c.toDataURL('image/jpeg', 0.8),
         quad: rotateQuadClockwise(p.quad, p.source.height),
+        mids: rotateQuadClockwise(p.mids, p.source.height),
         outside: p.outside && rotateMask(p.outside),
       };
     });
@@ -446,7 +459,9 @@ export function DocumentScanner({
         ) : (
           <PageEditor
             page={current}
-            onQuad={(quad) => update(current.id, () => ({ quad, quadSource: 'manual' }))}
+            onQuad={(quad, mids) =>
+              update(current.id, () => ({ quad, mids, quadSource: 'manual' }))
+            }
             onDetect={() => update(current.id, (p) => detectedFields(p.source))}
             onMode={(mode) => update(current.id, () => ({ mode }))}
             onRotate={() => rotate(current.id)}
@@ -549,15 +564,20 @@ function PageEditor({
   onDetect,
 }: {
   page: Extract<Page, { kind: 'image' }>;
-  onQuad: (quad: Quad) => void;
+  onQuad: (quad: Quad, mids: EdgeMids) => void;
   onDetect: () => void;
   onMode: (mode: ScanMode) => void;
   onRotate: () => void;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
-  const [quad, setQuad] = useState(page.quad);
+  // Góc và điểm giữa chung một trạng thái: kéo góc dời cả điểm giữa, hai lần cập nhật rời nhau
+  // giữa các nhịp pointermove dồn dập sẽ tính độ lệch theo góc cũ.
+  const [shape, setShape] = useState({ quad: page.quad, mids: page.mids });
+  const { quad, mids } = shape;
+  /** Đang kéo gì: 0–3 là góc, 4–7 là điểm giữa cạnh 0–3. */
   const dragging = useRef<number | null>(null);
-  useEffect(() => setQuad(page.quad), [page.quad, page.id]);
+  useEffect(() => setShape({ quad: page.quad, mids: page.mids }), [page.quad, page.mids, page.id]);
+  const bent = hasBentEdge(quad, mids);
 
   const w = page.source.width;
   const h = page.source.height;
@@ -572,6 +592,23 @@ function PageEditor({
 
   // Bán kính điểm kéo theo toạ độ ảnh: ~22 px trên màn hình (vùng bấm ≥ 40 px, 5.4).
   const handle = (Math.max(w, h) / 600) * 22;
+
+  // Viền: 4 đường cong bậc hai qua góc và điểm giữa (cạnh thẳng thì điều khiển = trung điểm).
+  const outline =
+    `M${quad[0].x},${quad[0].y} ` +
+    quad
+      .map((a, i) => {
+        const b = quad[(i + 1) % 4]!;
+        const c = bezierControl(a, b, mids[i]!);
+        return `Q${c.x},${c.y} ${b.x},${b.y}`;
+      })
+      .join(' ') +
+    ' Z';
+
+  function grab(e: ReactPointerEvent<SVGElement>, target: number) {
+    (e.currentTarget.ownerSVGElement ?? e.currentTarget).setPointerCapture(e.pointerId);
+    dragging.current = target;
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center gap-3">
@@ -588,6 +625,14 @@ function PageEditor({
         <Button variant="secondary" size="sm" onClick={onDetect}>
           <ScanSearch className="size-4" aria-hidden /> Tự tìm mép
         </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={!bent}
+          onClick={() => onQuad(quad, straightMids(quad))}
+        >
+          <Spline className="size-4" aria-hidden /> Làm thẳng cạnh
+        </Button>
       </div>
       <p
         role="status"
@@ -597,10 +642,12 @@ function PageEditor({
         )}
       >
         {page.quadSource === 'auto'
-          ? 'Máy đã tự tìm mép giấy — kiểm lại 4 chấm tròn, lệch thì kéo cho khớp góc giấy.'
+          ? bent
+            ? 'Máy đã tự tìm mép giấy, cả chỗ giấy cong — kiểm lại 4 chấm tròn ở góc và chấm nhỏ giữa cạnh, lệch thì kéo cho khớp mép.'
+            : 'Máy đã tự tìm mép giấy — kiểm lại 4 chấm tròn, lệch thì kéo cho khớp góc giấy.'
           : page.quadSource === 'default'
             ? 'Không tự tìm được mép giấy — kéo 4 chấm tròn vào đúng 4 góc tờ giấy. Lần sau đặt giấy trên nền tối hơn (bàn gỗ, bìa sẫm) để máy tự tìm.'
-            : 'Kéo 4 chấm tròn cho khớp 4 góc tờ giấy.'}
+            : 'Kéo 4 chấm tròn cho khớp 4 góc tờ giấy. Giấy cong thì kéo chấm nhỏ giữa cạnh cho viền ôm theo mép.'}
       </p>
       {page.blurry && (
         <p
@@ -628,21 +675,45 @@ function PageEditor({
           preserveAspectRatio="none"
           className="absolute inset-0 size-full"
           onPointerMove={(e) => {
-            if (dragging.current === null) return;
+            const target = dragging.current;
+            if (target === null) return;
             const p = toImage(e);
-            setQuad((q) => q.map((c, i) => (i === dragging.current ? p : c)) as Quad);
+            setShape((s) => {
+              if (target >= 4) {
+                return {
+                  quad: s.quad,
+                  mids: s.mids.map((c, i) => (i === target - 4 ? p : c)) as EdgeMids,
+                };
+              }
+              const next = s.quad.map((c, i) => (i === target ? p : c)) as Quad;
+              return { quad: next, mids: followCorners(s.quad, s.mids, next) };
+            });
           }}
           onPointerUp={() => {
             if (dragging.current === null) return;
             dragging.current = null;
-            onQuad(quad);
+            onQuad(quad, mids);
           }}
         >
-          <polygon
-            points={quad.map((p) => `${p.x},${p.y}`).join(' ')}
-            className="fill-brand/10 stroke-brand"
-            strokeWidth={handle / 6}
-          />
+          <path d={outline} className="fill-brand/10 stroke-brand" strokeWidth={handle / 6} />
+          {mids.map((p, i) => (
+            <g
+              key={`mid-${i}`}
+              data-testid={`scan-edge-${i}`}
+              className="cursor-grab"
+              onPointerDown={(e) => grab(e, 4 + i)}
+            >
+              {/* Vùng bấm vô hình cùng cỡ chấm góc (≥ 40 px); chấm nhìn thấy nhỏ hơn cho khỏi lẫn với góc. */}
+              <circle cx={p.x} cy={p.y} r={handle} fill="transparent" />
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={handle * 0.55}
+                className="fill-brand stroke-surface"
+                strokeWidth={handle / 6}
+              />
+            </g>
+          ))}
           {quad.map((p, i) => (
             <circle
               key={i}
@@ -652,10 +723,7 @@ function PageEditor({
               data-testid={`scan-corner-${i}`}
               className="cursor-grab fill-surface stroke-brand"
               strokeWidth={handle / 4}
-              onPointerDown={(e) => {
-                (e.currentTarget.ownerSVGElement ?? e.currentTarget).setPointerCapture(e.pointerId);
-                dragging.current = i;
-              }}
+              onPointerDown={(e) => grab(e, i)}
             />
           ))}
         </svg>

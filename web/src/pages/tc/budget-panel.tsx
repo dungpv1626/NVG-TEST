@@ -21,8 +21,9 @@ import {
   summarizeBudget,
 } from '@nvg/shared';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
-import { useSiteBudgetStatus } from '@/hooks/use-construction-sites';
+import { useSiteBudgetSource, useSiteBudgetStatus } from '@/hooks/use-construction-sites';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { SiteBudgetEditor, SiteBudgetSetup } from './site-budget-editor';
 
 /**
  * Mức độ an toàn của ngân sách.
@@ -48,8 +49,10 @@ function HealthBadge({ health }: { health: BudgetHealth }) {
 
 export function BudgetPanel({ siteId }: { siteId: string }) {
   const { data, isLoading, error } = useSiteBudgetStatus(siteId);
+  // 0235: ai lập / sửa được ngân sách gắn thẳng công trình, và căn cứ báo giá.
+  const { data: source, isLoading: sourceLoading } = useSiteBudgetSource(siteId);
 
-  if (isLoading) return <TableSkeleton rows={4} />;
+  if (isLoading || sourceLoading) return <TableSkeleton rows={4} />;
   if (error) return <ErrorState message={toUserMessage(error)} />;
 
   const rows = data ?? [];
@@ -57,8 +60,12 @@ export function BudgetPanel({ siteId }: { siteId: string }) {
   // tên, hai cột lặp nhau chỉ đẩy cột «Còn được chi» ra khỏi khung nhìn.
   const showGroup = rows.some((r) => r.name !== COST_GROUP_LABELS[r.cost_group]);
   if (rows.length === 0) {
+    // Công trình đi từ cơ hội CRM (không gói thầu / thiết kế): lập ngay tại đây từ báo giá (0235).
+    if (source?.can_manage && !source.has_budget) {
+      return <SiteBudgetSetup siteId={siteId} source={source} />;
+    }
     return (
-      <EmptyState message="Chưa có ngân sách thi công cho công trình này. Ngân sách được lập từ bản dự toán đã phê duyệt ở gói thầu hoặc dự án thiết kế nguồn — không nhập lại tại công trường." />
+      <EmptyState message="Chưa có ngân sách thi công cho công trình này. Ngân sách được lập từ bản dự toán đã phê duyệt ở gói thầu hoặc dự án thiết kế nguồn, hoặc do Trưởng phòng Thi công lập từ báo giá đã duyệt." />
     );
   }
 
@@ -177,6 +184,8 @@ export function BudgetPanel({ siteId }: { siteId: string }) {
           </tbody>
         </table>
       </div>
+
+      {source?.can_manage && source.site_only && <SiteBudgetEditor siteId={siteId} />}
     </div>
   );
 }

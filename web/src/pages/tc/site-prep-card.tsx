@@ -9,10 +9,11 @@
 
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
-import { useUpdateConstructionSite } from '@/hooks/use-construction-sites';
+import { useSiteBudgetSource, useUpdateConstructionSite } from '@/hooks/use-construction-sites';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
@@ -50,6 +51,7 @@ export function SitePrepCard({
 }) {
   const { data: users = [] } = useCommanderCandidates(site.company_id);
   const update = useUpdateConstructionSite();
+  const { data: budget } = useSiteBudgetSource(site.id);
   const [commander, setCommander] = useState(site.responsible_user_id ?? '');
   const [start, setStart] = useState(site.planned_start_date ?? '');
   const [end, setEnd] = useState(site.planned_end_date ?? '');
@@ -126,6 +128,15 @@ export function SitePrepCard({
           <DateInput value={end} disabled={!canEdit} onChange={setEnd} />
         </Field>
       </div>
+      {/* 0235: không chặn khởi công, chỉ nhắc — thiếu ngân sách thì đề nghị mua chưa gửi được. */}
+      {budget?.can_manage && budget.has_budget === false && (
+        <p className="mt-3 text-sm">
+          Công trình chưa có ngân sách — đề nghị mua gắn công trình chưa gửi phê duyệt được.{' '}
+          <Link to="?tab=ngan-sach" className="text-brand underline-offset-4 hover:underline">
+            Lập ngân sách
+          </Link>
+        </p>
+      )}
       {canEdit && (
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <Button

@@ -14,13 +14,16 @@ import { supabase } from '@/lib/supabase';
 
 export const TEMPLATE_BUCKET = 'contract-templates';
 
-/** Loại văn bản của mẫu (0229). */
-export type TemplateDocumentKind = 'hop_dong' | 'phu_luc' | 'thanh_ly';
+/** Loại văn bản của mẫu (0229; hồ sơ dự thầu / biên bản thương thảo 0236 — soạn ở trang gói thầu). */
+export type TemplateDocumentKind =
+  'hop_dong' | 'phu_luc' | 'thanh_ly' | 'ho_so_du_thau' | 'thuong_thao';
 
 export const TEMPLATE_DOCUMENT_KIND_LABELS: Readonly<Record<TemplateDocumentKind, string>> = {
   hop_dong: 'Hợp đồng',
   phu_luc: 'Phụ lục hợp đồng',
   thanh_ly: 'Biên bản thanh lý',
+  ho_so_du_thau: 'Hồ sơ dự thầu',
+  thuong_thao: 'Biên bản thương thảo hợp đồng',
 };
 export const DOCUMENT_BUCKET = 'contract-documents';
 

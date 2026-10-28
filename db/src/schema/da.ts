@@ -122,7 +122,8 @@ export const boqItems = pgTable(
     ...companyScoped(),
 
     /**
-     * ĐÚNG MỘT trong hai cột cha có giá trị — ràng buộc CHECK ở migration giữ điều đó.
+     * Tối đa MỘT trong hai cột cha có giá trị; cả hai rỗng chỉ khi dòng gắn thẳng công trình
+     * (0235). Trước 0235 là ĐÚNG MỘT trong hai cột cha có giá trị — ràng buộc CHECK ở migration giữ điều đó.
      *
      * PRD TK-07 nói rõ Thiết kế (NVO) "sử dụng CHUNG cơ chế với Module DA (DA-04 đến DA-06)".
      * Nên bảng khối lượng và bảng dự toán nhận cả hai loại hồ sơ cha thay vì NVO có một bộ
@@ -389,7 +390,8 @@ export const projectBudgets = pgTable(
     ...companyScoped(),
 
     /**
-     * ĐÚNG MỘT trong hai cột cha có giá trị — cùng cách `estimates` và `boq_items` đã làm
+     * Tối đa MỘT trong hai cột cha có giá trị; cả hai rỗng chỉ khi dòng gắn thẳng công trình
+     * (0235). Trước 0235 là ĐÚNG MỘT trong hai cột cha có giá trị — cùng cách `estimates` và `boq_items` đã làm
      * khi bộ máy dự toán được dùng chung cho NVO (TK-07). Ngân sách phải theo được: NVO
      * làm trọn gói thiết kế + thi công, không đi qua gói thầu, nhưng vẫn cần TC-05 so chi
      * phí với ngân sách. Ràng buộc CHECK ở migration giữ "đúng một".
@@ -458,6 +460,16 @@ export const projectBudgets = pgTable(
     uniqueIndex('project_budgets_design_cost_code')
       .on(t.designProjectId, t.costCode)
       .where(sql`${t.deletedAt} IS NULL`),
+    /**
+     * Dòng gắn THẲNG công trình (0235): công trình mở từ hợp đồng của cơ hội CRM không có gói
+     * thầu / thiết kế, ngân sách lập ngay trên công trình. CHECK `project_budgets_one_owner`
+     * (migration) cho phép cả hai cột cha rỗng khi có `construction_site_id`.
+     */
+    uniqueIndex('project_budgets_site_cost_code')
+      .on(t.constructionSiteId, t.costCode)
+      .where(
+        sql`${t.deletedAt} IS NULL AND ${t.biddingProjectId} IS NULL AND ${t.designProjectId} IS NULL`,
+      ),
   ],
 );
 

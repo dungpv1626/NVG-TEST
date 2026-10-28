@@ -1576,6 +1576,27 @@
       "when": 1791780000000,
       "tag": "0233_dien_san_dau_bai",
       "breakpoints": true
+    },
+    {
+      "idx": 233,
+      "version": "7",
+      "when": 1791790000000,
+      "tag": "0234_gia_tri_mot_noi",
+      "breakpoints": true
+    },
+    {
+      "idx": 234,
+      "version": "7",
+      "when": 1791800000000,
+      "tag": "0235_ngan_sach_cong_trinh",
+      "breakpoints": true
+    },
+    {
+      "idx": 235,
+      "version": "7",
+      "when": 1791810000000,
+      "tag": "0236_ho_so_du_thau_tu_mau",
+      "breakpoints": true
     }
   ]
 }

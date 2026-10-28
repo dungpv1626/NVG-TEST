@@ -193,10 +193,12 @@ export const TEMPLATE_LOOPS: Readonly<Record<string, { term: ContractTermType; l
   quyet_toan: { term: 'quyet_toan', label: CONTRACT_TERM_TYPE_LABELS.quyet_toan },
 };
 
-/** Ba nhóm mà `submit_contract_approval` chặn trình ký nếu thiếu. */
+/**
+ * Hai nhóm mà `submit_contract_approval` chặn trình ký nếu thiếu. Giá trị hợp đồng không còn là nhóm điều khoản
+ * (0234, anh Dũng 28/10/2026: «nhập ở 1 nơi thôi») — chỉ là `contracts.value`, sửa ở bước «1. Thông tin».
+ */
 export const CONTRACT_REQUIRED_TERM_TYPES: readonly ContractTermType[] = [
   'pham_vi',
-  'gia_tri',
   'tien_do_thanh_toan',
 ];
 

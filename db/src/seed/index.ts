@@ -48,12 +48,13 @@ interface ContractTemplateAsset {
   file: string;
   code: string;
   title: string;
-  /** Rỗng với phụ lục / biên bản thanh lý (0229) — dùng cho mọi loại hợp đồng. */
-  contract_type: string | null;
-  /** hop_dong · phu_luc · thanh_ly (0229). */
+  /** Rỗng với phụ lục / biên bản thanh lý (0229) và bộ mẫu hồ sơ dự thầu (0236). */
+  contract_type?: string | null;
+  /** hop_dong · phu_luc · thanh_ly (0229) · ho_so_du_thau · thuong_thao (0236). */
   document_kind?: string;
   tags: Record<string, unknown>;
-  payment_milestones: unknown[];
+  /** Không có ở bộ mẫu hồ sơ dự thầu (0236). */
+  payment_milestones?: unknown[];
   free_fields: unknown[];
   options: unknown[];
   sha: string;
@@ -352,14 +353,24 @@ async function main() {
     // Tệp sinh bằng db/seed-assets/contract-templates/convert.py từ bộ dự thảo anh Dũng gửi
     // 21/10/2026. Tên tệp lưu theo băm nội dung: chạy lại với cùng tệp thì chỉ cập nhật các đợt
     // gợi ý; tệp đổi thì ngừng dùng bản cũ, nạp bản mới (tệp + chỗ trống của mẫu bất biến, 0171).
+    // Bộ biểu mẫu hồ sơ dự thầu NVC (0236, convert_bid.py) nạp cùng đường: cùng bảng `contract_templates`,
+    // `document_kind` ho_so_du_thau / thuong_thao, không gắn loại hợp đồng.
     let templateCount = 0;
-    for (const code of ['NVC', 'NVO', 'NVS']) {
+    const templateSources = [
+      ...['NVC', 'NVO', 'NVS'].map((code) => ({ code, folder: 'contract-templates' })),
+      { code: 'NVC', folder: 'bid-templates' },
+    ];
+    for (const { code, folder } of templateSources) {
       const companyId = companyByCode.get(code);
       if (!companyId) continue;
-      const dir = new URL(`../../seed-assets/contract-templates/${code}/`, import.meta.url);
-      const manifest = JSON.parse(
-        readFileSync(new URL('manifest.json', dir), 'utf8'),
-      ) as ContractTemplateAsset[];
+      const dir = new URL(`../../seed-assets/${folder}/${code}/`, import.meta.url);
+      const manifest = (
+        JSON.parse(readFileSync(new URL('manifest.json', dir), 'utf8')) as ContractTemplateAsset[]
+      ).map((m) => ({
+        ...m,
+        contract_type: m.contract_type ?? null,
+        payment_milestones: m.payment_milestones ?? [],
+      }));
       for (const m of manifest) {
         const path = `${companyId}/bo-mau-${m.sha}.docx`;
         const active = await db.execute<{ id: string; storage_path: string }>(sqlOp`

@@ -13,7 +13,7 @@ import {
   type TemplateDocumentKind,
 } from './use-contract-templates';
 
-export type AnnexKind = Exclude<TemplateDocumentKind, 'hop_dong'>;
+export type AnnexKind = Extract<TemplateDocumentKind, 'phu_luc' | 'thanh_ly'>;
 
 const TEMPLATE_SELECT =
   'id, company_id, title, contract_type, document_kind, price_form, storage_path, file_name, tags, ' +

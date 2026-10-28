@@ -471,6 +471,126 @@ export function useSiteBudgetStatus(siteId: string | undefined) {
 }
 
 // ---------------------------------------------------------------------------
+// Ngân sách lập ngay trên công trình (0235) — công trình mở từ hợp đồng của cơ hội CRM không có
+// gói thầu / hồ sơ thiết kế để sinh ngân sách. Lập từ báo giá đã duyệt, rồi người lập nhập số.
+// ---------------------------------------------------------------------------
+
+export interface SiteBudgetSource {
+  /** Trưởng phòng Thi công hoặc Ban Giám đốc. Sai thì mọi cột khác rỗng. */
+  can_manage: boolean;
+  has_budget: boolean | null;
+  /** Mọi dòng ngân sách đều gắn thẳng công trình (sửa được ở đây). */
+  site_only: boolean | null;
+  quote_code: string | null;
+  quote_value: MoneyValue | null;
+  contract_code: string | null;
+  blocked_reason: string | null;
+}
+
+export function useSiteBudgetSource(siteId: string | undefined) {
+  return useQuery<SiteBudgetSource | null, Error>({
+    queryKey: ['construction-sites', siteId, 'budget-source'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('site_budget_source', { p_site_id: siteId! });
+      if (error) throw new Error(error.message);
+      return ((data ?? []) as SiteBudgetSource[])[0] ?? null;
+    },
+    enabled: Boolean(siteId),
+  });
+}
+
+export interface SiteBudgetLine {
+  id: string;
+  cost_group: CostGroup;
+  cost_code: string;
+  name: string;
+  budgeted_amount: MoneyValue;
+  notes: string | null;
+}
+
+/** Dòng ngân sách kèm `id` để sửa — chỉ gọi khi `can_manage` (RLS vẫn lọc dòng lợi nhuận). */
+export function useSiteBudgetLines(siteId: string | undefined, enabled: boolean) {
+  return useQuery<SiteBudgetLine[], Error>({
+    queryKey: ['construction-sites', siteId, 'budget-lines'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('project_budgets')
+        .select('id, cost_group, cost_code, name, budgeted_amount, notes')
+        .eq('construction_site_id', siteId!)
+        .order('cost_group')
+        .order('cost_code');
+      if (error) throw new Error(error.message);
+      return (data ?? []) as SiteBudgetLine[];
+    },
+    enabled: Boolean(siteId) && enabled,
+  });
+}
+
+function useInvalidateSiteBudget() {
+  const queryClient = useQueryClient();
+  return (siteId: string) => {
+    void queryClient.invalidateQueries({ queryKey: ['construction-sites', siteId] });
+    void queryClient.invalidateQueries({ queryKey: ['reports', 'sites-budget-status'] });
+  };
+}
+
+export function useBuildSiteBudget() {
+  const invalidate = useInvalidateSiteBudget();
+  return useMutation<number, Error, { siteId: string }>({
+    mutationFn: async ({ siteId }) => {
+      const { data, error } = await supabase.rpc('build_site_budget_from_quote', {
+        p_site_id: siteId,
+      });
+      if (error) throw error;
+      return data as number;
+    },
+    onSuccess: (_d, { siteId }) => invalidate(siteId),
+  });
+}
+
+export function useSaveSiteBudgetLine() {
+  const invalidate = useInvalidateSiteBudget();
+  return useMutation<
+    string,
+    Error,
+    {
+      siteId: string;
+      lineId: string | null;
+      costGroup: CostGroup;
+      costCode: string;
+      name: string;
+      /** Số đồng dạng chuỗi chữ số (từ `MoneyInput`). */
+      budgetedAmount: string;
+    }
+  >({
+    mutationFn: async (input) => {
+      const { data, error } = await supabase.rpc('save_site_budget_line', {
+        p_site_id: input.siteId,
+        p_line_id: input.lineId,
+        p_cost_group: input.costGroup,
+        p_cost_code: input.costCode,
+        p_name: input.name,
+        p_budgeted_amount: input.budgetedAmount || '0',
+      });
+      if (error) throw error;
+      return data as string;
+    },
+    onSuccess: (_d, { siteId }) => invalidate(siteId),
+  });
+}
+
+export function useDeleteSiteBudgetLine() {
+  const invalidate = useInvalidateSiteBudget();
+  return useMutation<void, Error, { siteId: string; lineId: string }>({
+    mutationFn: async ({ lineId }) => {
+      const { error } = await supabase.rpc('delete_site_budget_line', { p_line_id: lineId });
+      if (error) throw error;
+    },
+    onSuccess: (_d, { siteId }) => invalidate(siteId),
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Tổ đội / nhà thầu phụ (TC-06)
 // ---------------------------------------------------------------------------
 

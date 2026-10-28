@@ -597,7 +597,9 @@ describeDb(
       });
       expect(blocked?.message).toContain('điều khoản');
 
-      for (const t of ['pham_vi', 'gia_tri', 'tien_do_thanh_toan']) {
+      expect(terms.label).not.toContain('giá trị');
+      // Giá trị hợp đồng chỉ là `contracts.value` (0234) — không cần dòng điều khoản «giá trị».
+      for (const t of ['pham_vi', 'tien_do_thanh_toan']) {
         const { error } = await kd.from('contract_terms').insert({
           contract_id: contractId,
           company_id: company!.id,

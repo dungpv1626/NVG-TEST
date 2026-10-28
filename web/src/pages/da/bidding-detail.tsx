@@ -38,6 +38,7 @@ import { EstimatePanel } from '@/components/estimate/estimate-panel';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { companyCodeOf, useAuth, useCan } from '@/lib/auth';
 import { BidDocumentsPanel } from './bid-documents-panel';
+import { BidFormsCard } from './bid-forms-card';
 import { BidCapabilityPanel, BidClarificationPanel, BidGuaranteePanel } from './bid-extras-panels';
 import { BudgetPanel } from './budget-panel';
 
@@ -271,12 +272,15 @@ export function BiddingDetailPage() {
             id: 'ho-so-thau',
             label: 'Hồ sơ thầu',
             content: (
-              <BidDocumentsPanel
-                projectId={project.id}
-                companyId={project.company_id}
-                readOnly={!canEdit}
-                submittedAt={project.submitted_at}
-              />
+              <div className="space-y-4">
+                <BidFormsCard project={project} canEdit={canEdit} />
+                <BidDocumentsPanel
+                  projectId={project.id}
+                  companyId={project.company_id}
+                  readOnly={!canEdit}
+                  submittedAt={project.submitted_at}
+                />
+              </div>
             ),
           },
           {

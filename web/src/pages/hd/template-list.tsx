@@ -153,7 +153,11 @@ export function ContractTemplatePage() {
                           ? CONTRACT_PRICE_FORM_LABELS[t.price_form]
                           : 'Mọi hình thức giá'
                       }`
-                    : `${TEMPLATE_DOCUMENT_KIND_LABELS[t.document_kind]} — mọi loại hợp đồng`}{' '}
+                    : `${TEMPLATE_DOCUMENT_KIND_LABELS[t.document_kind]} — ${
+                        t.document_kind === 'ho_so_du_thau' || t.document_kind === 'thuong_thao'
+                          ? 'soạn ở trang gói thầu'
+                          : 'mọi loại hợp đồng'
+                      }`}{' '}
                   · {Object.keys(t.tags).length} chỗ trống · tải lên {formatDate(t.created_at)}
                   {t.creator ? ` bởi ${t.creator.full_name}` : ''}
                 </p>

@@ -1,0 +1,453 @@
+[
+  {
+    "file": "NVC-DT-01A_Ho_so_du_thau.docx",
+    "code": "NVC-DT-01A",
+    "title": "NVC-DT-01A — Hồ sơ dự thầu (danh mục kiểm tra, Mẫu 01 – 10)",
+    "document_kind": "ho_so_du_thau",
+    "tags": {
+      "nvg_ten": {},
+      "ten_goi_thau": {},
+      "noi_lap": {},
+      "ngay_lap_ngay": {},
+      "ngay_lap_thang": {},
+      "ngay_lap_nam": {},
+      "ben_moi_thau": {},
+      "ten_du_an": {},
+      "o_1": {},
+      "gia_du_thau": {},
+      "gia_du_thau_bang_chu": {},
+      "thue_gtgt_gom": {},
+      "giam_gia_ty_le": {},
+      "giam_gia_so_tien": {},
+      "thoi_gian_thuc_hien": {},
+      "hieu_luc_hsdt": {},
+      "pa_giam_a": {},
+      "giam_a_ty_le": {},
+      "pa_giam_b": {},
+      "giam_b_so_tien": {},
+      "o_2": {},
+      "gia_sau_giam": {},
+      "gia_sau_giam_bang_chu": {},
+      "nvg_dai_dien": {},
+      "nvg_chuc_vu": {},
+      "nvg_ma_so_thue": {},
+      "nvg_dia_chi": {},
+      "o_3": {},
+      "o_4": {},
+      "o_5": {},
+      "o_6": {},
+      "o_7": {},
+      "o_8": {},
+      "o_9": {},
+      "o_10": {},
+      "o_11": {},
+      "o_12": {},
+      "o_13": {},
+      "o_14": {},
+      "hop_dong_tuong_tu": {
+        "stt": {},
+        "ten": {},
+        "chu_dau_tu": {},
+        "gia_tri": {},
+        "phan_thuc_hien": {},
+        "thoi_gian": {},
+        "tai_lieu": {}
+      },
+      "nhan_su": {
+        "stt": {},
+        "vi_tri": {},
+        "ho_ten": {},
+        "kinh_nghiem": {},
+        "chung_chi": {},
+        "hdld": {}
+      },
+      "o_15": {},
+      "o_16": {},
+      "o_17": {},
+      "o_18": {},
+      "o_19": {},
+      "o_20": {},
+      "o_21": {},
+      "thiet_bi": {
+        "stt": {},
+        "ten": {},
+        "so_luong": {},
+        "nam_sx": {},
+        "so_huu": {},
+        "kiem_dinh": {},
+        "ghi_chu": {}
+      },
+      "tong_hop_gia": {
+        "stt": {},
+        "hang_muc": {},
+        "gia_tri": {},
+        "ghi_chu": {}
+      },
+      "gia_truoc_thue_so": {},
+      "tien_thue_so": {},
+      "gia_du_thau_so": {},
+      "giam_gia_so_tien_so": {},
+      "gia_sau_giam_so": {}
+    },
+    "loops": {
+      "hop_dong_tuong_tu": {
+        "columns": [
+          "stt",
+          "ten",
+          "chu_dau_tu",
+          "gia_tri",
+          "phan_thuc_hien",
+          "thoi_gian",
+          "tai_lieu"
+        ],
+        "default_rows": [
+          {
+            "tai_lieu": "HĐ, BB nghiệm thu, thanh lý"
+          }
+        ]
+      },
+      "nhan_su": {
+        "columns": [
+          "stt",
+          "vi_tri",
+          "ho_ten",
+          "kinh_nghiem",
+          "chung_chi",
+          "hdld"
+        ],
+        "default_rows": [
+          {
+            "vi_tri": "Chỉ huy trưởng"
+          },
+          {
+            "vi_tri": "Cán bộ kỹ thuật kết cấu"
+          },
+          {
+            "vi_tri": "Cán bộ kỹ thuật cơ điện"
+          },
+          {
+            "vi_tri": "Cán bộ an toàn"
+          },
+          {
+            "vi_tri": "Cán bộ QA/QC"
+          }
+        ]
+      },
+      "thiet_bi": {
+        "columns": [
+          "stt",
+          "ten",
+          "so_luong",
+          "nam_sx",
+          "so_huu",
+          "kiem_dinh",
+          "ghi_chu"
+        ],
+        "default_rows": []
+      },
+      "tong_hop_gia": {
+        "columns": [
+          "stt",
+          "hang_muc",
+          "gia_tri",
+          "ghi_chu"
+        ],
+        "default_rows": [
+          {
+            "hang_muc": "Phần chuẩn bị, lán trại, biện pháp"
+          },
+          {
+            "hang_muc": "Phần móng, nền"
+          },
+          {
+            "hang_muc": "Phần kết cấu (BTCT/thép)"
+          },
+          {
+            "hang_muc": "Phần mái, bao che"
+          },
+          {
+            "hang_muc": "Phần hoàn thiện"
+          },
+          {
+            "hang_muc": "Phần cơ điện"
+          },
+          {
+            "hang_muc": "Phần PCCC"
+          },
+          {
+            "hang_muc": "Hạ tầng ngoài nhà"
+          }
+        ]
+      }
+    },
+    "free_fields": [
+      {
+        "key": "o_1",
+        "seq": 1,
+        "article": "Mẫu 01 — Đơn dự thầu",
+        "before": "ứu hồ sơ mời thầu/thư mời chào giá gói thầu … thuộc dự án … và văn bản làm rõ, sửa đổi số ",
+        "after": " (nếu có), chúng tôi, …, cam kết thực hiện gói thầ",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_2",
+        "seq": 2,
+        "article": "Mẫu 02 — Thư giảm giá",
+        "before": "… Phương án B: Giảm …, áp dụng cho các hạng mục: ",
+        "after": " (ghi rõ hạng mục và mức giảm từng hạng mục).",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_3",
+        "seq": 3,
+        "article": "Mẫu 03 — Giấy ủy quyền",
+        "before": "Ủy quyền cho: ",
+        "after": ", Số định danh cá nhân: …, chức vụ: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_4",
+        "seq": 4,
+        "article": "Mẫu 03 — Giấy ủy quyền",
+        "before": "Ủy quyền cho: ………………, Số định danh cá nhân: …, chức vụ: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_5",
+        "seq": 5,
+        "article": "Mẫu 03 — Giấy ủy quyền",
+        "before": "rong phạm vi ủy quyền với tư cách đại diện cho công ty. Giấy ủy quyền có hiệu lực từ ngày ",
+        "after": " đến ngày … (không ngắn hơn thời hạn có hiệu lực c",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_6",
+        "seq": 6,
+        "article": "Mẫu 03 — Giấy ủy quyền",
+        "before": "ủy quyền với tư cách đại diện cho công ty. Giấy ủy quyền có hiệu lực từ ngày …… đến ngày ",
+        "after": " (không ngắn hơn thời hạn có hiệu lực của hồ sơ dự",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_7",
+        "seq": 7,
+        "article": "Mẫu 04 — Thỏa thuận liên danh",
+        "before": "g tôi gồm: Thành viên đứng đầu liên danh: … (MST: …) – đại diện: …; Thành viên liên danh: ",
+        "after": " – đại diện: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_8",
+        "seq": 8,
+        "article": "Mẫu 04 — Thỏa thuận liên danh",
+        "before": "đứng đầu liên danh: … (MST: …) – đại diện: …; Thành viên liên danh: ……………………… – đại diện: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_9",
+        "seq": 9,
+        "article": "Mẫu 04 — Thỏa thuận liên danh",
+        "before": "Điều 1. Nguyên tắc chung: Các thành viên tự nguyện thành lập liên danh \"",
+        "after": " \" để dự thầu gói thầu trên. Thành viên nào vi phạ",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_10",
+        "seq": 10,
+        "article": "Mẫu 04 — Thỏa thuận liên danh",
+        "before": "",
+        "after": "%",
+        "default": null,
+        "option": null,
+        "cell": "(đứng đầu) — Tỷ lệ % giá trị"
+      },
+      {
+        "key": "o_11",
+        "seq": 11,
+        "article": "Mẫu 04 — Thỏa thuận liên danh",
+        "before": "",
+        "after": "%",
+        "default": null,
+        "option": null,
+        "cell": "Tỷ lệ % giá trị"
+      },
+      {
+        "key": "o_12",
+        "seq": 12,
+        "article": "Mẫu 04 — Thỏa thuận liên danh",
+        "before": "hầu ☐ thực hiện bảo lãnh dự thầu cho cả liên danh ☐ tham gia thương thảo hợp đồng ☐ khác: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_13",
+        "seq": 13,
+        "article": "Mẫu 05 — Bản cam kết của nhà thầu",
+        "before": "4. Bảo hành công trình theo thời hạn: ",
+        "after": " tháng.",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_14",
+        "seq": 14,
+        "article": "Mẫu 05 — Bản cam kết của nhà thầu",
+        "before": "7. Cam kết khác theo yêu cầu của hồ sơ mời thầu: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_15",
+        "seq": 15,
+        "article": "Mẫu 08 — Lý lịch nhân sự chủ chốt",
+        "before": "Vị trí đề xuất: ",
+        "after": "  Họ tên: …  Năm sinh: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_16",
+        "seq": 16,
+        "article": "Mẫu 08 — Lý lịch nhân sự chủ chốt",
+        "before": "Vị trí đề xuất: ………………  Họ tên: ",
+        "after": "  Năm sinh: …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_17",
+        "seq": 17,
+        "article": "Mẫu 08 — Lý lịch nhân sự chủ chốt",
+        "before": "Vị trí đề xuất: ………………  Họ tên: ………………  Năm sinh: ",
+        "after": "",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_18",
+        "seq": 18,
+        "article": "Mẫu 08 — Lý lịch nhân sự chủ chốt",
+        "before": "Trình độ chuyên môn: ",
+        "after": "  Chứng chỉ hành nghề: … hạng … hiệu lực đến …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_19",
+        "seq": 19,
+        "article": "Mẫu 08 — Lý lịch nhân sự chủ chốt",
+        "before": "Trình độ chuyên môn: ………………  Chứng chỉ hành nghề: ",
+        "after": " hạng … hiệu lực đến …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_20",
+        "seq": 20,
+        "article": "Mẫu 08 — Lý lịch nhân sự chủ chốt",
+        "before": "Trình độ chuyên môn: ………………  Chứng chỉ hành nghề: ………… hạng ",
+        "after": " hiệu lực đến …",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_21",
+        "seq": 21,
+        "article": "Mẫu 08 — Lý lịch nhân sự chủ chốt",
+        "before": "Trình độ chuyên môn: ………………  Chứng chỉ hành nghề: ………… hạng …… hiệu lực đến ",
+        "after": "",
+        "default": null,
+        "option": null
+      }
+    ],
+    "options": [],
+    "replaced": [
+      "ben_moi_thau",
+      "gia_du_thau",
+      "gia_du_thau_bang_chu",
+      "gia_sau_giam",
+      "gia_sau_giam_bang_chu",
+      "giam_a_ty_le",
+      "giam_b_so_tien",
+      "giam_gia_so_tien",
+      "giam_gia_ty_le",
+      "hieu_luc_hsdt",
+      "ngay_lap_nam",
+      "ngay_lap_ngay",
+      "ngay_lap_thang",
+      "noi_lap",
+      "nvg_chuc_vu",
+      "pa_giam_a",
+      "pa_giam_b",
+      "ten_du_an",
+      "ten_goi_thau",
+      "thoi_gian_thuc_hien",
+      "thue_gtgt_gom"
+    ],
+    "sha": "d88a58f3bc8fda9a",
+    "notes_removed": 3
+  },
+  {
+    "file": "NVC-DT-01B_Bien_ban_thuong_thao.docx",
+    "code": "NVC-DT-01B",
+    "title": "NVC-DT-01B — Biên bản thương thảo hợp đồng (Mẫu 11)",
+    "document_kind": "thuong_thao",
+    "tags": {
+      "ten_goi_thau": {},
+      "ten_du_an": {},
+      "ngay_lap_ngay": {},
+      "ngay_lap_thang": {},
+      "ngay_lap_nam": {},
+      "noi_lap": {},
+      "o_1": {},
+      "nvg_ten": {},
+      "o_2": {},
+      "gia_theo_hsdt": {}
+    },
+    "loops": {},
+    "free_fields": [
+      {
+        "key": "o_1",
+        "seq": 1,
+        "article": "Mẫu 11 — Biên bản thương thảo hợp đồng",
+        "before": "Hôm nay, ngày … tháng … năm …, tại …, đại diện Chủ đầu tư/Bên mời thầu: ",
+        "after": "; đại diện Nhà thầu (…): … đã tiến hành thương thả",
+        "default": null,
+        "option": null
+      },
+      {
+        "key": "o_2",
+        "seq": 2,
+        "article": "Mẫu 11 — Biên bản thương thảo hợp đồng",
+        "before": "… tháng … năm …, tại …, đại diện Chủ đầu tư/Bên mời thầu: ………………; đại diện Nhà thầu (…): ",
+        "after": " đã tiến hành thương thảo hợp đồng với kết quả:",
+        "default": null,
+        "option": null
+      }
+    ],
+    "options": [],
+    "replaced": [
+      "ngay_lap_nam",
+      "ngay_lap_ngay",
+      "ngay_lap_thang",
+      "noi_lap",
+      "ten_du_an",
+      "ten_goi_thau"
+    ],
+    "sha": "6096f2a626b97811",
+    "notes_removed": 0
+  }
+]
