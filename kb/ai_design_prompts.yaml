@@ -29,7 +29,7 @@
 # 9.9.3 (13/10/2026, T160 — Haan chấm phương án d084a46e): câu nhắc C14 (ô giao thông to như một phòng), D6 (ban công chính mặt tiền mở từ giao thông chung), D7 (ban công mặt hông nhỏ hơn mặt tiền). Chỉ gửi khi phương án dưới ngưỡng. Gỡ hai câu tự mâu thuẫn: C12 bản phác «draw it one cell wide» (trái `corridor_min_cells` = 2 ô của biệt thự) nay theo `corridor_min_cells`; D5 bỏ thứ tự «bedroom first» (trái D6).
 # 9.10.0 (14/10/2026, T161 — Haan hỏi lỗi d084a46e ở mô hình hay dựng hình): luật 6 — hành lang / khu chung dọc trọn `arrival` của ô thang (tri thức `stair_min_m.arrival` mới, ngay lượt đầu); hành lang đúng `corridor_min_cells` ô, sàn rộng hơn là phòng; luật 10 + `B_balcony` + `R_balcony` — ban công chính mặt tiền lớn nhất, mở từ hành lang / khu chung, ban công khác nhỏ (thay «bedroom first» cho mọi ban công); câu nhắc `balcony_main_access`, `balcony_main_depth` (hai câu đầu bài mới). Rút câu trùng ý để vừa trần T46: câu mở đầu kể lại lược đồ, «Relationships…» (đã có trong lược đồ), «habitable rooms on open_faces» (trùng `knowledge.faces`), «the stair where it is on storey 1» (trùng luật 6).
 # 9.11.0 (23/10/2026, T165 — lượt thật THU5 nhà phố 5 × 18 m có ô tô): `floor_level` luật 7 có câu `[[entry_garage|…]]` — gara được làm entry_room khi hàng đường không đủ cho gara và phòng khách cạnh nhau (luật T115 trước chỉ có ở `house_layout` / `house_bands`); câu nhắc mới sketch_row_too_narrow, entrance_wrong_side_garage, door_outside_on_boundary_garage.
-version: '9.12.0'
+version: '9.12.1'
 
 program:
   system: |
@@ -1185,6 +1185,7 @@ facade:
     - roof: type, pitch (null for flat), material and colour.
     - materials: one entry per zone you use — at least `body`; add base, accent, trim, railing,
       gate, fence, main_door, side_door, window, garage_door as the design needs.
+      Every colour is a code from the colour list; clear glass is `trong_suot`, never free text.
     - palette: primary, secondary and optional accent colours as #RRGGBB, matching your colours.
     - gate and fence: only when <frame> says there is a front yard; otherwise null.
     - balcony_railing: one railing code when <frame> lists balconies, otherwise null.

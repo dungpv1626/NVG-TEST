@@ -11,10 +11,14 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { ZaloSend } from '@/components/share/zalo-send';
+import { useCompanyLookup } from '@/hooks/use-companies';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { useRecipientContact } from '@/hooks/use-outbound-shares';
 import { shareUrl, useCreateShare, type ShareSubject } from '@/hooks/use-showcase';
 import { useCompanyScope } from '@/lib/company-scope';
 import { supabase } from '@/lib/supabase';
+import { composeZaloMessage } from '@/lib/zalo-share';
 
 function addDays(days: number): string {
   const d = new Date();
@@ -48,6 +52,9 @@ export function ShareDialog({
   const [until, setUntil] = useState(addDays(14));
   const [error, setError] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
+  const [created, setCreated] = useState<{ id: string; token: string; expires_at: string } | null>(
+    null,
+  );
   const [copied, setCopied] = useState(false);
 
   async function submit() {
@@ -77,6 +84,7 @@ export function ShareDialog({
           next_action_at: addDays(2),
         });
       }
+      setCreated({ id: res.id, token: res.token, expires_at: expiresAt });
       setLink(shareUrl(res.token));
       onCreated();
     } catch (e) {
@@ -98,6 +106,17 @@ export function ShareDialog({
           Gửi link qua Zalo / tin nhắn. Khách xem không cần đăng nhập, tới hết ngày{' '}
           {formatDate(until)}. Theo dõi khách đã mở chưa, hoặc thu hồi sớm, ở tab «Link đã gửi».
         </p>
+        {created && (
+          <div className="mt-3">
+            <ShowcaseZaloSend
+              share={created}
+              subject={subject}
+              forName={forName}
+              companyId={scope.isAggregate ? null : scope.companyId}
+              canSend
+            />
+          </div>
+        )}
       </ConfirmDialog>
     );
   }
@@ -151,5 +170,49 @@ export function ShareDialog({
         )}
       </div>
     </ConfirmDialog>
+  );
+}
+
+/**
+ * «Gửi qua Zalo» cho một link mẫu công trình (0238): lời nhắn kèm link `/xem-mau/:token` có hạn, số lấy từ
+ * đầu mối / cơ hội / khách hàng gắn với link. Người dùng tự bấm gửi trong Zalo.
+ */
+export function ShowcaseZaloSend({
+  share,
+  subject,
+  forName,
+  companyId,
+  canSend,
+  showHistory = true,
+}: {
+  share: { id: string; token: string; expires_at: string };
+  subject: ShareSubject;
+  forName: string | null;
+  companyId: string | null;
+  canSend: boolean;
+  showHistory?: boolean;
+}) {
+  const contact = useRecipientContact({
+    customerId: subject.customerId ?? null,
+    leadId: subject.leadId ?? null,
+    opportunityId: subject.opportunityId ?? null,
+  }).data;
+  const companyName = useCompanyLookup()(companyId)?.short_name ?? null;
+  return (
+    <ZaloSend
+      canSend={canSend}
+      size="sm"
+      showHistory={showHistory}
+      entityType="showcase_shares"
+      entityId={share.id}
+      shareLinkId={share.id}
+      phone={contact?.phone ?? null}
+      message={composeZaloMessage({
+        recipientName: forName ?? contact?.name ?? null,
+        companyName,
+        subject: 'một số mẫu công trình đã thực hiện để tham khảo',
+        link: { url: shareUrl(share.token), expiresAt: share.expires_at },
+      })}
+    />
   );
 }

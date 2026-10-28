@@ -38,9 +38,16 @@ export function RecordChain({ kind, id }: { kind: ChainKind; id: string }) {
   return (
     // v2: thẻ «Chuỗi hồ sơ» dọc, mỗi hồ sơ một chấm trên đường nối; sang cột phải trang chi tiết.
     <DetailAside place="chain">
-      <nav aria-label="Chuỗi hồ sơ" className="mb-4 rounded-card bg-surface p-4 lg:mb-5 xl:mb-0">
+      <nav aria-label="Chuỗi hồ sơ" className="mb-4 rounded-card bg-surface p-4 lg:mb-5 2xl:mb-0">
         <h2 className="mb-2 text-xs font-semibold text-ink-subtle">Chuỗi hồ sơ</h2>
-        <ol className="relative space-y-2 before:absolute before:top-2 before:bottom-2 before:left-[5px] before:w-px before:bg-border">
+        {/* Ở cột phải (2xl) xếp dọc trên một đường nối; nằm trong cột chính thì xếp ngang cho gọn. */}
+        <ol
+          className={cn(
+            'relative flex flex-wrap gap-x-6 gap-y-2',
+            '2xl:block 2xl:space-y-2 2xl:before:absolute 2xl:before:top-2 2xl:before:bottom-2',
+            '2xl:before:left-[5px] 2xl:before:w-px 2xl:before:bg-border',
+          )}
+        >
           {chain.map((r) => (
             <li key={`${r.kind}-${r.id}`} className="relative flex gap-3">
               <span

@@ -38,7 +38,8 @@ import type { ConstructionNorms } from '../kb/construction';
 import type { SiteContextTable } from '../kb/site-context';
 import type { VocabularyIndex, ZoneDefaults } from '../kb/vocabulary';
 import type { PlanQuality } from '../ai/plan-quality';
-import type { RoutePricing } from '../llm/router';
+import type { CallCapSettings, RoutePricing } from '../llm/router';
+import { CallCostCapReached, type CostCapStop } from '../ai/cost-cap';
 import type { ReasoningEffort, StructuredCallOptions, TextModelClient } from '../llm/text-client';
 import type { RulePack } from '../rules/rule-pack';
 import {
@@ -203,12 +204,14 @@ export function planClientFor(
 export function replayDeps(source: ReplaySource): Pick<PlanStepDeps, 'provider' | 'model'> & {
   pricing?: undefined;
   revise?: undefined;
+  callCap?: undefined;
 } {
   return {
     provider: REPLAY_PROVIDER,
     model: replayModel(source.of),
     pricing: undefined,
     revise: undefined,
+    callCap: undefined,
   };
 }
 
@@ -266,6 +269,14 @@ export interface PlanStepDeps {
    * Vắng = vòng sửa chạy tuyến kỹ sư chọn.
    */
   revise?: { route: string; pricing?: RoutePricing; model: string };
+  /**
+   * Trần TỪNG lời gọi (T176): tham số `billing.call_cap` và giá + giới hạn token ra theo tuyến. Vắng (phép thử,
+   * phát lại) = không bọc client.
+   */
+  callCap?: {
+    settings: CallCapSettings | null;
+    routeOf: (routeName: string) => { pricing?: RoutePricing; maxOutputTokens: number | null };
+  };
 }
 
 /** Pha của một lượt: mô hình khai cả nhà, rồi chương trình kiểm và xếp. */
@@ -312,6 +323,11 @@ export interface ProposeOutcome {
   layoutHints?: string[];
   /** Đường v6: bộ dải khi bộ giải báo lỗi cấu trúc — vòng sau sửa bộ dải này (T116). */
   bandsBase?: AiHouseBands;
+  /**
+   * Lời gọi KHÔNG được gửi: phần còn lại của mức chi phí không đủ cho số token ra tối thiểu (T176). Không tốn
+   * tiền, không có dòng nhật ký; `call` là bản ghi rỗng (0 token).
+   */
+  costCap?: CostCapStop;
   /** Tầng của `bandsBase` đã khoá (tầng 1 chương trình dựng lại). */
   bandsKeep?: number[];
 }
@@ -373,6 +389,8 @@ export async function proposeHouse(
       );
     }
   } catch (error) {
+    // Trần từng lời gọi (T176): lời gọi chưa gửi đi — không tốn tiền, không ghi dòng nhật ký.
+    if (error instanceof CallCostCapReached) return capStopOutcome(deps, error.stop);
     // Lượt gọi hỏng ở tầng mạng hoặc nhà cung cấp: vẫn có thể đã tính tiền, nên vẫn ghi một dòng,
     // lấy số token từ chính lỗi và tên model từ cấu hình tuyến (đo 11/09/2026: 6/6 dòng `failed`
     // từng ghi 0 đồng và `model = "unknown"`). Rồi ném tiếp để Workflow xử lý theo chính sách.
@@ -413,6 +431,21 @@ export async function proposeHouse(
   const callId = await logCall(deps, scope, params, retrying, logged);
   live?.onLogged({ callId, ...logged });
   return outcome;
+}
+
+/** Kết quả «không gọi» vì trần từng lời gọi (T176): bản ghi 0 token, mang lý do dừng. */
+function capStopOutcome(deps: PlanStepDeps, stop: CostCapStop): ProposeOutcome {
+  return {
+    intentJson: null,
+    issues: [],
+    call: {
+      provider: deps.provider,
+      model: deps.model,
+      usage: { inputTokens: 0, outputTokens: 0 },
+      latencyMs: 0,
+    },
+    costCap: stop,
+  };
 }
 
 /** Móc của bảng theo dõi trực tiếp vào một lượt gọi. */
@@ -906,6 +939,8 @@ export interface EditCallOutcome {
   editJson: string | null;
   issues: string[];
   call: PlanCallRecord;
+  /** Lời gọi không được gửi vì trần từng lời gọi (T176) — xem `ProposeOutcome.costCap`. */
+  costCap?: CostCapStop;
 }
 
 /** Bản gốc + chương trình không gian của nó, đọc bằng khoá Workflow — ném khi không đọc được. */
@@ -967,6 +1002,10 @@ export async function proposeEdit(
       call: attempt.call,
     };
   } catch (error) {
+    if (error instanceof CallCostCapReached) {
+      const { call } = capStopOutcome(deps, error.stop);
+      return { editJson: null, issues: [], call, costCap: error.stop };
+    }
     const failed = {
       provider: deps.provider,
       model: deps.model,

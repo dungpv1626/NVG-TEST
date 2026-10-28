@@ -9,12 +9,19 @@
  * thứ tự, không phải dò. Sau sáu mục là nhóm «Thông tin hiện trường» RIÊNG của pháp nhân
  * (`SURVEY_SITE_FORMS` — NVO nhà ở, NVC nhà xưởng, NVS giàn giáo), cũng cùng thứ tự với màn hình.
  * Mọi chữ động đi qua `escapeHtml`.
+ *
+ * Phiếu trống dồn MỌI thứ mang danh tính (cơ hội, khách hàng, người liên hệ, điện thoại, địa chỉ,
+ * người khảo sát, chữ ký hai bên) vào một khung đầu trang có viền, kết thúc bằng một VẠCH ĐEN dày
+ * (28/10/2026): «Máy đọc phiếu» tìm vạch đó trên ảnh quét và tô trắng mọi thứ phía trên trước khi gửi
+ * (`paper-redact.ts`). Vạch là viền (`border`) nên vẫn in khi tắt «in hình nền». Đừng đặt chữ khách
+ * hàng ở dưới vạch.
  */
 
 import {
   filledSiteDetails,
   formatDateTime,
   SURVEY_ATTACHMENT_KIND_LABELS,
+  SURVEY_REPORT_FIELD_HINTS,
   SURVEY_REPORT_FIELDS,
   SURVEY_REPORT_STATUS_META,
   surveySiteForm,
@@ -32,15 +39,8 @@ export interface SurveyPrintInfo {
   companyName: string | null;
 }
 
-/** Gợi ý in mờ dưới tên mục — giống chữ gợi ý trong ô nhập trên màn hình. */
-const FIELD_HINTS: Record<string, string> = {
-  needs: 'Loại công trình, quy mô, công năng khách hàng cần',
-  decision_maker: 'Người thật sự chốt, không phải người liên hệ — họ tên và vai trò',
-  budget_note: 'Khoảng ngân sách khách nêu',
-  schedule_note: 'Thời điểm khởi công, thời hạn bàn giao',
-  commercial_terms: 'Đợt thanh toán, bảo lãnh, bảo hành',
-  notes: 'Hiện trạng mặt bằng, rủi ro nhận thấy, điểm cần lưu ý khi báo giá',
-};
+/** Gợi ý in mờ dưới tên mục — giống chữ gợi ý trong ô nhập trên màn hình (dùng chung máy đọc phiếu). */
+const FIELD_HINTS = SURVEY_REPORT_FIELD_HINTS;
 
 /** Số dòng kẻ để viết tay cho từng mục — mục hiện trạng cần nhiều chỗ nhất. */
 const FIELD_LINES: Record<string, number> = {
@@ -66,6 +66,11 @@ const FORM_STYLE = `<style>
   .site td { height: 30px; }
   .site td.k { width: 34%; }
   .site .hint { margin: 0; }
+  .private { border: 1px solid #44546F; border-bottom: 4mm solid #000; padding: 6px 8px 8px; margin: 0 0 8mm; }
+  .private .tag { margin: 0 0 4px; font-size: 11px; font-weight: 600; color: #44546F; }
+  .private table { margin-bottom: 4px; }
+  .private .sign { margin-top: 8px; }
+  .private .sign p { margin: 0 0 40px; }
 </style>`;
 
 function value(v: string | null | undefined): string {
@@ -126,24 +131,28 @@ export function printBlankSurveyForm(
   ).join('');
 
   const body = `${FORM_STYLE}
-    ${headTable(info, [
-      ['Người khảo sát', ''],
-      ['Bắt đầu lúc', '……… giờ ……… ngày ……… / ……… / …………'],
-      ['Kết thúc lúc', '……… giờ ……… ngày ……… / ……… / …………'],
-    ])}
+    <div class="private">
+      <p class="tag">Thông tin khách hàng và chữ ký — phần này không gửi AI (máy che trước khi đọc phiếu)</p>
+      ${headTable(info, [
+        ['Người khảo sát', ''],
+        ['Bắt đầu lúc', '……… giờ ……… ngày ……… / ……… / …………'],
+        ['Kết thúc lúc', '……… giờ ……… ngày ……… / ……… / …………'],
+      ])}
+      <div class="sign">
+        <div><p>Người khảo sát</p><span class="hint">(ký, ghi rõ họ tên)</span></div>
+        <div><p>Đại diện khách hàng</p><span class="hint">(ký, ghi rõ họ tên — nếu có)</span></div>
+      </div>
+    </div>
     ${fields}
     ${siteSection}
     <div class="field">
       <h2>Sơ đồ hiện trạng</h2>
-      <p class="hint">Vẽ phác mặt bằng, hướng, lối vào, kích thước đo được</p>
+      <p class="hint">Vẽ phác mặt bằng, hướng, lối vào, kích thước đo được — không ghi tên, số điện thoại khách</p>
       <div class="sketch"></div>
     </div>
-    <div class="sign">
-      <div><p>Người khảo sát</p><span class="hint">(ký, ghi rõ họ tên)</span></div>
-      <div><p>Đại diện khách hàng</p><span class="hint">(ký, ghi rõ họ tên — nếu có)</span></div>
-    </div>
-    <p class="hint">Về văn phòng: chụp phiếu này tải lên biên bản khảo sát (loại «Phiếu khảo sát giấy»)
-      rồi gõ các mục vào hệ thống theo đúng thứ tự trên.</p>`;
+    <p class="hint">Về văn phòng: quét phiếu này bằng «Quét phiếu giấy» trong biên bản khảo sát, rồi gõ các
+      mục vào hệ thống theo đúng thứ tự trên (hoặc bấm «Máy đọc phiếu và điền nháp» khi chức năng đã bật).
+      Tên, điện thoại, địa chỉ khách chỉ ghi trong khung trên cùng.</p>`;
 
   const title = info?.companyName
     ? `Phiếu khảo sát — ${info.companyName}`

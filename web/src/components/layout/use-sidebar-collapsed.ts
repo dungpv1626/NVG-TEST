@@ -5,8 +5,12 @@
  * người ngồi màn hình 27 inch ở văn phòng thì muốn thanh mở, mở laptop 13 inch ngoài công
  * trường thì muốn thu — ghim vào tài khoản là bắt họ chỉnh lại mỗi lần đổi máy.
  *
- * Ẩn hẳn và kéo đổi bề rộng (anh Dũng 25/10/2026): «thanh nav dọc có thể ẩn đi và kéo ra thu vào để tăng diện tích
- * nhìn» — kéo mép phải để đổi bề rộng, kéo hẹp quá thì thu thành dải biểu tượng, kéo tiếp thì ẩn.
+ * Kéo đổi bề rộng (anh Dũng 25/10/2026): «thanh nav dọc có thể ẩn đi và kéo ra thu vào để tăng diện tích nhìn» —
+ * kéo mép phải để đổi bề rộng, kéo hẹp quá thì thu thành dải biểu tượng.
+ *
+ * Bỏ dạng «ẩn hẳn» (28/10/2026, anh Dũng: «thao tác ẩn nav không được mượt mà»): thanh biến mất tức
+ * thì, còn lại một nút tròn nổi đè lên ô tìm kiếm. Dạng gọn nhất nay là dải biểu tượng 72px — đủ hẹp
+ * để nhường chỗ, vẫn bấm được từng phân hệ. Máy đã lưu «ẩn» thì mở ra ở dạng dải biểu tượng.
  *
  * Chỉ có nghĩa từ khổ `lg` trở lên: dưới mức đó thanh trái không hiện, điều hướng chuyển sang
  * thanh dưới (Webapp Flow 4.8).
@@ -14,15 +18,16 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-export type SidebarMode = 'open' | 'rail' | 'hidden';
+export type SidebarMode = 'open' | 'rail';
 
 /** Bề rộng thanh khi mở, px. Mặc định = `w-62` cũ. */
 export const SIDEBAR_WIDTH_DEFAULT = 248;
 export const SIDEBAR_WIDTH_MIN = 208;
 export const SIDEBAR_WIDTH_MAX = 360;
-/** Kéo hẹp dưới mức này thì thu thành dải biểu tượng; dưới mức sau thì ẩn hẳn. */
+/** Bề rộng dải biểu tượng khi thu gọn, px. */
+export const SIDEBAR_RAIL_WIDTH = 72;
+/** Kéo hẹp dưới mức này thì thu thành dải biểu tượng. */
 export const SIDEBAR_RAIL_BELOW = 160;
-export const SIDEBAR_HIDE_BELOW = 56;
 
 const KEY = 'nvg.sidebar';
 /** Khoá cũ (chỉ có thu / mở) — đọc để người đã thu thanh không thấy nó bật ra sau khi cập nhật. */
@@ -43,7 +48,9 @@ function stored(): SidebarState {
     const raw = window.localStorage.getItem(KEY);
     if (raw) {
       const s = JSON.parse(raw) as Partial<SidebarState>;
-      const mode = s.mode === 'rail' || s.mode === 'hidden' ? s.mode : 'open';
+      // «hidden» là dạng cũ đã bỏ — mở ra ở dạng dải biểu tượng.
+      const mode: SidebarMode =
+        s.mode === 'rail' || (s.mode as string) === 'hidden' ? 'rail' : 'open';
       return {
         mode,
         width: typeof s.width === 'number' ? clampWidth(s.width) : SIDEBAR_WIDTH_DEFAULT,
@@ -62,7 +69,7 @@ export function useSidebarLayout(): {
   mode: SidebarMode;
   width: number;
   setMode: (mode: SidebarMode) => void;
-  /** Bề rộng đang kéo (px, chưa kẹp) — tự chuyển sang thu gọn / ẩn khi kéo đủ hẹp. */
+  /** Bề rộng đang kéo (px, chưa kẹp) — tự chuyển sang thu gọn khi kéo đủ hẹp. */
   dragTo: (px: number) => void;
   /** Nút thu gọn: mở ↔ dải biểu tượng. */
   toggle: () => void;
@@ -80,7 +87,6 @@ export function useSidebarLayout(): {
   const setMode = useCallback((mode: SidebarMode) => setState((s) => ({ ...s, mode })), []);
   const dragTo = useCallback((px: number) => {
     setState((s) => {
-      if (px < SIDEBAR_HIDE_BELOW) return { ...s, mode: 'hidden' };
       if (px < SIDEBAR_RAIL_BELOW) return { ...s, mode: 'rail' };
       return { mode: 'open', width: clampWidth(px) };
     });

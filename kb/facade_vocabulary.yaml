@@ -71,6 +71,9 @@ colours:
   xanh_ngoc: { label_vi: 'Xanh ngọc', prompt_en: 'jade green', hex: '#5E9C8F' }
   vang_dat: { label_vi: 'Vàng đất', prompt_en: 'ochre yellow', hex: '#C9A04E' }
   ghi_bac: { label_vi: 'Ghi bạc', prompt_en: 'silver grey', hex: '#A7ABAE' }
+  # Kính trong suốt (lan can kính, mảng kính) — thêm 28/10/2026: lượt thật fec8d315 ghi màu lan can kính bằng chữ
+  # «trong suốt» vì danh mục không có mã nào cho kính, cả câu trả lời bị loại.
+  trong_suot: { label_vi: 'Trong suốt (kính)', prompt_en: 'clear glass', hex: '#DCE6E8' }
   tu_nhien:
     { label_vi: 'Màu tự nhiên của vật liệu', prompt_en: 'natural material colour', hex: '#B9A58A' }
 

@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase';
 export interface QuoteRecord {
   id: string;
   code: string;
+  company_id: string;
   version: number;
   is_current_version: boolean;
   /** Đơn vị đồng. */
@@ -31,7 +32,7 @@ export interface QuoteRecord {
 }
 
 const QUOTE_SELECT =
-  'id, code, version, is_current_version, total_value, discount_amount, discount_reason, ' +
+  'id, code, company_id, version, is_current_version, total_value, discount_amount, discount_reason, ' +
   'status, sent_to_customer_at, customer_response, responded_at, valid_until, notes, created_at, ' +
   'created_by_user:users!quotes_created_by_users_id_fk(full_name)';
 

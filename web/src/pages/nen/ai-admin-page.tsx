@@ -55,6 +55,14 @@ const FEATURES = [
       'Đọc biên bản khảo sát thiết kế, lời chủ nhà đã chép chữ và báo cáo khảo sát đã duyệt của Kinh doanh → đề xuất câu trả lời; kiến trúc sư chọn câu nào dùng. Tắt thì điền tay.',
     provider: 'Google Gemini Flash — gói trả phí (không dùng dữ liệu để huấn luyện)',
   },
+  {
+    key: 'surveyPaper' as const,
+    param: 'ai.survey_paper_read_enabled',
+    label: 'Máy đọc phiếu khảo sát giấy',
+    detail:
+      'Ảnh phiếu khảo sát viết tay → nháp sáu ô báo cáo và ô phiếu riêng; người khảo sát chọn ô, sửa rồi lưu. Trình duyệt tô trắng khung thông tin khách trước khi gửi, người dùng xem ảnh đã che. Ước tính khoảng 0,003–0,01 USD mỗi phiếu 1–2 trang (ảnh tính theo token). Tắt thì gõ tay.',
+    provider: 'Google Gemini Flash — gói trả phí (không dùng dữ liệu để huấn luyện)',
+  },
 ];
 
 const FEATURE_LABEL: Record<string, string> = {
@@ -62,6 +70,7 @@ const FEATURE_LABEL: Record<string, string> = {
   survey_summary: 'Viết báo cáo khảo sát',
   site_log_draft: 'Xếp mục nhật ký công trường',
   brief_prefill: 'Điền sẵn đầu bài thiết kế',
+  survey_paper_read: 'Đọc phiếu khảo sát giấy',
 };
 
 const MODE_TEXT: Record<AiMode, string> = {

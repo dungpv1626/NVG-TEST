@@ -41,6 +41,12 @@ export interface StructuredCallOptions {
   images?: GenerateImagePart[];
   maxOutputTokens?: number;
   /**
+   * Trần CỨNG token ra của RIÊNG lời gọi này, đặt bởi mức chi phí của lượt (T176, `ai/cost-cap.ts`
+   * `costCappedClient`). Khác `maxOutputTokens`: tuyến KHÔNG thắng nó — giới hạn thực tế là số nhỏ hơn giữa
+   * giới hạn của tuyến và số này (`outputBudget`). Vắng = như trước.
+   */
+  outputCap?: number;
+  /**
    * Nhiệt độ. Để trống thì client dùng mặc định của nhà cung cấp — mô hình suy luận thế hệ
    * mới của OpenAI và Anthropic từ chối tham số này, nên không tự điền 0 như `gemini.ts`.
    */
@@ -192,7 +198,16 @@ export function outputBudget(
   routeCap: number | undefined,
   requested: number | undefined,
   fallback: number,
+  /** Trần cứng của lời gọi (`StructuredCallOptions.outputCap`, T176) — chỉ HẠ, không bao giờ nâng. */
+  hardCap?: number,
 ): number | null {
-  if (routeCap === 0) return null;
-  return routeCap ?? requested ?? fallback;
+  const budget = routeCap === 0 ? null : (routeCap ?? requested ?? fallback);
+  return capOutput(budget, hardCap);
+}
+
+/** Lấy số nhỏ hơn giữa giới hạn đã có (`null` = không đặt) và trần cứng của lời gọi (T176). */
+export function capOutput(budget: number | null, hardCap: number | undefined): number | null {
+  if (hardCap === undefined || !Number.isFinite(hardCap) || hardCap <= 0) return budget;
+  const cap = Math.floor(hardCap);
+  return budget === null ? cap : Math.min(budget, cap);
 }

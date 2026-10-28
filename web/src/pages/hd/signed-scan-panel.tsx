@@ -26,7 +26,11 @@ import {
   useSignedScanHistory,
 } from '@/hooks/use-contract-scan';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { useCompanyLookup } from '@/hooks/use-companies';
+import { useRecipientContact } from '@/hooks/use-outbound-shares';
+import { ZaloSend, ZaloShareHistory, type ZaloSendProps } from '@/components/share/zalo-send';
 import { safeFileName, shareOrDownload } from '@/lib/share-file';
+import { composeZaloMessage } from '@/lib/zalo-share';
 import { SignedScanLink } from './signed-scan-link';
 
 function addDays(days: number): string {
@@ -46,10 +50,26 @@ export function SignedScanPanel({
     title: string;
     contract_number: string | null;
     signed_scan_path: string | null;
+    customer?: { id: string; name: string } | null;
   };
   /** Người chịu trách nhiệm hoặc Ban Giám đốc. */
   canManage: boolean;
 }) {
+  const recipient = useRecipientContact({ customerId: contract.customer?.id ?? null }).data;
+  const companyName = useCompanyLookup()(contract.company_id)?.short_name ?? null;
+  // Lời nhắn gửi link xem bản đã ký qua Zalo cá nhân của người gửi (0238).
+  const zalo = (share: { id: string; token: string; expires_at: string }) => ({
+    entityType: 'contract_signed_scan' as const,
+    entityId: contract.id,
+    phone: recipient?.phone ?? null,
+    shareLinkId: share.id,
+    message: composeZaloMessage({
+      recipientName: contract.customer?.name ?? recipient?.name ?? null,
+      companyName,
+      subject: `bản hợp đồng đã ký${contract.contract_number ? ` số ${contract.contract_number}` : ` «${contract.title}»`}`,
+      link: { url: scanShareUrl(share.token), expiresAt: share.expires_at },
+    }),
+  });
   const prompt = usePromptDialog();
   const attach = useAttachSignedScan();
   const { data: shares = [] } = useContractScanShares(contract.id);
@@ -118,6 +138,7 @@ export function SignedScanPanel({
         <ScanShareDialog
           contractId={contract.id}
           companyId={contract.company_id}
+          zalo={zalo}
           onClose={() => setSharing(false)}
         />
       )}
@@ -249,6 +270,7 @@ export function SignedScanPanel({
                       >
                         Chép link
                       </Button>
+                      <ZaloSend canSend={canManage} size="sm" showHistory={false} {...zalo(s)} />
                       {canManage && (
                         <Button
                           size="sm"
@@ -269,6 +291,9 @@ export function SignedScanPanel({
               );
             })}
           </ul>
+          <div className="mt-2">
+            <ZaloShareHistory entityType="contract_signed_scan" entityId={contract.id} />
+          </div>
         </div>
       )}
     </section>
@@ -284,10 +309,16 @@ const QUICK = [
 function ScanShareDialog({
   contractId,
   companyId,
+  zalo,
   onClose,
 }: {
   contractId: string;
   companyId: string;
+  zalo: (share: {
+    id: string;
+    token: string;
+    expires_at: string;
+  }) => Omit<ZaloSendProps, 'canSend'>;
   onClose: () => void;
 }) {
   const create = useCreateScanShare();
@@ -295,6 +326,9 @@ function ScanShareDialog({
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
+  const [created, setCreated] = useState<{ id: string; token: string; expires_at: string } | null>(
+    null,
+  );
   const [copied, setCopied] = useState(false);
 
   async function submit() {
@@ -309,6 +343,7 @@ function ScanShareDialog({
         expiresAt,
         note: note.trim() || null,
       });
+      setCreated({ id: res.id, token: res.token, expires_at: expiresAt });
       setLink(scanShareUrl(res.token));
     } catch (e) {
       setError(toUserMessage(e, 'create'));
@@ -329,6 +364,11 @@ function ScanShareDialog({
           Gửi link qua Zalo / email. Khách xem và tải bản đã ký không cần đăng nhập, tới hết ngày{' '}
           {formatDate(until)}. Thu hồi sớm ở mục «Link đã gửi khách».
         </p>
+        {created && (
+          <div className="mt-3">
+            <ZaloSend canSend showHistory={false} {...zalo(created)} />
+          </div>
+        )}
       </ConfirmDialog>
     );
   }

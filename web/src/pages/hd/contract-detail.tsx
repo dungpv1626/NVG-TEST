@@ -593,6 +593,7 @@ export function ContractDetailPage() {
               <DocumentPanel
                 contract={contract}
                 canDraft={canDraft && !isClosed}
+                canSend={canApprove || (canEdit && isResponsible)}
                 termsPanel={
                   <TermsPanel
                     contractId={contract.id}

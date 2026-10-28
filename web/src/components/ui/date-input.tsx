@@ -23,7 +23,7 @@
  */
 
 import { CalendarDays } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { displayDateToIso, isoDateToDisplay, toNvgDateInput } from '@nvg/shared';
 import { CalendarPopover } from '@/components/ui/calendar-popover';
 import { Input } from '@/components/ui/input';
@@ -159,6 +159,9 @@ export function DateInput({
    *
    * Ô TRỐNG HẲN thì vẫn báo: đó là người dùng cố ý bỏ ngày, không phải gõ dở.
    */
+  // Neo của bảng lịch: bảng lịch đặt theo khung nhìn, căn mép phải với ô này (`CalendarPopover`).
+  const boxRef = useRef<HTMLDivElement>(null);
+
   function handleBlur() {
     if (incomplete) return;
     onBlur?.(iso ?? '');
@@ -166,7 +169,7 @@ export function DateInput({
 
   return (
     <>
-      <div className="relative">
+      <div ref={boxRef} className="relative">
         <Input
           ref={inputRef}
           type="text"
@@ -222,6 +225,7 @@ export function DateInput({
 
             {calendarOpen && (
               <CalendarPopover
+                anchorRef={boxRef}
                 selected={iso ?? ''}
                 min={min}
                 max={max}

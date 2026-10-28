@@ -44,20 +44,24 @@ export function StepTrack<S extends string>({
   const nextStep = w.next ? flow.steps[w.next] : null;
 
   const nextCard = (
-    // Thẻ tối «Bước tiếp theo» (v2) — sang cột phải của trang chi tiết khi màn hình đủ rộng.
+    // Thẻ tối «Bước tiếp theo» (v2) — sang cột phải của trang chi tiết khi màn hình đủ rộng (2xl).
+    // Hẹp hơn thì nằm ở đầu cột chính, dạng GỌN: tên bước một dòng, «Đang làm / Sau đó / Bước cuối»
+    // xếp ngang — dạng dọc 330px ở đó chiếm nửa màn hình trên laptop (anh Dũng 28/10/2026).
     <section
       aria-label="Bước tiếp theo"
-      className="mb-4 rounded-card-dark bg-shell-card p-5 text-fg-inverse lg:mb-5 xl:mb-0"
+      className="mb-4 rounded-card-dark bg-shell-card p-4 text-fg-inverse lg:mb-5 2xl:mb-0 2xl:p-5"
     >
-      <p className="text-xs font-semibold text-shell-fg-subtle">
-        {nextStep ? 'Bước tiếp theo' : w.isExit ? 'Đã rẽ nhánh' : 'Bước cuối'}
-      </p>
-      <h2 className="mt-1 text-md font-semibold">
-        {nextStep && w.next ? nextStep.label : step.label}
-      </h2>
-      {nextStep?.auto && <p className="mt-0.5 text-shell-fg">{nextStep.auto}</p>}
+      <div className="flex flex-wrap items-baseline gap-x-2 2xl:block">
+        <p className="text-xs font-semibold text-shell-fg-subtle">
+          {nextStep ? 'Bước tiếp theo' : w.isExit ? 'Đã rẽ nhánh' : 'Bước cuối'}
+        </p>
+        <h2 className="text-md font-semibold 2xl:mt-1">
+          {nextStep && w.next ? nextStep.label : step.label}
+        </h2>
+        {nextStep?.auto && <p className="text-shell-fg 2xl:mt-0.5">{nextStep.auto}</p>}
+      </div>
 
-      <dl className="mt-3 space-y-2">
+      <dl className="mt-2 grid gap-x-6 gap-y-2 sm:grid-cols-[2fr_1fr_1fr] 2xl:mt-3 2xl:block 2xl:space-y-2">
         <div>
           <dt className="text-xs text-shell-fg-subtle">Đang làm</dt>
           <dd className="text-shell-fg">

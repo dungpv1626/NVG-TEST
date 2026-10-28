@@ -4584,3 +4584,67 @@ thử dùng client giả. `kb/ai_design_prompts.yaml` `version` CHƯA tăng (m�
 
 Câu hỏi cho NVG: bỏ / thêm phong cách nào (ví dụ Wabi-sabi, Nhật, Đông Dương hiện đại); bộ `must` / `avoid` / `allowed` có đúng
 cách NVO làm không; ảnh mẫu từng phong cách từ công trình NVO đã làm (để thay câu mô tả và kiểm chi tiết nhận diện).
+
+## T176 — Trần TỪNG lời gọi mô hình; mọi tuyến chữ có giới hạn token ra; câu 429 của Gemini đúng nghĩa (28/10/2026, anh Dũng đồng ý)
+
+**Sự cố.** «Xếp mặt bằng» hồ sơ `NVO-TK-2026-9272`, tuyến `ai_text_anthropic` (Claude Opus 5.5, `reasoning_effort: medium`,
+`max_output_tokens: 0` = 128.000 khi truyền luồng): MỘT lời gọi chạy 20 phút, 7.754 token vào / 128.000 token ra (toàn bộ là suy
+nghĩ), không viết xong câu trả lời — **2,59 USD** trong khi mức của lượt (`design_setting.ai_run_cost_cap_usd`) trên máy là 0,8. Mức
+T164 (`costCapDecision`) chỉ xét TRƯỚC lời gọi SỬA, ước bằng trung bình các lời gọi trước: lời gọi đầu không bị chặn, lời gọi đang
+chạy không cắt được. Hộp hỏi trước khi chạy ước «≈ 0,491 USD» (trung bình lượt cũ của mô hình khác × bảng giá) — lệch hơn 5 lần.
+
+**Sửa 1 — trần từng lời gọi** (`shared/src/design/call-cost.ts` `callBudget`, dùng chung Worker + màn hình):
+- Trước MỖI lời gọi (kể cả lời gọi đầu, mọi phương án, lượt sửa theo yêu cầu): chi phí tối đa = token vào ƯỚC × giá vào +
+  `max_output_tokens` của tuyến × giá ra. Token vào ước theo ký tự (lời dẫn + thân + phần nối + lược đồ) ÷
+  `billing.call_cap.chars_per_token` (2,5 — cố ý thấp để ước CAO; là ước, không phải số đo).
+- `đã tiêu + tối đa > mức` → hạ giới hạn token ra của chính lời gọi ấy: `floor((mức − đã tiêu − tiền vào) / giá ra)`; dưới
+  `billing.call_cap.min_output_tokens` (8.000 — lời gọi đầu của Terra ra 6.000–7.300, Sol 9.122) thì KHÔNG gọi, lượt dừng với
+  câu «Đã dừng trước lời gọi kế tiếp vì phần còn lại của mức chi phí … không đủ cho một lời gọi tối thiểu (≈ …)» (`reason: 'call'`).
+- Cài bằng client bọc `costCappedClient` (`workers/src/design/ai/cost-cap.ts`) quanh client của `proposeHouse` / `proposeEdit`
+  trong Workflow; lời gọi bị chặn ném `CallCostCapReached`, hai hàm bắt và trả kết quả mang `costCap` — không ghi dòng
+  `design_ai_call` (không có lời gọi nào), Workflow dừng như mọi đường dừng vì mức (lưu bản đạt nếu có).
+- Giới hạn của lời gọi đi xuống nhà cung cấp qua `StructuredCallOptions.outputCap` (chỉ HẠ, không nâng — `capOutput`):
+  OpenAI `max_output_tokens`, Anthropic `max_tokens` (cũng là trần suy nghĩ: Claude 5 không nhận `budget_tokens`, chỉ
+  `thinking: adaptive` + `effort`), Gemini `maxOutputTokens`.
+- Giữ nguyên: mức trống → không trần; tuyến không có giá hoặc đã có lời gọi không tính được tiền → cách cũ (T164 `unpriced`);
+  phép kiểm trung bình T164 trước lời gọi sửa vẫn chạy (dừng sớm hơn khi một lời gọi điển hình không còn vừa).
+- Hộp hỏi: dòng «Tối đa ≈ X USD mỗi lời gọi» tính bằng cùng `callBudget` (token vào = số đo lớn nhất của các lượt trước, chưa có
+  thì ghi «chưa gồm phần token vào»), nói rõ khi giới hạn đã hạ cho vừa mức. Danh mục model trả thêm `maxOutputTokens`, `limits`
+  trả `callMinOutputTokens`.
+
+**Sửa 2 — mọi tuyến `ai_text_*` có giới hạn** (`config/models.yaml`, phép tính ghi cạnh từng tuyến, token vào cho phép 10.000):
+
+| Tuyến | Token ra | Một lời gọi tối đa |
+| --- | --- | --- |
+| `ai_text_anthropic` Opus 5.5 (4/20) | 22.000, effort `low` | ≈ 0,48 USD |
+| `_opus5`, `_opus47` (5/25) | 18.000, `low` | ≈ 0,50 USD |
+| `_fast` Sonnet 5.5, `_sonnet5` (2/10) | 45.000, `low` | ≈ 0,47 USD |
+| `_top` Fable 5.1 (10/50) | 8.000, `low` | ≈ 0,50 USD |
+| `ai_text_openai` Terra (2/12) | 24.000 | ≈ 0,31 USD |
+| `_fast` Luna (0,2/1,2) | 32.000 | ≈ 0,04 USD |
+| `_deep` Sol (4/20) | 12.000 (giữ) | ≈ 0,28 USD |
+| `_sol6` GPT-6 Sol (2/10) | 24.000 | ≈ 0,26 USD |
+| `_top` Astra (10/50) | 8.000 | ≈ 0,50 USD |
+| `ai_text_gemini` 3.1 Pro (2/12) | 24.000 | ≈ 0,31 USD |
+| `_fast` 3.8 Flash (0,75/3,75) | 32.000 | ≈ 0,13 USD |
+
+Anthropic `medium` → `low`: ở `medium` Opus 5.5 nghĩ hết 128.000 token; giới hạn 22.000 với `medium` gần như chắc cắt dở. Chọn
+mức khác trên màn hình vẫn thắng, và vẫn bị giới hạn chặn. Phép thử `call-cost-cap.test.ts` canh: mọi `ai_text_*` có
+`max_output_tokens` > 0 và có giá; tuyến Anthropic ≤ 0,5 USD một lời gọi và effort `low` / `medium`; `min_output_tokens` không cao
+hơn giới hạn tuyến nào; `billing.call_cap` sai thì tệp không nạp.
+
+**Sửa 3 — 429 của Gemini** (`llm/provider-faults.ts`): câu thật «You exceeded your current quota, please check your plan and
+billing details … generate_content_free_tier_input_token_count, limit: 0, model: gemini-3.1-pro» chứa «billing» nên bị đọc thành
+«hết tín dụng». Nay ba trường hợp: (a) `free_tier` + `limit: 0` → «khoá đang ở gói miễn phí (chưa bật thanh toán), model này
+không có hạn mức miễn phí … Quản trị hệ thống xử lý được», không thử lại; (b) «Quota exceeded for metric» hạn mức khác 0 /
+`PerMinute` / `PerDay` / «Please retry in» → «đang chạm hạn mức gọi, thử lại sau», thử lại; (c) hết tín dụng thật (`prepayment
+credits are depleted`, `insufficient_quota` của OpenAI, `credit balance is too low`) → câu cũ.
+
+**Đo / kiểm** (không gọi nhà cung cấp nào — client và `fetch` giả): `call-cost-cap.test.ts` 37 phép thử (mức 0,8 + giá Opus + 128.000 → hạ còn 38.449 token, tối đa ≤ 0,8 USD; còn quá ít → dừng trước khi gọi; không giá / mức trống → như cũ; ba client nhận `outputCap`; canh `config/models.yaml`; ba câu 429), hai ca mới ở `ai-design-steps.test.ts` (chặn: 0 lời gọi, 0 dòng nhật ký; còn đủ: gọi với giới hạn đã hạ), `max-call-cost.test.tsx` (hộp hỏi ra ĐÚNG số Worker tính). Phát lại 39 tệp `ai-live-*` + `ai-replay` + `live-plan`: không đổi (142 phép thử; `ai-live-c8cefafc` một lần đỏ khi chạy chung, chạy riêng xanh — lúc đỏ lúc xanh vì máy bận). Đột biến M245–M248 (không hạ giới hạn; client Claude bỏ `outputCap`; lời gọi bị chặn thành lỗi nhà cung cấp; 429 free tier lại thành «hết tín dụng») đo tay: cả bốn ĐỎ.
+
+**Còn hở.** (1) Lời gọi đã gửi thì vẫn không cắt được giữa chừng theo tiền — trần là giới hạn token ra lúc gửi; hạn chờ
+`request_timeout_s: 0` vẫn để nguyên. (2) Token vào là ƯỚC theo ký tự; ảnh gửi kèm không tính (lời gọi mặt bằng không gửi ảnh).
+(3) Chỉ luồng mặt bằng + sửa theo yêu cầu có mức chi phí; mặt đứng, phối cảnh, ảnh, `generateAiPlan` (đường không Workflow)
+chưa có mức — chỉ được giới hạn token ra của tuyến chặn. (4) Lượt Sonnet 5 cũ (17–26/09, `medium`) từng ra 58.000–117.000 token —
+cao hơn giới hạn 45.000 mới; ở `low` chưa có số đo. Fable / Astra 8.000 token chưa có lượt thật nào — dễ bị cắt. (5) Phép kiểm
+cuối Workflow (`ai-design.ts`) không có phép thử chạy được (cần runtime Workers); phép thử phủ `proposeHouse` + client bọc.

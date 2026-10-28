@@ -7,11 +7,13 @@
  * đốc duyệt đúng bộ ảnh đang thấy (CSDL cũng chặn, `rls_survey_writable`).
  *
  * Phiếu giấy đi qua bộ quét dùng chung (0189): chụp từng trang, kéo góc, ghép thành một PDF —
- * đọc lại để gõ vào biên bản dễ hơn nhiều ảnh lệch rời rạc.
+ * đọc lại để gõ vào biên bản dễ hơn nhiều ảnh lệch rời rạc. Tệp loại «Phiếu khảo sát giấy» có nút
+ * «Máy đọc phiếu và điền nháp» (28/10/2026, `survey-paper-read-panel.tsx`) khi công tắc AI bật và
+ * người xem sửa được biên bản.
  */
 
 import { useRef, useState } from 'react';
-import { Camera, FileText, FileUp, ScrollText, Trash2 } from 'lucide-react';
+import { Camera, FileText, FileUp, ScanText, ScrollText, Trash2 } from 'lucide-react';
 import {
   SURVEY_ATTACHMENT_KINDS,
   SURVEY_ATTACHMENT_KIND_LABELS,
@@ -21,6 +23,7 @@ import { DocumentScanner } from '@/components/scan/document-scanner';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { useAiStatus } from '@/hooks/use-site-surveys';
 import {
   isPreviewableImage,
   SURVEY_ATTACHMENT_ACCEPT,
@@ -30,6 +33,7 @@ import {
   useUploadSurveyAttachments,
   type SurveyAttachment,
 } from '@/hooks/use-survey-attachments';
+import { SurveyPaperReadPanel, type PaperApplyEntry } from './survey-paper-read-panel';
 
 function sizeLabel(bytes: number | null): string {
   if (!bytes) return '';
@@ -37,12 +41,29 @@ function sizeLabel(bytes: number | null): string {
   return `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB`;
 }
 
+/** Tệp máy đọc được: phiếu giấy dạng PDF (bộ quét) hoặc ảnh JPG / PNG. */
+function paperReadable(a: SurveyAttachment): boolean {
+  return (
+    a.kind === 'phieu' &&
+    a.url !== null &&
+    (a.mime_type === 'application/pdf' ||
+      a.mime_type === 'image/jpeg' ||
+      a.mime_type === 'image/png')
+  );
+}
+
 export function SurveyAttachmentsSection({
   surveyId,
   canEdit,
+  paperRead,
 }: {
   surveyId: string;
   canEdit: boolean;
+  /** Máy đọc phiếu: nội dung hiện có của từng ô + cách điền vào biểu mẫu biên bản. */
+  paperRead?: {
+    current: Record<string, string | null | undefined>;
+    onApply: (entries: PaperApplyEntry[]) => string | null;
+  };
 }) {
   const { data: items = [], isLoading } = useSurveyAttachments(surveyId);
   const upload = useUploadSurveyAttachments();
@@ -54,6 +75,9 @@ export function SurveyAttachmentsSection({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<SurveyAttachment | null>(null);
+  const [reading, setReading] = useState<SurveyAttachment | null>(null);
+  const { data: ai } = useAiStatus();
+  const canRead = canEdit && paperRead !== undefined && (ai?.surveyPaper ?? 'off') !== 'off';
 
   if (isLoading) return null;
   if (!canEdit && items.length === 0) return null;
@@ -72,7 +96,10 @@ export function SurveyAttachmentsSection({
       const { uploaded, skipped } = await upload.mutateAsync({ surveyId, files, kind });
       setMessage(
         `Đã tải lên ${uploaded} tệp.` +
-          (skipped.length ? ` Bỏ qua vì quá 50 MB: ${skipped.join(', ')}.` : ''),
+          (skipped.length ? ` Bỏ qua vì quá 50 MB: ${skipped.join(', ')}.` : '') +
+          (kind === 'phieu' && canRead
+            ? ' Bấm «Máy đọc phiếu và điền nháp» cạnh tệp để máy chép các ô.'
+            : ''),
       );
     } catch (e) {
       setError(toUserMessage(e, 'create'));
@@ -185,6 +212,7 @@ export function SurveyAttachmentsSection({
                 onCaption={(caption) => update.mutate({ id: a.id, caption })}
                 onDelete={() => setDeleting(a)}
               />
+              {canRead && paperReadable(a) && <PaperReadButton onClick={() => setReading(a)} />}
             </li>
           ))}
         </ul>
@@ -219,10 +247,28 @@ export function SurveyAttachmentsSection({
                   onCaption={(caption) => update.mutate({ id: a.id, caption })}
                   onDelete={() => setDeleting(a)}
                 />
+                {canRead && paperReadable(a) && <PaperReadButton onClick={() => setReading(a)} />}
               </div>
             </li>
           ))}
         </ul>
+      )}
+
+      {reading && canRead && paperRead && (
+        <SurveyPaperReadPanel
+          key={reading.id}
+          surveyId={surveyId}
+          fileUrl={reading.url!}
+          fileName={reading.file_name}
+          mimeType={reading.mime_type}
+          current={paperRead.current}
+          onApply={(entries) => {
+            const failed = paperRead.onApply(entries);
+            if (!failed) setReading(null);
+            return failed;
+          }}
+          onClose={() => setReading(null)}
+        />
       )}
 
       {deleting && (
@@ -246,6 +292,15 @@ export function SurveyAttachmentsSection({
         </ConfirmDialog>
       )}
     </section>
+  );
+}
+
+function PaperReadButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button variant="secondary" size="sm" className="mt-1" onClick={onClick}>
+      <ScanText />
+      Máy đọc phiếu và điền nháp
+    </Button>
   );
 }
 

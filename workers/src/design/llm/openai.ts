@@ -107,7 +107,12 @@ export class OpenAiClient implements TextModelClient, AiImageClient {
       input.push({ role: 'user', content: [{ type: 'input_text', text: options.promptTail }] });
     }
 
-    const budget = outputBudget(route.max_output_tokens, options.maxOutputTokens, 16_384);
+    const budget = outputBudget(
+      route.max_output_tokens,
+      options.maxOutputTokens,
+      16_384,
+      options.outputCap,
+    );
     const body: Record<string, unknown> = {
       model: route.model,
       instructions: options.system,

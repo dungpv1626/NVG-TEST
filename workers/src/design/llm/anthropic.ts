@@ -23,6 +23,7 @@ import { LlmCallFailed } from './gemini';
 import type { ModelRouter, ResolvedRoute } from './router';
 import { schemaFor } from './schema-dialect';
 import {
+  capOutput,
   outputBudget,
   requestTimeout,
   tokenCount,
@@ -129,9 +130,14 @@ export class AnthropicClient implements TextModelClient {
       // luồng thì giữ 16.384: yêu cầu thường mà viết cả trăm nghìn token sẽ hết giờ HTTP giữa chừng.
       // Trước 17/09/2026 `0` cũng thành 16.384, nên tuyến phải đặt tay 32.000 — và lượt Sonnet 5
       // lúc 07:44 bị cắt đúng ở đó (32.000 token ra, 0,335 USD, không dùng được).
-      max_tokens:
+      // Trần cứng của lời gọi (T176, mức chi phí của lượt) áp SAU cùng — chỉ hạ, kể cả khi tuyến để `0`.
+      // `max_tokens` của Claude là trần CHUNG cho suy nghĩ + trả lời, nên nó cũng là trần suy nghĩ: Claude 5
+      // không nhận `budget_tokens` (400), chỉ `thinking: adaptive` + `effort`.
+      max_tokens: capOutput(
         outputBudget(route.max_output_tokens, options.maxOutputTokens, 16_384) ??
-        (options.onProgress ? CLAUDE_MAX_OUTPUT_TOKENS : 16_384),
+          (options.onProgress ? CLAUDE_MAX_OUTPUT_TOKENS : 16_384),
+        options.outputCap,
+      ),
       system: options.system,
       messages: [{ role: 'user', content }],
       output_config: {

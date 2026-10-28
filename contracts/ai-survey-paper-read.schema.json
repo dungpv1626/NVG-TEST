@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-survey-paper-read.schema.json",
+  "title": "AiSurveyPaperRead",
+  "description": "Gemini đọc ẢNH phiếu khảo sát giấy (viết tay) của Kinh doanh rồi trả NHÁP cho sáu ô báo cáo khảo sát và các ô «Thông tin hiện trường» riêng của pháp nhân (anh Dũng 28/10/2026). Ảnh gửi đi đã được trình duyệt TÔ TRẮNG khung thông tin khách (tên, điện thoại, địa chỉ, chữ ký) — bản PDF gốc vẫn ở kho, không gửi. Không phải artifact bất biến và không ghi gì vào biên bản: Worker loại khoá lạ, lược danh tính khách khỏi giá trị; người khảo sát chọn ô nào dùng, sửa rồi tự Lưu. Ô đọc không ra thì bỏ hẳn, không đoán.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["fields"],
+  "properties": {
+    "fields": {
+      "type": "array",
+      "maxItems": 40,
+      "items": { "$ref": "#/$defs/field" }
+    }
+  },
+  "$defs": {
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "value", "confidence"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Khoá ô: một trong sáu ô báo cáo (`needs`, `decision_maker`, `budget_note`, `schedule_note`, `commercial_terms`, `notes`) hoặc `site.<khoá>` của phiếu riêng pháp nhân (`SURVEY_SITE_FORMS`)."
+        },
+        "value": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Chữ viết tay đọc được, chép gần nguyên văn (sửa chính tả hiển nhiên được, không thêm ý)."
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["ro", "khong_ro"],
+          "description": "`ro` = đọc rõ; `khong_ro` = có chữ nhưng đọc không chắc, người dùng phải đối chiếu với phiếu."
+        }
+      }
+    }
+  }
+}

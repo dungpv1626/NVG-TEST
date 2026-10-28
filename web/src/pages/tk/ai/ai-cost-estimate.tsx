@@ -13,6 +13,7 @@ import {
   editRunUnits,
   estimateFromPricing,
   estimateRunCost,
+  maxMeasuredInputTokens,
   planRunUnits,
   type CostEstimate,
 } from './run-cost-estimate';
@@ -30,10 +31,31 @@ export function useCostEstimate(
   route: string | null,
   /** Mô hình đang chọn — giá niêm yết của nó dùng khi chưa có lượt nào bằng chính nó. */
   option?: AiModelOption | null,
-): { estimate: CostEstimate | null; loading: boolean } {
+): {
+  estimate: CostEstimate | null;
+  loading: boolean;
+  /** Token vào lớn nhất đã đo của cùng nhóm lượt gọi — cho «tối đa mỗi lời gọi» (T176). */
+  maxInputTokens: number | null;
+} {
   const history = useAiCostHistory('plan', PURPOSES[kind]);
   const inputPrice = option?.route === route ? option?.inputPer1mUsd : undefined;
   const outputPrice = option?.route === route ? option?.outputPer1mUsd : undefined;
+  const maxInputTokens = useMemo(() => {
+    if (!history.data) return null;
+    return maxMeasuredInputTokens(
+      history.data.calls.map((call) => ({
+        projectId: call.project_id,
+        createdAt: call.created_at,
+        route: call.route,
+        purpose: call.purpose,
+        status: call.status,
+        inputTokens: call.input_tokens,
+        outputTokens: call.output_tokens,
+        costUsd: call.cost_usd === null ? null : Number(call.cost_usd),
+      })),
+      PURPOSES[kind],
+    );
+  }, [history.data, kind]);
   const estimate = useMemo(() => {
     if (!route || !history.data) return null;
     const units = kind === 'plan' ? planRunUnits : editRunUnits;
@@ -63,7 +85,7 @@ export function useCostEstimate(
       })
     );
   }, [history.data, kind, route, inputPrice, outputPrice]);
-  return { estimate, loading: history.isLoading };
+  return { estimate, loading: history.isLoading, maxInputTokens };
 }
 
 /** Chữ ngắn gắn lên nút: «≈ 0,24 USD». Rỗng khi chưa có số — nút không mang chữ «Chưa đủ dữ liệu». */

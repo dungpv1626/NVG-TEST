@@ -14,6 +14,13 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { callBudget, estimateInputTokens, type DataClass } from '@nvg/shared/design';
+import type { CallCapSettings, RoutePricing } from '../llm/router';
+import type {
+  StructuredCallOptions,
+  StructuredCallResult,
+  TextModelClient,
+} from '../llm/text-client';
 
 /** Khoá cấu hình trong `design_setting`. */
 export const RUN_COST_CAP_KEY = 'ai_run_cost_cap_usd';
@@ -50,10 +57,16 @@ export interface CostCapStop {
   capUsd: number;
   /** Tiền (giá niêm yết) các lời gọi mô hình của lượt đã tiêu tới lúc dừng. */
   spentUsd: number;
-  /** Ước tính một lời gọi nữa; `null` khi không tính được giá lượt trước. */
+  /**
+   * Ước tính một lời gọi nữa; `null` khi không tính được giá lượt trước. Với `call`: tiền của lời gọi kế ở
+   * mức token ra TỐI THIỂU (`billing.call_cap.min_output_tokens`) — phần còn lại của mức không đủ số ấy.
+   */
   nextUsd: number | null;
-  /** `unpriced` = có lời gọi không tính được tiền, nên không bảo đảm được mức. */
-  reason: 'over' | 'unpriced';
+  /**
+   * `unpriced` = có lời gọi không tính được tiền, nên không bảo đảm được mức. `call` = trần TỪNG lời gọi
+   * (T176): hạ giới hạn token ra cho vừa phần còn lại thì dưới mức tối thiểu để mô hình kịp trả lời.
+   */
+  reason: 'over' | 'unpriced' | 'call';
 }
 
 /**
@@ -91,6 +104,9 @@ export function formatUsdVi(value: number): string {
 
 /** Câu hiện cho người dùng khi lượt dừng vì mức chi phí. */
 export function costCapMessage(stop: CostCapStop): string {
+  if (stop.reason === 'call') {
+    return `Đã dừng trước lời gọi kế tiếp vì phần còn lại của mức chi phí ${formatUsdVi(stop.capUsd)} (đã tiêu ${formatUsdVi(stop.spentUsd)}) không đủ cho một lời gọi tối thiểu${stop.nextUsd !== null ? ` (≈ ${formatUsdVi(stop.nextUsd)})` : ''}.`;
+  }
   if (stop.reason === 'unpriced') {
     return `Đã dừng vì không tính được chi phí lời gọi trước của mô hình này, trong khi lượt có mức chi phí ${formatUsdVi(stop.capUsd)} (đã tiêu ${formatUsdVi(stop.spentUsd)}).`;
   }
@@ -99,4 +115,97 @@ export function costCapMessage(stop: CostCapStop): string {
 
 function round6(value: number): number {
   return Math.round(value * 1_000_000) / 1_000_000;
+}
+
+// ---------------------------------------------------------------------------
+// Trần TỪNG lời gọi (T176)
+// ---------------------------------------------------------------------------
+
+/**
+ * Lời gọi KHÔNG được gửi vì phần còn lại của mức không đủ cho số token ra tối thiểu. Không tốn tiền — nơi
+ * bắt (`proposeHouse`, `proposeEdit`) không ghi dòng nhật ký nào, và trả kết quả mang `stop` để lượt dừng
+ * như mọi đường dừng vì mức chi phí.
+ */
+export class CallCostCapReached extends Error {
+  constructor(readonly stop: CostCapStop) {
+    super(costCapMessage(stop));
+    this.name = 'CallCostCapReached';
+  }
+}
+
+export interface CallCapGuard {
+  /** Mức của lượt, USD; `null` = không giới hạn → client đi thẳng. */
+  capUsd: number | null;
+  /** Tiền các lời gọi đã xong của lượt, đọc ĐÚNG lúc sắp gọi (mảng dùng chung mọi phương án). */
+  spent: () => readonly (number | null)[];
+  /** Giá và giới hạn token ra của tuyến sắp gọi (tuyến sửa có giá riêng). */
+  routeOf: (routeName: string) => { pricing?: RoutePricing; maxOutputTokens: number | null };
+  /** `billing.call_cap`; `null` = chưa khai → client đi thẳng. */
+  settings: CallCapSettings | null;
+}
+
+/** Số ký tự của lời gọi gửi đi — lời dẫn hệ thống, thân, phần nối, lược đồ. Ảnh không tính (xem T176). */
+export function requestChars(options: StructuredCallOptions): number {
+  return (
+    options.system.length +
+    options.prompt.length +
+    (options.promptTail?.length ?? 0) +
+    JSON.stringify(options.schema).length
+  );
+}
+
+/**
+ * Bọc client chữ: trước MỖI lời gọi, kể cả lời gọi đầu, tính chi phí tối đa của lời gọi ấy và hạ giới hạn
+ * token ra (`outputCap`) cho vừa phần còn lại của mức; không đủ cho `min_output_tokens` thì ném
+ * `CallCostCapReached` TRƯỚC khi gọi.
+ *
+ * Đi thẳng (như trước T176) khi: mức trống, chưa khai `billing.call_cap`, tuyến chưa có giá, hoặc đã có lời
+ * gọi không tính được tiền (chỗ ấy mức T164 `unpriced` đã dừng trước lời gọi sửa).
+ */
+export function costCappedClient(inner: TextModelClient, guard: CallCapGuard): TextModelClient {
+  if (guard.capUsd === null || !guard.settings) return inner;
+  const capUsd = guard.capUsd;
+  const settings = guard.settings;
+  return {
+    async complete(
+      routeName: string,
+      dataClass: DataClass,
+      options: StructuredCallOptions,
+    ): Promise<StructuredCallResult> {
+      const costs = guard.spent();
+      const known = costs.filter((cost): cost is number => cost !== null);
+      const route = guard.routeOf(routeName);
+      const inPrice = route.pricing?.input_per_1m_usd;
+      const outPrice = route.pricing?.output_per_1m_usd;
+      if (known.length < costs.length || inPrice === undefined || outPrice === undefined) {
+        return inner.complete(routeName, dataClass, options);
+      }
+      const spentUsd = round6(known.reduce((sum, cost) => sum + cost, 0));
+      const decision = callBudget({
+        capUsd,
+        spentUsd,
+        inputTokens: estimateInputTokens(requestChars(options), settings.chars_per_token),
+        routeOutputTokens: route.maxOutputTokens,
+        prices: { inputPer1mUsd: inPrice, outputPer1mUsd: outPrice },
+        minOutputTokens: settings.min_output_tokens,
+      });
+      if (decision.kind === 'stop') {
+        throw new CallCostCapReached({
+          capUsd,
+          spentUsd,
+          nextUsd: round6(decision.minCallUsd),
+          reason: 'call',
+        });
+      }
+      if (decision.lowered && decision.outputTokens !== null) {
+        console.log(
+          `[ĐO] trần lời gọi (T176): ${routeName} giới hạn token ra ${route.maxOutputTokens ?? 'không đặt'} → ` +
+            `${decision.outputTokens} (đã tiêu ${spentUsd} / mức ${capUsd} USD)`,
+        );
+        const outputCap = Math.min(options.outputCap ?? Infinity, decision.outputTokens);
+        return inner.complete(routeName, dataClass, { ...options, outputCap });
+      }
+      return inner.complete(routeName, dataClass, options);
+    },
+  };
 }

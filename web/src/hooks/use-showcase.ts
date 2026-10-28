@@ -247,6 +247,8 @@ export interface ShowcaseShare {
   lead_id: string | null;
   opportunity_id: string | null;
   customer_id: string | null;
+  company_id: string | null;
+  created_by: string | null;
   creator: { full_name: string } | null;
   views: { viewed_at: string }[];
 }
@@ -259,7 +261,7 @@ export function useShowcaseShares() {
         .from('showcase_shares')
         .select(
           'id, token, item_ids, title, note, expires_at, revoked_at, created_at, lead_id, ' +
-            'opportunity_id, customer_id, creator:users!showcase_shares_created_by_fkey(full_name), ' +
+            'opportunity_id, customer_id, company_id, created_by, creator:users!showcase_shares_created_by_fkey(full_name), ' +
             'views:showcase_share_views(viewed_at)',
         )
         .order('created_at', { ascending: false })

@@ -117,7 +117,13 @@ import {
 import { mandatoryRules } from '../ai/mandatory-data';
 import { costUsd } from '../ai/call-log';
 import { ReplayTextClient } from '../llm/replay';
-import { costCapDecision, costCapMessage, type CostCapStop } from '../ai/cost-cap';
+import {
+  costCapDecision,
+  costCapMessage,
+  costCappedClient,
+  type CostCapStop,
+} from '../ai/cost-cap';
+import type { TextModelClient } from '../llm/text-client';
 
 /** Lượt sửa theo yêu cầu kỹ sư gọi mô hình tối đa bấy nhiêu lần: một lần, cộng một lần kèm lý do cổng. */
 const EDIT_CALLS_MAX = 4;
@@ -252,6 +258,14 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       model: publicRoute?.model ?? 'unknown',
       promptStore: createArtifactStore(this.env),
       ...reviseOf(router, params.textRoute),
+      // Trần TỪNG lời gọi (T176): giá + giới hạn token ra theo tuyến thật sẽ gọi (tuyến sửa có giá riêng).
+      callCap: {
+        settings: router.callCap,
+        routeOf: (name: string) => ({
+          ...(router.pricingOf(name) ? { pricing: router.pricingOf(name) } : {}),
+          maxOutputTokens: router.outputLimitOf(name),
+        }),
+      },
       // Phát lại: nhật ký ghi nhà cung cấp `replay`, model `replay:<mã>`, không giá, không tuyến sửa (T170).
       ...(params.replay ? replayDeps(params.replay) : {}),
     };
@@ -676,6 +690,26 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
   }
 
   /**
+   * Client chữ có trần TỪNG lời gọi (T176): trước mỗi lời gọi tính chi phí tối đa của nó với tiền đã tiêu của
+   * cả lượt (`spend`, đọc đúng lúc gọi) và hạ giới hạn token ra cho vừa mức; không đủ cho số tối thiểu thì
+   * không gọi. Mức trống / phát lại / chưa khai `billing.call_cap` = client nguyên.
+   */
+  private capped(
+    params: AiDesignParams,
+    deps: PlanStepDeps,
+    spend: readonly (number | null)[],
+    client: TextModelClient,
+  ): TextModelClient {
+    if (params.replay || !deps.callCap) return client;
+    return costCappedClient(client, {
+      capUsd: params.costCapUsd ?? null,
+      spent: () => spend,
+      routeOf: deps.callCap.routeOf,
+      settings: deps.callCap.settings,
+    });
+  }
+
+  /**
    * Một phương án: AI khai cả nhà → chương trình kiểm và xếp → (AI sửa → xếp lại) tối đa ba lần → lưu
    * (T45).
    *
@@ -769,7 +803,10 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
           () =>
             proposeHouse(
               // Phát lại: client của đúng vòng này (T170) — không giữ bộ đếm qua các bước.
-              { ...deps, client: planClientFor(params, round, deps.client) },
+              {
+                ...deps,
+                client: this.capped(params, deps, spend, planClientFor(params, round, deps.client)),
+              },
               params,
               variant,
               round,
@@ -781,6 +818,26 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
           board.signal,
         ),
       )) as ProposeOutcome;
+      // Trần từng lời gọi (T176): lời gọi không được gửi — dừng như mọi đường dừng vì mức chi phí.
+      if (proposal.costCap) {
+        await markStep(db, runId, id('propose'), 'failed', {
+          error: costCapMessage(proposal.costCap),
+        });
+        if (best) return this.writeBest(step, deps, params, variant, best, calls.length);
+        const last = lastArranged;
+        if (!last) {
+          throw new AiPlanRejectedWithMain(
+            [{ level: 0, messages: [costCapMessage(proposal.costCap)] }],
+            null,
+            proposal.costCap,
+          );
+        }
+        throw new AiPlanRejectedWithMain(
+          finalRejections(last.rejections, first ?? last.rejections, last.retry, calls.length),
+          mainRejection(bestFailed, bestFailedRound, last, deps.prompts),
+          proposal.costCap,
+        );
+      }
       calls.push(proposal.call);
       // Vòng sửa chạy tuyến `revise_route` (nếu khai) — tính bằng giá của tuyến ấy, như `logCall`.
       const revise = (retry?.hints?.length ?? 0) > 0 ? deps.revise : undefined;
@@ -914,10 +971,24 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       const currentRetry = retry;
       const proposal = (await step.do(callId, MODEL_STEP, () =>
         once(
-          () => proposeEdit(deps, params, currentRetry, hooks()).finally(() => board.drop(callId)),
+          () =>
+            proposeEdit(
+              { ...deps, client: this.capped(params, deps, spend, deps.client) },
+              params,
+              currentRetry,
+              hooks(),
+            ).finally(() => board.drop(callId)),
           board.signal,
         ),
       )) as EditCallOutcome;
+      if (proposal.costCap) {
+        await markStep(db, runId, callId, 'failed', { error: costCapMessage(proposal.costCap) });
+        throw new AiPlanRejectedWithMain(
+          [{ level: 0, messages: retry?.issues ?? [costCapMessage(proposal.costCap)] }],
+          null,
+          proposal.costCap,
+        );
+      }
       spend.push(costUsd(deps.pricing, proposal.call.usage));
       await markStep(db, runId, callId, 'done');
 

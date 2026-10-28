@@ -37,6 +37,8 @@ export interface AiModelOption {
   /** Giá niêm yết mỗi triệu token vào/ra, USD — `null` khi cấu hình chưa khai. */
   inputPer1mUsd: number | null;
   outputPer1mUsd: number | null;
+  /** Giới hạn token ra của tuyến; `null` = không đặt (T176). */
+  maxOutputTokens: number | null;
   /** `false` khi khoá của nhà cung cấp là gói miễn phí — tiền thật bằng 0. */
   billed: boolean;
   /** Nhận «mức suy nghĩ» theo lượt không — xem `PublicRoute.supportsEffort`. */
@@ -77,6 +79,7 @@ function option(route: PublicRoute): AiModelOption {
     imageUsd: route.pricing?.image_usd ?? null,
     inputPer1mUsd: route.pricing?.input_per_1m_usd ?? null,
     outputPer1mUsd: route.pricing?.output_per_1m_usd ?? null,
+    maxOutputTokens: route.maxOutputTokens,
     billed: route.billed,
     supportsEffort: route.supportsEffort,
   };

@@ -7,7 +7,7 @@
  * đi tiếp khi hàm này ném lỗi (CLAUDE.md 5.1).
  */
 
-import type { SiteLogVoiceDraft } from '@nvg/shared';
+import type { PaperReadItem, SiteLogVoiceDraft } from '@nvg/shared';
 import type { PrefillAccepted, PrefillRejected } from '@nvg/shared/design';
 import { supabase } from './supabase';
 
@@ -57,6 +57,7 @@ export function aiStatus(): Promise<{
   summary: AiMode;
   siteLog: AiMode;
   briefPrefill: AiMode;
+  surveyPaper: AiMode;
 }> {
   return call('/status');
 }
@@ -72,6 +73,27 @@ export interface BriefPrefillResult {
 /** Khảo sát thiết kế + khảo sát CRM đã duyệt → đề xuất câu trả lời đầu bài. Không ghi gì. */
 export function prefillBrief(projectId: string): Promise<BriefPrefillResult> {
   return call('/brief-prefill', { method: 'POST', body: { project_id: projectId } });
+}
+
+/** Kết quả «Máy đọc phiếu»: ô đọc được (đã kiểm khoá, đã lược danh tính) + khoá lạ bị loại. */
+export interface SurveyPaperReadResult {
+  accepted: PaperReadItem[];
+  rejected: { key: string; reason: string }[];
+  fake: boolean;
+}
+
+/** Ảnh phiếu khảo sát giấy ĐÃ CHE khung thông tin khách → nháp các ô báo cáo. Không ghi gì. */
+export function readSurveyPaper(
+  surveyId: string,
+  pagesBase64: string[],
+): Promise<SurveyPaperReadResult> {
+  return call('/survey-paper-read', {
+    method: 'POST',
+    body: {
+      survey_id: surveyId,
+      pages: pagesBase64.map((data) => ({ mime_type: 'image/jpeg', data })),
+    },
+  });
 }
 
 export function transcribeRecording(

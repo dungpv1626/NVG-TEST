@@ -149,10 +149,19 @@ export interface ModelConfig {
    * Nhà cung cấp nào KHÔNG phát sinh hoá đơn (khoá gói miễn phí, dịch vụ không thu tiền).
    * Theo nhà cung cấp chứ không theo tuyến: tiền bám vào khoá.
    */
-  billing?: { free_providers?: string[] };
+  billing?: { free_providers?: string[]; call_cap?: CallCapSettings };
   /** Tên nhà cung cấp hiện trên ô chọn model. Thiếu thì giao diện hiện chính mã nhà cung cấp. */
   providers?: Record<string, { label?: string }>;
   routes: Record<string, ModelRoute>;
+}
+
+/**
+ * Tham số của trần TỪNG lời gọi (T176, `billing.call_cap`): hệ số ước token vào theo ký tự và số token ra
+ * tối thiểu để mô hình kịp trả lời. Vắng = không có trần từng lời gọi (chỉ còn mức T164).
+ */
+export interface CallCapSettings {
+  chars_per_token: number;
+  min_output_tokens: number;
 }
 
 /** Một tuyến nhìn từ giao diện: đủ để chọn, không đủ để gọi. */
@@ -171,6 +180,8 @@ export interface PublicRoute {
   enabled: boolean;
   hasKey: boolean;
   pricing?: RoutePricing;
+  /** Giới hạn token ra của tuyến (`max_output_tokens`); `null` = tuyến không đặt (T176). */
+  maxOutputTokens: number | null;
   /** `false` khi khoá của nhà cung cấp không phát sinh hoá đơn — tiền thật là 0. */
   billed: boolean;
   /**
@@ -216,6 +227,19 @@ export function parseModelConfig(yamlText: string): ModelConfig {
   const raw = parseYaml(yamlText) as ModelConfig | undefined;
   if (!raw || typeof raw !== 'object' || !raw.routes) {
     throw new Error('config/models.yaml không đúng định dạng: thiếu mục `routes`.');
+  }
+  const callCap = raw.billing?.call_cap;
+  if (callCap !== undefined) {
+    // Số sai ở đây là trần chi phí sai lặng lẽ — không nạp tệp còn hơn (T176).
+    if (
+      !(callCap.chars_per_token > 0) ||
+      !Number.isInteger(callCap.min_output_tokens) ||
+      callCap.min_output_tokens < 1
+    ) {
+      throw new Error(
+        'config/models.yaml: `billing.call_cap` cần `chars_per_token` > 0 và `min_output_tokens` là số nguyên dương.',
+      );
+    }
   }
   for (const [name, route] of Object.entries(raw.routes)) {
     if (![1, 2, 3].includes(route.max_data_class)) {
@@ -335,6 +359,7 @@ export class ModelRouter {
       enabled: r.enabled,
       hasKey: Boolean(this.apiKeys[r.provider]),
       pricing: r.pricing,
+      maxOutputTokens: outputLimit(r),
       billed: this.isBilled(r.provider),
       supportsEffort:
         r.provider === 'openai' || r.provider === 'anthropic' || Boolean(r.thinking_level),
@@ -356,6 +381,17 @@ export class ModelRouter {
     return this.config.routes[routeName]?.revise_route ?? routeName;
   }
 
+  /** Giới hạn token ra của một tuyến (`max_output_tokens`); `null` = không đặt hoặc không có tuyến (T176). */
+  outputLimitOf(routeName: string): number | null {
+    const route = this.config.routes[routeName];
+    return route ? outputLimit(route) : null;
+  }
+
+  /** Tham số trần từng lời gọi (`billing.call_cap`); `null` = chưa khai (T176). */
+  get callCap(): CallCapSettings | null {
+    return this.config.billing?.call_cap ?? null;
+  }
+
   /** Giá niêm yết của một tuyến, không kèm khoá. */
   pricingOf(routeName: string): RoutePricing | undefined {
     return this.config.routes[routeName]?.pricing;
@@ -364,4 +400,10 @@ export class ModelRouter {
   get version(): string {
     return this.config.version;
   }
+}
+
+/** `max_output_tokens` dương = giới hạn; `0` hoặc vắng = không đặt (`null`). */
+function outputLimit(route: ModelRoute): number | null {
+  const n = route.max_output_tokens;
+  return typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : null;
 }

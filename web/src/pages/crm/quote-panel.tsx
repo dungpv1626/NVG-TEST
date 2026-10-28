@@ -19,11 +19,14 @@ import {
   formatDateTime,
   QUOTE_STAGES,
 } from '@nvg/shared';
+import { ZaloSend } from '@/components/share/zalo-send';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { StatusLozenge, StatusWithLabel } from '@/components/ui/status-lozenge';
 import { WaitingOn } from '@/components/entity/waiting-on';
 import { useApprovalHistory, type ApprovalHistoryEntry } from '@/hooks/use-approvals';
+import { useCompanyLookup } from '@/hooks/use-companies';
+import { useRecipientContact } from '@/hooks/use-outbound-shares';
 import { toUserMessage } from '@/hooks/use-error-message';
 import {
   useQuotes,
@@ -33,6 +36,7 @@ import {
   type QuoteRecord,
 } from '@/hooks/use-quotes';
 import { cn } from '@/lib/utils';
+import { composeZaloMessage } from '@/lib/zalo-share';
 
 const EM_DASH = '—';
 
@@ -130,6 +134,8 @@ export function QuotePanel({
               isEffective={quote.id === effectiveQuoteId}
               approvals={approvals.data?.get(quote.id) ?? []}
               editable={editable}
+              canSend={canEdit}
+              opportunityId={opportunityId}
               busy={requestApproval.isPending || sendQuote.isPending || recordResponse.isPending}
               isResponding={respondingTo === quote.id}
               responseText={responseText}
@@ -182,6 +188,9 @@ interface QuoteVersionCardProps {
   isEffective: boolean;
   approvals: ApprovalHistoryEntry[];
   editable: boolean;
+  /** Người chịu trách nhiệm cơ hội / lãnh đạo — gửi báo giá ĐÃ DUYỆT qua Zalo (0238). */
+  canSend: boolean;
+  opportunityId: string;
   busy: boolean;
   isResponding: boolean;
   responseText: string;
@@ -198,6 +207,8 @@ function QuoteVersionCard({
   isEffective,
   approvals,
   editable,
+  canSend,
+  opportunityId,
   busy,
   isResponding,
   responseText,
@@ -333,6 +344,14 @@ function QuoteVersionCard({
 
       {quote.notes && <p className="mt-2 text-fg-subtle">{quote.notes}</p>}
 
+      {/* Chỉ bản ĐÃ DUYỆT, đang là bản hiện hành — không gửi khách giá chưa duyệt hay giá đã thay. Chưa có
+          link / PDF báo giá cho khách nên chỉ gửi lời nhắn tóm tắt. */}
+      {canSend && quote.status === 'completed' && quote.is_current_version && (
+        <div className="mt-3">
+          <QuoteZaloSend quote={quote} opportunityId={opportunityId} />
+        </div>
+      )}
+
       {/* Lịch sử phê duyệt — CRM-05 yêu cầu lưu lại, DA-07 gọi đây là "căn cứ phê duyệt". */}
       {approvals.length > 0 && (
         <ul className="mt-3 space-y-2 border-t border-border pt-3">
@@ -402,6 +421,34 @@ function QuoteVersionCard({
         )
       )}
     </li>
+  );
+}
+
+function QuoteZaloSend({ quote, opportunityId }: { quote: QuoteRecord; opportunityId: string }) {
+  const contact = useRecipientContact({ opportunityId }).data;
+  const companyName = useCompanyLookup()(quote.company_id)?.short_name ?? null;
+  const value = quote.total_value ? formatCurrency(quote.total_value) : null;
+  const until = formatDate(quote.valid_until);
+  const details = [
+    value ? `Giá trị báo giá: ${value}` : null,
+    until ? `hiệu lực tới ${until}` : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
+  return (
+    <ZaloSend
+      canSend
+      size="sm"
+      entityType="quotes"
+      entityId={quote.id}
+      phone={contact?.phone ?? null}
+      message={composeZaloMessage({
+        recipientName: contact?.name ?? null,
+        companyName,
+        subject: `báo giá ${quote.code}`,
+        details: details ? `${details}.` : null,
+      })}
+    />
   );
 }
 

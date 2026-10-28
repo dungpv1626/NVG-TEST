@@ -142,8 +142,10 @@ export function EntityDetail({
 
   const { active, selectTab, onTabKeyDown } = useDetailTabs(allTabs, defaultTab);
 
-  // Cột phải v2 (330px, từ xl): thẻ «Bước tiếp theo» + «Chuỗi hồ sơ» (cổng từ `DetailAside`) và hồ
-  // sơ liên quan. Dưới xl không có cột này — các khối ấy nằm ngay trong cột chính.
+  // Cột phải v2 (330px, từ 2xl = 1.536 px): thẻ «Bước tiếp theo» + «Chuỗi hồ sơ» (cổng từ
+  // `DetailAside`) và hồ sơ liên quan. Hẹp hơn thì không có cột này — các khối ấy nằm gọn ngay trong
+  // cột chính. Trước 28/10/2026 cột phải hiện từ 1.280 px, laptop 1.280–1.440 px chỉ còn cột chính
+  // ~600 px (anh Dũng).
   const wide = useWideDetail();
   const [asideUsers, setAsideUsers] = useState(0);
   const [nextEl, setNextEl] = useState<HTMLDivElement | null>(null);
@@ -241,19 +243,22 @@ export function EntityDetail({
             <div className={cn(compact && 'lg:hidden')}>
               <Breadcrumb items={effectiveBreadcrumbs} />
             </div>
+            {/* Tiêu đề chiếm phần còn lại của hàng, tối thiểu 24rem; thiếu chỗ thì hàng nút xuống
+              dòng dưới thay vì bóp tên hồ sơ còn «Xưởng cơ khí Minh P…» (anh Dũng 28/10/2026, màn
+              ~1.300 px). Tên dài thì xuống dòng, tối đa 2 dòng rồi mới cắt (tên đầy đủ ở `title`). */}
             <div
               className={cn(
-                'mt-2 flex flex-wrap items-start justify-between gap-3',
-                compact && 'lg:mt-0 lg:flex-nowrap lg:items-center',
+                'mt-2 flex flex-wrap items-start justify-between gap-x-4 gap-y-3',
+                compact && 'lg:mt-0 lg:items-center lg:gap-y-1',
               )}
             >
-              <div className="min-w-0">
+              <div className="min-w-0 grow basis-96">
                 <h1
                   className={cn(
-                    'text-title font-bold text-pretty',
-                    compact && 'lg:truncate lg:text-lg',
+                    'line-clamp-2 text-title font-bold text-pretty break-words',
+                    compact && 'lg:line-clamp-1 lg:text-lg',
                   )}
-                  title={compact ? title : undefined}
+                  title={title}
                 >
                   {title}
                 </h1>
@@ -282,7 +287,9 @@ export function EntityDetail({
                   )}
                 </div>
               </div>
-              {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+              {actions && (
+                <div className="flex max-w-full flex-wrap items-center gap-2">{actions}</div>
+              )}
             </div>
 
             {/* Viền dưới đặt trên chính thanh tab để gạch chân tab đang chọn khớp đúng

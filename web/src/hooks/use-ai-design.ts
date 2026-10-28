@@ -42,6 +42,8 @@ export interface AiModelOption {
   /** Giá niêm yết mỗi triệu token vào/ra, USD. Vắng ở máy chủ cũ. */
   inputPer1mUsd?: number | null;
   outputPer1mUsd?: number | null;
+  /** Giới hạn token ra của tuyến (`max_output_tokens`); `null` = không đặt. Vắng ở máy chủ cũ (T176). */
+  maxOutputTokens?: number | null;
   /** `false` = khoá gói miễn phí, tiền thật bằng 0. Vắng ở máy chủ cũ = coi như có tính tiền. */
   billed?: boolean;
   /** Nhận «mức suy nghĩ» theo lượt không. */
@@ -64,6 +66,8 @@ export interface AiModelCatalogue {
      * không giới hạn. Vắng ở máy chủ cũ.
      */
     runCostCapUsd?: number | null;
+    /** Số token ra tối thiểu của một lời gọi khi bị hạ cho vừa mức (T176, `billing.call_cap`). Vắng ở máy chủ cũ. */
+    callMinOutputTokens?: number | null;
   };
 }
 

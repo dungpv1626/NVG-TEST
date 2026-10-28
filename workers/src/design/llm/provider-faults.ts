@@ -54,7 +54,53 @@ function looksLikeBilling(body: string): boolean {
   return BILLING_HINTS.some((hint) => lower.includes(hint));
 }
 
+/**
+ * Google trả 429 «You exceeded your current quota, please check your plan and billing details … Quota exceeded for
+ * metric: …generate_content_free_tier_input_token_count, limit: 0, model: gemini-3.1-pro …» khi khoá thuộc project
+ * CHƯA bật thanh toán và model không có hạn mức miễn phí (T176, 28/10/2026). Câu ấy chứa «billing» và «exceeded your
+ * current quota» nên trước đây bị đọc thành «hết tín dụng» — sai chỗ sửa: không phải nạp tiền, mà là bật thanh
+ * toán / dùng khoá trả phí.
+ */
+function looksLikeFreeTierWithoutQuota(body: string): boolean {
+  const lower = body.toLowerCase();
+  return lower.includes('free_tier') && /limit:\s*0(?!\d)/.test(lower);
+}
+
+/**
+ * Hạn mức THEO THỜI GIAN (phút / ngày) của Google: cùng câu mở đầu «exceeded your current quota … billing», nhưng có
+ * «Quota exceeded for metric» với hạn mức khác 0, mã hạn mức «PerMinute» / «PerDay», hoặc «Please retry in …». Chờ
+ * rồi thử lại là đúng. `insufficient_quota` (OpenAI hết tiền) không bao giờ rơi vào đây.
+ */
+function looksLikeRateQuota(body: string): boolean {
+  const lower = body.toLowerCase();
+  if (lower.includes('insufficient_quota')) return false;
+  return (
+    lower.includes('quota exceeded for metric') ||
+    lower.includes('perminute') ||
+    lower.includes('perday') ||
+    lower.includes('please retry in') ||
+    lower.includes('retrydelay')
+  );
+}
+
 export function classifyHttpFault(status: number, body: string): ProviderFault {
+  if (status === 429 && looksLikeFreeTierWithoutQuota(body)) {
+    return {
+      retryable: false,
+      userMessage:
+        'Không chạy được bước này: khoá API của nhà cung cấp đang ở gói miễn phí (chưa bật thanh toán), ' +
+        'model này không có hạn mức miễn phí. Bật thanh toán cho project của khoá hoặc dùng khoá trả phí — ' +
+        'Quản trị hệ thống xử lý được việc này. Thử lại ngay bây giờ không đổi được kết quả.',
+    };
+  }
+  if (status === 429 && looksLikeRateQuota(body)) {
+    return {
+      retryable: true,
+      userMessage:
+        'Không chạy được bước này: khoá API đang chạm hạn mức gọi của nhà cung cấp mô hình (theo phút hoặc ' +
+        'theo ngày). Thử lại sau.',
+    };
+  }
   if (status === 429 && looksLikeBilling(body)) {
     return {
       retryable: false,

@@ -160,6 +160,8 @@ aiApp.get('/models', async (c) => {
       runCostCapUsd: parseCostCap(
         (settings.data ?? []).find((r) => r.key === RUN_COST_CAP_KEY)?.value ?? null,
       ),
+      // Số token ra tối thiểu của trần từng lời gọi (T176) — để hộp hỏi tính cùng hàm Worker chặn.
+      callMinOutputTokens: modelRouter(c.env).callCap?.min_output_tokens ?? null,
     },
   });
 });

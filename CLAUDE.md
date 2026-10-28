@@ -1097,6 +1097,19 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   `CONTRACTS_FINGERPRINT` — phát hành API cùng giao diện). Lời dẫn 9.12.0. Còn: GĐ2 lượt thật (Mặt ngoài `9272` + 1 lượt mặt bằng
   kiểm câu nhắc mới, chờ anh Dũng bấm hoặc cấp quyền), GĐ4 ảnh mẫu (chờ NVG), GĐ5 bản vẽ cho khách, GĐ6 3D thật / thêm hồ sơ;
   gợi ý mặt bằng theo phong cách (việc 10) làm sau GĐ1. `plan-score.test.ts` đỏ trên máy này do yaml CRLF (autocrlf) — có sẵn.
+- **Chiều 28/10/2026 (anh Dũng):** 0237 máy đọc phiếu khảo sát giấy (`POST /ai/survey-paper-read`, công tắc
+  `ai.survey_paper_read_enabled` TRỐNG; trình duyệt CHE khung thông tin khách + chữ ký ở đầu phiếu in mới — vạch đen 4 mm — rồi
+  mới gửi ảnh; lời đáp qua `scrubIdentity`; chỉ điền NHÁP); `Input` mặc định `autoComplete="off"` (khoảng trắng lệch chỗ khi bộ gõ
+  tiếng Việt va danh sách gợi ý của trình duyệt — tên khách `KH-00362` anh Dũng tự sửa). 0238 «Gửi qua Zalo» cá nhân (`zalo.me/<số>` +
+  chép lời nhắn trên máy tính, bảng chia sẻ trên điện thoại; lịch sử `outbound_shares`, không lưu lời nhắn; gắn ở mẫu công trình,
+  bản đã ký, báo giá đã duyệt (chỉ lời nhắn), văn bản Word đã duyệt). T176 trần TỪNG lời gọi AI (`billing.call_cap` ở
+  `config/models.yaml`, hạ `outputCap` cho vừa trần, dưới 8.000 token thì không gọi) + mọi tuyến chữ có `max_output_tokens`, Anthropic
+  mức suy nghĩ `low` — sau sự cố một lời gọi Claude Opus 5.5 tốn 2,59 USD. Khoá Gemini trả phí MỚI (khoá cũ nằm ở project Free Tier —
+  tóm tắt khảo sát / điền sẵn / xếp mục trước nay thực chất chạy gói miễn phí); khối AI chung chuyển `gemini-3.8-flash`. Giao diện: thanh
+  bên trượt + dải biểu tượng 72 px (bỏ dạng «ẩn hẳn»), ô nổi dùng chung `useAnchoredPosition`, cột phải hồ sơ từ 1.536 px. Lượt thật AI
+  Design `9272`: ảnh nội thất, mặt đứng (thêm mã màu `trong_suot`), phối cảnh 5 ảnh ĐẠT; mặt bằng HỎNG với cả Terra, Opus 5.5, Gemini
+  3.1 Pro — cùng hỏng tầng 2 (phòng không lối vào / thiếu diện tích); tổng ≈ 3,72 USD. Đang làm: chương trình tự kéo hành lang + nới
+  phòng (T177). Kịch bản thử NVC 6 pipeline + NVS: tài liệu Claude Docs https://claude.ai/artifact/QHJGe71KCcwezWrX7UqxPP.
 - **Chạy cho máy khác cùng wifi (28/10/2026):** `.env` `VITE_SUPABASE_URL` / `VITE_DESIGN_API_URL` trỏ `192.168.1.3` (bản cũ trỏ
   `127.0.0.1` / `localhost`), `workers/.dev.vars` thêm `ALLOWED_ORIGINS`; Worker `wrangler dev --ip 0.0.0.0`, Vite `npx vite --host
   0.0.0.0` (chạy trong `web/` — `npm run dev -- --host` nuốt cờ). Tường lửa cổng 5173 / 8788 / 55321 phải mở bằng quyền
@@ -1258,7 +1271,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email.
 
-**Migration tiếp theo: 0237.** (Đã dùng tới 0236; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0239.** (Đã dùng tới 0238; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 

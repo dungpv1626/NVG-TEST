@@ -32,10 +32,10 @@ import {
   useShowcaseUrls,
   type ShowcaseItem,
 } from '@/hooks/use-showcase';
-import { useAuth } from '@/lib/auth';
+import { useAuth, useIsOrgManager } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { CoverImage, placeLine, specLine } from './showcase-shared';
-import { ShareDialog } from './share-dialog';
+import { ShareDialog, ShowcaseZaloSend } from './share-dialog';
 
 const SELECT_CLASS = 'h-9 rounded-sm border border-border-strong bg-surface px-2';
 
@@ -324,6 +324,11 @@ export function ShowcaseLibraryPage() {
 
 function SharesTab() {
   const shares = useShowcaseShares();
+  const { profile } = useAuth();
+  const manager = useIsOrgManager();
+  // Gửi lại qua Zalo: người tạo link hoặc lãnh đạo — gương `rls_outbound_share_writable` (0238).
+  const isMine = (createdBy: string | null) =>
+    manager || (createdBy !== null && createdBy === profile?.id);
   const revoke = useRevokeShare();
   const [copied, setCopied] = useState<string | null>(null);
   if (shares.isLoading) return <Skeleton className="h-32" />;
@@ -372,6 +377,17 @@ function SharesTab() {
                 >
                   {copied === s.id ? 'Đã chép link' : 'Chép link'}
                 </Button>
+                <ShowcaseZaloSend
+                  share={s}
+                  subject={{
+                    leadId: s.lead_id ?? undefined,
+                    opportunityId: s.opportunity_id ?? undefined,
+                    customerId: s.customer_id ?? undefined,
+                  }}
+                  forName={null}
+                  companyId={s.company_id}
+                  canSend={isMine(s.created_by)}
+                />
                 <Button
                   size="sm"
                   variant="subtle"

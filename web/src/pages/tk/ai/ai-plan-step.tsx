@@ -85,7 +85,7 @@ import {
   estimateSource,
   useCostEstimate,
 } from './ai-cost-estimate';
-import { costCeiling, type CostEstimate } from './run-cost-estimate';
+import { costCeiling, maxCallCost, type CostEstimate, type MaxCallCost } from './run-cost-estimate';
 import { formatUsd } from './ai-usage';
 import { AiPlanCompare, ScoreChip } from './ai-plan-compare';
 import { PlanVerdict, planVerdict } from './ai-plan-verdict';
@@ -156,6 +156,15 @@ export function AiPlanStep({
   const callsMax = models.data?.limits?.planCallsMax ?? null;
   /** Mức chi phí chặn thật của một lượt (T164); `undefined` = máy chủ cũ không nói. */
   const capUsd = models.data?.limits?.runCostCapUsd;
+  /** Chi phí TỐI ĐA một lời gọi (T176) — cùng hàm Worker dùng để hạ giới hạn token ra. */
+  const perCallMax = maxCallCost({
+    inputPer1mUsd: ai.selected?.inputPer1mUsd,
+    outputPer1mUsd: ai.selected?.outputPer1mUsd,
+    maxOutputTokens: ai.selected?.maxOutputTokens,
+    inputTokens: cost.maxInputTokens,
+    capUsd,
+    minOutputTokens: models.data?.limits?.callMinOutputTokens,
+  });
   /** Đang hỏi lại trước khi chạy (23/10/2026): một lượt hỏng vẫn tốn 0,28–0,46 USD. */
   const [askRun, setAskRun] = useState(false);
   const hidePlan = useHideAiPlan();
@@ -602,6 +611,7 @@ export function AiPlanStep({
             units={Number(count)}
             callsMax={callsMax}
             capUsd={capUsd}
+            perCallMax={perCallMax}
             modelName={ai.selected?.short ?? ai.selected?.label ?? null}
           />
         </ConfirmDialog>
@@ -730,8 +740,11 @@ export function RunCostNotice({
   units,
   callsMax,
   capUsd,
+  perCallMax,
   modelName,
 }: {
+  /** Chi phí tối đa một lời gọi (T176); vắng / `null` = không tính được. */
+  perCallMax?: MaxCallCost | null;
   estimate: CostEstimate | null;
   units: number;
   callsMax: number | null;
@@ -762,10 +775,20 @@ export function RunCostNotice({
           thêm.
         </p>
       )}
+      {perCallMax && (
+        <p data-testid="per-call-max">
+          Tối đa ≈ {formatUsd(perCallMax.usd)} mỗi lời gọi
+          {perCallMax.lowered
+            ? ' — giới hạn token ra đã hạ cho vừa mức chi phí của lượt'
+            : ` — giới hạn ${perCallMax.outputTokens.toLocaleString('vi-VN')} token ra của mô hình này`}
+          {perCallMax.inputKnown ? '' : ', chưa gồm phần token vào (chưa có lượt nào đo)'}.
+        </p>
+      )}
       {typeof capUsd === 'number' ? (
         <p className="font-medium">
-          Mức chi phí tối đa của lượt: {formatUsd(capUsd)}. Lời gọi sửa kế tiếp có thể vượt mức này
-          thì chương trình dừng và báo lý do — Quản trị hệ thống đặt mức.
+          Mức chi phí tối đa của lượt: {formatUsd(capUsd)}. Trước mỗi lời gọi chương trình hạ giới
+          hạn token ra cho vừa phần còn lại; không đủ cho một lời gọi thì dừng và báo lý do — Quản
+          trị hệ thống đặt mức.
         </p>
       ) : capUsd === null ? (
         <p>Chưa đặt mức chi phí tối đa — lượt chạy không bị dừng theo số tiền.</p>

@@ -27,6 +27,7 @@ export * from './site-boundary-from-edges';
 export * from './site-boundary-from-coordinates';
 export * from './brief-prefill';
 export * from './style-catalogue';
+export * from './call-cost';
 
 // ---------------------------------------------------------------------------
 // Bộ môn — dùng lại enum `design_discipline` sẵn có (CLAUDE.md 8.5 T7)

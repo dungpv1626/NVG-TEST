@@ -44,6 +44,8 @@ import { useSurveyAttachments } from '@/hooks/use-survey-attachments';
 import { SurveyAttachmentsSection } from './survey-attachments-section';
 import { printBlankSurveyForm, printSurveyReport, type SurveyPrintInfo } from './survey-print';
 import { SurveyReportSection } from './survey-report-section';
+import type { PaperApplyEntry } from './survey-paper-read-panel';
+import { applyPaperEntries, paperCurrentValues } from './survey-paper-apply';
 
 const EM_DASH = '—';
 
@@ -157,25 +159,44 @@ export function SurveyPanel({
     onDraftChange({ editingId: '', form: { ...EMPTY_FORM, surveyedBy: profile?.id ?? '' } });
   }
 
+  /** Biểu mẫu dựng từ biên bản đã lưu; có `ai` thì sáu ô báo cáo lấy nháp máy viết. */
+  function formOf(survey: SiteSurveyRecord, ai?: SurveyAiDraft): SurveyForm {
+    return {
+      scheduledAt: toLocalInput(survey.scheduled_at),
+      surveyedAt: toLocalInput(survey.surveyed_at),
+      // Dùng id, KHÔNG tra ngược từ tên: hai nhân sự trùng tên sẽ gán nhầm người.
+      surveyedBy: survey.surveyed_by ?? '',
+      needs: ai?.needs ?? survey.needs ?? '',
+      decisionMaker: ai?.decision_maker ?? survey.decision_maker ?? '',
+      budgetNote: ai?.budget_note ?? survey.budget_note ?? '',
+      scheduleNote: ai?.schedule_note ?? survey.schedule_note ?? '',
+      commercialTerms: ai?.commercial_terms ?? survey.commercial_terms ?? '',
+      notes: ai?.notes ?? survey.notes ?? '',
+      siteDetails: { ...(survey.site_details ?? {}) },
+    };
+  }
+
   /** Mở biên bản để sửa; có `ai` thì sáu ô báo cáo lấy nháp máy viết (người dùng sửa rồi mới lưu). */
   function openEdit(survey: SiteSurveyRecord, ai?: SurveyAiDraft) {
     setActionError(null);
-    onDraftChange({
-      editingId: survey.id,
-      form: {
-        scheduledAt: toLocalInput(survey.scheduled_at),
-        surveyedAt: toLocalInput(survey.surveyed_at),
-        // Dùng id, KHÔNG tra ngược từ tên: hai nhân sự trùng tên sẽ gán nhầm người.
-        surveyedBy: survey.surveyed_by ?? '',
-        needs: ai?.needs ?? survey.needs ?? '',
-        decisionMaker: ai?.decision_maker ?? survey.decision_maker ?? '',
-        budgetNote: ai?.budget_note ?? survey.budget_note ?? '',
-        scheduleNote: ai?.schedule_note ?? survey.schedule_note ?? '',
-        commercialTerms: ai?.commercial_terms ?? survey.commercial_terms ?? '',
-        notes: ai?.notes ?? survey.notes ?? '',
-        siteDetails: { ...(survey.site_details ?? {}) },
-      },
-    });
+    onDraftChange({ editingId: survey.id, form: formOf(survey, ai) });
+  }
+
+  /** Biểu mẫu đang mở của biên bản này, hoặc biểu mẫu dựng từ bản đã lưu. */
+  const workingForm = (survey: SiteSurveyRecord) =>
+    editingId === survey.id ? form : formOf(survey);
+
+  /** Chữ máy đọc từ phiếu giấy → biểu mẫu biên bản (mở biểu mẫu nếu chưa mở). Không lưu. */
+  function applyPaper(
+    survey: SiteSurveyRecord,
+    entries: readonly PaperApplyEntry[],
+  ): string | null {
+    if (editingId !== null && editingId !== survey.id) {
+      return 'Đang soạn một biên bản khác — lưu hoặc hủy biên bản đó trước khi áp.';
+    }
+    setActionError(null);
+    onDraftChange({ editingId: survey.id, form: applyPaperEntries(workingForm(survey), entries) });
+    return null;
   }
 
   async function save() {
@@ -284,6 +305,10 @@ export function SurveyPanel({
               companyCode={companyCode}
               onEdit={() => openEdit(survey)}
               onUseDraft={(ai) => openEdit(survey, ai)}
+              paperRead={{
+                current: paperCurrentValues(workingForm(survey)),
+                onApply: (entries) => applyPaper(survey, entries),
+              }}
             />
           ))}
         </ol>
@@ -300,6 +325,7 @@ function SurveyCard({
   companyCode,
   onEdit,
   onUseDraft,
+  paperRead,
 }: {
   survey: SiteSurveyRecord;
   editable: boolean;
@@ -308,6 +334,10 @@ function SurveyCard({
   companyCode: string | null;
   onEdit: () => void;
   onUseDraft: (draft: SurveyAiDraft) => void;
+  paperRead: {
+    current: Record<string, string>;
+    onApply: (entries: PaperApplyEntry[]) => string | null;
+  };
 }) {
   // Báo cáo đang chờ / đã duyệt thì khoá sửa (CSDL cũng chặn — 0175).
   const locked = survey.report_status === 'cho_duyet' || survey.report_status === 'da_duyet';
@@ -402,7 +432,11 @@ function SurveyCard({
         </div>
       )}
 
-      <SurveyAttachmentsSection surveyId={survey.id} canEdit={canEdit && !locked} />
+      <SurveyAttachmentsSection
+        surveyId={survey.id}
+        canEdit={canEdit && !locked}
+        paperRead={paperRead}
+      />
 
       <SurveyReportSection survey={survey} canEdit={canEdit} onUseDraft={onUseDraft} />
     </li>

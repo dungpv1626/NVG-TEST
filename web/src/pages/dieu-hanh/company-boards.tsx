@@ -137,7 +137,8 @@ function Board({
     <article
       aria-label={company.name}
       className={cn(
-        'flex flex-col rounded-lg border bg-surface p-4',
+        // `min-w-0`: ô lưới không giãn theo nội dung dài nhất — thiếu nó thì ở 390 px thẻ thò 8 px ra ngoài.
+        'flex min-w-0 flex-col rounded-lg border bg-surface p-4',
         urgent > 0 ? 'border-status-overdue' : 'border-border',
       )}
     >

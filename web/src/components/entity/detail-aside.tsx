@@ -5,7 +5,7 @@
  * Hai khối ấy do `StepTrack` / `RecordChain` dựng, mà hai component này được trang đặt vào khe
  * `progress` của `EntityDetail` — tức là ở cột CHÍNH. Thay vì bắt từng trang truyền thêm một prop,
  * khối nào bọc trong `DetailAside` sẽ được cổng (portal) sang cột phải khi `EntityDetail` có cột ấy
- * (từ `xl`), còn dưới `xl` hoặc ngoài trang chi tiết thì nằm ngay tại chỗ.
+ * (từ `2xl`, 1.536 px), còn dưới `2xl` hoặc ngoài trang chi tiết thì nằm ngay tại chỗ.
  */
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
@@ -28,12 +28,17 @@ interface AsideSlot {
 
 export const DetailAsideContext = createContext<AsideSlot | null>(null);
 
-/** Màn hình đủ rộng cho cột phải (`xl`, 1280px) — đổi theo khi kéo cửa sổ. */
+/**
+ * Màn hình đủ rộng cho cột phải (`2xl`, 1.536 px) — đổi theo khi kéo cửa sổ. Từ 1.280 px như trước
+ * thì laptop 1.280–1.440 px còn cột chính quá hẹp: tên hồ sơ bị cắt, bảng lịch tràn (28/10/2026).
+ */
+export const WIDE_DETAIL_MIN_PX = 1536;
+const WIDE_QUERY = `(min-width: ${WIDE_DETAIL_MIN_PX}px)`;
+
 export function useWideDetail(): boolean {
-  const query = '(min-width: 1280px)';
   const [wide, setWide] = useState(() => {
     try {
-      return window.matchMedia(query).matches;
+      return window.matchMedia(WIDE_QUERY).matches;
     } catch {
       return false;
     }
@@ -41,7 +46,7 @@ export function useWideDetail(): boolean {
   useEffect(() => {
     let media: MediaQueryList;
     try {
-      media = window.matchMedia(query);
+      media = window.matchMedia(WIDE_QUERY);
     } catch {
       return;
     }

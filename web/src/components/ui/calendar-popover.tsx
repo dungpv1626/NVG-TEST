@@ -11,9 +11,11 @@
  */
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import { isoDateToDisplay } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
+import { useAnchoredPosition } from '@/components/ui/use-anchored-position';
 import { cn } from '@/lib/utils';
 
 /** Nhãn cột, bắt đầu từ Thứ Hai. Viết tắt vì cột chỉ rộng ~36px. */
@@ -44,6 +46,12 @@ export interface CalendarPopoverProps {
   today: string;
   onSelect: (isoValue: string) => void;
   onClose: () => void;
+  /**
+   * Phần tử neo (khung ô nhập). Có thì bảng lịch dựng ra `body`, đặt theo khung nhìn: luôn nằm
+   * trong màn hình, thiếu chỗ dưới thì lật lên trên (`useAnchoredPosition`). Không có thì giữ cách
+   * cũ — `absolute` ngay dưới phần tử cha.
+   */
+  anchorRef?: RefObject<HTMLElement | null>;
 }
 
 export function CalendarPopover({
@@ -53,8 +61,11 @@ export function CalendarPopover({
   today,
   onSelect,
   onClose,
+  anchorRef,
 }: CalendarPopoverProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const noAnchor = useRef<HTMLElement | null>(null);
+  const anchored = useAnchoredPosition(anchorRef ?? noAnchor, panelRef, { align: 'end' });
 
   // Tháng đang xem: mở ở tháng của ngày đã chọn, chưa chọn gì thì mở ở tháng hiện tại.
   const [view, setView] = useState(() => {
@@ -94,21 +105,17 @@ export function CalendarPopover({
     setView({ year: next.getUTCFullYear(), month: next.getUTCMonth() });
   }
 
-  return (
+  const panel = (
     <div
       ref={panelRef}
       role="dialog"
       aria-label="Chọn ngày"
+      style={anchorRef ? anchored : undefined}
       className={cn(
-        // ⚠️ ĐỪNG tăng w-72 lên w-80/rộng hơn để "đủ 40px/cột": popover này định vị bằng
-        // `right-0` so với chính ô nhập, không phải so với khung nhìn — ô nhập càng gần
-        // sidebar/mép trái thì phần mở rộng bên trái của popover càng lấn vào vùng bị
-        // `overflow` của cột nội dung cắt mất (đã thử w-80 và xác nhận trực tiếp trên trình
-        // duyệt: 2 cột đầu lịch + nút "Tháng trước" biến mất hẳn ở ô "Từ ngày" trang
-        // /kt/dong-tien). Muốn ô ngày đạt đúng 40px cần sửa cách định vị popover (neo theo
-        // khung nhìn hoặc portal), không phải nới rộng bề ngang — xem BUILD_PLAN.md 4C.
-        'absolute top-full right-0 z-20 mt-1 w-72 rounded-lg border border-border',
-        'bg-surface p-3 shadow-overlay',
+        // Có neo: dựng ra `body`, `fixed` theo khung nhìn (xem `anchorRef`) — không còn bị khung
+        // `overflow` của cột nội dung cắt mất hai cột đầu (anh Dũng 28/10/2026, màn ~1.300 px).
+        anchorRef ? 'z-60' : 'absolute top-full right-0 z-20 mt-1',
+        'w-72 rounded-lg border border-border bg-surface p-3 shadow-overlay',
       )}
     >
       <div className="mb-2 flex items-center justify-between">
@@ -205,4 +212,6 @@ export function CalendarPopover({
       </div>
     </div>
   );
+
+  return anchorRef ? createPortal(panel, document.body) : panel;
 }

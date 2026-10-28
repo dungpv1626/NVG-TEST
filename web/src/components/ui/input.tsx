@@ -81,6 +81,17 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           className,
         )}
         {...props}
+        /*
+         * Tắt gợi ý tự điền của trình duyệt cho ô chữ, trừ khi màn hình nói rõ (đăng nhập, mật khẩu).
+         *
+         * Gặp thật 28/10/2026: khách hàng tạo bằng bộ gõ Telex lưu «Công ty TNH  H Cơkhí Minh Phát TH U6»,
+         * địa chỉ «MỹỹHào» — trong khi mã của biểu mẫu không sửa giá trị lúc gõ (phép thử gõ dồn kiểu
+         * Telex cho ra đúng chữ). Ô «Tên khách hàng», «Địa chỉ» là chỗ trình duyệt bày danh sách gợi ý
+         * (tên, địa chỉ đã gõ trước); Unikey / EVKey sửa chữ bằng cách gửi phím xoá rồi gõ lại, va với
+         * danh sách gợi ý đang mở thì xoá nhầm chỗ — chính hai bộ gõ có mục «Sửa lỗi gợi ý trên trình
+         * duyệt» cho lỗi này. Hệ thống nghiệp vụ không cần trình duyệt nhớ chữ đã gõ.
+         */
+        autoComplete={props.autoComplete ?? 'off'}
         {...{ [VALIDATION_MESSAGE_ATTR]: validationMessage || undefined }}
         onInvalid={(e) => {
           refresh();

@@ -89,6 +89,8 @@ export interface GenerateOptions {
    */
   temperature?: number;
   maxOutputTokens?: number;
+  /** Trần cứng token ra của lời gọi này — xem `StructuredCallOptions.outputCap` (T176). */
+  outputCap?: number;
   /** Mức suy nghĩ cho lượt này — xem `StructuredCallOptions.reasoningEffort`. */
   reasoningEffort?: ReasoningEffort;
   /** Huỷ lượt gọi — nút «Dừng». */
@@ -244,7 +246,7 @@ export class GeminiClient implements TextModelClient, AiImageClient {
         temperature: options.temperature ?? 0,
         // Trần token: tuyến khai thì tuyến THẮNG nơi gọi, và `0` nghĩa là bỏ hẳn trường để nhà
         // cung cấp dùng mức tối đa của model. Xem `max_output_tokens` ở router.ts.
-        ...maxTokensField(route.max_output_tokens, options.maxOutputTokens),
+        ...maxTokensField(route.max_output_tokens, options.maxOutputTokens, options.outputCap),
         // Mức SUY NGHĨ, và nó chỉ có mặt khi tuyến khai — xem `thinking_level` ở
         // `config/models.yaml`. Vì sao phải khai: đo ngày 11/09/2026 trên một lượt xếp mặt bằng
         // thật cho thấy `maxOutputTokens` là trần CHUNG cho token nghĩ và token trả lời. Dòng
@@ -433,8 +435,10 @@ interface GeminiGenerateResponse {
 function maxTokensField(
   routeCap: number | undefined,
   requested: number | undefined,
+  /** Trần cứng của lời gọi (T176) — chỉ hạ. */
+  hardCap?: number,
 ): { maxOutputTokens?: number } {
-  const budget = outputBudget(routeCap, requested, 8192);
+  const budget = outputBudget(routeCap, requested, 8192, hardCap);
   return budget === null ? {} : { maxOutputTokens: budget };
 }
 

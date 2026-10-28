@@ -2015,6 +2015,39 @@ const MUTATIONS: Mutation[] = [
     find: '        ? prompts.floorLevel.hints[`${issue.code}_chain`]',
     replace: '        ? undefined',
   },
+  {
+    id: 'M245',
+    axis: 'tiền gọi mô hình',
+    file: 'shared/src/design/call-cost.ts',
+    bug: 'Trần từng lời gọi (T176) không hạ giới hạn token ra — lời gọi Opus 5.5 vẫn được tiêu 128.000 token (2,59 USD) dù mức 0,8',
+    find: '  const capped = routeOutputTokens === null ? allowed : Math.min(routeOutputTokens, allowed);',
+    replace: '  const capped = routeOutputTokens ?? allowed;',
+  },
+  {
+    id: 'M246',
+    axis: 'tiền gọi mô hình',
+    file: 'workers/src/design/llm/anthropic.ts',
+    bug: 'Client Claude bỏ qua giới hạn của lời gọi (T176) — `max_tokens` vẫn là 128.000',
+    find: '        options.outputCap,',
+    replace: '        undefined,',
+  },
+  {
+    id: 'M247',
+    axis: 'tiền gọi mô hình',
+    file: 'workers/src/design/workflows/ai-design-steps.ts',
+    bug: 'Lời gọi bị trần từng lời gọi chặn (T176) lại thành lỗi nhà cung cấp — ghi dòng nhật ký, lượt không dừng theo mức',
+    find: '    if (error instanceof CallCostCapReached) return capStopOutcome(deps, error.stop);',
+    replace:
+      "    if (error instanceof CallCostCapReached && deps.provider === '') return capStopOutcome(deps, error.stop);",
+  },
+  {
+    id: 'M248',
+    axis: 'tiền gọi mô hình',
+    file: 'workers/src/design/llm/provider-faults.ts',
+    bug: '429 «free_tier, limit: 0» của Gemini lại bị đọc thành «hết tín dụng» (T176) — người dùng đi nạp tiền thay vì bật thanh toán',
+    find: "  return lower.includes('free_tier') && /limit:\\s*0(?!\\d)/.test(lower);",
+    replace: "  return false && lower.includes('free_tier');",
+  },
 ];
 
 /** Thư mục mã nguồn được băm trước và sau khi chạy. `db/` không đụng tới nên không băm. */

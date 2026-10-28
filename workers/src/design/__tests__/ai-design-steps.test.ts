@@ -40,6 +40,7 @@ import {
   zoneDefaults,
 } from '../kb/vocabulary';
 import { fullPrompt, type TextModelClient } from '../llm/text-client';
+import { costCappedClient } from '../ai/cost-cap';
 import {
   arrangeHouseStep,
   houseStepId,
@@ -734,5 +735,57 @@ describe('bước xếp — đường dải v6: dải tầng 1 không vừa kh�
     expect(hints).not.toMatch(/tầng 1 hỏng/);
     expect(hints).not.toMatch(/Storey 1: /);
     expect(hints).toMatch(/Thiếu Giếng trời/);
+  });
+});
+
+describe('trần TỪNG lời gọi (T176)', () => {
+  it('phần còn lại của mức không đủ: không gọi mô hình, không ghi nhật ký, kết quả mang lý do dừng', async () => {
+    let calls = 0;
+    const inner: TextModelClient = {
+      async complete(...args) {
+        calls += 1;
+        return answering(VILLA_HOUSE).complete(...args);
+      },
+    };
+    const capped = costCappedClient(inner, {
+      capUsd: 0.8,
+      spent: () => [0.79],
+      routeOf: () => ({
+        pricing: { input_per_1m_usd: 4, output_per_1m_usd: 20 },
+        maxOutputTokens: 22_000,
+      }),
+      settings: { chars_per_token: 2.5, min_output_tokens: 8000 },
+    });
+    const { deps, recorded } = depsWith(capped);
+    const outcome = await proposeHouse(deps, PARAMS, VARIANT, 2, ['- avoid this']);
+    expect(calls).toBe(0);
+    expect(recorded.inserts).toEqual([]);
+    expect(outcome.intentJson).toBeNull();
+    expect(outcome.costCap).toMatchObject({ capUsd: 0.8, spentUsd: 0.79, reason: 'call' });
+  });
+
+  it('còn đủ: gọi với giới hạn token ra đã hạ', async () => {
+    const seen: (number | undefined)[] = [];
+    const inner: TextModelClient = {
+      async complete(route, cls, options) {
+        seen.push(options.outputCap);
+        return answering(VILLA_HOUSE).complete(route, cls, options);
+      },
+    };
+    const capped = costCappedClient(inner, {
+      capUsd: 0.8,
+      spent: () => [],
+      routeOf: () => ({
+        pricing: { input_per_1m_usd: 4, output_per_1m_usd: 20 },
+        maxOutputTokens: 128_000,
+      }),
+      settings: { chars_per_token: 2.5, min_output_tokens: 8000 },
+    });
+    const { deps } = depsWith(capped);
+    const outcome = await proposeHouse(deps, PARAMS, VARIANT, 1);
+    expect(outcome.costCap).toBeUndefined();
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toBeLessThan(40_000);
+    expect(seen[0]).toBeGreaterThan(30_000);
   });
 });

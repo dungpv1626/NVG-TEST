@@ -10,6 +10,9 @@
  *   POST /ai/design-transcribe — một đoạn ghi âm của Thiết kế (khảo sát, ý kiến khách) → chữ (5A)
  *   POST /ai/brief-prefill   — khảo sát thiết kế + khảo sát CRM đã duyệt → ĐỀ XUẤT câu trả lời đầu bài
  *                              (không ghi gì; kiến trúc sư chọn rồi áp vào bản nháp — `brief-prefill.ts`)
+ *   POST /ai/survey-paper-read — ảnh phiếu khảo sát giấy ĐÃ CHE khung thông tin khách → NHÁP sáu ô báo
+ *                              cáo + ô phiếu riêng (không ghi gì; người khảo sát chọn, sửa, tự Lưu —
+ *                              `survey-paper-read.ts`)
  *
  * Hàng rào chi phí (CLAUDE.md 6.4, chủ dự án chốt «AI làm bằng giả lập trước»):
  *   · `AI_FAKE=1` (chỉ đặt trong `workers/.dev.vars`) → trả kết quả MẪU, không gọi ai cả.
@@ -31,10 +34,12 @@ import {
 import { stripWhisperHallucinations } from './whisper-hallucination';
 import {
   aiBriefPrefillSchema,
+  aiSurveyPaperReadSchema,
   normalizePrefill,
   type AiBriefPrefillSuggestion,
+  type AiSurveyPaperRead,
 } from '@nvg/shared/design';
-import { filledSiteDetails } from '@nvg/shared';
+import { filledSiteDetails, surveyPaperFields } from '@nvg/shared';
 import { readEffectiveBriefForm } from '../design/brief/form-config';
 import {
   customerIdentities,
@@ -44,6 +49,15 @@ import {
   PREFILL_RESPONSE_SCHEMA,
   type PrefillSources,
 } from './brief-prefill';
+import {
+  fakePaperRead,
+  normalizePaperRead,
+  PAPER_RESPONSE_SCHEMA,
+  paperIdentities,
+  paperPrompt,
+  parsePaperPages,
+  type PaperPage,
+} from './survey-paper-read';
 
 export interface AiEnv extends DesignEnv {
   /**
@@ -59,11 +73,13 @@ export interface AiEnv extends DesignEnv {
 type Mode = 'off' | 'fake' | 'on';
 
 const WHISPER_MODEL = '@cf/openai/whisper-large-v3-turbo';
-const SUMMARY_MODEL = 'gemini-2.5-flash';
+// Khoá trả phí mới (28/10/2026) thuộc project mới: Google không mở `gemini-2.5-flash` cho người dùng mới (404) — cùng
+// lý do `kb_label_normalize` đã chuyển sang 3.8-flash. Khoá cũ nằm ở project chưa bật thanh toán (Free Tier).
+const SUMMARY_MODEL = 'gemini-3.8-flash';
 /** Workers AI tính theo phút âm thanh — mức công bố, chỉ để ghi sổ, không dùng để chặn. */
 const WHISPER_USD_PER_MINUTE = 0.0005;
-/** Gemini 2.5 Flash gói trả phí, USD / 1 triệu token (vào / ra) — chỉ để ghi sổ. */
-const GEMINI_USD_PER_MTOK = { input: 0.3, output: 2.5 };
+/** Gemini 3.8 Flash gói trả phí, USD / 1 triệu token (vào / ra) — giá ưu đãi tới 31/12/2026 (config/models.yaml); chỉ để ghi sổ. */
+const GEMINI_USD_PER_MTOK = { input: 0.75, output: 3.75 };
 
 const SURVEY_FIELDS = [
   'needs',
@@ -93,26 +109,32 @@ async function switchOn(env: AiEnv, key: string): Promise<boolean> {
   return Number(data) === 1;
 }
 
-async function modes(
-  env: AiEnv,
-): Promise<{ transcribe: Mode; summary: Mode; siteLog: Mode; briefPrefill: Mode }> {
+async function modes(env: AiEnv): Promise<{
+  transcribe: Mode;
+  summary: Mode;
+  siteLog: Mode;
+  briefPrefill: Mode;
+  surveyPaper: Mode;
+}> {
   const fake = (name: string) =>
     env.AI_FAKE === '1' ||
     (env.AI_FAKE ?? '')
       .split(',')
       .map((v) => v.trim())
       .includes(name);
-  const [t, s, l, b] = await Promise.all([
+  const [t, s, l, b, p] = await Promise.all([
     switchOn(env, 'ai.transcribe_enabled'),
     switchOn(env, 'ai.survey_summary_enabled'),
     switchOn(env, 'ai.site_log_enabled'),
     switchOn(env, 'ai.brief_prefill_enabled'),
+    switchOn(env, 'ai.survey_paper_read_enabled'),
   ]);
   return {
     transcribe: fake('transcribe') ? 'fake' : t && env.AI ? 'on' : 'off',
     summary: fake('summary') ? 'fake' : s && env.GEMINI_PAID_API_KEY ? 'on' : 'off',
     siteLog: fake('site_log') ? 'fake' : l && env.GEMINI_PAID_API_KEY ? 'on' : 'off',
     briefPrefill: fake('brief_prefill') ? 'fake' : b && env.GEMINI_PAID_API_KEY ? 'on' : 'off',
+    surveyPaper: fake('survey_paper') ? 'fake' : p && env.GEMINI_PAID_API_KEY ? 'on' : 'off',
   };
 }
 
@@ -679,6 +701,188 @@ assistantApp.post('/brief-prefill', async (c) => {
   const { accepted, rejected } = normalizePrefill(form.config, suggestions);
   return c.json({ accepted, rejected, used, fake: mode === 'fake' });
 });
+
+// ---------------------------------------------------------------------------------------------
+// Ảnh phiếu khảo sát giấy (đã che khung thông tin khách) → nháp sáu ô + ô phiếu riêng (28/10/2026)
+// ---------------------------------------------------------------------------------------------
+/**
+ * Chạy dưới phiên người gọi: chỉ người viết được báo cáo (`rls_survey_writable` — người phụ trách cơ hội,
+ * báo cáo đang Nháp / bị trả về) mới đọc được. Không ghi gì vào biên bản, không lưu ảnh: giao diện đưa
+ * nháp vào biểu mẫu, người khảo sát sửa rồi tự Lưu. Bản PDF gốc trong kho vẫn là bằng chứng.
+ */
+assistantApp.post('/survey-paper-read', async (c) => {
+  const token = bearer(c);
+  if (!token) return c.json({ error: 'Chưa đăng nhập.' }, 401);
+  const body = (await c.req.json().catch(() => ({}))) as { survey_id?: string; pages?: unknown };
+  if (!body.survey_id) return c.json({ error: 'Thiếu biên bản khảo sát.' }, 400);
+
+  const db = await asUser(c.env, token);
+  const { data: writable } = await db.rpc('rls_survey_writable', { p_survey_id: body.survey_id });
+  if (!writable) {
+    const { data: row } = await db
+      .from('site_surveys')
+      .select('report_status')
+      .eq('id', body.survey_id)
+      .maybeSingle();
+    const status = (row as { report_status?: string } | null)?.report_status;
+    if (status === 'cho_duyet' || status === 'da_duyet') {
+      return c.json(
+        {
+          error:
+            'Báo cáo khảo sát đã gửi Ban Giám đốc nên không điền nháp được nữa. Ban Giám đốc trả về thì sửa tiếp.',
+        },
+        409,
+      );
+    }
+    return c.json(
+      { error: 'Chỉ người phụ trách cơ hội mới cho máy đọc phiếu của biên bản này.' },
+      403,
+    );
+  }
+
+  const mode = (await modes(c.env)).surveyPaper;
+  if (mode === 'off') {
+    return c.json(
+      {
+        error:
+          'Chức năng máy đọc phiếu giấy chưa bật — gõ tay các ô như thường. Quản trị bật ở trang Trợ lý AI khi chủ dự án duyệt chi phí.',
+      },
+      409,
+    );
+  }
+
+  const parsed = parsePaperPages(body.pages);
+  if ('error' in parsed) return c.json({ error: parsed.error }, 400);
+
+  const { data: survey } = await db
+    .from('site_surveys')
+    .select(
+      'id, opportunity:opportunities(company_id, company:companies(code), customer:customers(name, contact_person, representative_name, phone, email, address, tax_code))',
+    )
+    .eq('id', body.survey_id)
+    .maybeSingle();
+  if (!survey) return c.json({ error: 'Không tìm thấy biên bản khảo sát.' }, 404);
+  const opp = (
+    survey as unknown as {
+      opportunity: {
+        company_id: string;
+        company: { code?: string } | null;
+        customer: Parameters<typeof paperIdentities>[0];
+      } | null;
+    }
+  ).opportunity;
+  const companyCode = opp?.company?.code ?? null;
+  const fields = surveyPaperFields(companyCode);
+  const identities = paperIdentities(opp?.customer ?? null);
+  const base = {
+    company_id: opp?.company_id ?? null,
+    user_id: await actorId(db),
+    feature: 'survey_paper_read',
+    entity_type: 'site_surveys',
+    entity_id: body.survey_id,
+  };
+
+  let raw: AiSurveyPaperRead;
+  if (mode === 'fake') {
+    raw = fakePaperRead(companyCode);
+    await logCall(c.env, { ...base, provider: 'gia_lap', model: null, is_fake: true, ok: true });
+  } else {
+    try {
+      const result = await geminiPaperRead(
+        c.env.GEMINI_PAID_API_KEY!,
+        paperPrompt(fields),
+        parsed.pages,
+      );
+      raw = result.read;
+      await logCall(c.env, {
+        ...base,
+        provider: 'gemini_paid',
+        model: SUMMARY_MODEL,
+        is_fake: false,
+        input_units: result.inputTokens,
+        output_units: result.outputTokens,
+        cost_usd:
+          (result.inputTokens * GEMINI_USD_PER_MTOK.input +
+            result.outputTokens * GEMINI_USD_PER_MTOK.output) /
+          1_000_000,
+        ok: true,
+      });
+    } catch (e) {
+      await logCall(c.env, {
+        ...base,
+        provider: 'gemini_paid',
+        model: SUMMARY_MODEL,
+        is_fake: false,
+        ok: false,
+        error: e instanceof Error ? e.message : String(e),
+      });
+      const busy = e instanceof Error && /Gemini trả (503|429)/.test(e.message);
+      return c.json(
+        {
+          error: busy
+            ? 'Dịch vụ AI đang quá tải. Thử lại sau ít phút, hoặc gõ tay các ô như thường.'
+            : 'Máy chưa đọc được phiếu. Gõ tay các ô như thường.',
+        },
+        502,
+      );
+    }
+  }
+
+  const { accepted, rejected } = normalizePaperRead(fields, raw, identities);
+  return c.json({ accepted, rejected, fake: mode === 'fake' });
+});
+
+async function geminiPaperRead(
+  key: string,
+  prompt: string,
+  pages: readonly PaperPage[],
+): Promise<{ read: AiSurveyPaperRead; inputTokens: number; outputTokens: number }> {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${SUMMARY_MODEL}:generateContent?key=${key}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: prompt },
+              ...pages.map((p) => ({ inline_data: { mime_type: p.mime_type, data: p.data } })),
+            ],
+          },
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: PAPER_RESPONSE_SCHEMA,
+          temperature: 0.1,
+          // Chép chữ không cần suy luận dài; chặn trần để chi phí mỗi phiếu đoán được.
+          thinkingConfig: { thinkingBudget: 512 },
+        },
+      }),
+    },
+  );
+  if (!res.ok) throw new Error(`Gemini trả ${res.status}`);
+  const json = (await res.json()) as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+    usageMetadata?: {
+      promptTokenCount?: number;
+      candidatesTokenCount?: number;
+      thoughtsTokenCount?: number;
+    };
+  };
+  const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
+  // Kiểm theo hợp đồng: sai hình thì coi như lượt hỏng, không đoán.
+  const read = aiSurveyPaperReadSchema.parse(JSON.parse(text));
+  return {
+    read,
+    inputTokens: json.usageMetadata?.promptTokenCount ?? 0,
+    // Token suy nghĩ tính tiền như token ra.
+    outputTokens:
+      (json.usageMetadata?.candidatesTokenCount ?? 0) +
+      (json.usageMetadata?.thoughtsTokenCount ?? 0),
+  };
+}
 
 async function geminiBriefPrefill(
   key: string,

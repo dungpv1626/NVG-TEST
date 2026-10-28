@@ -73,6 +73,10 @@ import {
   type ContractDetailRecord,
 } from '@/hooks/use-contracts';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { useCompanyLookup } from '@/hooks/use-companies';
+import { useRecipientContact } from '@/hooks/use-outbound-shares';
+import { ZaloSend } from '@/components/share/zalo-send';
+import { composeZaloMessage } from '@/lib/zalo-share';
 import { useContractTermSources } from '@/hooks/use-quotes';
 import { fillTemplate, inspectTemplate, safeFileName, saveBlob } from '@/lib/docx-template';
 import {
@@ -103,6 +107,9 @@ import { cn } from '@/lib/utils';
  */
 const DRAFTABLE_STAGES = ['nhap'] as const;
 
+/** Bước gửi được văn bản đã duyệt cho khách — khớp `rls_outbound_share_writable('contracts')` (0238). */
+const SENDABLE_STAGES: readonly string[] = ['da_duyet', 'da_ky', 'hoan_thanh'];
+
 /**
  * Tab «Soạn hợp đồng»: bên trái sửa (thông tin in lên văn bản + điều khoản), bên phải bản xem
  * trước đứng yên khi cuộn. Trước đây Điều khoản và Văn bản là hai tab — sửa một dòng phải đổi
@@ -111,9 +118,12 @@ const DRAFTABLE_STAGES = ['nhap'] as const;
 export function DocumentPanel({
   contract,
   canDraft,
+  canSend = false,
   termsPanel,
 }: {
   contract: ContractDetailRecord;
+  /** Người chịu trách nhiệm hoặc Ban Giám đốc — gửi văn bản đã duyệt cho khách qua Zalo (0238). */
+  canSend?: boolean;
   /** Người chịu trách nhiệm có quyền sửa HD — đúng điều kiện `rls_contract_writable`. */
   canDraft: boolean;
   /** Khối điều khoản (HD-02) — đặt ở cột sửa, cạnh bản xem trước. */
@@ -134,6 +144,15 @@ export function DocumentPanel({
       contractId={contract.id}
       submittedId={contract.submitted_document_id}
       approvedId={contract.approved_document_id}
+      sendTo={
+        canSend && SENDABLE_STAGES.includes(contract.stage)
+          ? {
+              companyId: contract.company_id,
+              customer: contract.customer,
+              label: contract.contract_number ?? contract.title,
+            }
+          : null
+      }
     />
   );
 
@@ -1170,11 +1189,20 @@ function VersionsSection({
   contractId,
   submittedId,
   approvedId,
+  sendTo,
 }: {
   contractId: string;
   submittedId: string | null;
   approvedId: string | null;
+  /** Có thì bản đã duyệt có nút «Gửi qua Zalo» kèm tệp Word. */
+  sendTo: {
+    companyId: string;
+    customer: { id: string; name: string } | null;
+    label: string;
+  } | null;
 }) {
+  const contact = useRecipientContact({ customerId: sendTo?.customer?.id ?? null }).data;
+  const companyName = useCompanyLookup()(sendTo?.companyId)?.short_name ?? null;
   const { data: versions } = useContractDocuments(contractId);
   const [error, setError] = useState<string | null>(null);
 
@@ -1234,6 +1262,27 @@ function VersionsSection({
               >
                 <Download className="size-4" aria-hidden /> Tải về
               </button>
+              {sendTo && v.id === approvedId && (
+                <div className="w-full">
+                  <ZaloSend
+                    canSend
+                    size="sm"
+                    entityType="contracts"
+                    entityId={contractId}
+                    phone={contact?.phone ?? null}
+                    file={{
+                      name: v.file_name,
+                      load: () => downloadFile(DOCUMENT_BUCKET, v.storage_path),
+                    }}
+                    message={composeZaloMessage({
+                      recipientName: sendTo.customer?.name ?? contact?.name ?? null,
+                      companyName,
+                      subject: `văn bản hợp đồng ${sendTo.label} đã duyệt để xem trước khi ký`,
+                      withFile: true,
+                    })}
+                  />
+                </div>
+              )}
             </li>
           ))}
         </ul>

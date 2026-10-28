@@ -17,6 +17,8 @@
  * × số token đo được bằng mô hình khác, ghi rõ là ước tính theo bảng giá), không có nữa mới «Chưa đủ dữ liệu».
  */
 
+import { callBudget } from '@nvg/shared/design';
+
 export interface CostRunRow {
   id: string;
   projectId: string;
@@ -214,4 +216,62 @@ export function planRunUnits(result: unknown): number | null {
 /** Lượt sửa theo yêu cầu kỹ sư (T53) — một bản sửa mỗi lượt. */
 export function editRunUnits(result: unknown): number | null {
   return result && typeof result === 'object' ? 1 : null;
+}
+
+/** Token vào LỚN NHẤT đã đo ở các lượt gọi trước (mọi mô hình, cùng nhóm mục đích) — `null` = chưa có dòng nào. */
+export function maxMeasuredInputTokens(
+  calls: readonly CostCallRow[],
+  purposes: readonly string[],
+): number | null {
+  const wanted = new Set(purposes);
+  let max: number | null = null;
+  for (const call of calls) {
+    if (!wanted.has(call.purpose) || call.inputTokens == null) continue;
+    if (max === null || call.inputTokens > max) max = call.inputTokens;
+  }
+  return max;
+}
+
+export interface MaxCallCost {
+  /** Tiền TỐI ĐA một lời gọi có thể tiêu, USD (giá niêm yết). */
+  usd: number;
+  /** `true` = giới hạn token ra bị hạ cho vừa mức chi phí của lượt (trần từng lời gọi, T176). */
+  lowered: boolean;
+  /** `false` = chưa có số token vào đo được — con số chỉ gồm phần token ra. */
+  inputKnown: boolean;
+  /** Giới hạn token ra dùng để tính. */
+  outputTokens: number;
+}
+
+/**
+ * Chi phí TỐI ĐA của lời gọi ĐẦU (T176) — cùng hàm `callBudget` mà Worker dùng để hạ giới hạn token ra, nên
+ * hộp hỏi và lượt chạy không lệch nhau. Token vào lấy số đo lớn nhất của các lượt trước (không đoán theo ký tự:
+ * màn hình không có lời dẫn). `null` = tuyến chưa khai giá hoặc không đặt giới hạn token ra mà lượt không có mức.
+ */
+export function maxCallCost(options: {
+  inputPer1mUsd: number | null | undefined;
+  outputPer1mUsd: number | null | undefined;
+  maxOutputTokens: number | null | undefined;
+  inputTokens: number | null;
+  capUsd: number | null | undefined;
+  minOutputTokens: number | null | undefined;
+}): MaxCallCost | null {
+  const { inputPer1mUsd, outputPer1mUsd } = options;
+  if (inputPer1mUsd == null || outputPer1mUsd == null) return null;
+  const decision = callBudget({
+    capUsd: options.capUsd ?? null,
+    spentUsd: 0,
+    inputTokens: options.inputTokens ?? 0,
+    routeOutputTokens: options.maxOutputTokens ?? null,
+    prices: { inputPer1mUsd, outputPer1mUsd },
+    // Màn hình không chặn — chỉ cần số tối thiểu để phân biệt «dừng»; vắng thì 1.
+    minOutputTokens: options.minOutputTokens ?? 1,
+  });
+  if (decision.outputTokens === null || decision.maxCallUsd === null) return null;
+  return {
+    usd: decision.maxCallUsd,
+    lowered: decision.kind === 'stop' || decision.lowered,
+    inputKnown: options.inputTokens !== null,
+    outputTokens: decision.outputTokens,
+  };
 }

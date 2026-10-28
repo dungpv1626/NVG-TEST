@@ -32,7 +32,12 @@ export interface FailedVariant {
   /** Lượt hỏng nhẹ nhất khi nó không phải lượt cuối. Vắng ở lượt chạy trước 23/10/2026. */
   main?: { round: number; levels: Array<Pick<FailedReason, 'level' | 'messages' | 'codes'>> };
   /** Lượt dừng vì chạm mức chi phí (T164) — Worker ghi `workers/src/design/ai/cost-cap.ts::CostCapStop`. */
-  costCap?: { capUsd: number; spentUsd: number; reason?: 'over' | 'unpriced' };
+  costCap?: {
+    capUsd: number;
+    spentUsd: number;
+    nextUsd?: number | null;
+    reason?: 'over' | 'unpriced' | 'call';
+  };
   /** Dừng gọi lại vì cùng một lỗi chính lặp lại (T174) — Worker ghi `workflows/plan-main-rejection.ts::EarlyStop`. */
   earlyStop?: { reason: 'same_main_issue'; rounds: number; level: number; message: string };
 }
@@ -96,6 +101,9 @@ function usdVi(value: number): string {
 
 /** Câu dừng vì mức chi phí — dựng từ số, không đọc lại `error`, để lượt cũ / lượt khác không lẫn vào. */
 export function costStopMessage(cap: NonNullable<FailedVariant['costCap']>): string {
+  if (cap.reason === 'call') {
+    return `Đã dừng trước lời gọi kế tiếp vì phần còn lại của mức chi phí ${usdVi(cap.capUsd)} (đã tiêu ${usdVi(cap.spentUsd)}) không đủ cho một lời gọi tối thiểu${cap.nextUsd != null ? ` (≈ ${usdVi(cap.nextUsd)})` : ''}.`;
+  }
   return cap.reason === 'unpriced'
     ? `Đã dừng vì không tính được chi phí lời gọi trước của mô hình này, trong khi lượt có mức chi phí ${usdVi(cap.capUsd)} (đã tiêu ${usdVi(cap.spentUsd)}).`
     : `Đã dừng vì chạm mức chi phí ${usdVi(cap.capUsd)} (đã tiêu ${usdVi(cap.spentUsd)}).`;

@@ -94,7 +94,7 @@ styles:
           thep_son_tinh_dien,
           inox,
         ]
-      colours: [trang, trang_kem, xam_nhat, xam_dam, den, ghi_bac, nau_go, be, tu_nhien]
+      colours: [trang, trang_kem, xam_nhat, xam_dam, den, ghi_bac, nau_go, be, tu_nhien, trong_suot]
       railings: [kinh_cuong_luc, sat_hop, inox_kinh, xay_dac, lam_go]
       door_materials: [nhom_kinh_he, nhom_son_tinh_dien, kinh_cuong_luc, thep_van_go, nhom_cuon]
       gate_types: [sliding, swing, folding]
@@ -273,7 +273,20 @@ styles:
           sat_my_thuat,
         ]
       colours:
-        [trang, trang_kem, be, xam_nhat, ghi_bac, do_ngoi, nau_go, nau_dam, xanh_reu, xam_dam, den]
+        [
+          trang,
+          trang_kem,
+          be,
+          xam_nhat,
+          ghi_bac,
+          do_ngoi,
+          nau_go,
+          nau_dam,
+          xanh_reu,
+          xam_dam,
+          den,
+          trong_suot,
+        ]
       railings: [sat_hop, inox_kinh, kinh_cuong_luc, xay_dac, con_tien, sat_my_thuat]
       door_materials: [nhom_kinh_he, go_tu_nhien, thep_van_go, nhom_son_tinh_dien]
       gate_types: [swing, sliding]
@@ -328,7 +341,7 @@ styles:
           thep_son_tinh_dien,
           da_granite,
         ]
-      colours: [trang, trang_kem, xam_nhat, ghi_bac, be, xam_dam, den, tu_nhien]
+      colours: [trang, trang_kem, xam_nhat, ghi_bac, be, xam_dam, den, tu_nhien, trong_suot]
       railings: [kinh_cuong_luc, sat_hop, xay_dac]
       door_materials: [nhom_kinh_he, kinh_cuong_luc, nhom_son_tinh_dien, nhom_cuon]
       gate_types: [sliding, swing]
@@ -383,7 +396,8 @@ styles:
           be_tong_tran,
           nhom_kinh,
         ]
-      colours: [trang, trang_kem, be, nau_go, nau_dam, xanh_reu, tu_nhien, xam_nhat, xam_dam]
+      colours:
+        [trang, trang_kem, be, nau_go, nau_dam, xanh_reu, tu_nhien, xam_nhat, xam_dam, trong_suot]
       railings: [lam_go, sat_hop, kinh_cuong_luc, inox_kinh, xay_dac]
       door_materials: [nhom_kinh_he, go_tu_nhien, thep_van_go, nhom_son_tinh_dien]
       gate_types: [sliding, swing, folding]
@@ -544,7 +558,7 @@ styles:
           thep_son_tinh_dien,
           gach_the,
         ]
-      colours: [trang, trang_kem, xam_nhat, ghi_bac, xam_dam, den, nau_go, tu_nhien]
+      colours: [trang, trang_kem, xam_nhat, ghi_bac, xam_dam, den, nau_go, tu_nhien, trong_suot]
       railings: [kinh_cuong_luc, sat_hop, lam_go, xay_dac]
       door_materials: [nhom_kinh_he, nhom_son_tinh_dien, go_tu_nhien, kinh_cuong_luc]
       gate_types: [sliding, swing]

@@ -1,7 +1,7 @@
 /**
  * Thanh điều hướng thu gọn được.
  *
- * Canh phần dễ hỏng lặng lẽ: ở trạng thái thu, chữ trên màn hình đổi sang nhãn ngắn nhưng
+ * Canh phần dễ hỏng lặng lẽ: ở trạng thái thu, trên màn hình chỉ còn biểu tượng nhưng
  * **tên đọc được phải giữ nguyên nhãn đầy đủ** — nếu không, người dùng trình đọc màn hình mất
  * hẳn nghĩa của mục mà không có cách nào biết. Và lựa chọn phải sống qua lần tải trang sau,
  * nếu không thì mỗi lần mở lại phần mềm là một lần phải thu tay.
@@ -50,18 +50,22 @@ describe('Thanh điều hướng trái', () => {
     );
   });
 
-  it('thu gọn thì chữ đổi sang nhãn ngắn nhưng TÊN ĐỌC ĐƯỢC vẫn là nhãn đầy đủ', async () => {
+  it('thu gọn thì chỉ còn biểu tượng nhưng TÊN ĐỌC ĐƯỢC vẫn là nhãn đầy đủ, rê chuột hiện nhãn', async () => {
     renderWithApp(<Sidebar />);
     await userEvent.click(screen.getByRole('button', { name: 'Thu gọn thanh điều hướng' }));
 
-    // Nhìn thấy: nhãn ngắn.
-    expect(screen.getByText(MODULES.CRM.shortLabel)).toBeInTheDocument();
     // Đọc được: vẫn nhãn đầy đủ — đây mới là thứ trình đọc màn hình đọc ra.
-    expect(screen.getByRole('link', { name: MODULES.CRM.label })).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: MODULES.CRM.label });
+    expect(link).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Mở rộng thanh điều hướng' })).toHaveAttribute(
       'aria-expanded',
       'false',
     );
+    // Rê chuột: nhãn nổi bên phải dải biểu tượng.
+    await userEvent.hover(link);
+    expect(document.body.querySelector('.fixed')).toHaveTextContent(MODULES.CRM.label);
+    await userEvent.unhover(link);
+    expect(document.body.querySelector('.fixed')).toBeNull();
   });
 
   it('thu gọn thì bộ chọn pháp nhân chuyển sang dạng gọn, không dựng dạng thứ ba', async () => {
@@ -91,17 +95,17 @@ describe('Thanh điều hướng trái', () => {
     );
   });
 
-  it('ẩn hẳn được (nút hoặc Ctrl + B), hiện lại đúng dạng trước khi ẩn', async () => {
+  it('Ctrl + B thu gọn / mở; không còn dạng ẩn hẳn với nút nổi', async () => {
+    // Máy từng lưu dạng «ẩn» cũ thì mở ra ở dạng dải biểu tượng.
+    window.localStorage.setItem('nvg.sidebar', JSON.stringify({ mode: 'hidden', width: 248 }));
     renderWithApp(<Sidebar />);
-    await userEvent.click(screen.getByRole('button', { name: 'Thu gọn thanh điều hướng' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Ẩn thanh điều hướng' }));
-    expect(screen.queryByRole('navigation', { name: 'Điều hướng chính' })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Hiện thanh điều hướng' }));
-    expect(screen.getByRole('button', { name: 'Mở rộng thanh điều hướng' })).toBeInTheDocument();
-    await userEvent.keyboard('{Control>}b{/Control}');
-    expect(screen.queryByRole('navigation', { name: 'Điều hướng chính' })).not.toBeInTheDocument();
-    await userEvent.keyboard('{Control>}b{/Control}');
     expect(screen.getByRole('navigation', { name: 'Điều hướng chính' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mở rộng thanh điều hướng' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Hiện thanh điều hướng' })).not.toBeInTheDocument();
+    await userEvent.keyboard('{Control>}b{/Control}');
+    expect(screen.getByRole('button', { name: 'Thu gọn thanh điều hướng' })).toBeInTheDocument();
+    await userEvent.keyboard('{Control>}b{/Control}');
+    expect(screen.getByRole('button', { name: 'Mở rộng thanh điều hướng' })).toBeInTheDocument();
   });
 
   it('nhóm theo nghiệp vụ: chỉ hiện nhóm còn mục được xem', () => {
