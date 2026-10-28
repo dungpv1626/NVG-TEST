@@ -21,9 +21,12 @@ import { FacadeBriefFields } from './ai/ai-facade-brief-form';
 export function FacadeControl({
   value,
   onChange,
+  briefStyle = null,
 }: {
   value: BriefFacade | null | undefined;
   onChange: (value: unknown) => void;
+  /** Phong cách đầu bài đã chọn — ô chọn lọc theo phong cách này (T175). */
+  briefStyle?: string | null;
 }) {
   const vocab = useFacadeVocabulary();
   if (vocab.isLoading) return <Skeleton className="h-40 w-full" />;
@@ -42,6 +45,7 @@ export function FacadeControl({
         vocab={vocab.data}
         plan={null}
         withStyle={false}
+        briefStyle={briefStyle}
       />
     </div>
   );

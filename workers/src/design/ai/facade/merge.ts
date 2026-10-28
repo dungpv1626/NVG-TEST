@@ -10,7 +10,17 @@
  * Nhà không có sân trước thì bỏ cổng và rào: không có chỗ đặt chúng trên mặt đứng.
  */
 
-import type { AiFacadeBrief, AiFacadeConcept, AiFacadeProposal } from '@nvg/shared/design';
+import {
+  selectionsOfFacadeBrief,
+  selectionsOfFacadeConcept,
+  styleMismatches,
+  styleMismatchText,
+  type AiFacadeBrief,
+  type AiFacadeConcept,
+  type AiFacadeProposal,
+  type FacadeSelection,
+  type StyleCatalogue,
+} from '@nvg/shared/design';
 import type { FacadeVocabulary } from '../../kb/facade-vocabulary';
 import type { FacadeFrame } from './frame';
 
@@ -45,6 +55,69 @@ export function mergeFacade(
   vocab: FacadeVocabulary,
   meta: FacadeMeta,
   brief: AiFacadeBrief | null = null,
+  styles: StyleCatalogue | null = null,
+): AiFacadeConcept {
+  const concept = mergeCore(frame, proposal, vocab, meta, brief);
+  const warnings = styleWarnings(concept, brief, vocab, styles);
+  return warnings.length ? { ...concept, warnings } : concept;
+}
+
+/**
+ * Cảnh báo `facade_style_mismatch` (T175): mô hình chọn mã ngoài tập «hợp phong cách» của
+ * `kb/style_catalogue.yaml`. KHÔNG loại ý tưởng — phong cách là thẩm mỹ, không phải luật (T52).
+ *
+ * Mục kỹ sư đã điền trên phiếu không bị cảnh báo: mã ấy là quyết định của kỹ sư, và phiếu đã nói
+ * điều đó ngay lúc chọn (ô chọn hiện «không hợp phong cách đã chọn»).
+ */
+export function styleWarnings(
+  concept: AiFacadeConcept,
+  brief: AiFacadeBrief | null,
+  vocab: FacadeVocabulary,
+  styles: StyleCatalogue | null,
+): NonNullable<AiFacadeConcept['warnings']> {
+  const spec = styles?.styles[concept.style];
+  if (!spec) return [];
+  const fixed = new Set(
+    (brief ? selectionsOfFacadeBrief(brief) : []).map((s) => `${s.field}=${s.code}`),
+  );
+  return styleMismatches(selectionsOfFacadeConcept(concept), spec)
+    .filter((s) => !fixed.has(`${s.field}=${s.code}`))
+    .map((s) => ({
+      code: 'facade_style_mismatch' as const,
+      field: s.field,
+      value: s.code,
+      message: styleMismatchText(s, spec, codeLabel(vocab, s)),
+    }));
+}
+
+/** Nhãn tiếng Việt của một mã theo nhóm của nó — câu cảnh báo không in mã trần. */
+function codeLabel(vocab: FacadeVocabulary, s: FacadeSelection): string | undefined {
+  switch (s.group) {
+    case 'roof_types':
+      return vocab.roofTypes[s.code];
+    case 'gate_types':
+      return vocab.gateTypes[s.code];
+    case 'roof_materials':
+      return vocab.roofMaterials[s.code]?.label_vi;
+    case 'materials':
+      return vocab.materials[s.code]?.label_vi;
+    case 'colours':
+      return vocab.colours[s.code]?.label_vi;
+    case 'railings':
+      return vocab.railings[s.code]?.label_vi;
+    case 'door_materials':
+      return vocab.doorMaterials[s.code]?.label_vi;
+    case 'fence_types':
+      return vocab.fenceTypes[s.code]?.label_vi;
+  }
+}
+
+function mergeCore(
+  frame: FacadeFrame,
+  proposal: AiFacadeProposal,
+  vocab: FacadeVocabulary,
+  meta: FacadeMeta,
+  brief: AiFacadeBrief | null,
 ): AiFacadeConcept {
   const roofType = brief?.roof.type ?? proposal.roof.type;
   const flat = roofType === 'flat';

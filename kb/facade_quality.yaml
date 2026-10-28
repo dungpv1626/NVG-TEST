@@ -2,7 +2,7 @@
 #  THƯỚC CHẤM MẶT ĐỨNG — «giống cách NVG vẽ đến đâu»
 # ═══════════════════════════════════════════════════════════════════════════════
 #
-#  Phiên bản thước: score_version 3 (T63, T65 — 20/09/2026)
+#  Phiên bản thước: score_version 4 (T63, T65 — 20/09/2026; nhóm S T175 — 28/10/2026)
 #  Nguồn:           `kb/facade_experience.yaml` — 7 tờ mặt đứng DXF của 6 công
 #                   trình NVO đã phát hành, đo 20/09/2026.
 #
@@ -60,7 +60,9 @@ version: '2026.09.3'
 #   nào vẫn đang bị trừ điểm «lan can ban công cao 80–90 cm» — và đó là chỗ duy nhất
 #   hồ sơ demo mất điểm. Bản chấm tay đầu tiên đã lưu dưới thước 2 (điểm máy 95%), nên
 #   đây phải là một số MỚI: để nguyên số 2 là hai cái thước khác nhau cùng mang một tên.
-score_version: 3
+#   3 → 4 (28/10/2026, T175): thêm nhóm S «Đúng phong cách» (S1, S2) đọc `kb/style_catalogue.yaml`.
+#   Nhóm mới vào mẫu số, nên cùng một bản vẽ chấm dưới thước 3 và thước 4 không so thẳng được.
+score_version: 4
 
 co_so_du_lieu: '6 công trình NVO, 7 tờ mặt đứng — mọi ngưỡng [ĐO] là chỉ dấu, chưa phải chuẩn'
 
@@ -86,6 +88,13 @@ groups:
   R:
     vi: 'Lan can'
     weight: 10
+  # T175 (28/10/2026): phong cách đầu bài. Trọng số [CHUNG] — ĐỀ XUẤT của Claude Code, chờ kiến trúc
+  # sư NVO duyệt cùng `kb/style_catalogue.yaml`. Bộ đặc trưng còn là bản nháp, nên nhóm này nhẹ hơn
+  # các nhóm đo từ hồ sơ thật. Nhóm này cộng THÊM vào 100 của năm nhóm trên (tổng 115), không lấy
+  # bớt phần của nhóm nào: tỷ lệ giữa năm nhóm đo từ hồ sơ giữ nguyên, % vẫn tính trên phần chấm được.
+  S:
+    vi: 'Đúng phong cách'
+    weight: 15
 
 # Trong một nhóm, các tiêu chí CHẤM ĐƯỢC chia đều trọng số nhóm.
 within_group: equal
@@ -260,6 +269,30 @@ criteria:
     do_ai: false
     n: 4
     label: 'ĐO'
+
+  # ── S. Đúng phong cách (T175) ───────────────────────────────────────────────
+  # Đếm theo MÃ đã chọn (`match` của từng chi tiết trong `kb/style_catalogue.yaml`). Chi tiết không đo
+  # được bằng mã (đối xứng, số vật liệu) chỉ vào lời dẫn, không vào điểm. Đầu bài chưa chọn phong cách
+  # hoặc bộ đặc trưng chưa có phong cách ấy = thiếu đầu vào (giữ trọng số, không chấm).
+  - code: S1
+    group: S
+    vi: 'Có các chi tiết nhận diện của phong cách đã chọn'
+    giai_thich: 'Tỷ lệ chi tiết «phải có» của phong cách (`must`) xuất hiện trong mã đã chọn và mảng trang trí — ví dụ Tân cổ điển: phào chỉ, cột, mái mansard hoặc mái dốc, cửa vòm.'
+    kind: higher_better
+    pass: 1
+    zero: 0
+    n: 0
+    label: 'CHUNG'
+
+  - code: S2
+    group: S
+    vi: 'Không dùng chi tiết phong cách nên tránh'
+    giai_thich: 'Số chi tiết «nên tránh» của phong cách (`avoid`) đang có trên mặt đứng — ví dụ Tân cổ điển: mái tôn, bê tông trần, lan can kính.'
+    kind: count
+    pass: 0
+    zero: 2
+    n: 0
+    label: 'CHUNG'
 
 # ── Đo được trên hồ sơ nhưng CHƯA thành tiêu chí ───────────────────────────────
 #

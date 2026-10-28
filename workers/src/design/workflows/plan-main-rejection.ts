@@ -27,9 +27,37 @@ export class AiPlanRejectedWithMain extends AiPlanRejected {
     readonly main: MainRejection | null,
     /** Lượt dừng vì chạm mức chi phí (T164) — `null` khi dừng vì lý do khác. */
     readonly costCap: CostCapStop | null = null,
+    /** Lượt dừng vì cùng một lỗi chính lặp lại (T174) — `null` khi dừng vì lý do khác. */
+    readonly earlyStop: EarlyStop | null = null,
   ) {
     super(levels);
   }
+}
+
+/** Dừng gọi mô hình sửa vì cùng một lỗi chính lặp lại `rounds` lượt liền (T174, `sameMainProblem`). */
+export interface EarlyStop {
+  reason: 'same_main_issue';
+  rounds: number;
+  /** Tầng của lỗi chính; `0` = cả nhà. */
+  level: number;
+  /** Câu tiếng Việt cho màn hình — mã phòng vẫn là mã, giao diện tự đổi sang tên phòng (`readableMessage`). */
+  message: string;
+}
+
+/** Câu dừng sớm: nói số lượt, lỗi chính, và việc người dùng làm được — không gọi thêm vì gọi thêm vẫn tính tiền. */
+export function earlyStopOf(
+  rounds: number,
+  rejections: readonly LevelRejection[],
+): EarlyStop | null {
+  const main = rejections.find((rejection) => rejection.messages.length > 0);
+  if (!main) return null;
+  const where = main.level === 0 ? 'cả nhà' : `tầng ${main.level}`;
+  return {
+    reason: 'same_main_issue',
+    rounds,
+    level: main.level,
+    message: `Đã dừng gọi lại mô hình: ${rounds} lượt liền hỏng cùng một lỗi chính ở ${where} — ${main.messages[0]} Gọi thêm khó gỡ được mà vẫn tốn tiền; xem lại đầu bài ở chỗ này rồi chạy lại.`,
+  };
 }
 
 /**

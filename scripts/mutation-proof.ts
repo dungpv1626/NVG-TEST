@@ -1999,6 +1999,22 @@ const MUTATIONS: Mutation[] = [
     find: '  --color-brand: #057b47;',
     replace: '  --color-brand: #f39122;',
   },
+  {
+    id: 'M243',
+    axis: 'tiền gọi mô hình',
+    file: 'workers/src/design/ai/plan.ts',
+    bug: 'Cùng một lỗi chính lặp ba lượt mà vẫn gọi mô hình sửa tiếp (lượt thật 1dd74b99: lượt 5 ≈ 0,09 USD trả rỗng)',
+    find: '  return tail[0] !== null && tail.every((key) => key === tail[0]);',
+    replace: '  return false;',
+  },
+  {
+    id: 'M244',
+    axis: 'tiền gọi mô hình',
+    file: 'workers/src/design/ai/plan.ts',
+    bug: 'Câu nhắc phòng hụt sàn bỏ mất đường lấy ô qua phòng kề (lượt 2 của 1dd74b99) — mô hình nộp lại cùng phòng',
+    find: '        ? prompts.floorLevel.hints[`${issue.code}_chain`]',
+    replace: '        ? undefined',
+  },
 ];
 
 /** Thư mục mã nguồn được băm trước và sau khi chạy. `db/` không đụng tới nên không băm. */

@@ -4495,3 +4495,92 @@ chế `unavailable` giữ nguyên cho lựa chọn khác sau này.
 **Rủi ro đã biết, chấp nhận:** bộ xếp dựng trên hình chữ nhật lớn nhất nội tiếp thửa (`siteGeometry`), CHƯA đo lại trên hồ sơ
 đa giác thật — thửa méo nhiều thì phần đất ngoài hình chữ nhật ấy không được dùng (màn hình đã hiện «còn … m² ngoài phần xây
 được»). Gặp hồ sơ thật lệch thì đo bằng phát lại như T96 trước khi sửa bộ xếp.
+
+## T174 — Dừng sớm khi cùng một lỗi chính lặp lại; câu nhắc nói lấy ô ở đâu; thử lại tầng 1 khi cả nhà hỏng — GỠ (28/10/2026, giai đoạn 1 lộ trình AI Design)
+
+**Bối cảnh.** Lượt thật 1dd74b99 (hồ sơ NVO-TK-2026-9272, biệt thự 15 × 20 m, GPT-5.6 Terra, 5 lời gọi ≈ 0,50 USD, hỏng —
+`backup/ai-tron/bao-cao-luot-hong.md`): lượt 2–4 CÙNG lỗi chính «phòng ngủ tầng 2 chỉ 14,13 m² < 17 m²» (lượt 4 mô hình đánh
+số lại bedroom_4 → bedroom_3), lỗi phụ đổi mỗi lượt — `stuckRepeating` (cả tập lỗi y hệt, `STUCK_AFTER`) không bắt được; lượt
+5 mô hình trả danh mục rỗng, vẫn tính ≈ 0,09 USD. Câu trả lời của năm lượt chép thành fixture `ai-run-1dd74b99.json` (digest
+của 46d6eff3 — đầu bài 9272 dựng từ nó và đã qua hàng rào digest T170); phát lại ra đúng lỗi của lượt thật.
+
+**Việc 1 — dừng sớm theo lỗi chính. GIỮ.**
+- Lỗi chính = câu lỗi ĐẦU TIÊN của lượt (đúng câu bước «Xếp lại» và màn hình hiện), kèm tầng + mã; mã phòng trong ngoặc kép bỏ
+  số thứ tự, số đo giữ nguyên — phòng còn nhích diện tích thì chưa là lặp (`mainProblemKey`, `sameMainProblem`, `ai/plan.ts`).
+  Lượt xếp được ghi `null`, cắt chuỗi «liền nhau».
+- Ngưỡng là dữ liệu: `kb/plan_quality.yaml` `revision_stop_same_main_issue_rounds: 3` (vắng = tắt; không phải số nguyên ≥ 2 thì
+  tệp không nạp). Áp ở cả Workflow (`runVariant`) lẫn `generateAiPlan`; đã có bản xếp được dưới ngưỡng thì lưu bản ấy như mọi
+  đường dừng khác.
+- Kết quả lượt mang `earlyStop` (`workflows/plan-main-rejection.ts`): «Đã dừng gọi lại mô hình: 3 lượt liền hỏng cùng một lỗi
+  chính ở tầng 2 — … Gọi thêm khó gỡ được mà vẫn tốn tiền; xem lại đầu bài ở chỗ này rồi chạy lại.» Màn hình hiện câu ấy dưới
+  thẻ lý do (`plan-failure.ts` đổi mã phòng sang tên, dấu phẩy thập phân).
+- **Đo** (phát lại 59 lượt ghi / 248 lời gọi đã trả tiền, ngữ cảnh Workflow, mô phỏng phép dừng trên kết quả từng vòng): dừng sớm
+  9 lượt, **bớt 13 lời gọi** (5,2 %; 011b4adc, 0c86c0b1, 1dd74b99, 58688ead, 5cd78ef7, 6c35ed79, fdd486b1 bớt 1; 81fd3f57,
+  f351115d bớt 3), **không lượt nào mất vòng qua cổng**. Phép thử `ai-live-1dd74b99.test.ts`: ngưỡng 3 → 4 lời gọi, tắt → 5;
+  đột biến M243.
+
+**Việc 2 — câu nhắc phòng hụt sàn nói lấy ô ở đâu. GIỮ, CHƯA CÓ SỐ ĐO THẬT.**
+- Câu `_tight` cũ đã có số ô đang / cần, nhưng chỉ kể phòng dư ở xa («sd1, bc2, bc1») mà không nói lấy cách nào; ba lượt mô hình
+  nộp lại cùng phòng 15 ô. `shortDonor` (`ai/arrange/index.ts`, trong `adviseShort`) tính tất định trên bản phác: theo từng
+  hướng, phòng / hành lang kề bằng TRỌN một cạnh cùng bề rộng nhường được bấy nhiêu dải mà vẫn trên mức của nó (hành lang: còn đủ
+  `corridor_clear_m`) thì lấy thẳng (`_from`); không thì dời nguyên khối phòng thường ở giữa về phía phòng dư (`_chain`, tối đa
+  3 phòng giữa; ô thang / thang máy / giếng trời / hành lang / ban công không dời). Không có đường nào thì giữ câu `_tight`.
+- Lượt 2 của 1dd74b99 nay nhận: «Room "bedroom_4" … from 15 sketch cells … needs at least 19 cells. Its neighbours are at their
+  minimum, but "balcony_2" beyond "bedroom_3" has spare area (about 6 m² spare): shift "bedroom_3" by 1 line of 5 cells toward
+  "balcony_2" …». Lượt 3–4 không có đường (ban công chỉ còn một dải) — giữ câu cũ, không bịa.
+- Chỉ là gợi ý trong câu nhắc: bộ xếp không tự dời phòng nào. Phát lại KHÔNG đo được (cần mô hình trả lời câu nhắc mới) — chỉ có
+  phép thử + đột biến M244. Lời dẫn đổi mà `version` của `kb/ai_design_prompts.yaml` chưa tăng (mạch mặt đứng cùng sửa tệp).
+
+**Việc 3 — tầng 1 chọn theo cả nhà. ĐÃ THỬ, GỠ.** T172 đã có «chọn tầng 1 biết tầng trên» (dời ô thang một ô, nhận bản đầu tiên
+cho MỌI tầng trên xếp được). Chỗ còn trống: mọi tầng xếp được mà kiểm CẢ NHÀ hỏng (19 vòng của đối chứng chỉ còn lỗi cả nhà `L0`) thì
+không bước quay lui nào chạy. Đã thử: kiểm cả nhà hỏng → gọi lại `evaluateHouse` với bản tầng 1 vừa hỏng bị loại (`groundAvoid`),
+các bước quay lui T161 / T169 / T172 / T113 tìm bản khác, chỉ nhận khi CẢ NHÀ qua, tối đa 2 lần
+(`sketch.ground_core_shift.whole_house_retries`). Đo (cùng 248 vòng, ngữ cảnh Workflow, đối chứng = mã chưa có bước này):
+
+| Nhóm | Vòng qua cổng | Vòng đổi kết quả | Vòng lâu nhất |
+| --- | --- | --- | --- |
+| còn lại (225) | 15 → 15 | 0 | 105 s (f1a88ac1 vòng 5: 17 → 105 s) |
+| THU5 (23) | 0 → 0 | 0 | 15 s |
+
+Không vòng nào đổi, 43 vòng chậm hơn > 2 s — gỡ theo luật đo. Mã giữ ở `backup/gd1-mat-bang/viec3-thu-lai-tang1-khi-ca-nha-hong.patch`
+(kèm kịch bản phát lại `zz-replay-*.keep`, `run.sh`, `cmp.cjs`, `sim.cjs` và hai tệp kết quả). Lỗi cả nhà của các vòng ấy không
+nằm ở chỗ ô thang tầng 1 — muốn gỡ phải đọc từng lỗi `L0` (chưa làm). Nhà ống THU5 vẫn chặn ở bản phác tầng 2–4 (T171, T172):
+cần câu nhắc / lượt thật.
+
+**Ghi chú đo.** Thời gian tuyệt đối của đối chứng lần này cao hơn T172 2–4 lần (máy bận lúc chạy đối chứng); vòng lâu nhất đối
+chứng 172 s (02982bd7 vòng 4), lượt mới 105 s — so thời gian giữa hai lượt chỉ là chỉ dấu.
+
+## T175 — Bộ đặc trưng 9 phong cách thành dữ liệu; mặt đứng bám phong cách (28/10/2026, giai đoạn 3 lộ trình AI Design, việc 8 + 9)
+
+Anh Dũng: «chưa có phong cách mẫu (Indochine, Địa Trung Hải, Tân cổ điển…)». Trước đó mỗi phong cách chỉ là MỘT dòng tiếng Anh
+trong `kb/ai_design_prompts.yaml` (hai khối `styles:` — nội thất và mặt ngoài), mặt đứng không có ràng buộc hay điểm nào theo
+phong cách.
+
+**Việc 8 — `kb/style_catalogue.yaml`** (một tệp, theo cách `kb/` đang tổ chức). Chín phong cách khớp đúng chín lựa chọn câu
+`style` của `brief-form.json`. Mỗi phong cách: `label`, `mo_ta` (tiếng Việt), `prompt.interior` / `prompt.exterior` (tiếng Anh),
+`must` / `prefer` / `avoid` (câu `vi` cho màn hình, `en` cho mô hình, `match` = mã danh mục mà chi tiết «có mặt»), `allowed`
+(mã hợp phong cách theo tám nhóm của `kb/facade_vocabulary.yaml`), `symmetry`, `window_hw` (khi hợp). Cờ `status: de_xuat`,
+dòng đầu tệp ghi ĐỀ XUẤT của Claude Code, chờ kiến trúc sư NVO duyệt — nhận diện phong cách là nội dung chuyên môn của NVG
+(PRD 2.3). Worker kiểm mọi mã lúc nạp (`workers/src/design/kb/style-catalogue.ts`). Hai khối `styles:` của tệp lời dẫn đã gỡ:
+`aiPrompts()` dựng chúng từ bộ đặc trưng (`withStylePrompts`) — một nguồn; ảnh mặt đứng / phối cảnh nhận thêm chi tiết nên có /
+nên tránh, kèm câu «chỉ ở chỗ bản vẽ đã có» (ảnh vẽ từ ảnh neo đã khoá, dặn «phải có vòm» thì mô hình ảnh vẽ thêm vòm).
+
+**Việc 9 — mặt đứng bám phong cách, KHÔNG chặn** (phong cách là thẩm mỹ, không phải luật — T52):
+- Phiếu mặt đứng (bước Mặt đứng và mục Mặt đứng của đầu bài) chỉ liệt kê mã hợp phong cách; «Hiện mọi lựa chọn» mở lại cả danh
+  mục; ô đang giữ mã ngoài phong cách ghi «Không hợp phong cách … đã chọn», vẫn lưu được. `checkFacadeBriefCodes` KHÔNG đổi —
+  nó chỉ chặn mã không có trong danh mục.
+- Lời dẫn mặt đứng: khối `<requirements>` nối «Style guide» (must / prefer / avoid, đối xứng, tỷ lệ cửa, tập mã). Không thêm chỗ
+  điền mới vào `facade.user`, lời dẫn hệ thống giữ nguyên từng byte.
+- Hàm ghép: mã mô hình chọn ngoài tập → cảnh báo `facade_style_mismatch` ở trường TUỲ CHỌN mới `warnings` của hợp đồng
+  `ai-facade-concept` (chỉ thêm; artifact cũ vẫn đọc được; `CONTRACTS_FINGERPRINT` đổi — phát hành API cùng giao diện). Mã kỹ
+  sư đã điền không bị cảnh báo. Màn hình ý tưởng mặt đứng hiện các câu cảnh báo.
+- Thước chấm mặt đứng `score_version` 3 → 4: nhóm S «Đúng phong cách» trọng số 15 [CHUNG], cộng THÊM vào 100 của năm nhóm đo
+  từ hồ sơ (không lấy bớt phần nhóm nào). S1 = tỷ lệ `must` có mặt theo mã + mảng trang trí; S2 = số `avoid` đang dùng (0 đạt,
+  2 trở lên 0 điểm). Không có bộ đặc trưng / chưa chọn phong cách = thiếu đầu vào (giữ trọng số, không chấm). Chi tiết làm mất
+  điểm (`detail`) đi vào lượt sửa vì điểm và hiện trên bảng điểm. Bảng chấm tay cũ hiện «thước đã đổi» như mọi lần tăng số.
+
+KHÔNG làm việc 10 (gợi ý mặt bằng theo phong cách): mạch khác đang đo bộ xếp mặt bằng. Không gọi mô hình trả phí nào — mọi phép
+thử dùng client giả. `kb/ai_design_prompts.yaml` `version` CHƯA tăng (mạch kia đang sửa cùng tệp) — tăng khi gộp.
+
+Câu hỏi cho NVG: bỏ / thêm phong cách nào (ví dụ Wabi-sabi, Nhật, Đông Dương hiện đại); bộ `must` / `avoid` / `allowed` có đúng
+cách NVO làm không; ảnh mẫu từng phong cách từ công trình NVO đã làm (để thay câu mô tả và kiểm chi tiết nhận diện).

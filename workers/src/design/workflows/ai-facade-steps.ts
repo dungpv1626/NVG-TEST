@@ -9,7 +9,7 @@
  */
 
 import type { AiDesignParams } from './ai-design-steps';
-import type { AiFacadeBrief, AiFloorPlan } from '@nvg/shared/design';
+import type { AiFacadeBrief, AiFloorPlan, StyleCatalogue } from '@nvg/shared/design';
 import { LlmCallFailed } from '../llm/gemini';
 import { AI_DIGEST_DATA_CLASS } from '../brief/anonymise';
 import type { ArtifactRepository } from '../artifacts';
@@ -49,6 +49,12 @@ export interface FacadeStepDeps {
    * chia đôi thành phần phân tích và phần nạp tệp.
    */
   quality: FacadeQuality;
+  /**
+   * Bộ đặc trưng phong cách (`kb/style_catalogue.yaml`, T175) — lời dẫn «Style guide», cảnh báo
+   * `facade_style_mismatch` lúc ghép và nhóm S của thước chấm. Truyền vào vì cùng lý do với `quality`.
+   * Vắng = chạy như trước T175.
+   */
+  styles?: StyleCatalogue | null;
   repo: ArtifactRepository;
   pricing?: RoutePricing;
   provider: string;
@@ -138,6 +144,7 @@ export async function proposeFacadeStep(
       frame,
       vocab: deps.vocab,
       brief,
+      styles: deps.styles ?? null,
       retryIssues,
       retryKind,
       ...(params.reasoningEffort ? { reasoningEffort: params.reasoningEffort } : {}),
@@ -186,11 +193,13 @@ export async function proposeFacadeStep(
     deps.vocab,
     { planRef: params.planRef!, briefRef: params.facadeBriefRef ?? null, generator: PROBE },
     brief,
+    deps.styles ?? null,
   );
   const score = scoreFacade({
     concept: merged,
     quality: deps.quality,
     vocab: deps.vocab,
+    styles: deps.styles ?? null,
     // Phiếu của kỹ sư thắng quy ước cấu tạo — cùng phép ưu tiên với `railingCmOf` của bộ vẽ. Ở đây
     // không gọi hàm ấy được vì nó đọc tệp kb qua mô-đun `-data` (Vitest không nạp YAML).
     railingCm:
@@ -203,7 +212,7 @@ export async function proposeFacadeStep(
     call: attempt.call,
     score,
     habitIssues: facadeFixable(score).map(
-      (c) => `${c.vi}${c.giaiThich ? ` — ${c.giaiThich}` : ''}`,
+      (c) => `${c.vi}${c.detail ? ` (${c.detail})` : ''}${c.giaiThich ? ` — ${c.giaiThich}` : ''}`,
     ),
   };
 }
@@ -254,6 +263,7 @@ export async function writeFacadeStep(
       },
     },
     brief,
+    deps.styles ?? null,
   );
   const written = await deps.repo.write({
     scope: {

@@ -29,7 +29,7 @@
 # 9.9.3 (13/10/2026, T160 — Haan chấm phương án d084a46e): câu nhắc C14 (ô giao thông to như một phòng), D6 (ban công chính mặt tiền mở từ giao thông chung), D7 (ban công mặt hông nhỏ hơn mặt tiền). Chỉ gửi khi phương án dưới ngưỡng. Gỡ hai câu tự mâu thuẫn: C12 bản phác «draw it one cell wide» (trái `corridor_min_cells` = 2 ô của biệt thự) nay theo `corridor_min_cells`; D5 bỏ thứ tự «bedroom first» (trái D6).
 # 9.10.0 (14/10/2026, T161 — Haan hỏi lỗi d084a46e ở mô hình hay dựng hình): luật 6 — hành lang / khu chung dọc trọn `arrival` của ô thang (tri thức `stair_min_m.arrival` mới, ngay lượt đầu); hành lang đúng `corridor_min_cells` ô, sàn rộng hơn là phòng; luật 10 + `B_balcony` + `R_balcony` — ban công chính mặt tiền lớn nhất, mở từ hành lang / khu chung, ban công khác nhỏ (thay «bedroom first» cho mọi ban công); câu nhắc `balcony_main_access`, `balcony_main_depth` (hai câu đầu bài mới). Rút câu trùng ý để vừa trần T46: câu mở đầu kể lại lược đồ, «Relationships…» (đã có trong lược đồ), «habitable rooms on open_faces» (trùng `knowledge.faces`), «the stair where it is on storey 1» (trùng luật 6).
 # 9.11.0 (23/10/2026, T165 — lượt thật THU5 nhà phố 5 × 18 m có ô tô): `floor_level` luật 7 có câu `[[entry_garage|…]]` — gara được làm entry_room khi hàng đường không đủ cho gara và phòng khách cạnh nhau (luật T115 trước chỉ có ở `house_layout` / `house_bands`); câu nhắc mới sketch_row_too_narrow, entrance_wrong_side_garage, door_outside_on_boundary_garage.
-version: '9.11.0'
+version: '9.12.0'
 
 program:
   system: |
@@ -317,6 +317,10 @@ floor_level:
     # Cùng lỗi, khi chương trình đếm được số ô bản phác (`withSketchCells`, lượt đo 011b4adc).
     arrange_room_below_brief_area_tight: '- Room "{room}" came out at {area_m2} m² from {cells} sketch cells but the client requires at least {min_m2} m²; it needs at least {need_cells} cells, and no single neighbour ({tight}) can give that many without dropping below its own minimum — the stair, lift and corridors give none, and pushing into them breaks them. Rearrange the bands of this storey instead so the missing cells come from the rooms with spare area: {spare}; rooms the client gave no minimum may also shrink below the target you set for them. Keep the stair and lift cells where they are.'
     arrange_room_below_brief_area_cells: '- Room "{room}" came out at {area_m2} m² from {cells} sketch cells but the client requires at least {min_m2} m²; draw it with at least {need_cells} cells (take them from a neighbour that has spare area) and give it more target area.'
+    # Chương trình tìm được chỗ lấy ô trên bản phác (`shortDonor`, T174, lượt thật 1dd74b99): nói đích danh phòng nhường và
+    # cách lấy — câu `_tight` chỉ kể phòng dư ở xa, ba lượt mô hình nộp lại cùng phòng 15 ô.
+    arrange_room_below_brief_area_from: '- Room "{room}" came out at {area_m2} m² from {cells} sketch cells but the client requires at least {min_m2} m²; it needs at least {need_cells} cells. Take {give_lines} ({give_cells} cells) from "{donor}" right next to it ({donor_spare}, it stays above its own minimum), and give "{room}" more target area.'
+    arrange_room_below_brief_area_chain: '- Room "{room}" came out at {area_m2} m² from {cells} sketch cells but the client requires at least {min_m2} m²; it needs at least {need_cells} cells. Its neighbours are at their minimum, but "{donor}" beyond {via} has spare area ({donor_spare}): shift {via} by {give_lines} toward "{donor}" (same size, same width), so "{donor}" gives up {give_cells} cells and "{room}" grows into the freed line. Give "{room}" more target area; keep the stair and lift cells where they are.'
     arrange_stair_too_short: '- The stair "{room}" is only {have_m} m {dir} but its steps need {need_m} m; draw the stair {fix}.'
     arrange_anchor_conflict: '- The stair "{room}" must sit exactly over the stair below; draw it on the same cells as the storey below.'
     arrange_no_parti: '- No arrangement could be built from this storey; redraw the sketch in clear bands of rooms.'
@@ -1150,18 +1154,10 @@ sheet_image:
     Title block lines, in this order and with nothing added:
     {title_block}
     {style}
-  # Mã phong cách đầu bài → một câu tiếng Anh nối vào cuối lời dẫn. Thiếu mã nào thì bỏ hẳn mệnh
-  # đề, không thay bằng câu mặc định: đoán phong cách hộ khách là việc của kiến trúc sư.
-  styles:
-    hien_dai: 'Interior styling: contemporary Vietnamese, clean lines, light neutral palette.'
-    tan_co_dien: 'Interior styling: neo-classical, moulded panelling, warm creams and golds.'
-    indochine: 'Interior styling: Indochine, dark timber, rattan, encaustic floor tiles.'
-    mai_thai: 'Interior styling: relaxed contemporary under a pitched roof, warm timber tones.'
-    toi_gian: 'Interior styling: minimalist, very few pieces, white and pale timber.'
-    nhiet_doi: 'Interior styling: tropical, abundant indoor planting, rattan and light timber.'
-    dia_trung_hai: 'Interior styling: Mediterranean, white walls, terracotta, arched openings.'
-    co_dien: 'Interior styling: classical, symmetrical furniture layout, rich timber and fabric.'
-    bac_au: 'Interior styling: Scandinavian, pale timber, soft greys, uncluttered.'
+  # Bảng `styles` (mã phong cách → một câu tiếng Anh nối vào cuối lời dẫn) KHÔNG còn ở đây từ T175:
+  # Worker dựng nó từ `prompt.interior` của `kb/style_catalogue.yaml` lúc nạp (`withStylePrompts`).
+  # Thiếu mã nào thì bỏ hẳn mệnh đề, không thay bằng câu mặc định: đoán phong cách hộ khách là việc
+  # của kiến trúc sư.
   # Câu trình duyệt in ĐÈ LÊN PIXEL. Tiếng Việt có chủ đích — nó đọc cho người xem tấm ảnh, không
   # đọc cho mô hình. Bản đầy đủ hơn hiện bằng chữ trong trang là `AI_DISCLAIMERS.aiSheetImage`.
   watermark: 'Ảnh minh hoạ do AI vẽ — không đo được trên hình'
@@ -1280,18 +1276,10 @@ facade_image:
     Balcony railing: {railing}
     Gate and fence: {gate_fence}
     Decorative elements already in the drawing: {elements}
-  # Mã phong cách → một cụm tiếng Anh cho MẶT NGOÀI (khác `sheet_image.styles`, vốn nói về nội thất).
+  # Bảng `styles` (mã phong cách → cụm tiếng Anh cho MẶT NGOÀI) KHÔNG còn ở đây từ T175: Worker dựng
+  # nó từ `kb/style_catalogue.yaml` lúc nạp — `prompt.exterior` kèm chi tiết nên có / nên tránh
+  # (`exteriorStylePhrase`). Dùng chung cho ảnh mặt đứng, ảnh phối cảnh và ảnh từ bản vẽ kỹ sư.
   # Thiếu mã thì ghi «as the materials suggest» — không đoán phong cách hộ.
-  styles:
-    hien_dai: 'contemporary Vietnamese house, clean lines, flat planes'
-    tan_co_dien: 'neo-classical Vietnamese villa, mouldings and cornices'
-    indochine: 'Indochine style, shutters, arches and warm tones'
-    mai_thai: 'house with a steep Thai-style tiled roof'
-    toi_gian: 'minimalist house, very few elements, plain surfaces'
-    nhiet_doi: 'tropical modern house, deep overhangs, timber and planting'
-    dia_trung_hai: 'Mediterranean house, white render and terracotta'
-    co_dien: 'classical symmetrical villa'
-    bac_au: 'Scandinavian-inspired house, pale timber and simple forms'
   # Mã kiểu mái (hợp đồng `ai-facade-concept`) → cụm tiếng Anh. Thiếu mã thì ghép nguyên mã.
   roofs:
     flat: 'flat roof behind a parapet'

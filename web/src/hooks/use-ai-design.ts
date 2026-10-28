@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { AI_PREVIEW_WIDTH, type AiFacadeBrief } from '@nvg/shared/design';
+import { AI_PREVIEW_WIDTH, type AiFacadeBrief, type StyleCodeGroup } from '@nvg/shared/design';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { DesignApiError, designApi, designApiFile } from '@/lib/design-api';
 import { toUserMessage } from '@/hooks/use-error-message';
@@ -815,6 +815,8 @@ export interface AiFacadeView {
   elements: string[];
   rationale: string;
   generator: { provider: string; model: string; route: string; repaired?: boolean };
+  /** Cảnh báo lúc ghép — mã AI chọn ngoài phong cách đầu bài (T175). Vắng ở máy chủ cũ. */
+  warnings?: Array<{ code: string; message: string }>;
   /**
    * Điểm «giống cách NVG vẽ đến đâu» (T63). Vắng ở máy chủ cũ và ở bản mặt đứng dựng trước khi có
    * thước — khi ấy màn hình không hiện panel điểm, không hiện 0.
@@ -863,6 +865,8 @@ export interface AiFacadeScore {
     /** Mô hình quyết được tiêu chí này không — `false` = do mặt bằng, phiếu, hoặc quy ước cấu tạo. */
     doAi: boolean;
     why: string | null;
+    /** Chi tiết làm mất điểm (T175 — «còn thiếu: phào chỉ…»). Vắng ở máy chủ cũ. */
+    detail?: string;
   }>;
 }
 
@@ -992,6 +996,20 @@ export interface FacadeOption {
   label: string;
 }
 
+/** Một phong cách của bộ đặc trưng — phần màn hình cần (T175). */
+export interface FacadeStyleView {
+  code: string;
+  label: string;
+  description: string;
+  /** `de_xuat` = bản đề xuất, chờ kiến trúc sư NVO duyệt. */
+  status: string;
+  must: string[];
+  prefer: string[];
+  avoid: string[];
+  /** Mã hợp phong cách theo nhóm của danh mục; nhóm vắng = không giới hạn. */
+  allowed: Partial<Record<StyleCodeGroup, string[]>>;
+}
+
 /** Danh mục cho các ô chọn của phiếu — đọc từ `kb/facade_vocabulary.yaml` qua Worker. */
 export interface FacadeVocabularyView {
   roofTypes: FacadeOption[];
@@ -1006,6 +1024,11 @@ export interface FacadeVocabularyView {
   fenceTypes: FacadeOption[];
   gateTypes: FacadeOption[];
   elements: FacadeOption[];
+  /**
+   * Bộ đặc trưng phong cách (`kb/style_catalogue.yaml`, T175) — phiếu lọc ô chọn theo phong cách. Vắng
+   * ở Worker cũ hơn T175: phiếu hiện mọi lựa chọn như trước.
+   */
+  styles?: FacadeStyleView[];
   /** Giá trị dùng khi kỹ sư để trống — hiện làm chữ gợi ý. */
   defaults: {
     groundRaiseCm: number | null;

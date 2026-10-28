@@ -13,8 +13,8 @@
  */
 
 import { formatDateTime, formatNumber } from '@nvg/shared';
-import { STYLE_LABEL, STYLES, type AiFacadeBrief } from '@nvg/shared/design';
-import { useEffect, useMemo, useState } from 'react';
+import { STYLE_LABEL, STYLES, type AiFacadeBrief, type StyleCodeGroup } from '@nvg/shared/design';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FIELD_BOX, TEXTAREA_BOX } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,7 @@ import {
   useSaveFacadeBrief,
   type FacadeBriefState,
   type FacadeOption,
+  type FacadeStyleView,
   type FacadeVocabularyView,
 } from '@/hooks/use-ai-design';
 import { DesignApiError } from '@/lib/design-api';
@@ -34,6 +35,32 @@ import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
 import { Chip, Panel } from '../tk-ui';
 
 const AI_PICKS = 'Để AI đề xuất';
+
+/**
+ * Bộ lọc ô chọn theo phong cách (T175). `allowed(group)` = tập mã hợp phong cách của nhóm, `null` =
+ * không lọc (chưa chọn phong cách, nhóm không giới hạn, hoặc kỹ sư bật «Hiện mọi lựa chọn»).
+ * Ô chọn tự đọc ngữ cảnh này nên không phải truyền qua từng tầng.
+ */
+interface StyleFilter {
+  spec: FacadeStyleView | null;
+  showAll: boolean;
+  allowed: (group: StyleCodeGroup | undefined) => ReadonlySet<string> | null;
+}
+const StyleFilterContext = createContext<StyleFilter>({
+  spec: null,
+  showAll: true,
+  allowed: () => null,
+});
+
+/** Mã ngoài phong cách — luôn so theo tập của phong cách, kể cả khi đang hiện mọi lựa chọn. */
+function outsideStyle(
+  filter: StyleFilter,
+  group: StyleCodeGroup | undefined,
+  value: string | null,
+): boolean {
+  const list = group ? filter.spec?.allowed[group] : undefined;
+  return Boolean(value && list && !list.includes(value));
+}
 /** Ô bề rộng khi chưa có phương án mặt bằng (biểu mẫu đầu bài): bề rộng là của mặt bằng. */
 const BY_PLAN = 'Lấy theo phương án mặt bằng';
 
@@ -262,6 +289,7 @@ export function FacadeBriefFields({
   vocab,
   plan,
   withStyle = true,
+  briefStyle = null,
 }: {
   draft: AiFacadeBrief;
   onChange: (next: AiFacadeBrief) => void;
@@ -269,7 +297,23 @@ export function FacadeBriefFields({
   plan: FacadeBriefState['plan'];
   /** Đầu bài đã có câu phong cách riêng — ở đó bỏ ô này đi, một câu hỏi một chỗ. */
   withStyle?: boolean;
+  /** Phong cách đã chọn ở câu riêng của đầu bài — dùng khi `withStyle = false`. */
+  briefStyle?: string | null;
 }): React.ReactElement {
+  const [showAll, setShowAll] = useState(false);
+  const styleCode = withStyle ? draft.style : briefStyle;
+  const spec = vocab.styles?.find((s) => s.code === styleCode) ?? null;
+  const filter = useMemo<StyleFilter>(
+    () => ({
+      spec,
+      showAll,
+      allowed: (group) => {
+        const list = group && !showAll ? spec?.allowed[group] : undefined;
+        return list ? new Set(list) : null;
+      },
+    }),
+    [spec, showAll],
+  );
   const set = (mutate: (b: AiFacadeBrief) => void) => {
     const next = structuredClone(draft);
     mutate(next);
@@ -278,342 +322,438 @@ export function FacadeBriefFields({
   return (
     // `@container`: các nhóm chia hai cột theo bề ngang CHỖ ĐẶT (cột trái hẹp của bước mặt
     // đứng, hay cả bề ngang trong đầu bài), không theo bề ngang màn hình.
-    <div className="@container space-y-2">
-      <Group title="Chung" open>
-        {withStyle && (
-          <Select
-            label="Phong cách"
-            value={draft.style}
-            options={STYLES.map((code) => ({ code, label: STYLE_LABEL[code] }))}
-            onChange={(v) => set((b) => (b.style = v as AiFacadeBrief['style']))}
-          />
-        )}
-        <NumberField
-          label="Cốt sàn tầng 1 cao hơn vỉa hè (cm)"
-          value={draft.ground_raise_cm}
-          fallback={vocab.defaults.groundRaiseCm}
-          onChange={(v) => set((b) => (b.ground_raise_cm = v))}
-        />
-      </Group>
-
-      <Group title="Mái" open>
-        <Select
-          label="Loại mái"
-          value={draft.roof.type}
-          options={vocab.roofTypes}
-          onChange={(v) => set((b) => (b.roof.type = v as AiFacadeBrief['roof']['type']))}
-        />
-        <Select
-          label="Vật liệu mái"
-          value={draft.roof.material}
-          options={vocab.roofMaterials}
-          onChange={(v) => set((b) => (b.roof.material = v))}
-        />
-        <ColourSelect
-          label="Màu mái"
-          value={draft.roof.colour}
-          colours={vocab.colours}
-          onChange={(v) => set((b) => (b.roof.colour = v))}
-        />
-        <NumberField
-          label="Độ dốc mái (độ)"
-          value={draft.roof.pitch_deg}
-          fallback={null}
-          onChange={(v) => set((b) => (b.roof.pitch_deg = v))}
-        />
-        <NumberField
-          label="Tường chắn mái cao (cm, mái bằng)"
-          value={draft.roof.parapet_cm}
-          fallback={vocab.defaults.parapetCm}
-          onChange={(v) => set((b) => (b.roof.parapet_cm = v))}
-        />
-      </Group>
-
-      <Group title="Màu sơn" open>
-        {(
-          [
-            ['primary', 'Màu chính'],
-            ['secondary', 'Màu phụ'],
-            ['accent', 'Màu nhấn'],
-          ] as const
-        ).map(([key, label]) => (
-          <ColourSelect
-            key={key}
-            label={label}
-            value={draft.palette[key]}
-            colours={vocab.colours}
-            onChange={(v) => set((b) => (b.palette[key] = v))}
-          />
-        ))}
-      </Group>
-
-      <Group title="Vật liệu mặt tiền">
-        {(
-          [
-            ['body', 'Thân nhà'],
-            ['base', 'Phần đế, chân tường'],
-            ['accent', 'Mảng nhấn'],
-            ['trim', 'Chỉ, phào, khung'],
-          ] as const
-        ).map(([zone, label]) => (
-          <div key={zone} className="contents">
+    <StyleFilterContext.Provider value={filter}>
+      <div className="@container space-y-2">
+        {spec && <StyleGuide spec={spec} showAll={showAll} onShowAll={setShowAll} />}
+        <Group title="Chung" open>
+          {withStyle && (
             <Select
-              label={`${label} — vật liệu`}
-              value={draft.surfaces[zone].material}
-              options={vocab.materials}
-              onChange={(v) => set((b) => (b.surfaces[zone].material = v))}
+              label="Phong cách"
+              value={draft.style}
+              options={STYLES.map((code) => ({ code, label: STYLE_LABEL[code] }))}
+              onChange={(v) => set((b) => (b.style = v as AiFacadeBrief['style']))}
             />
+          )}
+          <NumberField
+            label="Cốt sàn tầng 1 cao hơn vỉa hè (cm)"
+            value={draft.ground_raise_cm}
+            fallback={vocab.defaults.groundRaiseCm}
+            onChange={(v) => set((b) => (b.ground_raise_cm = v))}
+          />
+        </Group>
+
+        <Group title="Mái" open>
+          <Select
+            label="Loại mái"
+            value={draft.roof.type}
+            options={vocab.roofTypes}
+            group="roof_types"
+            onChange={(v) => set((b) => (b.roof.type = v as AiFacadeBrief['roof']['type']))}
+          />
+          <Select
+            label="Vật liệu mái"
+            value={draft.roof.material}
+            options={vocab.roofMaterials}
+            group="roof_materials"
+            onChange={(v) => set((b) => (b.roof.material = v))}
+          />
+          <ColourSelect
+            label="Màu mái"
+            value={draft.roof.colour}
+            colours={vocab.colours}
+            onChange={(v) => set((b) => (b.roof.colour = v))}
+          />
+          <NumberField
+            label="Độ dốc mái (độ)"
+            value={draft.roof.pitch_deg}
+            fallback={null}
+            onChange={(v) => set((b) => (b.roof.pitch_deg = v))}
+          />
+          <NumberField
+            label="Tường chắn mái cao (cm, mái bằng)"
+            value={draft.roof.parapet_cm}
+            fallback={vocab.defaults.parapetCm}
+            onChange={(v) => set((b) => (b.roof.parapet_cm = v))}
+          />
+        </Group>
+
+        <Group title="Màu sơn" open>
+          {(
+            [
+              ['primary', 'Màu chính'],
+              ['secondary', 'Màu phụ'],
+              ['accent', 'Màu nhấn'],
+            ] as const
+          ).map(([key, label]) => (
             <ColourSelect
-              label={`${label} — màu`}
-              value={draft.surfaces[zone].colour}
+              key={key}
+              label={label}
+              value={draft.palette[key]}
               colours={vocab.colours}
-              onChange={(v) => set((b) => (b.surfaces[zone].colour = v))}
+              onChange={(v) => set((b) => (b.palette[key] = v))}
             />
-          </div>
-        ))}
-      </Group>
+          ))}
+        </Group>
 
-      <Group title="Cửa chính (tầng 1)" open>
-        <DoorFields
-          door={draft.main_door}
-          vocab={vocab}
-          fallbackH={vocab.defaults.doorHeightCm}
-          width={
-            plan === null
-              ? BY_PLAN
-              : plan.mainDoorW
-                ? `${formatNumber(plan.mainDoorW * 10)} mm`
-                : 'Mặt bằng chưa có cửa chính mặt tiền'
-          }
-          onChange={(door) => set((b) => (b.main_door = door))}
-        />
-      </Group>
+        <Group title="Vật liệu mặt tiền">
+          {(
+            [
+              ['body', 'Thân nhà'],
+              ['base', 'Phần đế, chân tường'],
+              ['accent', 'Mảng nhấn'],
+              ['trim', 'Chỉ, phào, khung'],
+            ] as const
+          ).map(([zone, label]) => (
+            <div key={zone} className="contents">
+              <Select
+                label={`${label} — vật liệu`}
+                value={draft.surfaces[zone].material}
+                options={vocab.materials}
+                group="materials"
+                onChange={(v) => set((b) => (b.surfaces[zone].material = v))}
+              />
+              <ColourSelect
+                label={`${label} — màu`}
+                value={draft.surfaces[zone].colour}
+                colours={vocab.colours}
+                onChange={(v) => set((b) => (b.surfaces[zone].colour = v))}
+              />
+            </div>
+          ))}
+        </Group>
 
-      <Group title="Cửa phụ, cửa ra ban công">
-        <DoorFields
-          door={draft.side_door}
-          vocab={vocab}
-          fallbackH={vocab.defaults.doorHeightCm}
-          width={
-            plan === null
-              ? BY_PLAN
-              : plan.sideDoorWs.length
-                ? plan.sideDoorWs.map((w) => `${formatNumber(w * 10)} mm`).join(' · ')
-                : 'Mặt tiền không có cửa phụ'
-          }
-          onChange={(door) => set((b) => (b.side_door = door))}
-        />
-      </Group>
+        <Group title="Cửa chính (tầng 1)" open>
+          <DoorFields
+            door={draft.main_door}
+            vocab={vocab}
+            fallbackH={vocab.defaults.doorHeightCm}
+            width={
+              plan === null
+                ? BY_PLAN
+                : plan.mainDoorW
+                  ? `${formatNumber(plan.mainDoorW * 10)} mm`
+                  : 'Mặt bằng chưa có cửa chính mặt tiền'
+            }
+            onChange={(door) => set((b) => (b.main_door = door))}
+          />
+        </Group>
 
-      <Group title="Cửa sổ">
-        <Select
-          label="Vật liệu khung"
-          value={draft.window.material}
-          options={vocab.doorMaterials}
-          onChange={(v) => set((b) => (b.window.material = v))}
-        />
-        <ColourSelect
-          label="Màu khung"
-          value={draft.window.colour}
-          colours={vocab.colours}
-          onChange={(v) => set((b) => (b.window.colour = v))}
-        />
-        <Select
-          label="Loại kính"
-          value={draft.window.glass}
-          options={vocab.glassTypes}
-          onChange={(v) => set((b) => (b.window.glass = v))}
-        />
-      </Group>
+        <Group title="Cửa phụ, cửa ra ban công">
+          <DoorFields
+            door={draft.side_door}
+            vocab={vocab}
+            fallbackH={vocab.defaults.doorHeightCm}
+            width={
+              plan === null
+                ? BY_PLAN
+                : plan.sideDoorWs.length
+                  ? plan.sideDoorWs.map((w) => `${formatNumber(w * 10)} mm`).join(' · ')
+                  : 'Mặt tiền không có cửa phụ'
+            }
+            onChange={(door) => set((b) => (b.side_door = door))}
+          />
+        </Group>
 
-      <Group title="Cửa để xe">
-        <Select
-          label="Kiểu cửa"
-          value={draft.garage_door.type}
-          options={vocab.garageDoorTypes}
-          onChange={(v) => set((b) => (b.garage_door.type = v))}
-        />
-        <Select
-          label="Vật liệu"
-          value={draft.garage_door.material}
-          options={vocab.doorMaterials}
-          onChange={(v) => set((b) => (b.garage_door.material = v))}
-        />
-        <ColourSelect
-          label="Màu"
-          value={draft.garage_door.colour}
-          colours={vocab.colours}
-          onChange={(v) => set((b) => (b.garage_door.colour = v))}
-        />
-        <ReadOnly
-          label="Bề rộng"
-          value={
-            plan === null
-              ? BY_PLAN
-              : plan.garageW
-                ? `${formatNumber(plan.garageW * 10)} mm — theo mặt bằng`
-                : 'Mặt tiền không có cửa để xe'
-          }
-        />
-      </Group>
+        <Group title="Cửa sổ">
+          <Select
+            label="Vật liệu khung"
+            value={draft.window.material}
+            options={vocab.doorMaterials}
+            group="door_materials"
+            onChange={(v) => set((b) => (b.window.material = v))}
+          />
+          <ColourSelect
+            label="Màu khung"
+            value={draft.window.colour}
+            colours={vocab.colours}
+            onChange={(v) => set((b) => (b.window.colour = v))}
+          />
+          <Select
+            label="Loại kính"
+            value={draft.window.glass}
+            options={vocab.glassTypes}
+            onChange={(v) => set((b) => (b.window.glass = v))}
+          />
+        </Group>
 
-      {/* Nhóm này LUÔN hiện, kể cả khi phương án mặt bằng chưa có ban công nào ra mặt trước.
+        <Group title="Cửa để xe">
+          <Select
+            label="Kiểu cửa"
+            value={draft.garage_door.type}
+            options={vocab.garageDoorTypes}
+            onChange={(v) => set((b) => (b.garage_door.type = v))}
+          />
+          <Select
+            label="Vật liệu"
+            value={draft.garage_door.material}
+            options={vocab.doorMaterials}
+            group="door_materials"
+            onChange={(v) => set((b) => (b.garage_door.material = v))}
+          />
+          <ColourSelect
+            label="Màu"
+            value={draft.garage_door.colour}
+            colours={vocab.colours}
+            onChange={(v) => set((b) => (b.garage_door.colour = v))}
+          />
+          <ReadOnly
+            label="Bề rộng"
+            value={
+              plan === null
+                ? BY_PLAN
+                : plan.garageW
+                  ? `${formatNumber(plan.garageW * 10)} mm — theo mặt bằng`
+                  : 'Mặt tiền không có cửa để xe'
+            }
+          />
+        </Group>
+
+        {/* Nhóm này LUÔN hiện, kể cả khi phương án mặt bằng chưa có ban công nào ra mặt trước.
           Bản trước ẩn hẳn nó, và ẩn LẶNG LẼ — kỹ sư mở phiếu ra không thấy mục lan can đâu mà
           cũng không biết vì sao (Haan báo 20/09/2026). Nhóm cổng và tường rào bên dưới cũng bị
           ẩn theo điều kiện, nhưng nó NÓI ra lý do; chỗ này thì không. */}
-      <Group title="Lan can ban công">
-        {plan !== null && plan.balconies === 0 && (
-          <p className="col-span-full text-fg-subtle">
-            Phương án mặt bằng đang chọn chưa có ban công nào ra mặt trước, nên mặt đứng chưa có lan
-            can để vẽ. Điền sẵn ở đây vẫn được — các ô này áp dụng ngay khi mặt bằng có ban công.
-          </p>
-        )}
-        <Select
-          label="Kiểu lan can"
-          value={draft.balcony.railing}
-          options={vocab.railings}
-          onChange={(v) => set((b) => (b.balcony.railing = v))}
-        />
-        <Select
-          label="Vật liệu lan can"
-          value={draft.balcony.material ?? null}
-          options={vocab.materials}
-          onChange={(v) => set((b) => (b.balcony.material = v))}
-        />
-        <ColourSelect
-          label="Màu lan can"
-          value={draft.balcony.colour}
-          colours={vocab.colours}
-          onChange={(v) => set((b) => (b.balcony.colour = v))}
-        />
-        {/* Chiều cao lan can là số DUY NHẤT của nhóm Lan can mà thước chấm đo (tiêu chí R1), và
+        <Group title="Lan can ban công">
+          {plan !== null && plan.balconies === 0 && (
+            <p className="col-span-full text-fg-subtle">
+              Phương án mặt bằng đang chọn chưa có ban công nào ra mặt trước, nên mặt đứng chưa có
+              lan can để vẽ. Điền sẵn ở đây vẫn được — các ô này áp dụng ngay khi mặt bằng có ban
+              công.
+            </p>
+          )}
+          <Select
+            label="Kiểu lan can"
+            value={draft.balcony.railing}
+            options={vocab.railings}
+            group="railings"
+            onChange={(v) => set((b) => (b.balcony.railing = v))}
+          />
+          <Select
+            label="Vật liệu lan can"
+            value={draft.balcony.material ?? null}
+            options={vocab.materials}
+            group="materials"
+            onChange={(v) => set((b) => (b.balcony.material = v))}
+          />
+          <ColourSelect
+            label="Màu lan can"
+            value={draft.balcony.colour}
+            colours={vocab.colours}
+            onChange={(v) => set((b) => (b.balcony.colour = v))}
+          />
+          {/* Chiều cao lan can là số DUY NHẤT của nhóm Lan can mà thước chấm đo (tiêu chí R1), và
               nó do chương trình đặt chứ không do mô hình chọn — nên điền ở đây là cách duy nhất
               đổi nó cho một hồ sơ. Mặc định 110 cm của quy ước cấu tạo đang lệch 80–90 cm đo được
               trên hồ sơ thật (chờ Haan quyết, Q-48). */}
-        <NumberField
-          label="Chiều cao lan can (cm)"
-          value={draft.balcony.h_cm ?? null}
-          fallback={vocab.defaults.railingHCm}
-          onChange={(v) => set((b) => (b.balcony.h_cm = v))}
-        />
-      </Group>
-
-      {plan?.frontYard === false ? (
-        <p className="px-1 text-fg-subtle">
-          Nhà sát ranh mặt tiền, không có sân trước — không có cổng và tường rào trên mặt đứng.
-        </p>
-      ) : (
-        <Group title="Cổng và tường rào">
-          <Select
-            label="Có làm cổng"
-            value={draft.gate.wanted === null ? null : draft.gate.wanted ? 'co' : 'khong'}
-            options={[
-              { code: 'co', label: 'Có cổng' },
-              { code: 'khong', label: 'Không làm cổng' },
-            ]}
-            onChange={(v) => set((b) => (b.gate.wanted = v === null ? null : v === 'co'))}
-          />
-          {draft.gate.wanted !== false && (
-            <>
-              <Select
-                label="Kiểu cổng"
-                value={draft.gate.type}
-                options={vocab.gateTypes}
-                onChange={(v) => set((b) => (b.gate.type = v as AiFacadeBrief['gate']['type']))}
-              />
-              <Select
-                label="Vật liệu cổng"
-                value={draft.gate.material}
-                options={vocab.materials}
-                onChange={(v) => set((b) => (b.gate.material = v))}
-              />
-              <ColourSelect
-                label="Màu cổng"
-                value={draft.gate.colour}
-                colours={vocab.colours}
-                onChange={(v) => set((b) => (b.gate.colour = v))}
-              />
-              <NumberField
-                label="Cổng cao (cm)"
-                value={draft.gate.h_cm}
-                fallback={null}
-                onChange={(v) => set((b) => (b.gate.h_cm = v))}
-              />
-            </>
-          )}
-          <Select
-            label="Kiểu tường rào"
-            value={draft.fence.type}
-            options={vocab.fenceTypes}
-            onChange={(v) => set((b) => (b.fence.type = v))}
-          />
-          <Select
-            label="Vật liệu tường rào"
-            value={draft.fence.material}
-            options={vocab.materials}
-            onChange={(v) => set((b) => (b.fence.material = v))}
-          />
-          <ColourSelect
-            label="Màu tường rào"
-            value={draft.fence.colour}
-            colours={vocab.colours}
-            onChange={(v) => set((b) => (b.fence.colour = v))}
-          />
           <NumberField
-            label="Tường rào cao (cm)"
-            value={draft.fence.h_cm}
-            fallback={null}
-            onChange={(v) => set((b) => (b.fence.h_cm = v))}
+            label="Chiều cao lan can (cm)"
+            value={draft.balcony.h_cm ?? null}
+            fallback={vocab.defaults.railingHCm}
+            onChange={(v) => set((b) => (b.balcony.h_cm = v))}
           />
         </Group>
-      )}
 
-      <Group title="Chi tiết trang trí mong muốn">
-        <fieldset className="col-span-full">
-          <legend className="text-fg-subtle">
-            Chọn những chi tiết phải có. Không chọn gì thì AI đề xuất.
-          </legend>
-          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-2">
-            {vocab.elements.map((element) => (
-              <label key={element.code} className="flex min-h-10 items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={draft.decorations.includes(
-                    element.code as AiFacadeBrief['decorations'][number],
-                  )}
-                  onChange={(event) =>
-                    set((b) => {
-                      const code = element.code as AiFacadeBrief['decorations'][number];
-                      b.decorations = event.target.checked
-                        ? [...b.decorations, code]
-                        : b.decorations.filter((d) => d !== code);
-                    })
-                  }
+        {plan?.frontYard === false ? (
+          <p className="px-1 text-fg-subtle">
+            Nhà sát ranh mặt tiền, không có sân trước — không có cổng và tường rào trên mặt đứng.
+          </p>
+        ) : (
+          <Group title="Cổng và tường rào">
+            <Select
+              label="Có làm cổng"
+              value={draft.gate.wanted === null ? null : draft.gate.wanted ? 'co' : 'khong'}
+              options={[
+                { code: 'co', label: 'Có cổng' },
+                { code: 'khong', label: 'Không làm cổng' },
+              ]}
+              onChange={(v) => set((b) => (b.gate.wanted = v === null ? null : v === 'co'))}
+            />
+            {draft.gate.wanted !== false && (
+              <>
+                <Select
+                  label="Kiểu cổng"
+                  value={draft.gate.type}
+                  options={vocab.gateTypes}
+                  group="gate_types"
+                  onChange={(v) => set((b) => (b.gate.type = v as AiFacadeBrief['gate']['type']))}
                 />
-                {element.label}
-              </label>
-            ))}
-          </div>
-        </fieldset>
-      </Group>
+                <Select
+                  label="Vật liệu cổng"
+                  value={draft.gate.material}
+                  options={vocab.materials}
+                  group="materials"
+                  onChange={(v) => set((b) => (b.gate.material = v))}
+                />
+                <ColourSelect
+                  label="Màu cổng"
+                  value={draft.gate.colour}
+                  colours={vocab.colours}
+                  onChange={(v) => set((b) => (b.gate.colour = v))}
+                />
+                <NumberField
+                  label="Cổng cao (cm)"
+                  value={draft.gate.h_cm}
+                  fallback={null}
+                  onChange={(v) => set((b) => (b.gate.h_cm = v))}
+                />
+              </>
+            )}
+            <Select
+              label="Kiểu tường rào"
+              value={draft.fence.type}
+              options={vocab.fenceTypes}
+              group="fence_types"
+              onChange={(v) => set((b) => (b.fence.type = v))}
+            />
+            <Select
+              label="Vật liệu tường rào"
+              value={draft.fence.material}
+              options={vocab.materials}
+              group="materials"
+              onChange={(v) => set((b) => (b.fence.material = v))}
+            />
+            <ColourSelect
+              label="Màu tường rào"
+              value={draft.fence.colour}
+              colours={vocab.colours}
+              onChange={(v) => set((b) => (b.fence.colour = v))}
+            />
+            <NumberField
+              label="Tường rào cao (cm)"
+              value={draft.fence.h_cm}
+              fallback={null}
+              onChange={(v) => set((b) => (b.fence.h_cm = v))}
+            />
+          </Group>
+        )}
 
-      <Group title="Ghi chú" open>
-        <label className="col-span-full block max-w-2xl">
-          <span className="block text-fg-subtle">Yêu cầu khác của kỹ sư</span>
-          <textarea
-            className={cn(TEXTAREA_BOX, 'mt-1 min-h-20')}
-            maxLength={1000}
-            value={draft.notes ?? ''}
-            onChange={(event) => set((b) => (b.notes = event.target.value || null))}
-          />
-          <span className="mt-1 block text-xs text-fg-subtle">
-            Nội dung này được gửi cho nhà cung cấp mô hình AI — không ghi tên khách, số điện thoại,
-            địa chỉ.
+        <Group title="Chi tiết trang trí mong muốn">
+          <fieldset className="col-span-full">
+            <legend className="text-fg-subtle">
+              Chọn những chi tiết phải có. Không chọn gì thì AI đề xuất.
+            </legend>
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-2">
+              {vocab.elements.map((element) => (
+                <label key={element.code} className="flex min-h-10 items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={draft.decorations.includes(
+                      element.code as AiFacadeBrief['decorations'][number],
+                    )}
+                    onChange={(event) =>
+                      set((b) => {
+                        const code = element.code as AiFacadeBrief['decorations'][number];
+                        b.decorations = event.target.checked
+                          ? [...b.decorations, code]
+                          : b.decorations.filter((d) => d !== code);
+                      })
+                    }
+                  />
+                  {element.label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        </Group>
+
+        <Group title="Ghi chú" open>
+          <label className="col-span-full block max-w-2xl">
+            <span className="block text-fg-subtle">Yêu cầu khác của kỹ sư</span>
+            <textarea
+              className={cn(TEXTAREA_BOX, 'mt-1 min-h-20')}
+              maxLength={1000}
+              value={draft.notes ?? ''}
+              onChange={(event) => set((b) => (b.notes = event.target.value || null))}
+            />
+            <span className="mt-1 block text-xs text-fg-subtle">
+              Nội dung này được gửi cho nhà cung cấp mô hình AI — không ghi tên khách, số điện
+              thoại, địa chỉ.
+            </span>
+          </label>
+        </Group>
+      </div>
+    </StyleFilterContext.Provider>
+  );
+}
+
+/**
+ * Khung phong cách đầu phiếu (T175): mô tả, chi tiết nhận diện, chi tiết nên tránh, và công tắc «Hiện
+ * mọi lựa chọn». Bộ đặc trưng là ĐỀ XUẤT chờ kiến trúc sư NVO duyệt — khung nói rõ điều đó.
+ */
+function StyleGuide({
+  spec,
+  showAll,
+  onShowAll,
+}: {
+  spec: FacadeStyleView;
+  showAll: boolean;
+  onShowAll: (value: boolean) => void;
+}): React.ReactElement {
+  return (
+    <div className="rounded-md border border-tk-line p-3">
+      <p>
+        <span className="font-medium">Phong cách {spec.label}</span>
+        {spec.status === 'de_xuat' && (
+          <span className="text-fg-subtle">
+            {' '}
+            · bộ đặc trưng đề xuất, chờ kiến trúc sư NVO duyệt
           </span>
-        </label>
-      </Group>
+        )}
+      </p>
+      <p className="mt-1 text-fg-subtle">{spec.description}</p>
+      {spec.must.length > 0 && (
+        <p className="mt-1">
+          <span className="text-fg-subtle">Chi tiết nhận diện: </span>
+          {spec.must.join('; ')}.
+        </p>
+      )}
+      {spec.avoid.length > 0 && (
+        <p className="mt-1">
+          <span className="text-fg-subtle">Nên tránh: </span>
+          {spec.avoid.join('; ')}.
+        </p>
+      )}
+      <label className="mt-2 flex min-h-10 items-center gap-2">
+        <input
+          type="checkbox"
+          checked={showAll}
+          onChange={(event) => onShowAll(event.target.checked)}
+        />
+        Hiện mọi lựa chọn
+        <span className="text-fg-subtle">
+          — mặc định các ô chỉ liệt kê vật liệu, màu, kiểu hợp phong cách này
+        </span>
+      </label>
     </div>
   );
+}
+
+/** Dòng cảnh báo dưới ô đang giữ một mã ngoài phong cách — không chặn lưu (T52). */
+function OutsideStyleNote({
+  group,
+  value,
+}: {
+  group: StyleCodeGroup | undefined;
+  value: string | null;
+}): React.ReactElement | null {
+  const filter = useContext(StyleFilterContext);
+  if (!outsideStyle(filter, group, value)) return null;
+  return (
+    <span className="mt-1 block text-tk-am-fg">
+      Không hợp phong cách {filter.spec!.label} đã chọn.
+    </span>
+  );
+}
+
+/** Lựa chọn còn hiện sau khi lọc: mã hợp phong cách, cộng mã đang chọn (không giấu giá trị đã có). */
+function useStyleOptions<T extends { code: string }>(
+  options: readonly T[],
+  group: StyleCodeGroup | undefined,
+  value: string | null,
+): readonly T[] {
+  const filter = useContext(StyleFilterContext);
+  const allowed = filter.allowed(group);
+  if (!allowed) return options;
+  return options.filter((o) => allowed.has(o.code) || o.code === value);
 }
 
 /** Một nhóm mục gập được — `<details>` của trình duyệt, không cần mã mở/đóng. */
@@ -643,28 +783,35 @@ function Select({
   value,
   options,
   onChange,
+  group,
 }: {
   label: string;
   value: string | null;
   options: readonly FacadeOption[];
   onChange: (value: string | null) => void;
+  /** Nhóm mã của bộ đặc trưng phong cách — có thì ô lọc theo phong cách (T175). */
+  group?: StyleCodeGroup;
 }): React.ReactElement {
+  const shown = useStyleOptions(options, group, value);
   return (
-    <label className="block">
-      <span className="block text-fg-subtle">{label}</span>
-      <select
-        className={cn(FIELD_BOX, 'mt-1 w-full')}
-        value={value ?? ''}
-        onChange={(event) => onChange(event.target.value || null)}
-      >
-        <option value="">{AI_PICKS}</option>
-        {options.map((option) => (
-          <option key={option.code} value={option.code}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div>
+      <label className="block">
+        <span className="block text-fg-subtle">{label}</span>
+        <select
+          className={cn(FIELD_BOX, 'mt-1 w-full')}
+          value={value ?? ''}
+          onChange={(event) => onChange(event.target.value || null)}
+        >
+          <option value="">{AI_PICKS}</option>
+          {shown.map((option) => (
+            <option key={option.code} value={option.code}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <OutsideStyleNote group={group} value={value} />
+    </div>
   );
 }
 
@@ -681,31 +828,36 @@ function ColourSelect({
   onChange: (value: string | null) => void;
 }): React.ReactElement {
   const picked = colours.find((colour) => colour.code === value);
+  // Mọi ô màu cùng một nhóm mã — lọc luôn theo phong cách (T175).
+  const shown = useStyleOptions(colours, 'colours', value);
   return (
-    <label className="block">
-      <span className="block text-fg-subtle">{label}</span>
-      <span className="mt-1 flex items-center gap-2">
-        <select
-          className={cn(FIELD_BOX, 'w-full')}
-          value={value ?? ''}
-          onChange={(event) => onChange(event.target.value || null)}
-        >
-          <option value="">{AI_PICKS}</option>
-          {colours.map((colour) => (
-            <option key={colour.code} value={colour.code}>
-              {colour.label} — {colour.hex}
-            </option>
-          ))}
-        </select>
-        {picked && (
-          <span
-            aria-hidden
-            className="inline-block size-8 shrink-0 rounded border border-tk-line"
-            style={{ backgroundColor: picked.hex }}
-          />
-        )}
-      </span>
-    </label>
+    <div>
+      <label className="block">
+        <span className="block text-fg-subtle">{label}</span>
+        <span className="mt-1 flex items-center gap-2">
+          <select
+            className={cn(FIELD_BOX, 'w-full')}
+            value={value ?? ''}
+            onChange={(event) => onChange(event.target.value || null)}
+          >
+            <option value="">{AI_PICKS}</option>
+            {shown.map((colour) => (
+              <option key={colour.code} value={colour.code}>
+                {colour.label} — {colour.hex}
+              </option>
+            ))}
+          </select>
+          {picked && (
+            <span
+              aria-hidden
+              className="inline-block size-8 shrink-0 rounded border border-tk-line"
+              style={{ backgroundColor: picked.hex }}
+            />
+          )}
+        </span>
+      </label>
+      <OutsideStyleNote group="colours" value={value} />
+    </div>
   );
 }
 
@@ -775,6 +927,7 @@ function DoorFields({
         label="Vật liệu"
         value={door.material}
         options={vocab.doorMaterials}
+        group="door_materials"
         onChange={(v) => onChange({ ...door, material: v })}
       />
       <ColourSelect

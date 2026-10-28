@@ -89,6 +89,13 @@ variant_search_until_percent: 65
 # bị chặn. Vắng = không kiểm.
 feasibility_max_percent: 85
 
+# Dừng gọi mô hình sửa khi bấy nhiêu lượt LIỀN NHAU hỏng cùng một LỖI CHÍNH (T174, 28/10/2026). Lỗi chính = câu lỗi
+# đầu tiên của lượt (câu màn hình hiện), so theo tầng + mã + câu với mã phòng bỏ số thứ tự («bedroom_4» ≡ «bedroom_3»)
+# và GIỮ nguyên số đo — phòng còn nhích diện tích thì chưa coi là lặp. Lượt thật 1dd74b99 (hồ sơ 9272): lượt 2–4 cùng
+# «phòng ngủ tầng 2 chỉ 14,13 m² < 17 m²» mà vẫn gọi lượt 5 (≈ 0,09 USD, mô hình trả rỗng). `STUCK_AFTER` (cả tập lỗi
+# y hệt) không bắt được vì lỗi phụ đổi mỗi lượt. Không phải luật nghề — là chỗ dừng tiêu tiền. Vắng = tắt.
+revision_stop_same_main_issue_rounds: 3
+
 # ── Trọng số nhóm ──────────────────────────────────────────────────────────────
 #
 # Y NGUYÊN bộ đo, không tự chỉnh (mặc định số 4 của phương án). Hai chỗ đáng để ý,

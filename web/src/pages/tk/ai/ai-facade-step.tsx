@@ -570,6 +570,14 @@ function FacadeIdea({ view }: { view: AiFacadeView }): React.ReactElement {
         {view.generator.provider} · {view.generator.model}
       </p>
       <p className="mt-2">{view.rationale}</p>
+      {/* Mã AI chọn ngoài phong cách đầu bài (T175) — chỉ nói ra, không loại phương án. */}
+      {(view.warnings ?? []).length > 0 && (
+        <ul className="mt-2 list-disc pl-5 text-tk-am-fg">
+          {view.warnings!.map((w) => (
+            <li key={w.message}>{w.message}</li>
+          ))}
+        </ul>
+      )}
 
       <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
         {view.legend.map((row) => (

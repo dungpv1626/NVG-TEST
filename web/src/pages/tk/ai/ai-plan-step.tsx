@@ -801,6 +801,7 @@ function PlanFailureReasons({
                 : 'Lý do của lượt cuối.'}
           </p>
           {view.costStop && <p className="font-medium text-tk-am-fg">{view.costStop}</p>}
+          {view.earlyStop && <p className="font-medium text-tk-am-fg">{view.earlyStop}</p>}
           {view.lastUnusable && (
             <p className="text-xs text-fg-subtle">
               Lượt cuối mô hình trả câu trả lời không dùng được; lý do của các lượt trước có trong

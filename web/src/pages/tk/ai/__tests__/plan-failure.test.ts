@@ -132,3 +132,31 @@ describe('Dừng vì mức chi phí (T164)', () => {
     expect(view!.costStop).toBeNull();
   });
 });
+
+describe('Dừng vì cùng một lỗi chính lặp lại (T174)', () => {
+  it('có `earlyStop` thì có câu dừng — mã phòng đổi sang tên, số dấu phẩy', () => {
+    const [view] = failureViews(
+      [
+        {
+          ...e5ec68a6,
+          earlyStop: {
+            reason: 'same_main_issue',
+            rounds: 3,
+            level: 2,
+            message:
+              'Đã dừng gọi lại mô hình: 3 lượt liền hỏng cùng một lỗi chính ở tầng 2 — Bản phác tầng 2 vẽ phòng "office_1" chỉ đủ khoảng 14.13 m² — đầu bài khai tối thiểu 17 m². Gọi thêm khó gỡ được mà vẫn tốn tiền; xem lại đầu bài ở chỗ này rồi chạy lại.',
+          },
+        },
+      ],
+      LABELS,
+    );
+    expect(view!.earlyStop).toMatch(/^Đã dừng gọi lại mô hình: 3 lượt liền/);
+    expect(view!.earlyStop).toContain('«Phòng làm việc 1»');
+    expect(view!.earlyStop).toContain('14,13 m²');
+  });
+
+  it('không có `earlyStop` thì không có câu dừng', () => {
+    const [view] = failureViews([e5ec68a6], LABELS);
+    expect(view!.earlyStop).toBeNull();
+  });
+});

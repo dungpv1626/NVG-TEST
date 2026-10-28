@@ -1,0 +1,552 @@
+# ĐỀ XUẤT của Claude Code (28/10/2026, T175), chờ kiến trúc sư NVO duyệt. Nhận diện phong cách là
+# nội dung chuyên môn của NVG (PRD 2.3): tệp này chỉ là bản nháp để kiến trúc sư sửa, chưa phải chuẩn.
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+#  BỘ ĐẶC TRƯNG PHONG CÁCH — chín phong cách của câu «Phong cách kiến trúc» trong đầu bài
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Anh Dũng (28/10/2026): «chưa có phong cách mẫu (Indochine, Địa Trung Hải, Tân cổ điển…)». Trước
+# tệp này mỗi phong cách chỉ là MỘT dòng tiếng Anh trong `kb/ai_design_prompts.yaml`, và mặt đứng
+# không có ràng buộc hay điểm nào theo phong cách.
+#
+# ── Dùng vào đâu ─────────────────────────────────────────────────────────────────────────
+# · `label`, `mo_ta`: hiện cho khách / kiến trúc sư (tiếng Việt).
+# · `prompt.interior`: câu nối vào lời dẫn ảnh mặt bằng có nội thất (`sheet_image`, `upload_image`).
+# · `prompt.exterior`: cụm đầu của mô tả phong cách cho ảnh mặt đứng và ảnh phối cảnh. Hai khối
+#   `styles:` cũ của `ai_design_prompts.yaml` đã gỡ — Worker dựng chúng từ ĐÂY lúc nạp
+#   (`withStylePrompts`), nên chỉ có một nơi để sửa. Phép thử canh hai bên không lệch.
+# · `must` / `prefer` / `avoid`: chèn vào lời dẫn mặt đứng (mục «Style guide») và lời dẫn ảnh. Câu `en`
+#   gửi mô hình, câu `vi` hiện trên màn hình. `match` (nếu có) là các MÃ danh mục mà một chi tiết
+#   «có mặt» — thước chấm mặt đứng đếm `must` có mặt và `avoid` bị dùng theo đúng các mã ấy
+#   (`kb/facade_quality.yaml` nhóm S). Chi tiết không đo được bằng mã (đối xứng, tỷ lệ khối) thì bỏ
+#   `match`: vẫn vào lời dẫn, không vào điểm.
+# · `allowed`: mã HỢP phong cách, theo từng nhóm của `kb/facade_vocabulary.yaml`. Phiếu mặt đứng chỉ hiện
+#   các mã này (kèm nút «Hiện mọi lựa chọn»); mô hình được dặn ưu tiên chúng; chọn mã ngoài tập thì ghi
+#   cảnh báo `facade_style_mismatch`. KHÔNG chặn: phong cách là thẩm mỹ, không phải luật (T52). Nhóm
+#   nào không khai = không giới hạn.
+# · `symmetry`: cao (mặt tiền đối xứng qua trục giữa) · vua (cân đối, không bắt buộc đối xứng) · thap
+#   (bất đối xứng là bình thường). `window_hw`: tỷ lệ cao / rộng gợi ý của ô cửa sổ, chỉ vào lời dẫn —
+#   lỗ mở là của mặt bằng (T16), mặt đứng không đổi được.
+#
+# Mã trong `allowed` và `match` phải có thật trong `kb/facade_vocabulary.yaml` — Worker kiểm lúc nạp,
+# phép thử `style-catalogue.test.ts` canh. Chín mã phong cách phải khớp đúng chín lựa chọn của câu
+# `style` trong `shared/src/design/brief-form.json`.
+#
+# Đây là `kb/` (bản vẽ trông thế nào), không phải `rules/` (phương án có hợp lệ không).
+
+version: '0.1.0'
+status: de_xuat
+
+styles:
+  hien_dai:
+    status: de_xuat
+    label: 'Hiện đại'
+    mo_ta: 'Khối hộp đường thẳng, mặt phẳng lớn, kính khung nhôm, ít chi tiết trang trí; mảng ốp đá hoặc gỗ tạo điểm nhấn.'
+    prompt:
+      interior: 'Interior styling: contemporary Vietnamese, clean lines, light neutral palette.'
+      exterior: 'contemporary Vietnamese house, clean lines, flat planes'
+    must:
+      - vi: 'Khối nhà đường thẳng, mái bằng hoặc mái dốc giấu sau tường chắn'
+        en: 'crisp box-like volumes with straight edges; a flat roof or a roof hidden behind a parapet'
+        match: { roof_types: [flat, mixed] }
+      - vi: 'Cửa kính khung nhôm mảng lớn'
+        en: 'large aluminium-framed glazing'
+        match: { door_materials: [nhom_kinh_he, kinh_cuong_luc, nhom_son_tinh_dien] }
+    prefer:
+      - vi: 'Lam chắn nắng nhôm hoặc gỗ'
+        en: 'aluminium or timber louvres for sun shading'
+        match: { elements: [louvre], materials: [lam_nhom, nhom_van_go, go_nhua] }
+      - vi: 'Phần đế ốp đá, thân sơn sáng'
+        en: 'stone-clad base under a light painted body'
+        match: { base_materials: [da_granite, da_cham, da_rua] }
+      - vi: 'Ô văng mỏng che cửa'
+        en: 'thin flat canopies over openings'
+        match: { elements: [canopy] }
+    avoid:
+      - vi: 'Phào chỉ, gờ cổ điển'
+        en: 'classical mouldings and cornices'
+        match: { materials: [phao_chi] }
+      - vi: 'Lan can con tiện, sắt mỹ thuật'
+        en: 'balusters and ornamental wrought iron'
+        match: { railings: [con_tien, sat_my_thuat], materials: [sat_my_thuat] }
+      - vi: 'Vòm đầu cửa, chóp trang trí'
+        en: 'arched door heads and ridge finials'
+        match: { elements: [arch, finial] }
+    allowed:
+      roof_types: [flat, mixed, hip, gable, japanese]
+      roof_materials: [btct_chong_tham, ngoi_phang, ngoi_mau, ton_giat_cap]
+      materials:
+        [
+          son_nuoc,
+          son_hieu_ung_be_tong,
+          be_tong_tran,
+          da_granite,
+          da_cham,
+          da_rua,
+          gach_the,
+          go_tu_nhien,
+          go_nhua,
+          lam_nhom,
+          nhom_van_go,
+          tam_alu,
+          nhom_kinh,
+          kinh_cuong_luc,
+          thep_son_tinh_dien,
+          inox,
+        ]
+      colours: [trang, trang_kem, xam_nhat, xam_dam, den, ghi_bac, nau_go, be, tu_nhien]
+      railings: [kinh_cuong_luc, sat_hop, inox_kinh, xay_dac, lam_go]
+      door_materials: [nhom_kinh_he, nhom_son_tinh_dien, kinh_cuong_luc, thep_van_go, nhom_cuon]
+      gate_types: [sliding, swing, folding]
+      fence_types: [xay_dac, xay_song_sat, sat_thep]
+    symmetry: thap
+
+  tan_co_dien:
+    status: de_xuat
+    label: 'Tân cổ điển'
+    mo_ta: 'Cổ điển giản lược: phào chỉ ở mép sàn và đỉnh tường, cột / trụ, cửa vòm, mái mansard hoặc mái dốc ngói, mặt tiền đối xứng, màu trắng kem.'
+    prompt:
+      interior: 'Interior styling: neo-classical, moulded panelling, warm creams and golds.'
+      exterior: 'neo-classical Vietnamese villa, mouldings and cornices'
+    must:
+      - vi: 'Phào chỉ ngang ở mép sàn và đỉnh tường'
+        en: 'moulded cornices along every floor line and the top of the wall'
+        match: { elements: [cornice], materials: [phao_chi] }
+      - vi: 'Cột hoặc trụ ốp ở mặt tiền'
+        en: 'columns or pilasters on the facade'
+        match: { elements: [column] }
+      - vi: 'Mái mansard hoặc mái dốc lợp ngói'
+        en: 'a mansard roof or a tiled pitched roof'
+        match: { roof_types: [mansard, hip, gable] }
+      - vi: 'Cửa vòm hoặc đầu cửa vòm'
+        en: 'arched openings or arched door heads'
+        match: { elements: [arch] }
+      - vi: 'Mặt tiền đối xứng qua trục giữa'
+        en: 'a symmetrical facade about its centre line'
+    prefer:
+      - vi: 'Lan can con tiện hoặc sắt mỹ thuật'
+        en: 'balustrades of turned balusters or light ornamental iron'
+        match: { railings: [con_tien, sat_my_thuat] }
+      - vi: 'Cửa gỗ hoặc thép vân gỗ'
+        en: 'timber or timber-effect doors'
+        match: { door_materials: [go_tu_nhien, thep_van_go] }
+      - vi: 'Thân nhà trắng kem, be'
+        en: 'cream or beige walls with white trims'
+        match: { body_colours: [trang_kem, be, trang] }
+    avoid:
+      - vi: 'Mái tôn sóng'
+        en: 'corrugated metal roofing'
+        match: { roof_materials: [ton_song] }
+      - vi: 'Bê tông trần, tấm alu, lam nhôm'
+        en: 'exposed concrete, aluminium composite panels, aluminium louvres'
+        match: { materials: [be_tong_tran, tam_alu, lam_nhom] }
+      - vi: 'Lan can kính không khung'
+        en: 'frameless glass balustrades'
+        match: { railings: [kinh_cuong_luc] }
+    allowed:
+      roof_types: [mansard, hip, gable, flat, mixed]
+      roof_materials: [ngoi_mau, ngoi_phang, ngoi_dat_nung, ton_giat_cap, btct_chong_tham]
+      materials:
+        [
+          son_nuoc,
+          son_gia_da,
+          da_granite,
+          da_cham,
+          phao_chi,
+          sat_my_thuat,
+          go_tu_nhien,
+          gach_op_gom,
+        ]
+      colours: [trang, trang_kem, be, vang_dat, xam_nhat, ghi_bac, nau_go, nau_dam, den, xanh_reu]
+      railings: [con_tien, sat_my_thuat, xay_dac]
+      door_materials: [go_tu_nhien, thep_van_go, nhom_kinh_he, sat_my_thuat, nhom_son_tinh_dien]
+      gate_types: [swing, sliding]
+      fence_types: [xay_song_sat, xay_dac]
+    symmetry: cao
+    window_hw: [1.8, 2.5]
+
+  indochine:
+    status: de_xuat
+    label: 'Đông Dương'
+    mo_ta: 'Pháp thuộc pha Việt: cửa chớp gỗ lá sách, gạch hoa gió hoặc gạch bông, mái ngói dốc, tường vàng đất hoặc trắng kem, cửa xanh ngọc hoặc nâu gỗ.'
+    prompt:
+      interior: 'Interior styling: Indochine, dark timber, rattan, encaustic floor tiles.'
+      exterior: 'Indochine style, shutters, arches and warm tones'
+    must:
+      - vi: 'Cửa gỗ, cửa chớp lá sách'
+        en: 'timber doors and louvred shutters'
+        match: { door_materials: [go_tu_nhien, thep_van_go] }
+      - vi: 'Gạch hoa gió hoặc gạch gốm trang trí'
+        en: 'decorative breeze blocks or patterned ceramic tiles'
+        match: { materials: [gach_hoa_gio, gach_op_gom] }
+      - vi: 'Mái ngói dốc'
+        en: 'a pitched clay-tile roof'
+        match: { roof_materials: [ngoi_dat_nung, ngoi_am_duong, ngoi_mau] }
+    prefer:
+      - vi: 'Tường vàng đất hoặc trắng kem'
+        en: 'ochre or cream walls'
+        match: { body_colours: [vang_dat, trang_kem, be] }
+      - vi: 'Cửa vòm, ô văng mái ngói nhỏ'
+        en: 'arched openings and small tiled canopies'
+        match: { elements: [arch, canopy] }
+      - vi: 'Sắt mỹ thuật nhẹ ở lan can, cổng'
+        en: 'light ornamental ironwork on railings and gate'
+        match: { railings: [sat_my_thuat], materials: [sat_my_thuat] }
+    avoid:
+      - vi: 'Tấm alu, inox'
+        en: 'aluminium composite panels and stainless steel'
+        match: { materials: [tam_alu, inox] }
+      - vi: 'Kính không khung mảng lớn'
+        en: 'large frameless glass panes'
+        match: { door_materials: [kinh_cuong_luc], railings: [kinh_cuong_luc] }
+      - vi: 'Bê tông trần'
+        en: 'exposed concrete'
+        match: { materials: [be_tong_tran] }
+    allowed:
+      roof_types: [hip, gable, flat, mixed]
+      roof_materials: [ngoi_dat_nung, ngoi_am_duong, ngoi_mau, btct_chong_tham]
+      materials:
+        [
+          son_nuoc,
+          gach_hoa_gio,
+          gach_op_gom,
+          go_tu_nhien,
+          sat_my_thuat,
+          da_ong,
+          gach_the,
+          phao_chi,
+          da_rua,
+        ]
+      colours: [vang_dat, trang_kem, be, xanh_ngoc, xanh_reu, nau_go, nau_dam, do_ngoi, trang, den]
+      railings: [sat_my_thuat, con_tien, lam_go, xay_dac]
+      door_materials: [go_tu_nhien, thep_van_go, sat_my_thuat, nhom_son_tinh_dien]
+      gate_types: [swing, folding]
+      fence_types: [xay_song_sat, xay_dac]
+    symmetry: vua
+    window_hw: [1.6, 2.2]
+
+  mai_thai:
+    status: de_xuat
+    label: 'Mái Thái'
+    mo_ta: 'Mái dốc lớn bốn mái lợp ngói, có diềm mái; thân nhà sáng màu, mái đỏ, nâu hoặc xanh rêu; hiên và sảnh có cột.'
+    prompt:
+      interior: 'Interior styling: relaxed contemporary under a pitched roof, warm timber tones.'
+      exterior: 'house with a steep Thai-style tiled roof'
+    must:
+      - vi: 'Mái Thái dốc lớn'
+        en: 'a steep Thai-style hipped roof'
+        match: { roof_types: [thai] }
+      - vi: 'Mái lợp ngói'
+        en: 'roof tiles, not sheet metal'
+        match: { roof_materials: [ngoi_mau, ngoi_phang, ngoi_dat_nung, ton_giat_cap] }
+    prefer:
+      - vi: 'Diềm mái dưới mép mái'
+        en: 'a fascia band under the eaves'
+        match: { elements: [eaves_band] }
+      - vi: 'Sảnh có mái dốc và cột'
+        en: 'an entrance porch with a pitched roof on columns'
+        match: { elements: [porch_roof, column] }
+      - vi: 'Thân nhà màu sáng'
+        en: 'light-coloured walls under a darker roof'
+        match: { body_colours: [trang, trang_kem, be, xam_nhat] }
+    avoid:
+      - vi: 'Mái bằng'
+        en: 'a flat roof'
+        match: { roof_types: [flat] }
+      - vi: 'Mái tôn sóng, sàn mái bê tông'
+        en: 'corrugated metal or a bare concrete roof slab'
+        match: { roof_materials: [ton_song, btct_chong_tham] }
+    allowed:
+      roof_types: [thai, hip, mixed]
+      roof_materials: [ngoi_mau, ngoi_phang, ngoi_dat_nung, ton_giat_cap]
+      materials:
+        [
+          son_nuoc,
+          son_gia_da,
+          da_granite,
+          da_cham,
+          da_rua,
+          gach_the,
+          go_tu_nhien,
+          nhom_kinh,
+          phao_chi,
+          sat_my_thuat,
+        ]
+      colours:
+        [trang, trang_kem, be, xam_nhat, ghi_bac, do_ngoi, nau_go, nau_dam, xanh_reu, xam_dam, den]
+      railings: [sat_hop, inox_kinh, kinh_cuong_luc, xay_dac, con_tien, sat_my_thuat]
+      door_materials: [nhom_kinh_he, go_tu_nhien, thep_van_go, nhom_son_tinh_dien]
+      gate_types: [swing, sliding]
+      fence_types: [xay_song_sat, xay_dac]
+    symmetry: vua
+
+  toi_gian:
+    status: de_xuat
+    label: 'Tối giản'
+    mo_ta: 'Bề mặt trơn, rất ít vật liệu và chi tiết, màu trung tính sáng; ô cửa cắt gọn, không trang trí.'
+    prompt:
+      interior: 'Interior styling: minimalist, very few pieces, white and pale timber.'
+      exterior: 'minimalist house, very few elements, plain surfaces'
+    must:
+      - vi: 'Thân nhà màu trung tính sáng'
+        en: 'plain light neutral walls'
+        match: { body_colours: [trang, trang_kem, xam_nhat, ghi_bac, be] }
+      - vi: 'Mái bằng hoặc mái dốc đơn giản'
+        en: 'a flat roof or one simple pitched roof'
+        match: { roof_types: [flat, gable] }
+      - vi: 'Không quá hai vật liệu chính trên mặt tiền'
+        en: 'no more than two main facade materials'
+    prefer:
+      - vi: 'Một mảng gỗ hoặc bê tông làm điểm nhấn'
+        en: 'a single timber or concrete accent'
+        match: { materials: [go_tu_nhien, go_nhua, be_tong_tran, son_hieu_ung_be_tong] }
+      - vi: 'Cửa kính khung mảnh'
+        en: 'slim-framed glazing'
+        match: { door_materials: [nhom_kinh_he, kinh_cuong_luc] }
+    avoid:
+      - vi: 'Phào chỉ, gạch hoa gió'
+        en: 'mouldings and decorative breeze blocks'
+        match: { materials: [phao_chi, gach_hoa_gio], elements: [cornice] }
+      - vi: 'Lan can con tiện, sắt mỹ thuật'
+        en: 'balusters and ornamental iron'
+        match: { railings: [con_tien, sat_my_thuat], materials: [sat_my_thuat] }
+      - vi: 'Vòm, ô tròn, chóp trang trí'
+        en: 'arches, round windows and finials'
+        match: { elements: [arch, oculus, finial] }
+    allowed:
+      roof_types: [flat, gable, mixed]
+      roof_materials: [btct_chong_tham, ngoi_phang, ton_giat_cap]
+      materials:
+        [
+          son_nuoc,
+          son_hieu_ung_be_tong,
+          be_tong_tran,
+          go_tu_nhien,
+          go_nhua,
+          nhom_kinh,
+          kinh_cuong_luc,
+          thep_son_tinh_dien,
+          da_granite,
+        ]
+      colours: [trang, trang_kem, xam_nhat, ghi_bac, be, xam_dam, den, tu_nhien]
+      railings: [kinh_cuong_luc, sat_hop, xay_dac]
+      door_materials: [nhom_kinh_he, kinh_cuong_luc, nhom_son_tinh_dien, nhom_cuon]
+      gate_types: [sliding, swing]
+      fence_types: [xay_dac, sat_thep]
+    symmetry: thap
+
+  nhiet_doi:
+    status: de_xuat
+    label: 'Nhiệt đới'
+    mo_ta: 'Hợp khí hậu nóng ẩm: mái đua sâu và ô văng che nắng, lam hoặc gạch hoa gió thông gió, bồn cây trên mặt tiền, vật liệu tự nhiên.'
+    prompt:
+      interior: 'Interior styling: tropical, abundant indoor planting, rattan and light timber.'
+      exterior: 'tropical modern house, deep overhangs, timber and planting'
+    must:
+      - vi: 'Mái đua sâu hoặc ô văng che nắng'
+        en: 'deep overhangs or canopies shading the openings'
+        match: { elements: [canopy, eaves_band] }
+      - vi: 'Lam chắn nắng hoặc gạch hoa gió'
+        en: 'sun-shading louvres or breeze-block screens'
+        match: { elements: [louvre], materials: [lam_nhom, gach_hoa_gio, go_nhua, nhom_van_go] }
+      - vi: 'Bồn cây, cây xanh trên mặt tiền'
+        en: 'planters with greenery on the facade'
+        match: { elements: [planter] }
+    prefer:
+      - vi: 'Gỗ, đá tự nhiên, gạch thẻ'
+        en: 'timber, natural stone and face brick'
+        match: { materials: [go_tu_nhien, da_cham, da_ong, gach_the, da_rua] }
+      - vi: 'Màu đất, màu tự nhiên của vật liệu'
+        en: 'earthy and natural material colours'
+        match: { colours: [tu_nhien, nau_go, be, xanh_reu] }
+    avoid:
+      - vi: 'Tấm alu bóng, inox'
+        en: 'glossy composite panels and stainless steel'
+        match: { materials: [tam_alu, inox] }
+      - vi: 'Kính mảng lớn không che nắng'
+        en: 'large unshaded glass walls'
+    allowed:
+      roof_types: [flat, hip, gable, japanese, mixed]
+      roof_materials: [btct_chong_tham, ngoi_mau, ngoi_phang, ngoi_dat_nung, ton_giat_cap]
+      materials:
+        [
+          son_nuoc,
+          da_cham,
+          da_ong,
+          da_rua,
+          gach_the,
+          gach_hoa_gio,
+          go_tu_nhien,
+          go_nhua,
+          lam_nhom,
+          nhom_van_go,
+          be_tong_tran,
+          nhom_kinh,
+        ]
+      colours: [trang, trang_kem, be, nau_go, nau_dam, xanh_reu, tu_nhien, xam_nhat, xam_dam]
+      railings: [lam_go, sat_hop, kinh_cuong_luc, inox_kinh, xay_dac]
+      door_materials: [nhom_kinh_he, go_tu_nhien, thep_van_go, nhom_son_tinh_dien]
+      gate_types: [sliding, swing, folding]
+      fence_types: [xay_dac, xay_song_sat, sat_thep]
+    symmetry: thap
+
+  dia_trung_hai:
+    status: de_xuat
+    label: 'Địa Trung Hải'
+    mo_ta: 'Tường trắng hoặc trắng kem, mái ngói đất nung, cửa vòm, sắt mỹ thuật ở ban công, cửa gỗ; điểm màu xanh ngọc.'
+    prompt:
+      interior: 'Interior styling: Mediterranean, white walls, terracotta, arched openings.'
+      exterior: 'Mediterranean house, white render and terracotta'
+    must:
+      - vi: 'Tường trắng hoặc trắng kem'
+        en: 'white or cream rendered walls'
+        match: { body_colours: [trang, trang_kem] }
+      - vi: 'Mái ngói đất nung'
+        en: 'a terracotta clay-tile roof'
+        match: { roof_materials: [ngoi_dat_nung], roof_colours: [do_ngoi] }
+      - vi: 'Cửa vòm'
+        en: 'arched openings'
+        match: { elements: [arch] }
+    prefer:
+      - vi: 'Sắt mỹ thuật ở ban công'
+        en: 'wrought-iron balcony railings'
+        match: { railings: [sat_my_thuat] }
+      - vi: 'Cửa gỗ, điểm màu xanh ngọc'
+        en: 'timber doors and shutters, accents of turquoise'
+        match: { door_materials: [go_tu_nhien, thep_van_go], colours: [xanh_ngoc] }
+      - vi: 'Gạch gốm trang trí'
+        en: 'decorative ceramic tiles'
+        match: { materials: [gach_op_gom] }
+    avoid:
+      - vi: 'Bê tông trần, tấm alu, lam nhôm'
+        en: 'exposed concrete, composite panels, aluminium louvres'
+        match: { materials: [be_tong_tran, tam_alu, lam_nhom] }
+      - vi: 'Mái tôn'
+        en: 'metal roofing'
+        match: { roof_materials: [ton_song, ton_giat_cap] }
+      - vi: 'Lan can kính không khung'
+        en: 'frameless glass balustrades'
+        match: { railings: [kinh_cuong_luc] }
+    allowed:
+      roof_types: [hip, gable, flat, mixed]
+      roof_materials: [ngoi_dat_nung, ngoi_mau, btct_chong_tham]
+      materials:
+        [son_nuoc, son_gia_da, gach_op_gom, da_cham, da_ong, go_tu_nhien, sat_my_thuat, phao_chi]
+      colours: [trang, trang_kem, be, do_ngoi, vang_dat, xanh_ngoc, nau_go, nau_dam, den]
+      railings: [sat_my_thuat, xay_dac, con_tien, lam_go]
+      door_materials: [go_tu_nhien, thep_van_go, sat_my_thuat, nhom_son_tinh_dien]
+      gate_types: [swing, sliding]
+      fence_types: [xay_dac, xay_song_sat]
+    symmetry: vua
+    window_hw: [1.4, 2.0]
+
+  co_dien:
+    status: de_xuat
+    label: 'Cổ điển'
+    mo_ta: 'Cổ điển châu Âu đầy đủ: mặt tiền đối xứng chặt, cột thức, phào chỉ nhiều lớp, lan can con tiện, mái mansard hoặc mái dốc, cửa vòm, chóp và ô tròn trang trí.'
+    prompt:
+      interior: 'Interior styling: classical, symmetrical furniture layout, rich timber and fabric.'
+      exterior: 'classical symmetrical villa'
+    must:
+      - vi: 'Cột thức ở mặt tiền'
+        en: 'classical columns on the facade'
+        match: { elements: [column] }
+      - vi: 'Phào chỉ nhiều lớp'
+        en: 'layered cornices and mouldings'
+        match: { elements: [cornice], materials: [phao_chi] }
+      - vi: 'Lan can con tiện'
+        en: 'turned-baluster balustrades'
+        match: { railings: [con_tien] }
+      - vi: 'Mái mansard hoặc mái tứ giác'
+        en: 'a mansard or hipped roof'
+        match: { roof_types: [mansard, hip] }
+      - vi: 'Mặt tiền đối xứng chặt qua trục giữa'
+        en: 'a strictly symmetrical facade about its centre line'
+    prefer:
+      - vi: 'Cửa vòm, ô tròn, chóp trang trí'
+        en: 'arched openings, round windows and finials'
+        match: { elements: [arch, oculus, finial] }
+      - vi: 'Cổng sắt mỹ thuật'
+        en: 'an ornamental wrought-iron gate'
+        match: { materials: [sat_my_thuat] }
+      - vi: 'Thân nhà trắng kem, vàng nhạt'
+        en: 'cream or pale ochre walls'
+        match: { body_colours: [trang_kem, vang_dat, be, trang] }
+    avoid:
+      - vi: 'Bê tông trần, tấm alu, lam nhôm, gỗ nhựa'
+        en: 'exposed concrete, composite panels, aluminium louvres, wood-plastic boards'
+        match: { materials: [be_tong_tran, tam_alu, lam_nhom, go_nhua] }
+      - vi: 'Mái tôn'
+        en: 'metal roofing'
+        match: { roof_materials: [ton_song, ton_giat_cap] }
+      - vi: 'Lan can kính hoặc sắt hộp'
+        en: 'glass or plain box-steel railings'
+        match: { railings: [kinh_cuong_luc, sat_hop] }
+    allowed:
+      roof_types: [mansard, hip, gable, flat]
+      roof_materials: [ngoi_mau, ngoi_phang, ngoi_dat_nung, btct_chong_tham]
+      materials: [son_nuoc, son_gia_da, da_granite, da_cham, phao_chi, sat_my_thuat, go_tu_nhien]
+      colours: [trang, trang_kem, be, vang_dat, ghi_bac, xam_nhat, nau_dam, nau_go, den]
+      railings: [con_tien, sat_my_thuat, xay_dac]
+      door_materials: [go_tu_nhien, thep_van_go, sat_my_thuat]
+      gate_types: [swing]
+      fence_types: [xay_song_sat, xay_dac]
+    symmetry: cao
+    window_hw: [1.8, 2.5]
+
+  bac_au:
+    status: de_xuat
+    label: 'Bắc Âu'
+    mo_ta: 'Khối nhà đơn giản mái hai dốc, ốp gỗ hoặc vân gỗ, màu trắng, xám nhạt; cửa sổ khung mảnh màu tối, gần như không trang trí.'
+    prompt:
+      interior: 'Interior styling: Scandinavian, pale timber, soft greys, uncluttered.'
+      exterior: 'Scandinavian-inspired house, pale timber and simple forms'
+    must:
+      - vi: 'Mái hai dốc đơn giản'
+        en: 'a simple gable roof'
+        match: { roof_types: [gable] }
+      - vi: 'Mảng ốp gỗ hoặc vân gỗ'
+        en: 'timber or timber-effect cladding'
+        match: { materials: [go_tu_nhien, go_nhua, nhom_van_go] }
+      - vi: 'Thân nhà trắng hoặc xám nhạt'
+        en: 'white or pale grey walls'
+        match: { body_colours: [trang, xam_nhat, ghi_bac, trang_kem] }
+    prefer:
+      - vi: 'Mái ngói phẳng hoặc tôn màu tối'
+        en: 'dark flat tiles or dark metal roofing'
+        match: { roof_materials: [ngoi_phang, ton_giat_cap, ton_song] }
+      - vi: 'Khung cửa mảnh màu đen hoặc xám đậm'
+        en: 'slim black or charcoal window frames'
+        match: { door_materials: [nhom_kinh_he, nhom_son_tinh_dien] }
+    avoid:
+      - vi: 'Phào chỉ, lan can con tiện, sắt mỹ thuật'
+        en: 'mouldings, balusters and ornamental iron'
+        match: { materials: [phao_chi, sat_my_thuat], railings: [con_tien, sat_my_thuat] }
+      - vi: 'Vòm, chóp trang trí'
+        en: 'arches and finials'
+        match: { elements: [arch, finial] }
+      - vi: 'Mái Thái, mái mansard'
+        en: 'Thai-style or mansard roofs'
+        match: { roof_types: [thai, mansard] }
+    allowed:
+      roof_types: [gable, flat, mixed]
+      roof_materials: [ngoi_phang, ton_giat_cap, ton_song, btct_chong_tham]
+      materials:
+        [
+          son_nuoc,
+          go_tu_nhien,
+          go_nhua,
+          nhom_van_go,
+          be_tong_tran,
+          son_hieu_ung_be_tong,
+          nhom_kinh,
+          kinh_cuong_luc,
+          thep_son_tinh_dien,
+          gach_the,
+        ]
+      colours: [trang, trang_kem, xam_nhat, ghi_bac, xam_dam, den, nau_go, tu_nhien]
+      railings: [kinh_cuong_luc, sat_hop, lam_go, xay_dac]
+      door_materials: [nhom_kinh_he, nhom_son_tinh_dien, go_tu_nhien, kinh_cuong_luc]
+      gate_types: [sliding, swing]
+      fence_types: [xay_dac, sat_thep, xay_song_sat]
+    symmetry: thap

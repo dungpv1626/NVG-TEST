@@ -554,6 +554,7 @@ export function BriefPanel({
             siteAreaM2={
               field.path === 'site.boundary_m' ? (draft.site?.area_m2 ?? undefined) : undefined
             }
+            briefStyle={field.control === 'facade' ? (draft.style ?? null) : undefined}
           />
         </div>
       ));

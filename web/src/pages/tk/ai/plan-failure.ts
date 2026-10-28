@@ -33,6 +33,8 @@ export interface FailedVariant {
   main?: { round: number; levels: Array<Pick<FailedReason, 'level' | 'messages' | 'codes'>> };
   /** Lượt dừng vì chạm mức chi phí (T164) — Worker ghi `workers/src/design/ai/cost-cap.ts::CostCapStop`. */
   costCap?: { capUsd: number; spentUsd: number; reason?: 'over' | 'unpriced' };
+  /** Dừng gọi lại vì cùng một lỗi chính lặp lại (T174) — Worker ghi `workflows/plan-main-rejection.ts::EarlyStop`. */
+  earlyStop?: { reason: 'same_main_issue'; rounds: number; level: number; message: string };
 }
 
 export interface FailureView {
@@ -48,6 +50,8 @@ export interface FailureView {
   hints: string[];
   /** Câu «đã dừng vì chạm mức chi phí» (T164); `null` khi lượt dừng vì lý do khác. */
   costStop: string | null;
+  /** Câu «đã dừng gọi lại vì cùng một lỗi chính» (T174); `null` khi lượt dừng vì lý do khác. */
+  earlyStop: string | null;
 }
 
 const ANSWER_UNUSABLE = 'answer_unusable';
@@ -144,6 +148,7 @@ export function failureViews(
       lastUnusable,
       hints: groups.length === 0 && !earlier.length ? [] : hintsFor(codes),
       costStop: item.costCap ? costStopMessage(item.costCap) : null,
+      earlyStop: item.earlyStop ? readableMessage(item.earlyStop.message, roomLabels) : null,
     };
   });
 }

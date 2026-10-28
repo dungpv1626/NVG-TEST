@@ -16,13 +16,14 @@ import { describe, expect, it } from 'vitest';
 import { aiPlanSheetImageSchema } from '@nvg/shared/design';
 import { PlanSheetError } from '../ai/draw/plan-sheet';
 import { parseAiPrompts } from '../ai/prompts';
+import { withStyles } from './ai-style-fixtures';
 import { anchorMime, assembleSheetImage, pngSize, sheetImagePrompt } from '../ai/sheet-image';
 import { parseVocabulary } from '../kb/vocabulary';
 import { TOWNHOUSE_PLAN, VILLA_PLAN } from './ai-plan-fixtures';
 
 const read = (relative: string): string =>
   readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8');
-const prompts = parseAiPrompts(load(read('../../../../kb/ai_design_prompts.yaml')));
+const prompts = withStyles(parseAiPrompts(load(read('../../../../kb/ai_design_prompts.yaml'))));
 const vocabulary = parseVocabulary(read('../../../../kb/room_vocabulary.yaml'));
 const labels: Record<string, string> = Object.fromEntries(
   vocabulary.types.map((type) => [type.code, type.vi]),

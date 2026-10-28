@@ -5,6 +5,8 @@
  * với `render/render.ts` + `render/prompts-data.ts`.
  */
 
+import type { StyleCatalogue } from '@nvg/shared/design';
+import { exteriorStylePhrase } from '../kb/style-catalogue';
 import type { LayoutRule } from './layout-prompt';
 export interface AiPrompts {
   version: string;
@@ -764,4 +766,31 @@ function parseStrategies(raw: unknown): PlanStrategy[] {
     seen.add(entry.id);
     return { id: entry.id, label: entry.label, strategy: entry.strategy };
   });
+}
+
+/**
+ * Hai bảng phong cách của lời dẫn ảnh — `sheetImage.styles` (nội thất) và `facadeImage.styles` (mặt
+ * ngoài) — dựng từ `kb/style_catalogue.yaml` (T175). Trước T175 hai bảng là hai khối `styles:` viết tay
+ * trong `kb/ai_design_prompts.yaml`; nay một nguồn, để bộ đặc trưng phong cách và lời dẫn ảnh không
+ * lệch nhau. Mã nào tệp lời dẫn vẫn còn khai thì bộ đặc trưng thắng.
+ */
+export function withStylePrompts(prompts: AiPrompts, catalogue: StyleCatalogue): AiPrompts {
+  const specs = Object.values(catalogue.styles);
+  return {
+    ...prompts,
+    sheetImage: {
+      ...prompts.sheetImage,
+      styles: {
+        ...prompts.sheetImage.styles,
+        ...Object.fromEntries(specs.map((s) => [s.code, s.prompt.interior])),
+      },
+    },
+    facadeImage: {
+      ...prompts.facadeImage,
+      styles: {
+        ...prompts.facadeImage.styles,
+        ...Object.fromEntries(specs.map((s) => [s.code, exteriorStylePhrase(s)])),
+      },
+    },
+  };
 }

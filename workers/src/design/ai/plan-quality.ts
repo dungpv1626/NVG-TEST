@@ -104,6 +104,11 @@ export interface PlanQuality {
    * `ai/feasibility.ts`). `null` = không kiểm.
    */
   feasibilityMaxPercent: number | null;
+  /**
+   * Bấy nhiêu lượt LIỀN NHAU hỏng cùng một LỖI CHÍNH thì thôi gọi mô hình sửa (T174, `sameMainProblem` ở
+   * `ai/plan.ts`). `null` = không dừng theo lỗi chính (vẫn dừng khi CẢ tập lỗi lặp — `STUCK_AFTER`).
+   */
+  sameMainIssueRounds: number | null;
 }
 
 /**
@@ -234,7 +239,20 @@ export function parsePlanQuality(yamlText: string): PlanQuality {
       'variant_search_until_percent',
     ),
     feasibilityMaxPercent: acceptPercentOf(raw.feasibility_max_percent, 'feasibility_max_percent'),
+    sameMainIssueRounds: roundsOf(raw.revision_stop_same_main_issue_rounds),
   };
+}
+
+/** Số lượt liền nhau (T174): vắng = tắt; phải là số nguyên ≥ 2 — một lượt thì chưa có gì để gọi là «lặp». */
+function roundsOf(raw: unknown): number | null {
+  if (raw === undefined || raw === null) return null;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 2) {
+    throw new PlanQualityError(
+      `\`revision_stop_same_main_issue_rounds\` của thước chấm phải là số nguyên ≥ 2, đang là "${String(raw)}".`,
+    );
+  }
+  return value;
 }
 
 function acceptPercentOf(raw: unknown, key = 'accept_percent'): number | null {

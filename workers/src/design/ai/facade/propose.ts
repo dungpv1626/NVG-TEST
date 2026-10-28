@@ -11,10 +11,12 @@ import {
   type AiBriefDigest,
   type AiFacadeBrief,
   type AiFacadeProposal,
+  type StyleCatalogue,
 } from '@nvg/shared/design';
 import proposalSchemaJson from '../../../../../contracts/ai-facade-proposal.schema.json';
 import { AI_DIGEST_DATA_CLASS } from '../../brief/anonymise';
 import type { FacadeVocabulary } from '../../kb/facade-vocabulary';
+import { facadeStyleGuideText } from '../../kb/style-catalogue';
 import type {
   ReasoningEffort,
   StructuredCallOptions,
@@ -79,6 +81,29 @@ export function facadeCodes(vocab: FacadeVocabulary): string {
   ].join('\n\n');
 }
 
+/**
+ * Khối `<requirements>` kèm «Style guide» của phong cách đầu bài (T175). Phong cách đặt ở đây chứ không
+ * thêm chỗ điền mới vào `facade.user`: nó cùng loại với yêu cầu của kỹ sư — thứ mô hình phải theo khi
+ * dựng phần còn lại — và giữ nguyên lời dẫn hệ thống từng byte (bộ nhớ đệm của nhà cung cấp).
+ */
+export function facadeRequirementsWithStyle(
+  brief: AiFacadeBrief | null,
+  vocab: FacadeVocabulary,
+  frame: { frontYard: boolean } | undefined,
+  styles: StyleCatalogue | null,
+  /** Phong cách của đầu bài khi không có phiếu (hồ sơ trước T114). */
+  fallbackStyle: string | null = null,
+): string {
+  const base = facadeRequirementsText(brief, vocab, frame);
+  const style = brief?.style ?? fallbackStyle;
+  const spec = style ? styles?.styles[style] : undefined;
+  return spec
+    ? `${base}
+
+${facadeStyleGuideText(spec)}`
+    : base;
+}
+
 export interface FacadeCallInput {
   client: TextModelClient;
   route: string;
@@ -88,6 +113,11 @@ export interface FacadeCallInput {
   vocab: FacadeVocabulary;
   /** Phiếu yêu cầu của kỹ sư — rỗng khi chưa điền. */
   brief?: AiFacadeBrief | null;
+  /**
+   * Bộ đặc trưng phong cách (`kb/style_catalogue.yaml`, T175). Có và phiếu có phong cách thì khối
+   * `<requirements>` kèm «Style guide»: chi tiết phải có / nên có / tránh và tập mã hợp phong cách.
+   */
+  styles?: StyleCatalogue | null;
   /** Lượt gọi lại: lý do lượt trước không dùng được (tiếng Việt, nguyên văn phép kiểm). */
   retryIssues?: readonly string[] | null;
   /**
@@ -116,7 +146,13 @@ export async function callFacadeModel(call: FacadeCallInput): Promise<FacadeAtte
     .replace('{brief}', () => facadeBrief(call.digest))
     .replace('{frame}', () => facadeFrameText(call.frame))
     .replace('{requirements}', () =>
-      facadeRequirementsText(call.brief ?? null, call.vocab, call.frame),
+      facadeRequirementsWithStyle(
+        call.brief ?? null,
+        call.vocab,
+        call.frame,
+        call.styles ?? null,
+        call.digest.style ?? null,
+      ),
     )
     .replace('{codes}', () => facadeCodes(call.vocab));
   // Phần gọi lại nối vào CUỐI thân lời gọi: lời dẫn hệ thống và phần đầu giữ nguyên từng byte, nên

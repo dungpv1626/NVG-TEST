@@ -17,6 +17,7 @@ import { load } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
 import { aiUploadedDrawingSchema, emptyFacadeBrief } from '@nvg/shared/design';
 import { parseAiPrompts } from '../ai/prompts';
+import { withStyles } from './ai-style-fixtures';
 import { parseFacadeVocabulary } from '../kb/facade-vocabulary';
 import {
   assembleUploadedDrawing,
@@ -28,7 +29,7 @@ import {
 
 const read = (p: string) =>
   readFileSync(fileURLToPath(new URL(`../../../../${p}`, import.meta.url)), 'utf8');
-const prompts = parseAiPrompts(load(read('kb/ai_design_prompts.yaml')));
+const prompts = withStyles(parseAiPrompts(load(read('kb/ai_design_prompts.yaml'))));
 const vocab = parseFacadeVocabulary(read('kb/facade_vocabulary.yaml'));
 
 /** Đầu tệp PNG tối thiểu đủ để đọc khung (chữ ký + IHDR). */

@@ -18,13 +18,14 @@ import { load } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
 import type { AiImageClient, AiImageOptions, AiImageResult } from '../llm/text-client';
 import { parseAiPrompts } from '../ai/prompts';
+import { withStyles } from './ai-style-fixtures';
 import { sheetImageCallOptions, sheetImagePrompt } from '../ai/sheet-image';
 import { parseVocabulary } from '../kb/vocabulary';
 import { TOWNHOUSE_PLAN } from './ai-plan-fixtures';
 
 const read = (relative: string): string =>
   readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8');
-const prompts = parseAiPrompts(load(read('../../../../kb/ai_design_prompts.yaml')));
+const prompts = withStyles(parseAiPrompts(load(read('../../../../kb/ai_design_prompts.yaml'))));
 const vocabulary = parseVocabulary(read('../../../../kb/room_vocabulary.yaml'));
 const labels: Record<string, string> = Object.fromEntries(
   vocabulary.types.map((type) => [type.code, type.vi]),

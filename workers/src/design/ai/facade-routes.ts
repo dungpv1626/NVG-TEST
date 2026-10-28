@@ -34,6 +34,7 @@ import { confirmBrief } from '../brief/confirm';
 import type { DesignEnv } from '../env';
 import { constructionNorms } from '../kb/construction-data';
 import { facadeVocabulary } from '../kb/facade-vocabulary-data';
+import { styleCatalogue } from '../kb/style-catalogue-data';
 import { facadeQuality } from './facade/quality-data';
 import { scoreFacade, type FacadeScore } from './facade/score';
 import { applyFacadeReview, FACADE_REVIEW_SCHEMA_VERSION } from './facade/review';
@@ -179,6 +180,18 @@ facadeApp.get('/vocabulary', (c) => {
     fenceTypes: list(vocab.fenceTypes),
     gateTypes: labels(vocab.gateTypes),
     elements: labels(vocab.elements),
+    // Bộ đặc trưng phong cách (T175) — phiếu lọc ô chọn theo phong cách đầu bài. Chỉ phần màn hình cần:
+    // nhãn, mô tả, chi tiết tiếng Việt và tập mã hợp phong cách. Câu tiếng Anh của lời dẫn không gửi.
+    styles: Object.values(styleCatalogue().styles).map((spec) => ({
+      code: spec.code,
+      label: spec.label,
+      description: spec.moTa,
+      status: spec.status,
+      must: spec.must.map((cue) => cue.vi),
+      prefer: spec.prefer.map((cue) => cue.vi),
+      avoid: spec.avoid.map((cue) => cue.vi),
+      allowed: spec.allowed,
+    })),
     // Mặc định khi kỹ sư để trống — hiện làm chữ gợi ý trong ô, để kỹ sư biết để trống nghĩa là gì.
     defaults: {
       groundRaiseCm: norms.facade ? Math.round(norms.facade.ground_floor_raise_m * 100) : null,
@@ -396,6 +409,7 @@ facadeApp.get('/:projectId', async (c) => {
     quality: facadeQuality(),
     vocab,
     railingCm: railingCmOf(concept),
+    styles: styleCatalogue(),
   });
   return c.json({
     artifactId: read.artifactId,
@@ -424,6 +438,8 @@ facadeApp.get('/:projectId', async (c) => {
     elements: (concept.elevation.elements ?? []).map((e) => vocab.elements[e.kind] ?? e.kind),
     rationale: concept.rationale,
     generator: concept.generator,
+    // Cảnh báo lúc ghép (T175 — mã ngoài phong cách). Không loại ý tưởng, chỉ để kỹ sư thấy.
+    warnings: (concept.warnings ?? []).map((w) => ({ code: w.code, message: w.message })),
     score,
     // Bản KỸ SƯ CHẤM LẠI gần nhất của ĐÚNG bản vẽ này (T63). Tìm qua cạnh lineage chứ không lọc
     // payload: `edgeTargets` trả mã và thời điểm mà không phải tải payload của từng bản chấm cũ.
@@ -492,6 +508,7 @@ facadeApp.post('/review/:projectId', async (c) => {
     quality,
     vocab: facadeVocabulary(),
     railingCm: railingCmOf(reviewed),
+    styles: styleCatalogue(),
   });
   const known = new Set(quality.criteria.map((criterion) => criterion.code));
 

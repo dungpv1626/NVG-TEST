@@ -25,11 +25,14 @@ const copy = (concept: AiFacadeConcept): AiFacadeConcept =>
   JSON.parse(JSON.stringify(concept)) as AiFacadeConcept;
 
 describe('Thước chấm — đọc tệp', () => {
-  it('tệp thật đọc được, có ngưỡng 80 và đủ năm nhóm', () => {
+  it('tệp thật đọc được, có ngưỡng 80, năm nhóm đo từ hồ sơ và nhóm phong cách', () => {
     expect(quality.acceptPercent).toBe(80);
-    expect(Object.keys(quality.groups).sort()).toEqual(['C', 'M', 'R', 'T', 'V']);
-    // Trọng số nhóm cộng đúng 100 — lệch thì % trên phần chấm được đọc sai mà không ai thấy.
-    expect(Object.values(quality.groups).reduce((sum, g) => sum + g.weight, 0)).toBe(100);
+    expect(Object.keys(quality.groups).sort()).toEqual(['C', 'M', 'R', 'S', 'T', 'V']);
+    // Năm nhóm đo từ hồ sơ thật cộng đúng 100; nhóm S (phong cách, T175) cộng THÊM, không lấy bớt
+    // phần của nhóm nào — tỷ lệ giữa năm nhóm cũ giữ nguyên, và % luôn tính trên phần chấm được.
+    const measured = Object.entries(quality.groups).filter(([code]) => code !== 'S');
+    expect(measured.reduce((sum, [, g]) => sum + g.weight, 0)).toBe(100);
+    expect(quality.groups.S!.weight).toBeGreaterThan(0);
   });
 
   it('tiêu chí thang `band` thiếu một mốc bị bắt NGAY lúc đọc tệp', () => {

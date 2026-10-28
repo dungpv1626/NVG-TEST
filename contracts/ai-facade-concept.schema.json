@@ -440,6 +440,35 @@
       "type": "string",
       "maxLength": 1500
     },
+    "warnings": {
+      "type": "array",
+      "maxItems": 40,
+      "description": "Cảnh báo chương trình ghi lúc ghép (T175, 28/10/2026) — KHÔNG loại ý tưởng. `facade_style_mismatch`: mô hình chọn một mã ngoài tập «hợp phong cách» của `kb/style_catalogue.yaml` cho phong cách của ý tưởng. Mục kỹ sư đã điền trên phiếu không bị cảnh báo ở đây — đó là quyết định của kỹ sư. Vắng ở mọi ý tưởng dựng trước T175 và ở ý tưởng không có cảnh báo nào.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "field", "value", "message"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": ["facade_style_mismatch"]
+          },
+          "field": {
+            "type": "string",
+            "maxLength": 40,
+            "description": "Ô của mặt đứng, ví dụ `roof.type`, `body.material`."
+          },
+          "value": {
+            "$ref": "#/$defs/code"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 300,
+            "description": "Câu tiếng Việt hiện trên màn hình."
+          }
+        }
+      }
+    },
     "generator": {
       "type": "object",
       "additionalProperties": false,

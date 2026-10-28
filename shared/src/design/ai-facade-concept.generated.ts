@@ -329,6 +329,28 @@ export const aiFacadeConceptSchema = z
         'Dữ liệu vẽ tờ mặt đứng. Khung (bề rộng, cao độ từng tầng) do Worker suy từ mặt bằng; mô hình thêm đường mái và các mảng trang trí.',
       ),
     rationale: z.string().max(1500),
+    /** Cảnh báo chương trình ghi lúc ghép (T175, 28/10/2026) — KHÔNG loại ý tưởng. `facade_style_mismatch`: mô hình chọn một mã ngoài tập «hợp phong cách» của `kb/style_catalogue.yaml` cho phong cách của ý tưởng. Mục kỹ sư đã điền trên phiếu không bị cảnh báo ở đây — đó là quyết định của kỹ sư. Vắng ở mọi ý tưởng dựng trước T175 và ở ý tưởng không có cảnh báo nào. */
+    warnings: z
+      .array(
+        z
+          .object({
+            code: z.enum(['facade_style_mismatch']),
+            /** Ô của mặt đứng, ví dụ `roof.type`, `body.material`. */
+            field: z
+              .string()
+              .max(40)
+              .describe('Ô của mặt đứng, ví dụ `roof.type`, `body.material`.'),
+            value: aiFacadeConceptCodeSchema,
+            /** Câu tiếng Việt hiện trên màn hình. */
+            message: z.string().max(300).describe('Câu tiếng Việt hiện trên màn hình.'),
+          })
+          .strict(),
+      )
+      .max(40)
+      .describe(
+        'Cảnh báo chương trình ghi lúc ghép (T175, 28/10/2026) — KHÔNG loại ý tưởng. `facade_style_mismatch`: mô hình chọn một mã ngoài tập «hợp phong cách» của `kb/style_catalogue.yaml` cho phong cách của ý tưởng. Mục kỹ sư đã điền trên phiếu không bị cảnh báo ở đây — đó là quyết định của kỹ sư. Vắng ở mọi ý tưởng dựng trước T175 và ở ý tưởng không có cảnh báo nào.',
+      )
+      .optional(),
     generator: z
       .object({
         kind: z.enum(['ai']),

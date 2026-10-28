@@ -5,11 +5,18 @@
 
 import { load } from 'js-yaml';
 import promptsYaml from '../../../../kb/ai_design_prompts.yaml';
-import { parseAiPrompts, type AiPrompts } from './prompts';
+import { styleCatalogue } from '../kb/style-catalogue-data';
+import { parseAiPrompts, withStylePrompts, type AiPrompts } from './prompts';
 
 let cached: AiPrompts | undefined;
 
 export function aiPrompts(): AiPrompts {
-  if (!cached) cached = parseAiPrompts(load(promptsYaml as unknown as string));
+  // Bảng phong cách của lời dẫn ảnh dựng từ `kb/style_catalogue.yaml` (T175) — một nguồn.
+  if (!cached) {
+    cached = withStylePrompts(
+      parseAiPrompts(load(promptsYaml as unknown as string)),
+      styleCatalogue(),
+    );
+  }
   return cached;
 }

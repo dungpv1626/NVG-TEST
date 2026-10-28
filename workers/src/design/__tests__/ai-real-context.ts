@@ -26,6 +26,7 @@ import { withStairShape } from '../ai/stair-choice';
 import { withHouseProfile } from '../ai/house-profile-norms';
 import { parsePlanQuality } from '../ai/plan-quality';
 import { parseAiPrompts } from '../ai/prompts';
+import { withStyles } from './ai-style-fixtures';
 import { NO_RULE_PACKS, selectedRulePack } from '../ai/rule-packs';
 import { parseBriefFidelity } from '../kb/brief-fidelity';
 import { parseConstructionNorms } from '../kb/construction';
@@ -83,7 +84,7 @@ const scoreRules = new RulePack(
   false,
 );
 
-export const prompts = parseAiPrompts(load(read('kb/ai_design_prompts.yaml')));
+export const prompts = withStyles(parseAiPrompts(load(read('kb/ai_design_prompts.yaml'))));
 
 export const FAKE_CALL = {
   provider: 'fake',

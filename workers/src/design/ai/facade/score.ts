@@ -17,7 +17,12 @@
  * Công thức cho điểm dùng lại `scoreOf` của bộ chấm mặt bằng — một bộ công thức, hai cái thước.
  */
 
-import type { AiFacadeConcept } from '@nvg/shared/design';
+import {
+  styleFactsOfConcept,
+  styleFit,
+  type AiFacadeConcept,
+  type StyleCatalogue,
+} from '@nvg/shared/design';
 import type { FacadeVocabulary } from '../../kb/facade-vocabulary';
 import { scoreOf } from '../plan-score';
 import type { FacadeCriterion, FacadeQuality } from './quality';
@@ -37,6 +42,11 @@ export interface FacadeCriterionScore {
   doAi: boolean;
   /** Vì sao không chấm được — chỉ có khi `value` rỗng. */
   why: string | null;
+  /**
+   * Chi tiết cụ thể làm mất điểm, tiếng Việt (T175 — «thiếu: phào chỉ, cột»). Vắng = tiêu chí không
+   * có gì để kể thêm. Đi kèm câu gửi mô hình ở lượt sửa vì điểm.
+   */
+  detail?: string;
 }
 
 export interface FacadeGroupScore {
@@ -62,8 +72,8 @@ export interface FacadeScore {
   criteria: FacadeCriterionScore[];
 }
 
-/** Một phép đo: giá trị, hoặc lý do vì sao chưa đo được. */
-type Measured = { value: number } | { why: string };
+/** Một phép đo: giá trị (kèm chi tiết nếu có), hoặc lý do vì sao chưa đo được. */
+type Measured = { value: number; detail?: string } | { why: string };
 
 const isMeasured = (m: Measured): m is { value: number } => 'value' in m;
 
@@ -182,6 +192,7 @@ function measure(
   concept: AiFacadeConcept,
   vocab: FacadeVocabulary,
   railingCm: number | null,
+  styles: StyleCatalogue | null,
 ): Measured {
   const bool = (ok: boolean): Measured => ({ value: ok ? 1 : 0 });
   const colourLight = (code: string | null | undefined): number | null => {
@@ -261,6 +272,37 @@ function measure(
       return railingCm === null
         ? { why: 'Chưa biết chiều cao lan can của quy ước cấu tạo.' }
         : { value: railingCm };
+    case 'S1':
+    case 'S2': {
+      if (!styles) return { why: 'Chưa nạp bộ đặc trưng phong cách.' };
+      const spec = styles.styles[concept.style];
+      if (!spec) return { why: `Bộ đặc trưng chưa có phong cách «${concept.style}».` };
+      const fit = styleFit(spec, styleFactsOfConcept(concept));
+      if (criterion.code === 'S1') {
+        if (fit.mustMeasured.length === 0) {
+          return {
+            why: `Phong cách ${spec.label} chưa khai chi tiết nhận diện nào đo được bằng mã.`,
+          };
+        }
+        const hit = fit.mustMeasured.length - fit.mustMissing.length;
+        return {
+          value: hit / fit.mustMeasured.length,
+          ...(fit.mustMissing.length
+            ? {
+                detail: `${spec.label} còn thiếu: ${fit.mustMissing.map((c) => c.vi).join('; ')}`,
+              }
+            : {}),
+        };
+      }
+      return {
+        value: fit.avoidHit.length,
+        ...(fit.avoidHit.length
+          ? {
+              detail: `${spec.label} nên tránh: ${fit.avoidHit.map((c) => c.vi).join('; ')}`,
+            }
+          : {}),
+      };
+    }
     default:
       // Thước khai một tiêu chí mà bộ chấm chưa biết đo: nói ra, đừng cho 0 lặng lẽ.
       return { why: `Bộ chấm chưa biết đo tiêu chí ${criterion.code}.` };
@@ -273,11 +315,17 @@ export interface FacadeScoreInput {
   vocab: FacadeVocabulary;
   /** Chiều cao lan can bộ vẽ dùng, cm (`kb/construction_norms.yaml`). */
   railingCm?: number | null;
+  /**
+   * Bộ đặc trưng phong cách (`kb/style_catalogue.yaml`, T175) — nhóm S. Vắng thì S1, S2 «thiếu đầu
+   * vào»: giữ trọng số nhưng không vào phần chấm được, nên điểm các nhóm khác không đổi.
+   */
+  styles?: StyleCatalogue | null;
 }
 
 export function scoreFacade(input: FacadeScoreInput): FacadeScore {
   const { concept, quality, vocab } = input;
   const railingCm = input.railingCm ?? null;
+  const styles = input.styles ?? null;
 
   /*
    * Hai kiểu «rỗng» KHÁC NHAU, và trọng số xử lý ngược nhau — cùng cách bộ chấm mặt bằng phân
@@ -296,7 +344,7 @@ export function scoreFacade(input: FacadeScoreInput): FacadeScore {
       inScope: holds === true,
       m:
         holds === true
-          ? measure(criterion, concept, vocab, railingCm)
+          ? measure(criterion, concept, vocab, railingCm, styles)
           : ({ why: holds } as Measured),
     };
   });
@@ -324,6 +372,7 @@ export function scoreFacade(input: FacadeScoreInput): FacadeScore {
       label: criterion.label,
       doAi: criterion.doAi,
       why: isMeasured(m) ? null : m.why,
+      ...(isMeasured(m) && m.detail && scoreOf(criterion, m.value) < 1 ? { detail: m.detail } : {}),
     };
   });
 

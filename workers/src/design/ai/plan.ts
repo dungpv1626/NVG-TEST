@@ -3486,7 +3486,14 @@ export function hintsFor(issues: readonly PlanIssue[], prompts: AiPrompts, prefi
   for (const issue of issues) {
     // Lỗi mang số ô bản phác (`withSketchCells`) thì dùng dòng nói số ô, nếu lời dẫn có.
     // Không phòng kề nào nhường được (`adviseShort`, T89) thì dùng dòng bảo xếp lại dải phòng.
+    // Chương trình tìm được chỗ lấy ô cụ thể (`shortDonor`, T174) thì nói đích danh: dời dãy phòng, hoặc lấy thẳng.
     const template =
+      (issue.params?.chain !== undefined
+        ? prompts.floorLevel.hints[`${issue.code}_chain`]
+        : undefined) ??
+      (issue.params?.donor !== undefined
+        ? prompts.floorLevel.hints[`${issue.code}_from`]
+        : undefined) ??
       (issue.params?.tight !== undefined
         ? prompts.floorLevel.hints[`${issue.code}_tight`]
         : undefined) ??
@@ -5456,6 +5463,37 @@ export function stuckRepeating(history: readonly string[], after = STUCK_AFTER):
   return tail.every((key) => key === tail[0]);
 }
 
+/**
+ * Chữ ký LỖI CHÍNH của một lượt hỏng (T174): câu lỗi ĐẦU TIÊN — đúng câu màn hình và bước «Xếp lại» hiện
+ * (`roundSummary`) — kèm tầng và mã. Mã phòng trong ngoặc kép bỏ số thứ tự («"bedroom_4"» ≡ «"bedroom_3"»): lượt sửa
+ * hay đánh số lại phòng mà lỗi vẫn là một. Số đo giữ nguyên, nên phòng còn nhích diện tích thì chữ ký đổi — đang tiến
+ * thì chưa phải lặp. `null` khi lượt không có câu lỗi nào.
+ */
+export function mainProblemKey(
+  rejections: readonly Pick<LevelRejection, 'level' | 'messages' | 'codes'>[],
+): string | null {
+  const rejection = rejections.find((item) => item.messages.length > 0);
+  if (!rejection) return null;
+  const message = rejection.messages[0]!.replace(/"([a-z][a-z_]*?)_\d+"/g, '"$1"');
+  return `${rejection.level}|${rejection.codes?.[0] ?? ''}|${message}`;
+}
+
+/**
+ * `after` lượt cuối hỏng cùng một lỗi chính (`mainProblemKey`) — câu nhắc đã nói đúng lỗi ấy `after − 1` lần mà mô hình
+ * không gỡ được. Khác `stuckRepeating` (cả tập lỗi y hệt): lỗi phụ đổi mỗi lượt vẫn tính là lặp. Lượt thật 1dd74b99 (hồ
+ * sơ 9272, 28/10/2026): lượt 2–4 cùng «phòng ngủ tầng 2 chỉ 14,13 m² < 17 m²», lỗi phụ khác nhau, lượt 5 ≈ 0,09 USD trả
+ * rỗng. `after` từ `kb/plan_quality.yaml` `revision_stop_same_main_issue_rounds`; `null` = tắt. Lượt xếp được ghi `null`
+ * vào `history` để chuỗi «liền nhau» đứt.
+ */
+export function sameMainProblem(
+  history: readonly (string | null)[],
+  after: number | null | undefined,
+): boolean {
+  if (!after || history.length < after) return false;
+  const tail = history.slice(-after);
+  return tail[0] !== null && tail.every((key) => key === tail[0]);
+}
+
 /** Ghép lý do lượt cuối với lượt đầu để màn hình so được — theo tầng. */
 export function finalRejections(
   last: readonly LevelRejection[],
@@ -5538,6 +5576,8 @@ export async function generateAiPlan(input: AiPlanInput): Promise<AiPlanResult> 
   // Số lần liền nhau đã gửi lại bản tốt nhất thay vì bản mới (xem `revisionBase`, `stalled`).
   let resent = 0;
   const history: string[] = [];
+  /** Lỗi chính từng lượt hỏng (`mainProblemKey`, T174). */
+  const mains: (string | null)[] = [];
   /** Câu trả lời đã chấm trong lượt này (`houseAnswerKey`) — gặp lại thì dừng (T153). */
   const seenAnswers = new Set<string>();
 
@@ -5625,6 +5665,7 @@ export async function generateAiPlan(input: AiPlanInput): Promise<AiPlanResult> 
     for (const rejection of rejections) if (rejection.level > 0) failedLevels.add(rejection.level);
     first ??= rejections;
     history.push(problemKey(rejections));
+    mains.push(mainProblemKey(rejections));
     const plan = retryPlan(attempt, evaluation, next?.previous ?? null);
     const answered = evaluation?.renamed ?? attempt.intent;
     const answerKey = answered ? houseAnswerKey(answered) : null;
@@ -5641,6 +5682,9 @@ export async function generateAiPlan(input: AiPlanInput): Promise<AiPlanResult> 
       );
     }
     if (stuckRepeating(history, stuckAfter(input.pipeline))) {
+      throw new AiPlanRejected(finalRejections(rejections, first, 'stuck', round + 1));
+    }
+    if (sameMainProblem(mains, input.quality.sameMainIssueRounds)) {
       throw new AiPlanRejected(finalRejections(rejections, first, 'stuck', round + 1));
     }
     if (plan.kind === 'revise') {

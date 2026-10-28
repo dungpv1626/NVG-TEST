@@ -10,6 +10,7 @@ import { load } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
 import { AI_DISCLAIMERS } from '@nvg/shared/design';
 import { AiPromptsError, parseAiPrompts } from '../ai/prompts';
+import { withStyles } from './ai-style-fixtures';
 import { ARRANGE_ISSUE_CODES, REVISABLE_CODES } from '../ai/arrange';
 
 const raw = load(
@@ -18,7 +19,7 @@ const raw = load(
     'utf8',
   ),
 );
-const prompts = parseAiPrompts(raw);
+const prompts = withStyles(parseAiPrompts(raw));
 const vietnamese = /[àáâãèéêìíòóôõùúýăđĩũơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/i;
 
 describe('kb/ai_design_prompts.yaml', () => {

@@ -1087,6 +1087,20 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   AI-A (70,2 điểm, dưới sàn nhóm D, E); ảnh nội thất / mặt đứng / phối cảnh CHƯA chạy — bộ lọc an toàn chặn Claude tự bấm lệnh
   trả phí, anh Dũng tự bấm trên giao diện hoặc thêm quyền. Câu hỏi mở: ngân sách công trình có cần BGĐ duyệt / bắt buộc trước
   khởi công; giá dự thầu đã gồm thuế chưa; danh mục kiểm tra có tách khỏi bộ nộp.
+- **AI Design — lộ trình 6 giai đoạn (28/10/2026, anh Dũng đồng ý):** GĐ1 mặt bằng ổn định (T174) — dừng sớm khi CÙNG lỗi
+  chính lặp 3 lượt (`kb/plan_quality.yaml` `revision_stop_same_main_issue_rounds`, `mainProblemKey` ở `ai/plan.ts`, câu
+  `earlyStop` trên màn hình; phát lại 59 lượt bớt 13 / 248 lời gọi, không mất vòng qua cổng), câu nhắc sửa nói lấy ô từ phòng
+  nào (`shortDonor`, CHƯA đo thật), «tầng 1 chọn lại theo cả nhà» đã thử rồi gỡ (15 → 15 vòng qua, patch ở `backup/gd1-mat-bang/`);
+  fixture lượt thật 28/10 `ai-run-1dd74b99.json`. GĐ3 phong cách mẫu (T175) — `kb/style_catalogue.yaml` 9 phong cách (ĐỀ XUẤT, chờ
+  kiến trúc sư NVO duyệt), lời dẫn mặt đứng / phối cảnh / nội thất đọc từ đây, phiếu mặt đứng lọc lựa chọn theo phong cách (chỉ
+  cảnh báo), nhóm điểm S «Đúng phong cách» (trọng số 15, `score_version` 4), hợp đồng `ai-facade-concept` thêm `warnings` (đổi
+  `CONTRACTS_FINGERPRINT` — phát hành API cùng giao diện). Lời dẫn 9.12.0. Còn: GĐ2 lượt thật (Mặt ngoài `9272` + 1 lượt mặt bằng
+  kiểm câu nhắc mới, chờ anh Dũng bấm hoặc cấp quyền), GĐ4 ảnh mẫu (chờ NVG), GĐ5 bản vẽ cho khách, GĐ6 3D thật / thêm hồ sơ;
+  gợi ý mặt bằng theo phong cách (việc 10) làm sau GĐ1. `plan-score.test.ts` đỏ trên máy này do yaml CRLF (autocrlf) — có sẵn.
+- **Chạy cho máy khác cùng wifi (28/10/2026):** `.env` `VITE_SUPABASE_URL` / `VITE_DESIGN_API_URL` trỏ `192.168.1.3` (bản cũ trỏ
+  `127.0.0.1` / `localhost`), `workers/.dev.vars` thêm `ALLOWED_ORIGINS`; Worker `wrangler dev --ip 0.0.0.0`, Vite `npx vite --host
+  0.0.0.0` (chạy trong `web/` — `npm run dev -- --host` nuốt cờ). Tường lửa cổng 5173 / 8788 / 55321 phải mở bằng quyền
+  Administrator. Kịch bản kiểm `127.0.0.1` trong `backup/` sẽ dừng khi `.env` trỏ IP mạng.
 - Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,

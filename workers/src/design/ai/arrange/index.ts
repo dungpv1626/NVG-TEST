@@ -1578,6 +1578,22 @@ function adviseShort(
   };
   // Phải nhường được ĐỦ số ô còn thiếu: phòng bớt một ô vẫn trên sàn mà bớt đủ thì hụt là không cứu được.
   const deficit = Math.max(1, Number(issue.params.need_cells) - (count.get(room) ?? 0));
+  // Chỗ lấy ô CỤ THỂ (T174): phòng / hành lang kề nhường thẳng, hoặc dời một dãy phòng cùng bề rộng về phía phòng dư.
+  const donor = shortDonor(input, sketch, room, deficit, count, spareAt);
+  if (donor) {
+    return {
+      ...issue,
+      params: {
+        ...issue.params,
+        donor: donor.donor,
+        give_cells: donor.give,
+        give_lines: `${donor.lines} ${donor.lines === 1 ? 'line' : 'lines'} of ${donor.span} cells`,
+        donor_spare: donor.spare,
+        via: donor.via.map((id) => `"${id}"`).join(', '),
+        ...(donor.via.length ? { chain: 1 } : {}),
+      },
+    };
+  }
   const canGive = (id: string) => spareAt(id, (count.get(id) ?? 0) - deficit) !== null;
   if ([...neighbours].some(canGive)) return issue;
   const spare = [...count.keys()]
@@ -1599,6 +1615,149 @@ function adviseShort(
         : 'none',
     },
   };
+}
+
+/** Chỗ lấy ô cho phòng hụt sàn (`shortDonor`). */
+interface ShortDonor {
+  donor: string;
+  /** Phòng nằm giữa, dời nguyên khối về phía `donor` (cùng bề rộng) — rỗng khi `donor` kề thẳng. */
+  via: string[];
+  /** Số dải ô lấy từ `donor`, mỗi dải `span` ô. */
+  lines: number;
+  span: number;
+  give: number;
+  /** Phần dư của `donor` sau khi nhường, tiếng Anh cho câu nhắc. */
+  spare: string;
+}
+
+/**
+ * Lấy ô ở ĐÂU cho phòng hụt sàn — tính tất định trên bản phác (T174, lượt thật 1dd74b99 hồ sơ 9272).
+ *
+ * Lượt 2–4 của 1dd74b99: «bd4» 15 ô (cần 19) kề «bd3» (đúng sàn 17 m²), «co2», «co3» (hành lang đúng bề rộng) — câu nhắc
+ * nói «không phòng kề nào nhường được, lấy từ sd1, bc2, bc1» mà không nói lấy cách nào; ba lượt mô hình nộp lại cùng phòng
+ * 15 ô. Ngay trên «bd3» là ban công «bc2» cùng bề rộng 5 ô còn dư: dời «bd3» lên một dải là «bd4» có thêm 5 ô.
+ *
+ * Đi theo từng hướng: phòng (chữ nhật đặc) kề phòng hụt bằng TRỌN một cạnh cùng bề rộng → nhường được `lines` dải mà vẫn
+ * trên mức của nó (`spareAt`; hành lang thì còn đủ bề rộng lọt lòng `corridor_clear_m`) thì là chỗ lấy; không nhường được
+ * mà là phòng thường thì dời nguyên khối, đi tiếp hướng ấy (tối đa `CHAIN_MAX` phòng giữa). Ô thang / thang máy / giếng
+ * trời không dời, không nhường. Chọn đường ngắn nhất, rồi ít ô nhất. Chỉ là GỢI Ý trong câu nhắc — bộ xếp không
+ * tự dời phòng nào theo đây. `null` khi không có đường nào.
+ */
+const CHAIN_MAX = 3;
+
+function shortDonor(
+  input: ArrangeInput,
+  sketch: PreparedSketch,
+  room: string,
+  deficit: number,
+  count: ReadonlyMap<string, number>,
+  spareAt: (id: string, remaining: number) => number | null,
+): ShortDonor | null {
+  const cells = sketch.grid.cells;
+  const { footprint, grid } = sketch;
+  const cellW = (footprint.x1 - footprint.x0) / grid.cols;
+  const cellH = (footprint.y1 - footprint.y0) / grid.rows;
+  const partition = input.construction.walls.partition_m * 100;
+  const clear =
+    (input.construction.circulation?.corridor_clear_m ??
+      input.construction.openings.door?.width_m ??
+      0.9) * 100;
+  const fixed = new Set([...input.stairTypes, 'elevator', 'light_well', 'core']);
+  const typeOf = (id: string) => input.program.spaces.find((space) => space.id === id)?.type;
+  const box = (id: string) => {
+    let r0 = Infinity;
+    let r1 = -1;
+    let c0 = Infinity;
+    let c1 = -1;
+    cells.forEach((row, r) =>
+      row.forEach((other, c) => {
+        if (other !== id) return;
+        r0 = Math.min(r0, r);
+        r1 = Math.max(r1, r);
+        c0 = Math.min(c0, c);
+        c1 = Math.max(c1, c);
+      }),
+    );
+    if (r1 < 0) return null;
+    // Chỉ chữ nhật đặc: phòng chữ L thì «dời một dải» không còn nghĩa rõ.
+    return (r1 - r0 + 1) * (c1 - c0 + 1) === (count.get(id) ?? 0) ? { r0, r1, c0, c1 } : null;
+  };
+  type Box = NonNullable<ReturnType<typeof box>>;
+  const dirs = [
+    { dr: -1, dc: 0 },
+    { dr: 1, dc: 0 },
+    { dr: 0, dc: -1 },
+    { dr: 0, dc: 1 },
+  ] as const;
+  const found: ShortDonor[] = [];
+  for (const dir of dirs) {
+    const vertical = dir.dr !== 0;
+    let current = box(room);
+    if (!current) return null;
+    const via: string[] = [];
+    for (let step = 0; step <= CHAIN_MAX; step += 1) {
+      const b: Box = current;
+      const line: (string | null | undefined)[] = [];
+      if (vertical) {
+        const r = dir.dr < 0 ? b.r0 - 1 : b.r1 + 1;
+        for (let c = b.c0; c <= b.c1; c += 1) line.push(cells[r]?.[c]);
+      } else {
+        const c = dir.dc < 0 ? b.c0 - 1 : b.c1 + 1;
+        for (let r = b.r0; r <= b.r1; r += 1) line.push(cells[r]?.[c]);
+      }
+      const next = line[0];
+      if (!next || next === room || via.includes(next) || line.some((id) => id !== next)) break;
+      const nb = box(next);
+      if (!nb) break;
+      const sameSpan = vertical
+        ? nb.c0 === b.c0 && nb.c1 === b.c1
+        : nb.r0 === b.r0 && nb.r1 === b.r1;
+      if (!sameSpan) break;
+      const type = typeOf(next);
+      if (!type || fixed.has(type)) break;
+      const span = vertical ? b.c1 - b.c0 + 1 : b.r1 - b.r0 + 1;
+      const lines = Math.ceil(deficit / span);
+      const depth = vertical ? nb.r1 - nb.r0 + 1 : nb.c1 - nb.c0 + 1;
+      if (lines < depth) {
+        if (type === 'circulation') {
+          // Hành lang nhường bề rộng thừa: còn lại vẫn đủ lọt lòng của nó.
+          const left = (depth - lines) * (vertical ? cellH : cellW) - partition;
+          if (left >= clear) {
+            found.push({
+              donor: next,
+              via: [...via],
+              lines,
+              span,
+              give: lines * span,
+              spare: `about ${((depth * (vertical ? cellH : cellW) - partition - clear) / 100).toFixed(1)} m wider than a corridor needs`,
+            });
+            break;
+          }
+        } else {
+          const after = spareAt(next, (count.get(next) ?? 0) - lines * span);
+          if (after !== null) {
+            const before = spareAt(next, count.get(next) ?? 0) ?? after;
+            found.push({
+              donor: next,
+              via: [...via],
+              lines,
+              span,
+              give: lines * span,
+              spare: `about ${Math.floor(before)} m² spare`,
+            });
+            break;
+          }
+        }
+      }
+      // Không nhường được: hành lang không dời (dời là đứt lối đi), ban công không rời mặt ngoài; phòng thường dời
+      // nguyên khối.
+      if (type === 'circulation' || type === 'balcony') break;
+      via.push(next);
+      current = nb;
+    }
+  }
+  found.sort((p, q) => p.via.length - q.via.length || p.give - q.give);
+  return found[0] ?? null;
 }
 
 /** Chuẩn hoá ý định của một tầng — vùng từ bản phác thì không giới hạn số phòng mỗi vùng. */

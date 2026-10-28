@@ -226,6 +226,7 @@ export function FacadeScorePanel({
                           : 'Chưa đạt'}
                   </p>
                 )}
+                {c.detail && <p className="mt-1">{c.detail}</p>}
                 {c.giaiThich && <p className="mt-1 text-xs text-tk-t3">{c.giaiThich}</p>}
 
                 {editing &&

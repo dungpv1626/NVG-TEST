@@ -409,6 +409,8 @@ export interface BriefFieldProps {
   anchorId?: string | null;
   /** Diện tích theo giấy chứng nhận — chỉ bảng vẽ thửa đa giác dùng để đối chiếu. */
   siteAreaM2?: number;
+  /** Phong cách đầu bài đã chọn — chỉ phần mặt đứng dùng, để lọc ô chọn theo phong cách (T175). */
+  briefStyle?: string | null;
 }
 
 export function BriefField({
@@ -422,6 +424,7 @@ export function BriefField({
   areaBudget,
   anchorId,
   siteAreaM2,
+  briefStyle,
 }: BriefFieldProps) {
   const hint = field.unit ? `${field.hint ?? ''} Đơn vị: ${field.unit}.`.trim() : field.hint;
 
@@ -447,6 +450,7 @@ export function BriefField({
           family={family}
           areaBudget={areaBudget}
           siteAreaM2={siteAreaM2}
+          briefStyle={briefStyle}
         />
       </Field>
       {issues.map((issue) => (
@@ -465,6 +469,7 @@ function BriefControl({
   family,
   areaBudget,
   siteAreaM2,
+  briefStyle,
 }: Omit<BriefFieldProps, 'issues' | 'anchorId'>) {
   switch (field.control) {
     case 'textarea':
@@ -873,7 +878,11 @@ function BriefControl({
     case 'facade':
       return (
         <Suspense fallback={<Skeleton className="h-40 w-full" />}>
-          <FacadeControl value={value as BriefFacade | null | undefined} onChange={onChange} />
+          <FacadeControl
+            value={value as BriefFacade | null | undefined}
+            onChange={onChange}
+            briefStyle={briefStyle ?? null}
+          />
         </Suspense>
       );
 

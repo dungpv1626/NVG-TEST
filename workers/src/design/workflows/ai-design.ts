@@ -85,6 +85,8 @@ import {
   problemKey,
   STALLED_AFTER,
   stuckRepeating,
+  mainProblemKey,
+  sameMainProblem,
   type LevelRejection,
   type PlanCallRecord,
   type PlanVariant,
@@ -92,13 +94,16 @@ import {
 } from '../ai/plan';
 import {
   AiPlanRejectedWithMain,
+  earlyStopOf,
   mainRejection,
   roundSummary,
+  type EarlyStop,
   type MainRejection,
 } from './plan-main-rejection';
 import { roomVocabulary as vocabularyIndex } from '../kb/vocabulary-data';
 import { facadeVocabulary } from '../kb/facade-vocabulary-data';
 import { facadeQuality } from '../ai/facade/quality-data';
+import { styleCatalogue } from '../kb/style-catalogue-data';
 import {
   FACADE_CALLS_MAX,
   facadeStepId,
@@ -259,6 +264,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
         outdoor: deps.groups.outdoor,
         vocab: facadeVocabulary(),
         quality: facadeQuality(),
+        styles: styleCatalogue(),
         repo,
         ...(publicRoute?.pricing ? { pricing: publicRoute.pricing } : {}),
         provider: deps.provider,
@@ -313,6 +319,8 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       main?: MainRejection;
       /** Dừng vì chạm mức chi phí của lượt (T164). */
       costCap?: CostCapStop;
+      /** Dừng gọi lại vì cùng một lỗi chính lặp lại (T174). */
+      earlyStop?: EarlyStop;
     }[] = [];
     params.variants.forEach((variant, index) => {
       const outcome = settled[index];
@@ -320,6 +328,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       else {
         const reason = outcome?.reason;
         const capped = reason instanceof AiPlanRejectedWithMain ? reason.costCap : null;
+        const early = reason instanceof AiPlanRejectedWithMain ? reason.earlyStop : null;
         failed.push({
           variantId: variant.id,
           // Dừng vì tiền thì câu chính nói đúng điều ấy; lý do hỏng của lượt chính vẫn ở `main` / `reasons`.
@@ -331,6 +340,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
           reasons: reason instanceof AiPlanRejected ? reason.levels : [],
           ...(reason instanceof AiPlanRejectedWithMain && reason.main ? { main: reason.main } : {}),
           ...(capped ? { costCap: capped } : {}),
+          ...(early ? { earlyStop: early } : {}),
         });
       }
     });
@@ -708,6 +718,8 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
     let resent = 0;
     // Tập lỗi từng lượt hỏng — thôi gọi khi `STUCK_AFTER` lượt liền y hệt (`stuckRepeating`).
     const history: string[] = [];
+    // Lỗi chính từng lượt (`mainProblemKey`, T174) — lượt xếp được ghi `null` để chuỗi «liền nhau» đứt.
+    const mains: (string | null)[] = [];
     // Câu trả lời hỏng đã chấm (`houseAnswerKey`) — mô hình trả lại một câu đã biết kết quả thì dừng (T153).
     const seenAnswers = new Set<string>();
     // Đầu bài vượt sàn xây được: không gọi mô hình (T112). Lượt sửa theo yêu cầu kỹ sư đã có mặt bằng.
@@ -791,6 +803,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
           percent,
           failedLevels: [...failedLevels],
         });
+        mains.push(null);
         // Đạt ngưỡng, hết lượt sửa, hoặc không có dòng nào để gửi mô hình → ghi bản tốt nhất.
         if (arranged.retry === 'none' || lastRound(params, round)) {
           return this.writeBest(step, deps, params, variant, best, calls.length);
@@ -809,6 +822,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
       }
       first ??= arranged.rejections;
       history.push(problemKey(arranged.rejections));
+      mains.push(mainProblemKey(arranged.rejections));
       const repeated = !!arranged.answerKey && seenAnswers.has(arranged.answerKey);
       if (arranged.answerKey) seenAnswers.add(arranged.answerKey);
       // Chỉ còn lỗi hình học (`retry: 'none'`): bộ dựng hình đã thử hết cách, mô hình không sửa được.
@@ -837,6 +851,17 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
         throw new AiPlanRejectedWithMain(
           finalRejections(arranged.rejections, first, 'stuck', calls.length),
           mainRejection(bestFailed, bestFailedRound, arranged, deps.prompts),
+        );
+      }
+      // Cùng một lỗi chính lặp lại (T174): câu nhắc đã nói đúng lỗi ấy mà mô hình không gỡ — dừng trước lời gọi kế.
+      const sameMain = deps.quality.sameMainIssueRounds;
+      if (sameMainProblem(mains, sameMain)) {
+        if (best) return this.writeBest(step, deps, params, variant, best, calls.length);
+        throw new AiPlanRejectedWithMain(
+          finalRejections(arranged.rejections, first, 'stuck', calls.length),
+          mainRejection(bestFailed, bestFailedRound, arranged, deps.prompts),
+          null,
+          earlyStopOf(sameMain!, arranged.rejections),
         );
       }
       // Sửa tiếp từ lượt hỏng nhẹ nhất, không phải lượt mới nhất (T73 i, lượt đo 5cd78ef7).
