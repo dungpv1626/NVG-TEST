@@ -10,6 +10,22 @@ import { productionEnvProblems } from './src/lib/build-env';
  * đây là ứng dụng quản trị nội bộ, không cần SEO; toàn bộ trang tĩnh phục vụ
  * qua CDN của Cloudflare Pages, không cần máy chủ Node.js riêng để render.
  */
+/**
+ * Chạy thử trên máy (`vite` dev): địa chỉ CSDL / Worker trỏ về máy này (localhost, 127.x, 192.168.x, 10.x)
+ * thì thay tên máy bằng đúng tên máy mà trình duyệt đang mở trang — mở `localhost:5173` gọi localhost, mở
+ * `192.168.1.8:5173` từ máy khác gọi 192.168.1.8. Wifi đổi IP không còn làm hỏng đăng nhập (anh Dũng gặp ba lần
+ * 28–29/10/2026). Bản build giữ nguyên địa chỉ trong `.env.production` (build-env.ts chặn địa chỉ máy).
+ */
+function devHostUrl(raw: string, command: string): string {
+  const local =
+    /^(https?:)\/\/(localhost|127\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?(\/.*)?$/.exec(
+      raw,
+    );
+  if (command !== 'serve' || !local) return JSON.stringify(raw);
+  const [, proto, , port = '', rest = ''] = local;
+  return `(${JSON.stringify(proto + '//')} + window.location.hostname + ${JSON.stringify(port + rest)})`;
+}
+
 export default defineConfig(({ command, mode }) => {
   // Biến môi trường nằm ở GỐC repo (một .env dùng chung cho cả workspace),
   // không phải trong web/. Bản phát hành đọc thêm `.env.production`, đè lên `.env`.
@@ -157,13 +173,13 @@ export default defineConfig(({ command, mode }) => {
     define: {
       // Chỉ đưa ra trình duyệt khóa CÔNG KHAI (anon key) — bị RLS giới hạn hoàn toàn.
       // Khóa service_role KHÔNG BAO GIỜ xuất hiện ở đây (Tech Stack 5.6).
-      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL ?? ''),
+      'import.meta.env.VITE_SUPABASE_URL': devHostUrl(env.VITE_SUPABASE_URL ?? '', command),
       'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY ?? ''),
       // Địa chỉ Worker của Module Thiết kế AI. Phải khai Ở ĐÂY mới tới được trình duyệt:
       // `.env` nằm ở gốc repo chứ không phải trong `web/`, nên Vite KHÔNG tự nạp nó — mọi
       // biến đều phải đi qua `define`. Thiếu một dòng ở đây thì màn hình liên quan báo
       // "chưa cấu hình dịch vụ" trong khi `.env` có đủ, và bản dựng vẫn xanh.
-      'import.meta.env.VITE_DESIGN_API_URL': JSON.stringify(env.VITE_DESIGN_API_URL ?? ''),
+      'import.meta.env.VITE_DESIGN_API_URL': devHostUrl(env.VITE_DESIGN_API_URL ?? '', command),
     },
     server: { port: 5173 },
     build: {
