@@ -7,7 +7,13 @@
  * Mô hình chỉ trả NHÁP theo hợp đồng `contracts/ai-survey-paper-read.schema.json`; khoá lạ bị loại.
  */
 
-import { surveyPaperFields, type PaperField, type PaperReadItem } from '@nvg/shared';
+import {
+  normalizePaperSketch,
+  surveyPaperFields,
+  type PaperField,
+  type PaperReadItem,
+  type PaperSketch,
+} from '@nvg/shared';
 import type { AiSurveyPaperRead } from '@nvg/shared/design';
 import { scrubIdentity } from '../design/brief/anonymise';
 
@@ -95,6 +101,12 @@ export function paperPrompt(fields: readonly PaperField[]): string {
     'Mục «Người quyết định»: chỉ ghi vai trò (ví dụ «Giám đốc công ty»), không ghi họ tên.',
     'Số tiền, kích thước, ngày tháng chép đúng như viết.',
     '',
+    'Mục «Sơ đồ hiện trạng» là khung vẽ tay, KHÔNG nằm trong danh sách ô dưới đây. Nếu khung có hình vẽ, trả',
+    '`sketch`: `page` = số thứ tự ảnh chứa khung (đếm từ 1); `x0`, `y0`, `x1`, `y1` = mép trái, trên, phải, dưới',
+    'của khung vẽ theo tỷ lệ bề ngang / chiều cao ảnh (0 tới 1); `description` = mô tả hình bằng câu ngắn: hình',
+    'dạng khu đất, kích thước ghi trên hình, hướng, đường và lối vào, vật cản (cột điện, giếng, cây…), nhà bên',
+    'cạnh — chỉ điều thấy trên hình. Khung trống thì không trả `sketch`.',
+    '',
     'Các mục (khoá | tên mục in trên phiếu | gợi ý):',
     ...fields.map((f) => `- ${f.key} | ${f.label}${f.hint ? ` | ${f.hint}` : ''}`),
   ].join('\n');
@@ -115,6 +127,18 @@ export const PAPER_RESPONSE_SCHEMA = {
         },
         required: ['key', 'value', 'confidence'],
       },
+    },
+    sketch: {
+      type: 'OBJECT',
+      properties: {
+        page: { type: 'INTEGER' },
+        x0: { type: 'NUMBER' },
+        y0: { type: 'NUMBER' },
+        x1: { type: 'NUMBER' },
+        y1: { type: 'NUMBER' },
+        description: { type: 'STRING' },
+      },
+      required: ['page', 'x0', 'y0', 'x1', 'y1', 'description'],
     },
   },
   required: ['fields'],
@@ -153,6 +177,19 @@ export function normalizePaperRead(
   return { accepted, rejected };
 }
 
+/** Khung sơ đồ: kiểm hộp theo số trang đã gửi, lược danh tính khỏi mô tả. Không có hoặc vô nghĩa → `null`. */
+export function normalizePaperSketchRead(
+  raw: AiSurveyPaperRead['sketch'],
+  pageCount: number,
+  identities: readonly string[],
+): PaperSketch | null {
+  if (!raw) return null;
+  const description = scrubIdentity(raw.description.trim(), identities)
+    .replace(/^(\[đã lược\][\s,.;:-]*)+$/u, '')
+    .trim();
+  return normalizePaperSketch({ ...raw, description }, pageCount);
+}
+
 /** Nháp MẪU cho chế độ giả lập — mọi giá trị ghi rõ «[Giả lập]», không lấy gì từ ảnh. */
 export function fakePaperRead(companyCode: string | null | undefined): AiSurveyPaperRead {
   const fields = surveyPaperFields(companyCode);
@@ -173,5 +210,15 @@ export function fakePaperRead(companyCode: string | null | undefined): AiSurveyP
       value: '[Giả lập] Chữ khó đọc — kiểm lại với phiếu.',
       confidence: 'khong_ro',
     });
-  return { fields: out };
+  return {
+    fields: out,
+    sketch: {
+      page: 1,
+      x0: 0.03,
+      y0: 0.72,
+      x1: 0.97,
+      y1: 0.97,
+      description: '[Giả lập] Vùng cuối trang 1 — không phải sơ đồ thật trên phiếu.',
+    },
+  };
 }

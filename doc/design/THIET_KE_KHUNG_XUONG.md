@@ -137,3 +137,12 @@ thang đúng cỡ tối thiểu và giếng trời kề thang. Đi sau các khun
 cảnh Workflow THU5 0 → 0; ngữ cảnh mặc định THU5 6 → 4 (lùi), lượt khác không đổi — gỡ khỏi mã. Chặn thật: chỗ ô thang + giếng
 trời tầng 1 quyết chiều sâu dải sau của mọi tầng, mà tầng 1 được chọn theo điểm riêng của nó. Bước sau (nếu làm): chọn tầng 1
 có biết tầng trên (họ T169), thử vài chỗ lõi theo chiều sâu. Chi tiết và bảng số: `QUYET_DINH_AI.md` T171.
+
+## 8. Khung hai hàng cho tầng trên — đã làm, giữ (T179, 28/10/2026)
+
+`arrange/skeleton-rows.ts`. Khi khung một hàng không ra cây qua cổng ở tầng trên: hành lang T áp đầu bước ra của ô thang (trọn bề
+ngang), dải trước một hàng chạm T, dải sau [vùng tự do | V cạnh thang | ô thang + túi cạnh / sau thang]; vùng tự do và túi sau thang là
+một hàng chạm T, một cột chạm V, hoặc HAI hàng kẹp hành lang H2 nối vào V. Dựng trong hệ toạ độ chuẩn (đầu bước ra = `y0`) rồi lật
+về, nên mọi hướng thang dùng một cách dựng. Phòng giữ hàng theo bản phác, hàng thiếu chỗ thì dời / đổi phòng giữa các hàng. Phát lại
+256 vòng: 16 → 25 vòng qua cổng, `1dd74b99` (hồ sơ 9272) v2–v4 qua; khu ướt chưa theo trục ống nước (E5 thấp hơn vòng cũ). Chi tiết:
+`QUYET_DINH_AI.md` T179.

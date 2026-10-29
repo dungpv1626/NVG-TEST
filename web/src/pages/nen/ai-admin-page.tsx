@@ -126,12 +126,16 @@ export function AiAdminPage() {
   function setSwitch(paramKey: string, on: boolean) {
     const param = (params.data ?? []).find((p) => p.param_key === paramKey);
     if (!param) return;
-    save.mutate({
-      id: param.id,
-      value: on ? 1 : null,
-      effectiveFrom: param.effective_from,
-      isActive: param.is_active,
-    });
+    // Trạng thái AI được giữ 5 phút trên trình duyệt — tải lại ngay để nút của chức năng hiện / ẩn theo công tắc.
+    save.mutate(
+      {
+        id: param.id,
+        value: on ? 1 : null,
+        effectiveFrom: param.effective_from,
+        isActive: param.is_active,
+      },
+      { onSuccess: () => void status.refetch() },
+    );
   }
 
   const months = useMemo<MonthRow[]>(() => {

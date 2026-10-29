@@ -10,6 +10,7 @@ import { surveyPaperFields } from '@nvg/shared';
 import {
   fakePaperRead,
   normalizePaperRead,
+  normalizePaperSketchRead,
   paperIdentities,
   paperPrompt,
   parsePaperPages,
@@ -74,6 +75,38 @@ describe('survey-paper-read (phần thuần)', () => {
       group: 'site',
       confidence: 'khong_ro',
     });
+  });
+
+  it('khung sơ đồ: kẹp toạ độ, trang lạ chỉ giữ mô tả, lược danh tính, hộp tí hon bỏ', () => {
+    const ids = paperIdentities(customer);
+    const ok = normalizePaperSketchRead(
+      {
+        page: 1,
+        x0: 0.97,
+        y0: 0.72,
+        x1: 0.03,
+        y1: 1,
+        description: 'Đất 7,2 × 22 m, cột điện góc phải, nhà ông Trần Văn Phát bên trái',
+      },
+      1,
+      ids,
+    );
+    expect(ok).toMatchObject({ page: 1, box: { x0: 0.03, x1: 0.97, y0: 0.72, y1: 1 } });
+    expect(ok!.description).not.toContain('Phát');
+    const wrongPage = normalizePaperSketchRead(
+      { page: 3, x0: 0, y0: 0.5, x1: 1, y1: 1, description: 'Đường 5 m' },
+      1,
+      ids,
+    );
+    expect(wrongPage).toMatchObject({ page: 0, description: 'Đường 5 m' });
+    expect(
+      normalizePaperSketchRead(
+        { page: 1, x0: 0.4, y0: 0.4, x1: 0.42, y1: 0.42, description: '' },
+        1,
+        ids,
+      ),
+    ).toBeNull();
+    expect(normalizePaperSketchRead(undefined, 1, ids)).toBeNull();
   });
 
   it('kiểm ảnh: 1–4 trang JPEG base64, có giới hạn kích thước', () => {
@@ -197,10 +230,10 @@ function post(body: unknown, e: Record<string, unknown> = env) {
 
 const PAGES = [{ mime_type: 'image/jpeg', data: 'AAAA' }];
 
-function geminiReturns(fields: unknown) {
+function geminiReturns(fields: unknown, sketch?: unknown) {
   return vi.fn(async () =>
     Response.json({
-      candidates: [{ content: { parts: [{ text: JSON.stringify({ fields }) }] } }],
+      candidates: [{ content: { parts: [{ text: JSON.stringify({ fields, sketch }) }] } }],
       usageMetadata: { promptTokenCount: 3000, candidatesTokenCount: 400, thoughtsTokenCount: 200 },
     }),
   );
@@ -250,6 +283,34 @@ describe('POST /ai/survey-paper-read (client giả)', () => {
       input_units: 3000,
       output_units: 600,
     });
+  });
+
+  it('trả khung sơ đồ; toạ độ sai hợp đồng thì bỏ khung nhưng vẫn giữ chữ các ô', async () => {
+    const field = { key: 'budget_note', value: 'Khoảng 6 tỷ', confidence: 'ro' };
+    vi.stubGlobal(
+      'fetch',
+      geminiReturns([field], {
+        page: 1,
+        x0: 0.05,
+        y0: 0.7,
+        x1: 0.95,
+        y1: 0.98,
+        description: 'Khu đất chữ nhật, đường phía Nam',
+      }),
+    );
+    let res = await post({ survey_id: 's1', pages: PAGES });
+    let json = (await res.json()) as { accepted: unknown[]; sketch: { page: number } | null };
+    expect(json.sketch).toMatchObject({ page: 1, description: 'Khu đất chữ nhật, đường phía Nam' });
+
+    vi.stubGlobal(
+      'fetch',
+      geminiReturns([field], { page: 1, x0: 5, y0: 0.7, x1: 0.95, y1: 0.98, description: 'x' }),
+    );
+    res = await post({ survey_id: 's1', pages: PAGES });
+    expect(res.status).toBe(200);
+    json = (await res.json()) as { accepted: unknown[]; sketch: { page: number } | null };
+    expect(json.sketch).toBeNull();
+    expect(json.accepted).toHaveLength(1);
   });
 
   it('công tắc tắt thì từ chối, không gọi mô hình', async () => {

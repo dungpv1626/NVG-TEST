@@ -4764,3 +4764,64 @@ diện tích trừ dung sai cổng, chỉ phòng đầu bài ghim tầng; hành 
 ở dải sau và phòng trong túi cạnh thang — đều chưa làm. (2) Kiểm chặn không biết hành lang; một đầu bài «vừa đủ» về diện tích vẫn có thể
 không dựng được — phần ấy chỉ thước chấm / cổng sau mới biết. (3) Chưa ghi vị trí ô thang đã chọn + độ sâu các dải thành dữ kiện cho
 câu nhắc (việc 1 gỡ nên không làm).
+
+## T179 — Khung HAI HÀNG cho tầng trên: hành lang áp đầu bước ra, dải sâu chia hai hàng kẹp hành lang (GIỮ) (28/10/2026)
+
+**Bối cảnh.** T178: ba lượt thật 9272 hỏng tầng 2; khung xương T102 chỉ xếp MỘT hàng phòng mỗi dải và túi giữa cạnh thang chỉ
+xếp phòng chồng theo chiều sâu (một chạm hành lang trước, một chạm hành lang sau). Đường a (không tốn tiền): dựng tầng như kiến trúc
+sư khi một hàng không đủ.
+
+**Làm** (`workers/src/design/ai/arrange/skeleton-rows.ts`, nối ở `skeletonStage`). Chỉ tầng trên (đầu bước ra của ô thang biết
+trước — `stairArrivalSide`, cùng phép `deriveDoors` kiểm T157), và đi SAU CÙNG: chỉ khi bản phác, khung T102, các vòng khung cũ và
+vòng chèn hành lang đều không ra cây nào qua cổng (bản đầu chạy ngay sau khung T102 thì chen trước cách chia vòng cũ vốn qua cả nhà —
+`ai-run-d084a46e` «ban công chính nông» đỏ). Lỗi của nó không vào câu nhắc; lần không ra cây nào được nhớ theo lượt (`rowsMemoFor`)
+vì các bước quay lui T113 / T169 / T172 xếp lại cùng tầng, cùng mốc nhiều lần (không nhớ thì `894b350d` v6 33 → 102 s). Dựng trong hệ toạ độ chuẩn — xoay / lật hình bao cho đầu bước ra thành cạnh `y0`, rồi lật cây về (`invPlaced`):
+- hành lang T áp đầu bước ra, trọn bề ngang; dải trước = một hàng phòng chạm T;
+- dải sau: [vùng tự do | dải dọc V cạnh thang | ô thang + túi cạnh thang (chạm T, rỗng thì thành sảnh) / túi sau thang]; vùng tự do
+  và túi sau thang mỗi cái là một hàng chạm T, một cột phòng chạm V, hoặc HAI HÀNG kẹp hành lang H2 nối vào V (cả hai hàng có cửa
+  ra H2 — hàng trong không đi xuyên phòng); không V khi ô thang chạm mép sau; mỗi khung thử cả bản lật gương;
+- phòng giữ hàng theo tâm chữ nhật bao bản phác; hàng nào không chứa nổi thì mỗi bước chọn phép dời một phòng / đổi chỗ hai phòng
+  giảm nhiều nhất tổng phần thiếu (đo bằng đúng `bandParts` của T102; hai hàng dò chiều sâu theo bước `depth_step_cm`); cột phòng
+  chạm V chỉ nhận phòng không có phòng khép kín / ban công;
+- ban công: mặt đầu bài bắt buộc trước, chỉ gắn vào hàng áp mặt thoáng (T91); ban công KHÉP KÍN của phòng mẹ ở hàng áp mặt thoáng
+  thành dải áp mặt ấy chạy suốt cột (chung vách phòng mẹ và WC khép kín) — để nó thành dải đứng cạnh WC thì nó không chạm phòng mẹ
+  (lượt đầu bị cổng bác `ensuite_door_wrong` đúng vì thế);
+- hai thứ tự trong hàng (theo bản phác, lật ngược) — luật bắt buộc T71 (thờ / WC kề, đối cửa) do cổng quyết;
+- mặt ban công đầu bài BẮT BUỘC phải có một ban công nằm dọc mặt ấy, không thì bỏ cây ngay (cổng cả nhà sẽ bác, mà tầng «qua»
+  bằng cây ấy thì các bước quay lui không chạy);
+- số đo, cửa, cổng, sàn đầu bài, thang đúng mốc, ghi chú `skeleton_arranged` («khung hai hàng (…)») như mọi ứng viên khung.
+Chưa làm: tầng có thang máy / giếng trời, tầng 1. Cấu hình: `kb/construction_norms.yaml` `sketch.skeleton_rows` (`max_candidates`
+12, `max_moves` 24, `depth_step_cm` 10; vắng hoặc `max_candidates: 0` = tắt).
+
+**Đo** (phát lại 61 lượt / 256 vòng, ngữ cảnh Workflow, một tiến trình; đối chứng = cùng mã, bỏ `skeleton_rows`; đối chứng trùng
+từng vòng với kết quả T178):
+
+| | Đối chứng | Khung hai hàng |
+| --- | --- | --- |
+| Vòng qua cổng | 16 | **25** (+ `0b7e4957` v2–5, `1dd74b99` v2–4, `3ff10f75` v2, `46d6eff3` v2, `7c6de305` v2) |
+| Vòng mất qua cổng | — | 1 — `7c6de305` v5, xem dưới |
+| Tầng hỏng / mã lỗi (233 vòng ngoài THU5) | 303 / 347 | 296 / 336 |
+| THU5 (23 vòng) | 0 | 0 |
+| Cả bộ / vòng lâu nhất | 1.716 s / 51,3 s | 1.841 s / 55,2 s (+7 %; 28 vòng chậm thêm > 2 s, nhiều nhất `4b0268b1` v2 37,8 → 44,0 s; lâu nhất `b1543b8c` v6 51,3 → 55,2 s — xa trần CPU 300 s) |
+| **3 lượt 9272** | 0 / 12 | **3 / 12** — `1dd74b99` v2, v3, v4 |
+
+`7c6de305` v5 mất vì chuỗi phát lại rẽ: v2 nay qua cổng, nên v3–v6 ghép lên ý định v2 (`mergeRevision`) thay vì chuỗi đã ghi, rồi
+hỏng ở tầng 1 (`stair_entry_long_side`) — mô hình chưa bao giờ trả lời câu nhắc của lượt v2 mới, nên v3 trở đi là phản thực tế. Với mã
+mới một lượt thật có mặt bằng 66,8 % ngay ở v2 (dưới sàn nhóm nên lượt sửa vẫn chạy, nhưng đã có bản xếp được để lưu). `ai-live-sketch-repair.test.ts` (đo riêng T177 trên chuỗi đã ghi) nay tắt khung hai hàng ở cả hai
+nhánh. `46d6eff3` v1 vẫn qua, không đổi.
+
+**Điểm** (thước chấm của vòng qua — `backup/gd1-mat-bang/score-t179new.jsonl`, `score-t179ctl.jsonl`): 10 vòng mới 61–69,6 %
+(9272: 65,0 / 65,9 / 65,0), 16 vòng cũ 62,1–76,8 %. Mọi vòng cũ lẫn mới đều dưới sàn nhóm 40 % ở nhóm D hoặc E, nên đều là «bản xếp
+được dưới ngưỡng» — lượt thật vẫn dùng lượt sửa / ô yêu cầu. C10 (hành lang ngõ cụt): đạt 3 / 10 vòng mới, 6 / 16 vòng cũ. E5 (khu ướt
+không đè chỗ ngủ / tiếp khách / thờ / lối vào tầng dưới): điểm trung bình 0,07 vòng mới, 0,27 vòng cũ — **khung hai hàng không biết
+trục ống nước**: WC / giặt rơi vào túi theo chỗ trống, không theo khu ướt tầng dưới (WC khép kín vẫn chọn cạnh theo `wetBelow`).
+
+**Giữ** (có lợi đo được, không vòng nào mất qua cổng thật, chậm thêm 7 %, vòng lâu nhất 55 s). Phép thử `ai-arrange-skeleton-rows.test.ts` (9: tám phép xoay / lật trả đúng cây, đầu bước ra mọi cạnh thành `y0`),
+`ai-live-skeleton-rows.test.ts` (`1dd74b99` v2: tắt → tầng 2 hỏng; bật → cả nhà qua, ghi chú khung hai hàng, đủ phòng đầu bài). Đột biến
+M253 (ban công khép kín lại thành dải đứng cạnh WC), M254 (hệ chuẩn sai khi đầu bước ra ở cạnh x1): đo tay, cả hai ĐỎ. Kết quả phát
+lại: `backup/gd1-mat-bang/replay-t179new-0.jsonl`, `replay-t179ctl-0.jsonl`, kịch bản `zz-replay-t179.test.ts.keep` (`CTL=1` = đối chứng).
+
+**Còn mở.** (1) `2f443166` (ô thang áp tường phải giữa chiều sâu, dải sau 4 m) và `d919051b` (ô thang giữa nhà) vẫn hỏng: hành lang
+chữ H cần ~40 m² trên sàn 192 m² mà phòng đầu bài đã cần ~136 m² — dư 25 cm ở dải trước là hết; chỉ ô thang ở chỗ khác (câu nhắc /
+lượt mới) mới gỡ. (2) E5: nên xếp khu ướt vào túi gần khu ướt tầng dưới trước khi dời phòng (chưa làm). (3) Ước bề ngang theo
+`floorWallCm` một bề dày — vài cây hụt sàn 0,4 m² ở cổng (phòng làm việc 12,6 < 13 m²). (4) Tầng có thang máy / giếng trời, tầng 1.

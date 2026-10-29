@@ -107,6 +107,29 @@ function base64Of(buffer: ArrayBuffer): string {
   return btoa(s);
 }
 
+/**
+ * Cắt khung sơ đồ từ ảnh trang ĐÃ CHE (đúng ảnh đã gửi máy đọc — phần che vẫn trắng), nới mỗi cạnh 1 %
+ * vì máy chỉ hộp hơi sát. Trả JPEG để lưu thành ảnh hiện trạng của biên bản.
+ */
+export async function cropSketch(
+  redactedUrl: string,
+  box: { x0: number; y0: number; x1: number; y1: number },
+): Promise<Blob> {
+  const bitmap = await createImageBitmap(await (await fetch(redactedUrl)).blob());
+  const pad = 0.01;
+  const x0 = Math.max(0, box.x0 - pad) * bitmap.width;
+  const y0 = Math.max(0, box.y0 - pad) * bitmap.height;
+  const x1 = Math.min(1, box.x1 + pad) * bitmap.width;
+  const y1 = Math.min(1, box.y1 + pad) * bitmap.height;
+  const out = canvasOf(x1 - x0, y1 - y0);
+  const ctx = out.getContext('2d')!;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, out.width, out.height);
+  ctx.drawImage(bitmap, x0, y0, x1 - x0, y1 - y0, 0, 0, out.width, out.height);
+  bitmap.close();
+  return toBlob(out, 0.9);
+}
+
 /** Ảnh trang ĐÃ CHE, dạng JPEG — vừa để xem trước vừa là đúng tệp gửi đi. */
 export async function redactedJpeg(page: PaperPageDraft): Promise<RedactedPage> {
   const out = canvasOf(page.source.width, page.source.height);

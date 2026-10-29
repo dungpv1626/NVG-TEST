@@ -35,10 +35,40 @@ export const aiSurveyPaperReadFieldSchema = z
 
 export type AiSurveyPaperReadField = z.infer<typeof aiSurveyPaperReadFieldSchema>;
 
+/** Khung «Sơ đồ hiện trạng» vẽ tay trên phiếu (anh Dũng 28/10/2026: sơ đồ phải hiện trong biên bản). Toạ độ theo tỷ lệ của ảnh trang ĐÃ CHE (0 = mép trái / trên, 1 = mép phải / dưới); trình duyệt cắt đúng vùng đó từ ảnh đã che và đề xuất lưu thành ảnh hiện trạng. Khung trống hoặc không thấy thì bỏ hẳn trường này. */
+export const aiSurveyPaperReadSketchSchema = z
+  .object({
+    /** Trang chứa sơ đồ, đếm từ 1 theo thứ tự ảnh gửi. */
+    page: z
+      .number()
+      .int()
+      .gte(1)
+      .lte(4)
+      .describe('Trang chứa sơ đồ, đếm từ 1 theo thứ tự ảnh gửi.'),
+    x0: z.number().gte(0).lte(1),
+    y0: z.number().gte(0).lte(1),
+    x1: z.number().gte(0).lte(1),
+    y1: z.number().gte(0).lte(1),
+    /** Mô tả sơ đồ bằng chữ: hình dạng khu đất, kích thước ghi trên hình, hướng, đường / lối vào, vật cản (cột điện, giếng, cây…), nhà bên cạnh. Chỉ điều thấy trên hình, không đoán. */
+    description: z
+      .string()
+      .max(1500)
+      .describe(
+        'Mô tả sơ đồ bằng chữ: hình dạng khu đất, kích thước ghi trên hình, hướng, đường / lối vào, vật cản (cột điện, giếng, cây…), nhà bên cạnh. Chỉ điều thấy trên hình, không đoán.',
+      ),
+  })
+  .strict()
+  .describe(
+    'Khung «Sơ đồ hiện trạng» vẽ tay trên phiếu (anh Dũng 28/10/2026: sơ đồ phải hiện trong biên bản). Toạ độ theo tỷ lệ của ảnh trang ĐÃ CHE (0 = mép trái / trên, 1 = mép phải / dưới); trình duyệt cắt đúng vùng đó từ ảnh đã che và đề xuất lưu thành ảnh hiện trạng. Khung trống hoặc không thấy thì bỏ hẳn trường này.',
+  );
+
+export type AiSurveyPaperReadSketch = z.infer<typeof aiSurveyPaperReadSketchSchema>;
+
 /** Gemini đọc ẢNH phiếu khảo sát giấy (viết tay) của Kinh doanh rồi trả NHÁP cho sáu ô báo cáo khảo sát và các ô «Thông tin hiện trường» riêng của pháp nhân (anh Dũng 28/10/2026). Ảnh gửi đi đã được trình duyệt TÔ TRẮNG khung thông tin khách (tên, điện thoại, địa chỉ, chữ ký) — bản PDF gốc vẫn ở kho, không gửi. Không phải artifact bất biến và không ghi gì vào biên bản: Worker loại khoá lạ, lược danh tính khách khỏi giá trị; người khảo sát chọn ô nào dùng, sửa rồi tự Lưu. Ô đọc không ra thì bỏ hẳn, không đoán. */
 export const aiSurveyPaperReadSchema = z
   .object({
     fields: z.array(aiSurveyPaperReadFieldSchema).max(40),
+    sketch: aiSurveyPaperReadSketchSchema.optional(),
   })
   .strict()
   .describe(

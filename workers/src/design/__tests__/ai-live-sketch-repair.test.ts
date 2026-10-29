@@ -30,7 +30,11 @@ async function roundFive(repair: boolean) {
     mandatory,
     construction: {
       ...base.construction,
-      sketch: repair ? sketch : { ...sketch, repair_walls: undefined },
+      // Khung hai hàng (T179) tắt ở cả hai nhánh: nó làm vòng 2 qua cổng, nên chuỗi vòng sửa phát lại rẽ khỏi chuỗi thật
+      // từ vòng 3 (vòng sau ghép lên vòng trước) — phép thử này đo riêng phép dời vách trên đúng chuỗi đã ghi.
+      sketch: repair
+        ? { ...sketch, skeleton_rows: undefined }
+        : { ...sketch, repair_walls: undefined, skeleton_rows: undefined },
     },
   };
   const context = planContext(input);

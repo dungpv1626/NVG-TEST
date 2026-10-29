@@ -211,6 +211,18 @@ export function SurveyReportSection({
             <Send />
             {status === 'tra_ve' ? 'Gửi lại Ban Giám đốc' : 'Gửi Ban Giám đốc duyệt'}
           </Button>
+          {/* Nút khoá phải nói lý do ngay dưới nút, không chỉ khi rê chuột (chạy thử 28/10/2026). */}
+          {summaryMode !== 'off' && !transcribed && (
+            <p className="basis-full text-fg-subtle">
+              «Máy viết báo cáo» viết từ các đoạn ghi âm — chưa có đoạn nào đã chép chữ. Khảo sát
+              bằng phiếu giấy thì dùng «Máy đọc phiếu và điền nháp» ở tệp phiếu phía trên.
+            </p>
+          )}
+          {!survey.needs && (
+            <p className="basis-full text-fg-subtle">
+              Điền ô «Nhu cầu của khách» rồi Lưu trước khi gửi Ban Giám đốc.
+            </p>
+          )}
         </div>
       )}
 

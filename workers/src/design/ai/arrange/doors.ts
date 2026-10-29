@@ -531,6 +531,14 @@ export function stairEntrySide(up: StairUp): StairSide {
 /** Chiều đi lên của vế đầu khi lối vào ở cạnh `side`: vế đầu đi thẳng vào ô, xa cạnh ấy. */
 const UP_FROM_SIDE: Record<StairSide, StairUp> = { x0: '+x', x1: '-x', y0: '+y', y1: '-y' };
 
+/**
+ * Cạnh ô thang người từ tầng dưới bước ra ở tầng trên — cùng phép `deriveDoors` kiểm (T157); khung hai hàng (T179) dựng
+ * hành lang áp đúng cạnh này.
+ */
+export function stairArrivalSide(up: StairUp, params: StairParams): StairSide {
+  return arrivalSide(up, stairArrival(params.shape));
+}
+
 /** Cạnh người bước ra ở tầng trên (T105): cạnh bậc 1, cạnh đối diện, hay cạnh xa theo trục ngang (thang L). */
 function arrivalSide(up: StairUp, arrival: 'start' | 'end' | 'across'): StairSide {
   if (arrival === 'start') return START_SIDE[up];

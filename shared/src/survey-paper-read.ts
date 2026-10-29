@@ -65,3 +65,43 @@ export function paperInitialSelection(
 ): Set<string> {
   return new Set(items.filter((i) => !(current[i.key] ?? '').trim()).map((i) => i.key));
 }
+
+/**
+ * Khung «Sơ đồ hiện trạng» máy tìm thấy trên phiếu: trang (đếm từ 1) và hộp theo tỷ lệ của ảnh ĐÃ CHE,
+ * kèm mô tả bằng chữ đã lược danh tính. Trình duyệt cắt ảnh từ chính ảnh đã che nên phần che vẫn giữ.
+ */
+export interface PaperSketch {
+  page: number;
+  box: { x0: number; y0: number; x1: number; y1: number };
+  description: string;
+}
+
+/** Hộp nhỏ hơn mức này coi như máy chỉ sai — không cắt một mẩu ảnh vô nghĩa. */
+const SKETCH_MIN_WIDTH = 0.15;
+const SKETCH_MIN_HEIGHT = 0.05;
+
+/**
+ * Kiểm khung sơ đồ máy trả: trang phải có trong lượt gửi, toạ độ kẹp vào 0–1 (đổi chỗ nếu ngược),
+ * hộp đủ lớn; không đạt thì bỏ hộp nhưng vẫn giữ mô tả (trả `page = 0`). Mô tả do nơi gọi lược danh tính.
+ */
+export function normalizePaperSketch(
+  raw: { page: number; x0: number; y0: number; x1: number; y1: number; description: string },
+  pageCount: number,
+): PaperSketch | null {
+  const clamp = (v: number) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0);
+  const [x0, x1] = [clamp(raw.x0), clamp(raw.x1)].sort((a, b) => a - b) as [number, number];
+  const [y0, y1] = [clamp(raw.y0), clamp(raw.y1)].sort((a, b) => a - b) as [number, number];
+  const description = raw.description.trim();
+  const boxOk =
+    Number.isInteger(raw.page) &&
+    raw.page >= 1 &&
+    raw.page <= pageCount &&
+    x1 - x0 >= SKETCH_MIN_WIDTH &&
+    y1 - y0 >= SKETCH_MIN_HEIGHT;
+  if (!boxOk && !description) return null;
+  return {
+    page: boxOk ? raw.page : 0,
+    box: boxOk ? { x0, y0, x1, y1 } : { x0: 0, y0: 0, x1: 0, y1: 0 },
+    description,
+  };
+}

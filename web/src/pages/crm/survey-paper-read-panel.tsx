@@ -8,6 +8,10 @@
  *  2. Cú bấm «Gửi ảnh đã che cho máy đọc» mới gọi máy (không gọi từ hiệu ứng — chế độ kiểm tra của React
  *     chạy hiệu ứng hai lần, lời gọi trả phí bị nhân đôi, đo thật ở 0233). Kết quả là ĐỀ XUẤT: ô biên bản
  *     đã có nội dung không chọn sẵn; «Áp vào biên bản» chỉ điền biểu mẫu, người dùng sửa rồi tự Lưu.
+ *
+ * Khung «Sơ đồ hiện trạng» vẽ tay (anh Dũng 28/10/2026: sơ đồ phải hiện trong biên bản): máy chỉ ra vị
+ * trí khung và mô tả bằng chữ. Trình duyệt cắt khung từ ẢNH ĐÃ CHE rồi đề xuất lưu thành «Ảnh hiện
+ * trạng» (biên bản in đã bày ảnh hiện trạng), mô tả đề xuất nối vào ô «Hiện trạng và ghi chú khác».
  */
 
 import { useEffect, useState } from 'react';
@@ -15,6 +19,7 @@ import { paperInitialSelection, type PaperReadItem } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { readSurveyPaper, type SurveyPaperReadResult } from '@/lib/ai-api';
 import {
+  cropSketch,
   loadPaperPages,
   PAPER_MAX_PAGES_CLIENT,
   redactedJpeg,
@@ -34,6 +39,7 @@ export function SurveyPaperReadPanel({
   mimeType,
   current,
   onApply,
+  onSaveSketch,
   onClose,
 }: {
   surveyId: string;
@@ -44,6 +50,8 @@ export function SurveyPaperReadPanel({
   current: Record<string, string | null | undefined>;
   /** Điền vào biểu mẫu biên bản. Trả câu lỗi nếu không áp được. */
   onApply: (entries: PaperApplyEntry[]) => string | null;
+  /** Lưu ảnh sơ đồ đã cắt thành ảnh hiện trạng của biên bản. Trả câu lỗi nếu không lưu được. */
+  onSaveSketch?: (image: Blob) => Promise<string | null>;
   onClose: () => void;
 }) {
   const [pages, setPages] = useState<PaperPageDraft[] | null>(null);
@@ -204,6 +212,8 @@ export function SurveyPaperReadPanel({
           request={request}
           current={current}
           onApply={onApply}
+          pageImages={shown?.map((p) => p.url) ?? []}
+          onSaveSketch={onSaveSketch}
           onRetry={() => setRequest(null)}
         />
       )}
@@ -212,15 +222,31 @@ export function SurveyPaperReadPanel({
 }
 
 /** Kết quả máy đọc: chọn ô nào dùng; ô biên bản đã có nội dung không chọn sẵn. */
+/** Khoá ô nhận mô tả sơ đồ — «Hiện trạng và ghi chú khác». */
+const SKETCH_NOTES_KEY = 'notes';
+
+/** Nối mô tả sơ đồ vào chữ đã có của ô ghi chú; mô tả đã nằm trong đó thì không nối lần nữa. */
+export function withSketchNote(notes: string, description: string): string {
+  const line = `Sơ đồ hiện trạng: ${description}`;
+  const base = notes.trim();
+  if (base.includes(description)) return base;
+  return base ? `${base}\n${line}` : line;
+}
+
 export function PaperReadResult({
   request,
   current,
   onApply,
+  pageImages = [],
+  onSaveSketch,
   onRetry,
 }: {
   request: Promise<SurveyPaperReadResult>;
   current: Record<string, string | null | undefined>;
   onApply: (entries: PaperApplyEntry[]) => string | null;
+  /** Ảnh trang ĐÃ CHE (cùng thứ tự đã gửi) — nguồn cắt khung sơ đồ. */
+  pageImages?: readonly string[];
+  onSaveSketch?: (image: Blob) => Promise<string | null>;
   onRetry?: () => void;
 }) {
   const [result, setResult] = useState<SurveyPaperReadResult | null>(null);
@@ -229,6 +255,32 @@ export function PaperReadResult({
   // Ô đã có nội dung lúc máy trả kết quả — chụp một lần, không tính lại khi người dùng áp.
   const [filled, setFilled] = useState<Set<string>>(new Set());
   const [applied, setApplied] = useState<string | null>(null);
+  const [sketchImage, setSketchImage] = useState<{ blob: Blob; url: string } | null>(null);
+  const [saveSketch, setSaveSketch] = useState(true);
+  const [noteSketch, setNoteSketch] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  // Cắt khung sơ đồ trên máy người dùng (không gọi máy chủ) khi kết quả có hộp hợp lệ.
+  const sketch = result?.sketch ?? null;
+  const sketchSrc = sketch && sketch.page > 0 ? pageImages[sketch.page - 1] : undefined;
+  useEffect(() => {
+    if (!sketch || !sketchSrc) return;
+    let cancelled = false;
+    let made: string | null = null;
+    cropSketch(sketchSrc, sketch.box)
+      .then((blob) => {
+        if (cancelled) return;
+        made = URL.createObjectURL(blob);
+        setSketchImage({ blob, url: made });
+      })
+      .catch(() => {
+        if (!cancelled) setSketchImage(null);
+      });
+    return () => {
+      cancelled = true;
+      if (made) URL.revokeObjectURL(made);
+    };
+  }, [sketch, sketchSrc]);
 
   useEffect(() => {
     let cancelled = false;
@@ -282,6 +334,36 @@ export function PaperReadResult({
   }
 
   const unsure = result.accepted.filter((a) => a.confidence === 'khong_ro').length;
+  const willSaveImage = Boolean(sketchImage && onSaveSketch && saveSketch);
+  const willNote = Boolean(sketch?.description && noteSketch);
+  const count = selected.size + (willSaveImage ? 1 : 0) + (willNote ? 1 : 0);
+
+  async function apply() {
+    if (!result) return;
+    setApplied(null);
+    const entries = result.accepted
+      .filter((a) => selected.has(a.key))
+      .map((a) => ({ key: a.key, value: a.value }));
+    if (willNote && sketch) {
+      const mine = entries.find((e) => e.key === SKETCH_NOTES_KEY);
+      const base = mine?.value ?? current[SKETCH_NOTES_KEY] ?? '';
+      const value = withSketchNote(base, sketch.description);
+      if (mine) mine.value = value;
+      else entries.push({ key: SKETCH_NOTES_KEY, value });
+    }
+    // Ảnh lưu TRƯỚC: áp xong thì khối máy đọc đóng lại.
+    if (willSaveImage && sketchImage && onSaveSketch) {
+      setBusy(true);
+      const failed = await onSaveSketch(sketchImage.blob);
+      setBusy(false);
+      if (failed) {
+        setApplied(failed);
+        return;
+      }
+      setSaveSketch(false);
+    }
+    setApplied(onApply(entries));
+  }
   return (
     <div className="mt-3 space-y-3">
       <p className="text-fg-subtle">
@@ -289,7 +371,42 @@ export function PaperReadResult({
         bản», đọc lại với phiếu giấy rồi Lưu. Ô biên bản đã có nội dung không chọn sẵn.
         {unsure > 0 && ` ${unsure} ô máy đọc không chắc — đối chiếu kỹ với phiếu.`}
       </p>
-      {result.accepted.length === 0 ? (
+      {sketch && (
+        <div className="rounded-sm border border-border p-3">
+          <p className="font-medium">Sơ đồ hiện trạng</p>
+          {sketchImage && (
+            <img
+              src={sketchImage.url}
+              alt="Sơ đồ hiện trạng cắt từ phiếu giấy"
+              className="mt-2 max-h-80 w-full rounded-sm border border-border object-contain"
+            />
+          )}
+          {sketch.description && <p className="mt-2 whitespace-pre-wrap">{sketch.description}</p>}
+          {sketchImage && onSaveSketch && (
+            <label className="mt-2 flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="size-4 accent-brand"
+                checked={saveSketch}
+                onChange={() => setSaveSketch((v) => !v)}
+              />
+              Lưu ảnh sơ đồ vào «Ảnh hiện trạng» của biên bản
+            </label>
+          )}
+          {sketch.description && (
+            <label className="mt-1 flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="size-4 accent-brand"
+                checked={noteSketch}
+                onChange={() => setNoteSketch((v) => !v)}
+              />
+              Thêm mô tả sơ đồ vào ô «Hiện trạng và ghi chú khác»
+            </label>
+          )}
+        </div>
+      )}
+      {result.accepted.length === 0 && !sketch ? (
         <p>Máy không đọc ra ô nào trên phiếu — gõ tay các ô như thường.</p>
       ) : (
         <ul className="divide-y divide-border rounded-sm border border-border">
@@ -326,21 +443,9 @@ export function PaperReadResult({
         </p>
       )}
       {applied && <p className="text-status-overdue">{applied}</p>}
-      {result.accepted.length > 0 && (
-        <Button
-          variant="primary"
-          disabled={selected.size === 0}
-          onClick={() =>
-            setApplied(
-              onApply(
-                result.accepted
-                  .filter((a) => selected.has(a.key))
-                  .map((a) => ({ key: a.key, value: a.value })),
-              ),
-            )
-          }
-        >
-          Áp {selected.size} ô vào biên bản
+      {(result.accepted.length > 0 || sketch) && (
+        <Button variant="primary" disabled={busy || count === 0} onClick={() => void apply()}>
+          {busy ? 'Đang lưu ảnh sơ đồ…' : `Áp ${count} mục vào biên bản`}
         </Button>
       )}
     </div>

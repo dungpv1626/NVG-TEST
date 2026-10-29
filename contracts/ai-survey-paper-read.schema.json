@@ -10,7 +10,12 @@
     "fields": {
       "type": "array",
       "maxItems": 40,
-      "items": { "$ref": "#/$defs/field" }
+      "items": {
+        "$ref": "#/$defs/field"
+      }
+    },
+    "sketch": {
+      "$ref": "#/$defs/sketch"
     }
   },
   "$defs": {
@@ -34,6 +39,45 @@
           "type": "string",
           "enum": ["ro", "khong_ro"],
           "description": "`ro` = đọc rõ; `khong_ro` = có chữ nhưng đọc không chắc, người dùng phải đối chiếu với phiếu."
+        }
+      }
+    },
+    "sketch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["page", "x0", "y0", "x1", "y1", "description"],
+      "description": "Khung «Sơ đồ hiện trạng» vẽ tay trên phiếu (anh Dũng 28/10/2026: sơ đồ phải hiện trong biên bản). Toạ độ theo tỷ lệ của ảnh trang ĐÃ CHE (0 = mép trái / trên, 1 = mép phải / dưới); trình duyệt cắt đúng vùng đó từ ảnh đã che và đề xuất lưu thành ảnh hiện trạng. Khung trống hoặc không thấy thì bỏ hẳn trường này.",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "description": "Trang chứa sơ đồ, đếm từ 1 theo thứ tự ảnh gửi."
+        },
+        "x0": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "y0": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "x1": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "y1": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1500,
+          "description": "Mô tả sơ đồ bằng chữ: hình dạng khu đất, kích thước ghi trên hình, hướng, đường / lối vào, vật cản (cột điện, giếng, cây…), nhà bên cạnh. Chỉ điều thấy trên hình, không đoán."
         }
       }
     }

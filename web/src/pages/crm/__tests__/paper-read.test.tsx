@@ -13,7 +13,7 @@ import userEvent from '@testing-library/user-event';
 import { paperInitialSelection, type PaperReadItem } from '@nvg/shared';
 import { defaultRedaction, findCutBar, FALLBACK_TOP_FRACTION, redactRows } from '../paper-redact';
 import { applyPaperEntries, paperCurrentValues } from '../survey-paper-apply';
-import { PaperReadResult } from '../survey-paper-read-panel';
+import { PaperReadResult, withSketchNote } from '../survey-paper-read-panel';
 import type { SurveyPaperReadResult } from '@/lib/ai-api';
 
 /** Trang giả 200 × 300: nền xám nhạt «chữ» ở mọi dòng, vạch đen dày ở dòng 90–99. */
@@ -133,10 +133,45 @@ describe('kết quả máy đọc không đè ô đã có', () => {
     expect(screen.getByRole('checkbox', { name: /Cầu trục/ })).toBeChecked();
     expect(screen.getByText(/Biên bản đã có nội dung ở ô này/)).toBeInTheDocument();
     expect(screen.getByText('Không rõ — kiểm lại')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Áp 2 ô vào biên bản' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Áp 2 mục vào biên bản' }));
     expect(onApply).toHaveBeenCalledWith([
       { key: 'budget_note', value: 'Khoảng 6 tỷ' },
       { key: 'site.crane', value: '5 tấn' },
+    ]);
+  });
+
+  it('mô tả sơ đồ nối vào ô ghi chú (cả khi ô ấy cũng được chọn), không nối hai lần', async () => {
+    expect(withSketchNote('', 'Đất 7 × 20 m')).toBe('Sơ đồ hiện trạng: Đất 7 × 20 m');
+    const both = 'Có giếng\nSơ đồ hiện trạng: Đất 7 × 20 m';
+    expect(withSketchNote('Có giếng', 'Đất 7 × 20 m')).toBe(both);
+    expect(withSketchNote(both, 'Đất 7 × 20 m')).toBe(both);
+    const onApply = vi.fn(() => null);
+    const notes: PaperReadItem = {
+      key: 'notes',
+      label: 'Hiện trạng và ghi chú khác',
+      group: 'report',
+      value: 'Đất trũng',
+      confidence: 'ro',
+    };
+    const result: SurveyPaperReadResult = {
+      accepted: [notes],
+      rejected: [],
+      // Trang 0 = chỉ có mô tả, không cắt ảnh (jsdom không dựng được ảnh).
+      sketch: { page: 0, box: { x0: 0, y0: 0, x1: 0, y1: 0 }, description: 'Đường 5 m phía Nam' },
+      fake: false,
+    };
+    render(
+      <PaperReadResult
+        request={Promise.resolve(result)}
+        current={paperCurrentValues(form)}
+        onApply={onApply}
+      />,
+    );
+    expect(await screen.findByText('Đường 5 m phía Nam')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /Thêm mô tả sơ đồ/ })).toBeChecked();
+    await userEvent.click(screen.getByRole('button', { name: 'Áp 2 mục vào biên bản' }));
+    expect(onApply).toHaveBeenCalledWith([
+      { key: 'notes', value: 'Đất trũng\nSơ đồ hiện trạng: Đường 5 m phía Nam' },
     ]);
   });
 

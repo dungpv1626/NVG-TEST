@@ -2081,6 +2081,22 @@ const MUTATIONS: Mutation[] = [
     find: 'const canSide = s <= beside + EPS && s <= D + EPS && a <= besideArea + EPS;',
     replace: 'const canSide = s <= D + EPS && a <= besideArea + EPS;',
   },
+  {
+    id: 'M253',
+    axis: 'số đo bản vẽ',
+    file: 'workers/src/design/ai/arrange/skeleton-rows.ts',
+    bug: 'Khung hai hàng (T179) để ban công khép kín thành dải đứng cạnh WC khép kín — ban công không chung vách phòng mẹ, tầng 2 của 1dd74b99 vòng 2 lại hỏng',
+    find: "if (sl.kind !== 'row' || !outerOpen(sl)) return c;",
+    replace: 'return c;',
+  },
+  {
+    id: 'M254',
+    axis: 'số đo bản vẽ',
+    file: 'workers/src/design/ai/arrange/skeleton-rows.ts',
+    bug: 'Khung hai hàng (T179) đặt hệ chuẩn sai khi đầu bước ra ở cạnh x1 — hành lang dựng ở đầu kia ô thang, người lên tới không bước ra được',
+    find: "const mirrorY = arrival === 'y1' || arrival === 'x1';",
+    replace: "const mirrorY = arrival === 'y1';",
+  },
 ];
 
 /** Thư mục mã nguồn được băm trước và sau khi chạy. `db/` không đụng tới nên không băm. */

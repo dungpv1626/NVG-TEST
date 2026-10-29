@@ -52,6 +52,7 @@ import {
 import {
   fakePaperRead,
   normalizePaperRead,
+  normalizePaperSketchRead,
   PAPER_RESPONSE_SCHEMA,
   paperIdentities,
   paperPrompt,
@@ -829,7 +830,8 @@ assistantApp.post('/survey-paper-read', async (c) => {
   }
 
   const { accepted, rejected } = normalizePaperRead(fields, raw, identities);
-  return c.json({ accepted, rejected, fake: mode === 'fake' });
+  const sketch = normalizePaperSketchRead(raw.sketch, parsed.pages.length, identities);
+  return c.json({ accepted, rejected, sketch, fake: mode === 'fake' });
 });
 
 async function geminiPaperRead(
@@ -872,8 +874,15 @@ async function geminiPaperRead(
     };
   };
   const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
-  // Kiểm theo hợp đồng: sai hình thì coi như lượt hỏng, không đoán.
-  const read = aiSurveyPaperReadSchema.parse(JSON.parse(text));
+  // Kiểm theo hợp đồng: sai hình thì coi như lượt hỏng, không đoán. Riêng khung sơ đồ sai (toạ độ ngoài
+  // 0–1, trang lạ) chỉ bỏ khung — chữ các ô vẫn dùng được.
+  const body = JSON.parse(text) as Record<string, unknown>;
+  let checked = aiSurveyPaperReadSchema.safeParse(body);
+  if (!checked.success && body && typeof body === 'object' && 'sketch' in body) {
+    delete body.sketch;
+    checked = aiSurveyPaperReadSchema.safeParse(body);
+  }
+  const read = checked.success ? checked.data : aiSurveyPaperReadSchema.parse(body);
   return {
     read,
     inputTokens: json.usageMetadata?.promptTokenCount ?? 0,

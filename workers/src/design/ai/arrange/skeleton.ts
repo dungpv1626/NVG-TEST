@@ -90,20 +90,20 @@ export interface SkeletonCandidate {
  * Bề rộng theo tim một lá CẦN để đạt sàn đầu bài khi chiều kia là `depth` cm: lọt lòng ≈ (rộng − tường)(sâu −
  * tường), tường lấy một bề dày tường ngoài như `environment()` (`floorWallCm`). Không có sàn đầu bài → 0.
  */
-function needWidth(l: PackLeaf, depth: number, wallCm: number): number {
+export function needWidth(l: PackLeaf, depth: number, wallCm: number): number {
   if (l.areaFloor === null) return 0;
   const clearDepth = Math.max(1, depth - wallCm);
   return ceil5((l.areaFloor * 10_000) / clearDepth + wallCm);
 }
 
 /** Ô nhỏ nhất của cây chia — cùng `tree/cells.ts` (`MIN_CELL_CM`), chép số để không kéo cả `tree/` vào đây. */
-const MIN_CELL_CM = 60;
+export const MIN_CELL_CM = 60;
 
 /**
  * Bề dày dải ban công trong nhà theo tim, cm: đủ cạnh dùng được và đủ diện tích dọc `along`, TRỪ phần đua ra
  * ngoài ranh ở mặt ấy — cổng đo phòng SAU khi nới, nên phần trong nhà chỉ cần bù chỗ thiếu.
  */
-function balconyThickness(
+export function balconyThickness(
   balcony: PackLeaf,
   along: number,
   side: Side,
@@ -119,11 +119,11 @@ const SERVICE_MAX_M2 = 8;
 /** Trần ứng viên trả ra — mỗi ứng viên là một lượt qua cổng. */
 const CANDIDATES_MAX = 36;
 /** Mã tạm cho đoạn hành lang trước khi gán mã thật. */
-const hallPlaceholder = (index: number) => `__hall_${index}`;
+export const hallPlaceholder = (index: number) => `__hall_${index}`;
 
 type Band = 'front' | 'core' | 'back';
 
-interface Cluster {
+export interface Cluster {
   item: PackItem;
   /** Ban công / sân gắn vào phòng này (lá gốc không cha, mô hình vẽ kề) và mặt hình bao nó áp vào. */
   balconies: { leaf: PackLeaf; side: Side }[];
@@ -517,7 +517,7 @@ function buildVariant(input: SkeletonInput, frame: Frame): BuiltVariant | null {
             ? { ...region, y1: region.y1 - cw }
             : { ...region, y0: region.y0 + cw }
           : region;
-      const placed = bandPlaced(row, clusters, hallSide, input, frame);
+      const placed = bandPlaced(row, clusters, hallSide, input, frame.vSide);
       return placed ? { kind: 'row', placed } : null;
     }
     // Hai hàng: hàng ngoài (A) áp mặt tiền, hàng trong (B) áp lõi — theo tâm ô bản phác so với giữa vùng.
@@ -554,7 +554,7 @@ function buildVariant(input: SkeletonInput, frame: Frame): BuiltVariant | null {
     const rects = slices(region, 'y', lengths);
     const [rectA, hall, rectB] =
       side === 'front' ? [rects[0]!, rects[1]!, rects[2]!] : [rects[2]!, rects[1]!, rects[0]!];
-    const placedA = bandPlaced(rectA, rowA, hallSide, input, frame);
+    const placedA = bandPlaced(rectA, rowA, hallSide, input, frame.vSide);
     if (!placedA) return null;
     // Hàng trong chia ba theo dải dọc: mảnh trên cột ô cố định, V, mảnh trên vùng trống.
     const hallSideB: 'y0' | 'y1' = side === 'front' ? 'y0' : 'y1';
@@ -567,13 +567,15 @@ function buildVariant(input: SkeletonInput, frame: Frame): BuiltVariant | null {
     }
     const fixedRect: Rect = { x0: fixedX[0], y0: rectB.y0, x1: fixedX[1], y1: rectB.y1 };
     const freeRect: Rect = { x0: freeX[0], y0: rectB.y0, x1: freeX[1], y1: rectB.y1 };
-    let fixed = onFixed.length ? bandPlaced(fixedRect, onFixed, hallSideB, input, frame) : null;
+    let fixed = onFixed.length
+      ? bandPlaced(fixedRect, onFixed, hallSideB, input, frame.vSide)
+      : null;
     if (onFixed.length && !fixed) {
       onFree = byX([...onFree, ...onFixed]);
       onFixed = [];
       fixed = null;
     }
-    const free = onFree.length ? bandPlaced(freeRect, onFree, hallSideB, input, frame) : null;
+    const free = onFree.length ? bandPlaced(freeRect, onFree, hallSideB, input, frame.vSide) : null;
     if (onFree.length && !free) return null;
     if (freeRect.x1 <= freeRect.x0 && onFree.length) return null;
     return {
@@ -814,16 +816,49 @@ function buildVariant(input: SkeletonInput, frame: Frame): BuiltVariant | null {
  * Một dải phòng: các cột theo trục ngang, mỗi cột một cụm. `hallSide` là cạnh của dải giáp hành lang / lõi
  * (`y0` = dải sau; `y1` = dải trước) — ban công áp cạnh đối diện.
  */
-function bandPlaced(
+export function bandPlaced(
   rect: Rect,
   clusters: readonly Cluster[],
   hallSide: 'y0' | 'y1',
   input: SkeletonInput,
-  frame: Frame,
+  vSide: 'lo' | 'hi',
 ): Placed | null {
   const depth = rect.y1 - rect.y0;
+  const parts = bandParts(rect, clusters, input);
+  const lengths = splitLengths(rect.x0, rect.x1 - rect.x0, parts);
+  if (!lengths) {
+    input.trace?.(
+      `  khung t${input.level}: dải ${hallSide === 'y1' ? 'trước' : 'sau'} rộng ${rect.x1 - rect.x0} sâu ${depth} không chứa: ${clusters
+        .map((c, i) => `${c.item.key}≥${parts[i]!.min}`)
+        .join(' ')}`,
+    );
+    return null;
+  }
+  const columns = slices(rect, 'x', lengths);
+  const placedColumns: Placed[] = [];
+  for (let i = 0; i < clusters.length; i += 1) {
+    const column = columnPlaced(columns[i]!, clusters[i]!, hallSide, input, vSide, {
+      first: i === 0,
+      last: i === clusters.length - 1,
+    });
+    if (!column) return null;
+    placedColumns.push(column);
+  }
+  return chain(rect, 'x', placedColumns);
+}
+
+/**
+ * Phần của từng cột trong một dải phòng `rect` (trọng số + bề ngang tối thiểu) — cùng phép đo `bandPlaced` dùng để
+ * chia, tách riêng để khung hai hàng (T179) đo được dải còn thiếu bao nhiêu mà không dựng cây.
+ */
+export function bandParts(
+  rect: Rect,
+  clusters: readonly Cluster[],
+  input: SkeletonInput,
+): { weight: number; min: number }[] {
+  const depth = rect.y1 - rect.y0;
   const wall = input.env.floorWallCm;
-  const parts = clusters.map((cluster) => {
+  return clusters.map((cluster) => {
     const parent = cluster.item.primary;
     // Phòng mẹ không hẹp dưới cạnh dùng được, và không dài quá tỉ lệ dùng được so với chiều sâu dải.
     // Ban công áp mặt trước / sau lấy một dải theo chiều sâu (phần thân phòng mẹ ngắn đi); áp mặt bên
@@ -851,26 +886,6 @@ function bandPlaced(
       cluster.item.weight + cluster.balconies.reduce((sum, b) => sum + b.leaf.target, 0);
     return { weight, min };
   });
-  const lengths = splitLengths(rect.x0, rect.x1 - rect.x0, parts);
-  if (!lengths) {
-    input.trace?.(
-      `  khung t${input.level}: dải ${hallSide === 'y1' ? 'trước' : 'sau'} rộng ${rect.x1 - rect.x0} sâu ${depth} không chứa: ${clusters
-        .map((c, i) => `${c.item.key}≥${parts[i]!.min}`)
-        .join(' ')}`,
-    );
-    return null;
-  }
-  const columns = slices(rect, 'x', lengths);
-  const placedColumns: Placed[] = [];
-  for (let i = 0; i < clusters.length; i += 1) {
-    const column = columnPlaced(columns[i]!, clusters[i]!, hallSide, input, frame, {
-      first: i === 0,
-      last: i === clusters.length - 1,
-    });
-    if (!column) return null;
-    placedColumns.push(column);
-  }
-  return chain(rect, 'x', placedColumns);
 }
 
 /** Một cột của dải: [ban công áp mặt thoáng] rồi [dải WC khép kín | phòng mẹ]. */
@@ -879,7 +894,7 @@ function columnPlaced(
   cluster: Cluster,
   hallSide: 'y0' | 'y1',
   input: SkeletonInput,
-  frame: Frame,
+  vSide: 'lo' | 'hi',
   at: { first: boolean; last: boolean },
 ): Placed | null {
   const { item } = cluster;
@@ -939,7 +954,7 @@ function columnPlaced(
         needWidth(item.primary, bodyDepth, input.env.floorWallCm),
       ),
     };
-    const towardsCore: 'x0' | 'x1' = frame.vSide === 'hi' ? 'x0' : 'x1';
+    const towardsCore: 'x0' | 'x1' = vSide === 'hi' ? 'x0' : 'x1';
     const score = (side: 'x0' | 'x1') => {
       const first = strips[0]!.fixed;
       const strip: Rect =
@@ -985,7 +1000,7 @@ function columnPlaced(
 }
 
 /** Xếp các lá dọc một trục trong một chữ nhật theo diện tích, mỗi lá không dưới cạnh kỹ thuật. */
-function stackAlong(
+export function stackAlong(
   rect: Rect,
   axis: 'x' | 'y',
   items: readonly PackItem[],
@@ -1016,7 +1031,7 @@ function stackAlong(
  * Đặt mã thật cho các đoạn hành lang: lá hành lang của tầng nhận đoạn (lớn nhận lớn); thiếu lá thì thêm không
  * gian mới vào chương trình (như V-29); thừa lá thì chia đoạn lớn nhất cho các lá còn lại.
  */
-function nameHallSegments(
+export function nameHallSegments(
   placed: Placed,
   segments: readonly Rect[],
   corridorItems: readonly PackItem[],
@@ -1125,7 +1140,7 @@ function replaceLeaf(node: Placed, id: string, replacement: Placed): Placed {
  * mẹ của nó, hay một loại được phép phục vụ nó; ô thang chạm một phòng đi xuyên được. Chỉ lọc chỗ CHẮC CHẮN
  * hỏng — cổng và `deriveDoors` vẫn đo lại đầy đủ.
  */
-function accessHolds(
+export function accessHolds(
   placed: Placed,
   leafById: ReadonlyMap<string, PackLeaf>,
   input: SkeletonInput,
@@ -1198,7 +1213,7 @@ function nextSpaceId(program: AiSpaceProgram, type: string): string {
   return `${type}_${Math.max(0, ...used) + 1}`;
 }
 
-function inside(r: Rect, f: Rect): boolean {
+export function inside(r: Rect, f: Rect): boolean {
   return r.x0 >= f.x0 && r.y0 >= f.y0 && r.x1 <= f.x1 && r.y1 <= f.y1 && r.x1 > r.x0 && r.y1 > r.y0;
 }
 
@@ -1213,7 +1228,7 @@ function centreDistance(a: Rect, b: Rect): number {
   return Math.hypot((a.x0 + a.x1 - b.x0 - b.x1) / 2, (a.y0 + a.y1 - b.y0 - b.y1) / 2);
 }
 
-function ceil5(value: number): number {
+export function ceil5(value: number): number {
   return Math.ceil(value / MODULE_CM) * MODULE_CM;
 }
 

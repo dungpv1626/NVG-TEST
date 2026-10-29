@@ -104,9 +104,9 @@ export function useUploadSurveyAttachments() {
   return useMutation<
     { uploaded: number; skipped: string[] },
     Error,
-    { surveyId: string; files: File[]; kind?: SurveyAttachmentKind }
+    { surveyId: string; files: File[]; kind?: SurveyAttachmentKind; caption?: string }
   >({
-    mutationFn: async ({ surveyId, files, kind }) => {
+    mutationFn: async ({ surveyId, files, kind, caption }) => {
       const skipped: string[] = [];
       let uploaded = 0;
       for (const file of files) {
@@ -127,6 +127,7 @@ export function useUploadSurveyAttachments() {
           file_name: file.name.slice(0, 255),
           mime_type: type,
           size_bytes: file.size,
+          ...(caption ? { caption } : {}),
         });
         if (error) {
           // Dòng không ghi được thì gỡ tệp vừa tải, không để tệp mồ côi trong kho.

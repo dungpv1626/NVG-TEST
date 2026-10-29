@@ -79,6 +79,12 @@ export interface SketchNorms {
    * ô thang đã dùng từ tỉ lệ này (`null` = không cảnh báo). Vắng = không kiểm.
    */
   stair_fit?: { block: boolean; warn_share: number | null };
+  /**
+   * Khung hai hàng T179 (`arrange/skeleton-rows.ts`): khung xương T102 không ra cây nào qua cổng ở tầng trên thì dựng thêm
+   * kiểu hành lang áp đầu bước ra của ô thang, dải dọc cạnh thang, dải sâu chia HAI hàng phòng kẹp hành lang. Số ứng viên
+   * tối đa, số lần dời phòng giữa các hàng khi chia, bước dò chiều sâu hàng (cm). Vắng hoặc `max_candidates: 0` = tắt.
+   */
+  skeleton_rows?: { max_candidates: number; max_moves: number; depth_step_cm: number };
 }
 
 export interface EntryStepNorms {
@@ -391,6 +397,30 @@ function parseSketch(raw: unknown): SketchNorms {
     }
     fit = { block, warn_share: warn as number | null };
   }
+  const rowsRaw = (raw as Record<string, unknown>).skeleton_rows as
+    Record<string, unknown> | undefined;
+  let rows: SketchNorms['skeleton_rows'];
+  if (rowsRaw !== undefined) {
+    const read = (name: string, positive: boolean): number => {
+      const value = rowsRaw?.[name];
+      if (
+        typeof value !== 'number' ||
+        !Number.isInteger(value) ||
+        value < 0 ||
+        (positive && value === 0)
+      ) {
+        throw new ConstructionNormsError(
+          `"sketch.skeleton_rows.${name}" phải là số nguyên ${positive ? 'dương' : 'không âm'}`,
+        );
+      }
+      return value;
+    };
+    rows = {
+      max_candidates: read('max_candidates', false),
+      max_moves: read('max_moves', false),
+      depth_step_cm: read('depth_step_cm', true),
+    };
+  }
   return {
     area_slack_ratio: ratio,
     grow_tries: tries,
@@ -399,6 +429,7 @@ function parseSketch(raw: unknown): SketchNorms {
     ...(shift ? { ground_core_shift: shift } : {}),
     ...(repair ? { repair_walls: repair } : {}),
     ...(fit ? { stair_fit: fit } : {}),
+    ...(rows ? { skeleton_rows: rows } : {}),
   };
 }
 

@@ -61,7 +61,13 @@ import {
   stairShortfall,
   stairTreads,
 } from '../tree/stair-fit';
-import { deriveDoors, stairSideOf, stairSidesNeeded, type StairSide } from './doors';
+import {
+  deriveDoors,
+  stairArrivalSide,
+  stairSideOf,
+  stairSidesNeeded,
+  type StairSide,
+} from './doors';
 import { carveStairLanding } from './stair-landing';
 import { intentFit, type IntentFit } from './fit';
 import { enumerateCarved, enumerateFrames, type FrameCandidate } from './frames';
@@ -89,7 +95,8 @@ import { CORRIDOR_STRIP_RATIO, trimCorridors } from './corridor-trim';
 import { splitLongEnsuiteWcs, type EnsuiteClosetSplit } from './ensuite-closet';
 import { widenRooms } from './room-widen';
 import { swapTowardOpenFace } from './open-face';
-import { skeletonCandidates } from './skeleton';
+import { skeletonCandidates, type SkeletonCandidate, type SkeletonInput } from './skeleton';
+import { rowsCandidates } from './skeleton-rows';
 import {
   baseId,
   cellBoxes,
@@ -911,7 +918,15 @@ function arrangeLevelCore(input: ArrangeInput): ArrangeResult {
   };
   // Khung xương (T102): chương trình dựng lõi + hành lang rồi lấp phòng theo vị trí bản phác — lối vào là
   // bất biến của cách dựng. Đi TRƯỚC các vòng khung cũ, vì các vòng ấy chỉ coi lối vào là khoản phạt mềm.
-  const skeleton = skeletonStage(input, intent, footprints[0]!, sketch, remember, failedGeometry);
+  const skeleton = skeletonStage(
+    input,
+    intent,
+    footprints[0]!,
+    sketch,
+    remember,
+    failedGeometry,
+    'skeleton',
+  );
   built += skeleton.built;
   if (skeleton.winner) {
     notes.push(skeletonNote(input.level, skeleton.winner.candidate.key));
@@ -968,6 +983,21 @@ function arrangeLevelCore(input: ArrangeInput): ArrangeResult {
         ),
       );
     }
+  }
+
+  // Khung hai hàng (T179) — sau cùng, khi mọi cách chia khác đều hỏng. Lỗi của nó không vào câu nhắc: câu nhắc nói về
+  // bản phác của mô hình và các cách chia gần nó nhất.
+  const rows = skeletonStage(input, intent, footprints[0]!, sketch, () => {}, new Set(), 'rows');
+  built += rows.built;
+  if (rows.winner) {
+    notes.push(skeletonNote(input.level, rows.winner.candidate.key));
+    return dropped(
+      finish(input, intent, notes, rows.winner, {
+        candidates: built,
+        passed: rows.passed,
+        relaxed: 0,
+      }),
+    );
   }
 
   const chosen: PlanIssue[] =
@@ -2328,6 +2358,18 @@ function shaftBesideStair(
 
 /** Ghi chú tầng xếp bằng khung xương (T102) — khoá ứng viên nói dạng khung nào. */
 function skeletonNote(level: number, key: string): DrawNote {
+  const rows = key.indexOf('skeleton|rows|');
+  if (rows >= 0) {
+    return {
+      code: 'skeleton_arranged',
+      message: `Tầng ${level}: chương trình dựng lại theo khung hai hàng (${key
+        .slice(rows + 'skeleton|rows|'.length)
+        .split('|')
+        .join(
+          ' ',
+        )}) — ô thang đúng mốc, hành lang áp đầu bước ra của ô thang, dải sâu chia hai hàng phòng kẹp hành lang, phòng theo vị trí bản phác.`,
+    };
+  }
   return {
     code: 'skeleton_arranged',
     message: `Tầng ${level}: chương trình dựng lại theo khung xương (${key
@@ -2348,6 +2390,12 @@ function skeletonStage(
   sketch: PreparedSketch | null,
   remember: (issues: PlanIssue[], filtered?: boolean) => void,
   failedGeometry: Set<string>,
+  /**
+   * `skeleton`: chỉ khung một hàng T102; `rows`: chỉ khung hai hàng T179; `all`: một hàng rồi, khi không cây nào qua,
+   * hai hàng. Đường chính gọi `skeleton` trước các vòng khung cũ và `rows` sau cùng — khung hai hàng không chen vào
+   * trước cách chia nào vốn đã qua.
+   */
+  phase: 'all' | 'skeleton' | 'rows' = 'all',
 ): { winner: Ranked | null; passed: number; built: number } {
   const { env, items, corridorIds, stairIds } = environment(input, intent, footprint, 0);
   const coreOf = (id: string): Rect | null =>
@@ -2396,7 +2444,7 @@ function skeletonStage(
       .filter((type) => !input.stairTypes.includes(type) && type !== 'elevator')
       .sort()[0] ?? 'circulation';
   const service = input.anchors?.service;
-  const candidates = skeletonCandidates({
+  const skeletonInput: SkeletonInput = {
     footprint,
     level: input.level,
     env,
@@ -2432,8 +2480,104 @@ function skeletonStage(
       : null,
     program: input.program,
     ...(input.trace ? { trace: input.trace } : {}),
-  });
-  input.trace?.(`tầng ${input.level} khung xương: ${candidates.length} ứng viên`);
+  };
+  const candidates = phase === 'rows' ? [] : skeletonCandidates(skeletonInput);
+  if (phase !== 'rows')
+    input.trace?.(`tầng ${input.level} khung xương: ${candidates.length} ứng viên`);
+  const first = gateSkeleton(
+    input,
+    intent,
+    footprint,
+    env,
+    stairIds,
+    candidates,
+    remember,
+    failedGeometry,
+  );
+  if (first.winner || phase === 'skeleton') return first;
+  // Khung hai hàng (T179): chỉ lên cổng khi không khung một hàng nào qua — không chen vào vòng khung cũ đã qua.
+  const rowsConfig = input.construction.sketch?.skeleton_rows;
+  if (!rowsConfig || rowsConfig.max_candidates <= 0) return first;
+  const up = input.anchors?.stairUp ?? null;
+  const params =
+    input.level > 1 && up
+      ? stairParamsOf(
+          input.construction,
+          stairTreads(
+            input.construction,
+            Math.round(input.construction.levels.storey_height_m * 100),
+          ),
+        )
+      : null;
+  const arrival = up && params ? stairArrivalSide(up, params) : null;
+  if (!arrival) return first;
+  // Các bước quay lui (T113, T169, T172) xếp lại cùng một tầng với cùng mốc nhiều lần trong một lượt: nhớ những lần khung
+  // hai hàng không ra cây nào qua cổng, theo đúng mọi thứ nó đọc, để không dựng + gate lại (tất định nên nhớ được).
+  const memo = rowsMemoFor(input.construction);
+  const memoKey = JSON.stringify([
+    input.level,
+    input.isTop,
+    arrival,
+    footprint,
+    stair,
+    skeletonInput.items.map((item) => [
+      item.key,
+      item.weight,
+      item.primary,
+      item.children,
+      item.row,
+      item.col,
+    ]),
+    [...boxes],
+    input.anchors ?? null,
+    input.program.spaces.filter((space) => space.level === input.level),
+    intent.leaves.map((leaf) => [leaf.id, leaf.types]),
+  ]);
+  if (memo.has(memoKey)) return first;
+  const rows = rowsCandidates(skeletonInput, arrival, rowsConfig);
+  input.trace?.(`tầng ${input.level} khung hai hàng: ${rows.length} ứng viên`);
+  if (!rows.length) {
+    memo.add(memoKey);
+    return first;
+  }
+  const second = gateSkeleton(
+    input,
+    intent,
+    footprint,
+    env,
+    stairIds,
+    rows,
+    // Lỗi của khung hai hàng không vào câu nhắc (câu nhắc nói về bản phác của mô hình), và không đánh dấu hình học hỏng
+    // cho các đường khác — kết quả nhớ ở `rowsMemoFor` vì thế không làm lệch lời báo giữa các lần gọi.
+    () => {},
+    new Set(),
+  );
+  if (!second.winner) memo.add(memoKey);
+  return { ...second, built: first.built + second.built };
+}
+
+/** Lần khung hai hàng không ra cây qua cổng, theo lượt (khoá theo bảng số đo của lượt — mỗi lượt một đối tượng). */
+const ROWS_MEMO = new WeakMap<object, Set<string>>();
+function rowsMemoFor(construction: object): Set<string> {
+  let memo = ROWS_MEMO.get(construction);
+  if (!memo) {
+    memo = new Set();
+    ROWS_MEMO.set(construction, memo);
+  }
+  return memo;
+}
+
+/** Ứng viên khung → cây → cổng; trả bản tốt nhất qua cổng. */
+function gateSkeleton(
+  input: ArrangeInput,
+  intent: LevelIntent,
+  footprint: Rect,
+  env: PackEnv,
+  stairIds: ReadonlySet<string>,
+  candidates: readonly SkeletonCandidate[],
+  remember: (issues: PlanIssue[], filtered?: boolean) => void,
+  failedGeometry: Set<string>,
+): { winner: Ranked | null; passed: number; built: number } {
   const built: Built[] = [];
   for (const candidate of candidates) {
     const frameEnv: PackEnv = candidate.leafById ? { ...env, leafById: candidate.leafById } : env;

@@ -448,3 +448,12 @@ sketch:
   stair_fit:
     block: true
     warn_share: 0.75
+  # Khung hai hàng (T179, `arrange/skeleton-rows.ts`) — tầng trên, khi bản phác và khung xương T102 đều không ra cây qua
+  # cổng: hành lang ngang áp đầu bước ra của ô thang, dải dọc cạnh thang, dải sâu chia HAI hàng phòng kẹp một hành lang (cả
+  # hai hàng có cửa ra hành lang), túi cạnh / sau ô thang cho phòng nhỏ, khu ướt. Phòng giữ hàng theo bản phác, hàng nào
+  # không chứa nổi thì dời bớt phòng sang hàng khác (tối đa `max_moves` lần). `max_candidates`: số ứng viên tối đa lên cổng
+  # (0 = tắt); `depth_step_cm`: bước dò chiều sâu hai hàng. Bỏ cả mục là tắt.
+  skeleton_rows:
+    max_candidates: 12
+    max_moves: 24
+    depth_step_cm: 10

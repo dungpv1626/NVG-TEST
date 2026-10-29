@@ -267,6 +267,20 @@ export function SurveyAttachmentsSection({
             if (!failed) setReading(null);
             return failed;
           }}
+          onSaveSketch={async (image) => {
+            const name = `So-do-hien-trang-${reading.file_name.replace(/\.[^.]+$/, '')}.jpg`;
+            try {
+              await upload.mutateAsync({
+                surveyId,
+                files: [new File([image], name, { type: 'image/jpeg' })],
+                kind: 'anh',
+                caption: 'Sơ đồ hiện trạng — cắt từ phiếu khảo sát giấy',
+              });
+              return null;
+            } catch (e) {
+              return toUserMessage(e, 'create');
+            }
+          }}
           onClose={() => setReading(null)}
         />
       )}

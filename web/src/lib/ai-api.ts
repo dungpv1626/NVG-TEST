@@ -7,7 +7,7 @@
  * đi tiếp khi hàm này ném lỗi (CLAUDE.md 5.1).
  */
 
-import type { PaperReadItem, SiteLogVoiceDraft } from '@nvg/shared';
+import type { PaperReadItem, PaperSketch, SiteLogVoiceDraft } from '@nvg/shared';
 import type { PrefillAccepted, PrefillRejected } from '@nvg/shared/design';
 import { supabase } from './supabase';
 
@@ -79,6 +79,8 @@ export function prefillBrief(projectId: string): Promise<BriefPrefillResult> {
 export interface SurveyPaperReadResult {
   accepted: PaperReadItem[];
   rejected: { key: string; reason: string }[];
+  /** Khung «Sơ đồ hiện trạng» (trang đếm từ 1; `page = 0` = chỉ có mô tả, không cắt được ảnh). */
+  sketch?: PaperSketch | null;
   fake: boolean;
 }
 
