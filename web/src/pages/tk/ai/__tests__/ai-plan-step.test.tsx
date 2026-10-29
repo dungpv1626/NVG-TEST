@@ -688,8 +688,8 @@ describe('Mặc định MỘT phương án, và mức suy nghĩ đi kèm lượt
     await userEvent.click(screen.getByRole('button', { name: /^Xếp mặt bằng/ }));
     const dialog = within(screen.getByRole('dialog'));
     expect(dialog.getByText(/tối đa 4 lượt sửa mỗi phương án \(5 lượt gọi\)/)).toBeInTheDocument();
-    // 0,1 USD mỗi lượt gọi × 5 lượt = 0,5 USD.
-    expect(dialog.getByText(/Trần nếu phải dùng hết: ≈ 0,5/)).toBeInTheDocument();
+    // Lời gọi đắt nhất 0,15 USD × 5 lượt = 0,75 USD (không lấy trung bình 0,1 — lượt thật 9272, 29/10/2026).
+    expect(dialog.getByText(/Trần nếu phải dùng hết: ≈ 0,75/)).toBeInTheDocument();
     await userEvent.click(dialog.getByRole('button', { name: 'Chưa chạy' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(state.start).not.toHaveBeenCalled();

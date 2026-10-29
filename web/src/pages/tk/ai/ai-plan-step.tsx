@@ -776,7 +776,7 @@ export function RunCostNotice({
   capUsd?: number | null;
   modelName: string | null;
 }): React.ReactElement {
-  const ceiling = costCeiling(estimate, callsMax, units);
+  const ceiling = costCeiling(estimate, callsMax, units, capUsd);
   return (
     <div className="space-y-2">
       <p>

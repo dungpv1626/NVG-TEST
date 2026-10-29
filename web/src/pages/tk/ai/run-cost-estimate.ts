@@ -51,8 +51,14 @@ export interface CostEstimate {
    * Vắng = `history` (bản trước 23/10/2026).
    */
   basis?: 'history' | 'pricing';
-  /** Trung bình tiền MỘT lượt gọi mô hình — để tính trần khi phải gọi lại nhiều lượt sửa. */
+  /** Trung bình tiền MỘT lượt gọi mô hình. */
   perCallUsd?: number | null;
+  /**
+   * Lượt gọi ĐẮT NHẤT đã gặp — trần khi phải gọi lại hết lượt sửa tính bằng số này, không bằng trung bình:
+   * lượt thật 29/10/2026 (9272) báo trần 0,461 USD (trung bình × 5) mà trả 0,577 USD, vì lời gọi đầu
+   * (phác cả nhà) đắt gấp rưỡi một lời gọi sửa.
+   */
+  maxCallUsd?: number | null;
 }
 
 /** Dòng cuối của một lượt có thể ghi sau mốc cập nhật trạng thái vài giây — cùng biên với `useRunCalls`. */
@@ -67,6 +73,7 @@ export function estimateRunCost(
   const perUnit: number[] = [];
   let callTotal = 0;
   let callCount = 0;
+  let callMax = 0;
   for (const run of runs) {
     if (!run.units || run.units <= 0) continue;
     const from = Date.parse(run.createdAt);
@@ -97,6 +104,7 @@ export function estimateRunCost(
         break;
       }
       total += call.costUsd;
+      callMax = Math.max(callMax, call.costUsd);
     }
     if (!priced) continue;
     perUnit.push(total / run.units);
@@ -109,6 +117,7 @@ export function estimateRunCost(
     samples: perUnit.length,
     basis: 'history',
     perCallUsd: callCount > 0 ? callTotal / callCount : null,
+    maxCallUsd: callMax > 0 ? callMax : null,
   };
 }
 
@@ -168,16 +177,16 @@ export function estimateFromPricing(
   const perUnit: number[] = [];
   let tokenUsd = 0;
   let callCount = 0;
+  let callMax = 0;
   for (const run of runs) {
     if (!run.units || run.units <= 0) continue;
     const mine = billedCalls(callsOfRun(run, calls, purposes));
     if (mine.length === 0) continue;
     // Lượt gọi chưa ghi token thì không biết nó tốn bao nhiêu — bỏ cả lượt chạy, không coi là 0.
     if (mine.some((call) => call.inputTokens == null || call.outputTokens == null)) continue;
-    const usd = mine.reduce(
-      (sum, call) => sum + usdOf(call.inputTokens ?? 0, call.outputTokens ?? 0),
-      0,
-    );
+    const each = mine.map((call) => usdOf(call.inputTokens ?? 0, call.outputTokens ?? 0));
+    const usd = each.reduce((sum, value) => sum + value, 0);
+    callMax = Math.max(callMax, ...each);
     perUnit.push(usd / run.units);
     tokenUsd += usd;
     callCount += mine.length;
@@ -188,6 +197,7 @@ export function estimateFromPricing(
     samples: perUnit.length,
     basis: 'pricing',
     perCallUsd: callCount > 0 ? tokenUsd / callCount : null,
+    maxCallUsd: callMax > 0 ? callMax : null,
   };
 }
 
@@ -199,9 +209,14 @@ export function costCeiling(
   estimate: CostEstimate | null,
   callsMax: number | null | undefined,
   units: number,
+  capUsd?: number | null,
 ): number | null {
-  if (!estimate?.perCallUsd || !callsMax || callsMax < 1) return null;
-  return estimate.perCallUsd * callsMax * units;
+  // Lời gọi đắt nhất đã gặp (29/10/2026); số cũ chỉ có trung bình thì dùng trung bình.
+  const perCall = estimate?.maxCallUsd ?? estimate?.perCallUsd;
+  if (!perCall || !callsMax || callsMax < 1) return null;
+  const ceiling = perCall * callsMax * units;
+  // Mức chặn thật của lượt (T164) — chương trình dừng trước lời gọi vượt nó, nên trần không cao hơn.
+  return typeof capUsd === 'number' && capUsd > 0 ? Math.min(ceiling, capUsd) : ceiling;
 }
 
 /** Số phương án một lượt xếp mặt bằng đã yêu cầu — đọc từ kết quả đã ghi (`plans` + `failed`). */

@@ -283,6 +283,25 @@ describe('Ước tính lần đầu theo bảng giá (estimateFromPricing, 23/10
     expect(costCeiling(null, 5, 1)).toBeNull();
   });
 
+  it('trần tính bằng lời gọi ĐẮT NHẤT, không vượt mức chặn của lượt (lượt thật 9272, 29/10/2026)', () => {
+    // Năm lời gọi thật: 0,152 · 0,099 · 0,096 · 0,128 · 0,100 = 0,577 USD. Trung bình × 5 = 0,577 — nhưng lượt
+    // trước đó trung bình 0,092 nên màn hình báo trần 0,461 rồi trả 0,577.
+    const usd = [0.152354, 0.099152, 0.096402, 0.128282, 0.1004];
+    const calls = usd.map((costUsd, i) =>
+      call({
+        purpose: i === 0 ? 'plan_house' : 'plan_house_revise',
+        createdAt: `2026-10-01T10:0${i}:30Z`,
+        costUsd,
+      }),
+    );
+    const est = estimateRunCost([run()], calls, PLAN);
+    expect(est?.maxCallUsd).toBeCloseTo(0.152354, 6);
+    const ceiling = costCeiling(est, 5, 1)!;
+    expect(ceiling).toBeCloseTo(0.152354 * 5, 6);
+    expect(ceiling).toBeGreaterThan(usd.reduce((a, b) => a + b, 0));
+    expect(costCeiling(est, 5, 1, 0.5)).toBeCloseTo(0.5);
+  });
+
   it('ước tính từ tiền thật cũng mang giá một lượt gọi', () => {
     const est = estimateRunCost(
       [run()],

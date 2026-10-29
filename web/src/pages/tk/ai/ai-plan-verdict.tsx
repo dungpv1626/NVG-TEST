@@ -27,6 +27,25 @@ export function planVerdict(review: AiPlanReview): {
   return { passed, items: topDeductions(review.score, MAX_ITEMS) };
 }
 
+/** Tiêu chí «phòng không có mặt thoáng» của nhóm Mặt thoáng (`kb/plan_quality.yaml`). */
+const DARK_ROOM_CODES = new Set(['D1', 'D2']);
+
+/**
+ * Phòng tối mà phương án không có giếng trời / sân trong: gợi ý thêm vào đầu bài (lượt thật 9272, 29/10/2026 — biệt thự
+ * 15 × 20 m chỉ hai mặt thoáng, ba phòng không cửa sổ). Theo T96 mô hình chỉ được đề xuất giếng trời khi đầu bài có hỏi
+ * tới, nên gọi lại mô hình không gỡ được chỗ này — người khai đầu bài quyết. `roomTypes` = loại phòng CÓ trong phương án
+ * (`roomList` từng tầng). Trả danh sách phòng tối; rỗng = không gợi ý.
+ */
+export function lightWellAdvice(
+  items: readonly PlanDeduction[],
+  roomTypes: readonly string[],
+): string[] {
+  if (roomTypes.some((type) => type === 'light_well' || type === 'courtyard')) return [];
+  return [
+    ...new Set(items.filter((item) => DARK_ROOM_CODES.has(item.code)).flatMap((item) => item.refs)),
+  ];
+}
+
 /** Câu yêu cầu sửa điền sẵn cho một việc — người dùng sửa lại trước khi gửi. */
 export function fixRequest(item: PlanDeduction, labels: Record<string, string>): string {
   const rooms = item.refs.map((id) => roomName(id, labels)).join(', ');
@@ -45,6 +64,10 @@ export function PlanVerdict({
 }): React.ReactElement {
   const { percent, threshold, weakGroups } = scoreSummary(review);
   const { passed, items } = planVerdict(review);
+  const darkRooms = lightWellAdvice(
+    items,
+    review.levels.flatMap((level) => (level.roomList ?? []).map((room) => room.type)),
+  );
 
   if (!review.score) {
     return (
@@ -115,6 +138,13 @@ export function PlanVerdict({
             </li>
           ))}
         </ol>
+      )}
+      {darkRooms.length > 0 && (
+        <p className="mt-3 rounded-field border border-status-pending/40 px-3 py-2 text-sm">
+          {darkRooms.map((id) => roomName(id, review.roomLabels)).join(', ')} không có cửa sổ ra mặt
+          thoáng. Đầu bài chưa có giếng trời hay sân trong nên AI không được tự thêm — muốn có thì
+          thêm «Giếng trời» ở mục «Không gian gia chủ yêu cầu» của đầu bài rồi xếp lại.
+        </p>
       )}
       {canFix && items.length > 0 && (
         <p className="mt-2 text-xs text-ink-subtle">
