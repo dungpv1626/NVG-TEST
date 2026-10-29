@@ -17,26 +17,26 @@ import {
   formatCurrency,
   formatDate,
   formatDateTime,
+  formatQuantity,
   QUOTE_STAGES,
+  vatNote,
 } from '@nvg/shared';
-import { ZaloSend } from '@/components/share/zalo-send';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { StatusLozenge, StatusWithLabel } from '@/components/ui/status-lozenge';
 import { WaitingOn } from '@/components/entity/waiting-on';
 import { useApprovalHistory, type ApprovalHistoryEntry } from '@/hooks/use-approvals';
-import { useCompanyLookup } from '@/hooks/use-companies';
-import { useRecipientContact } from '@/hooks/use-outbound-shares';
 import { toUserMessage } from '@/hooks/use-error-message';
 import {
   useQuotes,
   useRecordQuoteResponse,
   useRequestQuoteApproval,
+  useQuoteItems,
   useSendQuote,
   type QuoteRecord,
 } from '@/hooks/use-quotes';
 import { cn } from '@/lib/utils';
-import { composeZaloMessage } from '@/lib/zalo-share';
+import { QuoteDocumentActions } from './quote-document';
 
 const EM_DASH = '—';
 
@@ -342,15 +342,20 @@ function QuoteVersionCard({
         </p>
       )}
 
+      {quote.line_items_based && <QuoteItemsTable quote={quote} />}
+
       {quote.notes && <p className="mt-2 text-fg-subtle">{quote.notes}</p>}
 
-      {/* Chỉ bản ĐÃ DUYỆT, đang là bản hiện hành — không gửi khách giá chưa duyệt hay giá đã thay. Chưa có
-          link / PDF báo giá cho khách nên chỉ gửi lời nhắn tóm tắt. */}
-      {canSend && quote.status === 'completed' && quote.is_current_version && (
-        <div className="mt-3">
-          <QuoteZaloSend quote={quote} opportunityId={opportunityId} />
-        </div>
-      )}
+      {/* Văn bản báo giá (0239): xem / tải Word, PDF; gửi Zalo theo mẫu lời nhắn, gửi email. Chỉ bản ĐÃ DUYỆT,
+          đang hiện hành mới tải / gửi khách — bản khác chỉ xem, PDF in dấu «Bản nháp». */}
+      <div className="mt-3">
+        <QuoteDocumentActions
+          quote={quote}
+          opportunityId={opportunityId}
+          canSend={canSend}
+          canEditText={editable}
+        />
+      </div>
 
       {/* Lịch sử phê duyệt — CRM-05 yêu cầu lưu lại, DA-07 gọi đây là "căn cứ phê duyệt". */}
       {approvals.length > 0 && (
@@ -424,31 +429,56 @@ function QuoteVersionCard({
   );
 }
 
-function QuoteZaloSend({ quote, opportunityId }: { quote: QuoteRecord; opportunityId: string }) {
-  const contact = useRecipientContact({ opportunityId }).data;
-  const companyName = useCompanyLookup()(quote.company_id)?.short_name ?? null;
-  const value = quote.total_value ? formatCurrency(quote.total_value) : null;
-  const until = formatDate(quote.valid_until);
-  const details = [
-    value ? `Giá trị báo giá: ${value}` : null,
-    until ? `hiệu lực tới ${until}` : null,
-  ]
-    .filter(Boolean)
-    .join(', ');
+/** Bảng hạng mục của một phiên bản (0239) — gấp lại, mở khi cần xem chi tiết. */
+function QuoteItemsTable({ quote }: { quote: QuoteRecord }) {
+  const { data: items = [], isLoading } = useQuoteItems(quote.id);
+  if (isLoading) return null;
   return (
-    <ZaloSend
-      canSend
-      size="sm"
-      entityType="quotes"
-      entityId={quote.id}
-      phone={contact?.phone ?? null}
-      message={composeZaloMessage({
-        recipientName: contact?.name ?? null,
-        companyName,
-        subject: `báo giá ${quote.code}`,
-        details: details ? `${details}.` : null,
-      })}
-    />
+    <details className="mt-3 rounded-sm border border-border">
+      <summary className="cursor-pointer px-3 py-2 font-medium">
+        {items.length} hạng mục
+        {quote.subtotal_value !== null && (
+          <span className="font-normal text-fg-subtle">
+            {' '}
+            · tổng các hạng mục {formatCurrency(quote.subtotal_value)}
+          </span>
+        )}
+      </summary>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[36rem] text-sm">
+          <thead className="bg-surface-sunken text-left text-xs text-fg-subtle">
+            <tr>
+              <th className="px-3 py-1.5 font-medium">STT</th>
+              <th className="px-3 py-1.5 font-medium">Hạng mục</th>
+              <th className="px-3 py-1.5 font-medium">Đơn vị</th>
+              <th className="px-3 py-1.5 text-right font-medium">Khối lượng</th>
+              <th className="px-3 py-1.5 text-right font-medium">Đơn giá</th>
+              <th className="px-3 py-1.5 text-right font-medium">Thành tiền</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((i, n) => (
+              <tr key={i.id} className="border-t border-border">
+                <td className="px-3 py-1.5">{n + 1}</td>
+                <td className="px-3 py-1.5">{i.description}</td>
+                <td className="px-3 py-1.5">{i.unit ?? ''}</td>
+                <td className="px-3 py-1.5 text-right tabular-nums">
+                  {formatQuantity(i.quantity)}
+                </td>
+                <td className="px-3 py-1.5 text-right tabular-nums">
+                  {formatCurrency(i.unit_price)}
+                </td>
+                <td className="px-3 py-1.5 text-right tabular-nums">{formatCurrency(i.amount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="border-t border-border px-3 py-1.5 text-xs text-fg-subtle">
+        {vatNote(quote.vat_rate, quote.vat_included)}
+        {quote.vat_amount !== null && ` Tiền thuế: ${formatCurrency(quote.vat_amount)}.`}
+      </p>
+    </details>
   );
 }
 

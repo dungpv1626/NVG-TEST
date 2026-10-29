@@ -73,6 +73,15 @@ export interface SkeletonInput {
     projection: Readonly<Partial<Record<Side, number>>>;
   } | null;
   program: AiSpaceProgram;
+  /** Phòng KHÔ tầng ngay dưới (nhóm `dry_below`) — khung hai hàng tránh đặt khu ướt lên (T180, E5). */
+  dryBelow?: readonly Rect[];
+  /** Loại phòng nhóm `wet` / `habitable` của từ vựng (T180). */
+  wetTypes?: ReadonlySet<string>;
+  habitableTypes?: ReadonlySet<string>;
+  /** Nhóm `sleeping` — phòng ngủ tối bị trừ nặng hơn (D2). */
+  sleepingTypes?: ReadonlySet<string>;
+  /** `overlap_ratio` của tiêu chí E5 — khu ướt «đè» khi phần chồng lên chỗ khô từ tỉ lệ này. */
+  wetOverlapRatio?: number;
   trace?: (line: string) => void;
 }
 

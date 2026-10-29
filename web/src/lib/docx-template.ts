@@ -118,6 +118,26 @@ export function fillTemplate(buffer: ArrayBuffer, data: Record<string, TemplateV
   return doc.getZip().generate({ type: 'blob', mimeType: DOCX_MIME }) as Blob;
 }
 
+/**
+ * Chỗ trống của mẫu còn nằm nguyên trong một tệp Word (`{so_hop_dong}`, `{#pa_1_a}`) — tệp ấy là mẫu gốc chưa điền.
+ * Đọc chữ của `word/document.xml` (bỏ thẻ XML vì Word hay cắt một chỗ trống thành nhiều đoạn chữ). Dùng cho bản sửa
+ * trong Word của hợp đồng (0222) và báo giá (0239).
+ */
+export function unfilledTemplateTags(documentXml: string): string[] {
+  const text = documentXml.replace(/<[^>]+>/g, '');
+  return [...new Set([...text.matchAll(/\{[#/^]?([a-z][a-z0-9_]*)\}/g)].map((m) => `{${m[1]}}`))];
+}
+
+/** Chỗ trống còn sót trong một tệp `.docx` (đọc `word/document.xml`); tệp không đọc được thì `null`. */
+export function unfilledTagsInDocx(buffer: ArrayBuffer): string[] | null {
+  try {
+    const xml = new PizZip(buffer).file('word/document.xml')?.asText();
+    return xml === undefined ? null : unfilledTemplateTags(xml);
+  } catch {
+    return null;
+  }
+}
+
 /** Tên tệp an toàn: bỏ ký tự hệ điều hành cấm, giữ chữ có dấu. */
 export function safeFileName(name: string): string {
   return name

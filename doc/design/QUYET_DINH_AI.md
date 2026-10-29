@@ -4825,3 +4825,68 @@ lại: `backup/gd1-mat-bang/replay-t179new-0.jsonl`, `replay-t179ctl-0.jsonl`, k
 chữ H cần ~40 m² trên sàn 192 m² mà phòng đầu bài đã cần ~136 m² — dư 25 cm ở dải trước là hết; chỉ ô thang ở chỗ khác (câu nhắc /
 lượt mới) mới gỡ. (2) E5: nên xếp khu ướt vào túi gần khu ướt tầng dưới trước khi dời phòng (chưa làm). (3) Ước bề ngang theo
 `floorWallCm` một bề dày — vài cây hụt sàn 0,4 m² ở cổng (phòng làm việc 12,6 < 13 m²). (4) Tầng có thang máy / giếng trời, tầng 1.
+
+## T180 — Khung hai hàng chỉnh khu ướt và mặt thoáng sau khi chia (GIỮ) (29/10/2026, anh Dũng đồng ý)
+
+**Bối cảnh.** T179 dựng được tầng 2 của `1dd74b99` (hồ sơ 9272) nhưng đặt WC / giặt theo chỗ trống: WC chung nằm trên phòng ngủ tầng
+1, nhóm E «Dựng được» 0–20 %, nhóm D «Mặt thoáng» 35–42 %. Đích: nhóm E và D qua sàn nhóm, không mất vòng qua cổng nào.
+
+**Làm** (`arrange/skeleton-rows.ts` `tune`, dữ liệu do `rowsPreferInput` ở `index.ts` đưa vào). Chia xong (mọi hàng chứa nổi) thì
+tìm cục bộ: dời một phòng sang hàng khác (mọi chỗ trong hàng), đổi chỗ hai phòng giữa hai hàng, đổi chỗ hai phòng trong một hàng —
+mỗi bước chọn phép giảm nhiều nhất một giá đo trên chính các ô dựng ra, mọi phép giữ «mọi hàng chứa nổi», phòng có ban công / phòng
+ghim đầu hàng không dời. Giá:
+- khu ướt (nhóm `wet`) đè chỗ khô tầng dưới (nhóm `dry_below` của `anchors.belowRooms`, tỉ lệ chồng theo `overlap_ratio` của
+  chính tiêu chí E5) — `wet_over_dry`; khoảng cách tới khu ướt tầng dưới — `wet_distance_per_m` mỗi mét (E2);
+- phòng ở (nhóm `habitable`) không chạm mặt thoáng, không chung vách ban công — `dark_room`, thêm `dark_bedroom` cho nhóm
+  `sleeping` (D2);
+- phòng có sàn đầu bài mà ước lọt lòng dư dưới `floor_margin_ratio` — `tight_floor` (bản đầu không có phạt này: bản chỉnh hay hụt sàn
+  0,4 m² ở cổng).
+Bản chỉnh là ỨNG VIÊN THÊM (khoá `|q`), lên cổng TRƯỚC các bản theo bản phác: qua thì nó thắng (xếp hạng chung thưởng độ khớp bản
+phác, mà bản chỉnh cố ý rời bản phác); không bản chỉnh nào qua thì các bản T179 lên như cũ — nên không vòng nào mất qua cổng. Trọng số
+chỉ để so các cách xếp với nhau, không phải điểm: `kb/construction_norms.yaml` `sketch.skeleton_rows.prefer` (`max_moves` 16,
+`wet_over_dry` 3, `dark_room` 2, `dark_bedroom` 4, `wet_distance_per_m` 0,2, `floor_margin_ratio` 0,05, `tight_floor` 5); bỏ mục là tắt.
+Luật bắt buộc T71 (thờ cạnh / đối WC) không vào giá — cổng bác, bản T179 lên thay.
+
+**Đo** (phát lại 61 lượt / 256 vòng, ngữ cảnh Workflow, một tiến trình; đối chứng = cùng mã, bỏ `prefer`; đối chứng trùng từng vòng
+với kết quả T179):
+
+| | Đối chứng (T179) | Có chỉnh |
+| --- | --- | --- |
+| Vòng qua cổng | 25 | 25 — không vòng nào đổi kết quả cổng |
+| Cả bộ / vòng lâu nhất | 1.904 s / 107,6 s* | 1.924 s / 64,3 s (`f1a88ac1` v5 17,9 → 64,3 s; 17 vòng chậm thêm > 2 s) |
+| Vòng có nhóm E ≥ 40 % (25 vòng qua) | 1 | 4 |
+
+\* Thời gian máy lúc đo dao động mạnh (đối chứng chạy cùng mã T179 lần trước ra 55,2 s; `894b350d` v6 33 → 107 s giữa hai lần chạy cùng
+mã) — so thời gian chỉ là chỉ dấu; vòng lâu nhất xa trần CPU 300 s.
+
+Điểm 25 vòng qua (`backup/gd1-mat-bang/s180new.jsonl`, `s180ctl.jsonl`): 18 vòng không đổi (cách chia khác đã qua trước khung hai
+hàng), 7 vòng đổi:
+
+| Vòng | Đối chứng: % · D · E | Có chỉnh: % · D · E |
+| --- | --- | --- |
+| **`1dd74b99` v2** | 65,0 · 35 · 0 | 65,8 · 42 · 20 |
+| **`1dd74b99` v3** | 65,9 · 42 · 20 | **69,3 · 42 · 60** |
+| **`1dd74b99` v4** | 65,0 · 35 · 0 | **68,8 · 42 · 60** |
+| `46d6eff3` v2 | 69,0 · 46 · 20 | 70,7 · 35 · 60 |
+| `0b7e4957` v2 | 67,6 · 31 · 0 | 65,4 · 31 · 20 |
+| `0b7e4957` v3 | 68,3 · 46 · 0 | 71,8 · 31 · 0 |
+| `0b7e4957` v4 / v5 | 64,9 · 31 · 0 / 69,6 · 31 · 0 | 65,7 · 31 · 20 / 65,5 · 31 · 0 |
+
+9272 (`1dd74b99` v2 / v3 / v4), từng nhóm A · B · C · D · E: 82 · 67 · 76 · 42 · 20 / 83 · 67 · 77 · 42 · 60 / 81 · 67 · 77 · 42 · 60
+(đối chứng 73 · 83 · 79 · 35 · 0 / 82 · 67 · 76 · 42 · 20 / 73 · 83 · 79 · 35 · 0). Nhóm E qua sàn 40 % ở v3, v4; **nhóm D vẫn
+dưới sàn riêng của nó (60 %, `accept_group_floor_by_group.D`)** — nên chưa phương án nào đạt ngưỡng nhận. Phần D còn thiếu không nằm
+ở chỗ đặt phòng tầng 2: D2 (phòng ngủ tối) đếm cả `bedroom_2` tầng 1 (góc sau phải, không mặt thoáng); D6 (ban công chính mặt tiền
+chỉ mở từ phòng riêng) và D7 (ban công bên lớn hơn ban công trước) là cách khung gắn ban công. Có lùi: `0b7e4957` v3 / v5 tổng điểm
+giảm (D 46 → 31, B 100 → 67), `46d6eff3` v2 D 46 → 35 — bản chỉnh vẫn qua cổng nên lên trước; không vòng nào trong số ấy đạt ngưỡng
+nhận ở đối chứng.
+
+**Giữ** (E qua sàn ở 3 vòng thêm, 9272 v3 / v4 tổng +3,4 / +3,8 điểm, không vòng nào mất qua cổng, vòng lâu nhất 64 s). Phép thử
+`ai-live-skeleton-rows-wet.test.ts` (1dd74b99 v3: tắt chỉnh → có khu ướt tầng 2 đè chỗ khô tầng 1; bật → không khu ướt nào đè, điểm không
+thấp hơn). Đột biến M255 (bước chỉnh không chạy), M256 (bước chỉnh không biết khu ướt): đo tay, cả hai ĐỎ. Kết quả:
+`backup/gd1-mat-bang/replay-t180new-0.jsonl`, `replay-t180ctl-0.jsonl`, `zz-replay-t180.test.ts.keep` (`CTL=1` = đối chứng),
+`zz-score-t180.test.ts.keep`.
+
+**Còn mở.** (1) Nhóm D: gắn ban công chính mặt tiền vào hành lang / khu chung và giữ nó lớn nhất (D6, D7) — việc tiếp theo nếu cần qua
+ngưỡng; phòng ngủ tối tầng 1 là của tầng 1. (2) Bản chỉnh có thể lùi tổng điểm (`0b7e4957`) vì nó lên trước mà không so điểm với bản
+T179 — muốn chắc thì cho cả hai lên cổng và chọn theo điểm cả nhà (đổi xếp hạng, chưa làm). (3) Luật T71 chưa vào giá — vài bản chỉnh bị
+cổng bác vì thờ cạnh WC. (4) `ai-live-46d6eff3.test.ts` quá 30 s trên máy lúc đo kể cả khi tắt cả khung hai hàng (máy bận), không do T180.

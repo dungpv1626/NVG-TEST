@@ -2097,6 +2097,22 @@ const MUTATIONS: Mutation[] = [
     find: "const mirrorY = arrival === 'y1' || arrival === 'x1';",
     replace: "const mirrorY = arrival === 'y1';",
   },
+  {
+    id: 'M255',
+    axis: 'số đo bản vẽ',
+    file: 'workers/src/design/ai/arrange/skeleton-rows.ts',
+    bug: 'Bước chỉnh khung hai hàng (T180) không bao giờ chạy — WC chung tầng 2 lại nằm trên phòng ngủ tầng 1 (1dd74b99 vòng 3)',
+    find: 'if (config.prefer && config.prefer.max_moves > 0 && tune(config.prefer)) {',
+    replace: 'if (false && config.prefer && tune(config.prefer)) {',
+  },
+  {
+    id: 'M256',
+    axis: 'số đo bản vẽ',
+    file: 'workers/src/design/ai/arrange/skeleton-rows.ts',
+    bug: 'Bước chỉnh khung hai hàng (T180) không biết phòng nào là khu ướt — chỉ chỉnh mặt thoáng, khu ướt vẫn đè chỗ khô tầng dưới',
+    find: '    const wetTypes = ni.wetTypes ?? new Set<string>();',
+    replace: '    const wetTypes = new Set<string>();',
+  },
 ];
 
 /** Thư mục mã nguồn được băm trước và sau khi chạy. `db/` không đụng tới nên không băm. */

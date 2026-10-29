@@ -58,6 +58,8 @@ interface ContractTemplateAsset {
   free_fields: unknown[];
   options: unknown[];
   sha: string;
+  /** Ghi chú riêng của mẫu (mẫu báo giá DEMO 0239); không có thì câu chung của bộ dự thảo. */
+  notes?: string;
 }
 
 async function main() {
@@ -359,6 +361,8 @@ async function main() {
     const templateSources = [
       ...['NVC', 'NVO', 'NVS'].map((code) => ({ code, folder: 'contract-templates' })),
       { code: 'NVC', folder: 'bid-templates' },
+      // Mẫu báo giá DEMO ba pháp nhân (0239, quote-templates/build.mjs) — `document_kind` bao_gia.
+      ...['NVC', 'NVO', 'NVS'].map((code) => ({ code, folder: 'quote-templates' })),
     ];
     for (const { code, folder } of templateSources) {
       const companyId = companyByCode.get(code);
@@ -406,7 +410,7 @@ async function main() {
                   ${m.file}, ${JSON.stringify(m.tags)}::jsonb,
                   ${JSON.stringify(m.payment_milestones)}::jsonb,
                   ${JSON.stringify(m.free_fields)}::jsonb, ${JSON.stringify(m.options)}::jsonb,
-                  ${'Bộ mẫu dự thảo NVG (21/10/2026) — dùng như chính thức, chờ pháp chế rà soát.'})`);
+                  ${m.notes ?? 'Bộ mẫu dự thảo NVG (21/10/2026) — dùng như chính thức, chờ pháp chế rà soát.'})`);
         templateCount++;
       }
     }

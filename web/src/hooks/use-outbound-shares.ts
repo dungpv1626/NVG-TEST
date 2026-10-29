@@ -15,7 +15,9 @@ export interface OutboundShare {
   id: string;
   created_at: string;
   channel: 'zalo' | 'email';
-  via: 'bang_chia_se' | 'zalo_web' | null;
+  via: 'bang_chia_se' | 'zalo_web' | 'he_thong' | null;
+  /** Email giả lập — chưa có thư nào đi thật (0239). */
+  simulated: boolean;
   recipient: string | null;
   file_name: string | null;
   creator: { full_name: string } | null;
@@ -28,7 +30,7 @@ export function useOutboundShares(entityType: OutboundEntityType, entityId: stri
       const { data, error } = await supabase
         .from('outbound_shares')
         .select(
-          'id, created_at, channel, via, recipient, file_name, ' +
+          'id, created_at, channel, via, recipient, file_name, simulated, ' +
             'creator:users!outbound_shares_created_by_fkey(full_name)',
         )
         .eq('entity_type', entityType)

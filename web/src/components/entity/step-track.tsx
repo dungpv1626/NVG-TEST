@@ -29,6 +29,8 @@ export interface StepTrackProps<S extends string> {
   nextRequirements?: StepRequirement[];
   /** Tên người đang giữ hồ sơ, nếu biết — đứng trước câu mô tả việc của bước. */
   holder?: string | null;
+  /** Việc cụ thể của bước đang ở (danh sách việc kèm nút làm ngay) — hiện cuối thẻ «Bước tiếp theo». */
+  extra?: React.ReactNode;
 }
 
 export function StepTrack<S extends string>({
@@ -36,6 +38,7 @@ export function StepTrack<S extends string>({
   current,
   nextRequirements = [],
   holder,
+  extra,
 }: StepTrackProps<S>): React.ReactElement {
   const w = stepWindow(flow, current);
   const step = flow.steps[current];
@@ -105,6 +108,7 @@ export function StepTrack<S extends string>({
           ))}
         </ul>
       )}
+      {extra}
     </section>
   );
 

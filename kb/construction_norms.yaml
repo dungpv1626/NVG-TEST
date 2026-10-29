@@ -457,3 +457,17 @@ sketch:
     max_candidates: 12
     max_moves: 24
     depth_step_cm: 10
+    # Bước chỉnh T180: chia đã vừa thì dời / đổi phòng (tối đa `max_moves` bước) cho khu ướt (nhóm `wet`) không đè chỗ khô
+    # tầng dưới (nhóm `dry_below`, tỉ lệ chồng theo `overlap_ratio` của E5) và gần khu ướt tầng dưới, phòng ở (nhóm
+    # `habitable`) có mặt thoáng hay cửa ra ban công. Trọng số chỉ để so các cách xếp với nhau — không phải điểm; bản chỉnh là
+    # ứng viên THÊM bên cạnh bản theo bản phác. Bỏ mục `prefer` là tắt.
+    prefer:
+      max_moves: 16
+      wet_over_dry: 3
+      dark_room: 2
+      # thêm cho phòng ngủ (nhóm `sleeping`) tối — D2 trừ hết từ phòng ngủ tối đầu tiên
+      dark_bedroom: 4
+      wet_distance_per_m: 0.2
+      # phòng có sàn đầu bài mà ước lọt lòng chỉ dư dưới tỉ lệ này thì trừ `tight_floor` — cổng đo kỹ hơn và hay bác
+      floor_margin_ratio: 0.05
+      tight_floor: 5

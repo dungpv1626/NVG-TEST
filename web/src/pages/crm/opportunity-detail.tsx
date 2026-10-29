@@ -42,6 +42,7 @@ import {
 import { ContactLogPanel } from '@/components/crm/contact-log-panel';
 import { useCan, useIsOrgManager, useIsResponsible } from '@/lib/auth';
 import { CLASSIFICATION_ANCHOR, ClassificationCard } from './classification-card';
+import { NegotiationNextSteps } from './negotiation-next-steps';
 import { QuotePanel } from './quote-panel';
 import { EMPTY_SURVEY_DRAFT, SurveyPanel, type SurveyDraft } from './survey-panel';
 import { cn } from '@/lib/utils';
@@ -290,6 +291,16 @@ export function OpportunityDetailPage() {
               current={data.stage}
               nextRequirements={nextRequirements}
               holder={data.owner?.full_name ?? null}
+              extra={
+                data.stage === 'dam_phan' ? (
+                  <NegotiationNextSteps
+                    opportunityId={data.id}
+                    contractId={contractId}
+                    hasContract={hasContract}
+                    canEdit={canEdit && !isHandedOver}
+                  />
+                ) : undefined
+              }
             />
           </>
         }

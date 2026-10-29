@@ -78,7 +78,13 @@ import { useRecipientContact } from '@/hooks/use-outbound-shares';
 import { ZaloSend } from '@/components/share/zalo-send';
 import { composeZaloMessage } from '@/lib/zalo-share';
 import { useContractTermSources } from '@/hooks/use-quotes';
-import { fillTemplate, inspectTemplate, safeFileName, saveBlob } from '@/lib/docx-template';
+import {
+  fillTemplate,
+  inspectTemplate,
+  safeFileName,
+  saveBlob,
+  unfilledTemplateTags,
+} from '@/lib/docx-template';
 import {
   DocInputsSection,
   emptyFreeKeys,
@@ -1603,10 +1609,8 @@ function MissingBox({
  * Chỗ trống của mẫu còn nằm nguyên trong một tệp Word (`{so_hop_dong}`, `{#pa_1_a}`) — tệp ấy là mẫu gốc chưa điền.
  * Đọc chữ của `word/document.xml` (bỏ thẻ XML vì Word hay cắt một chỗ trống thành nhiều đoạn chữ).
  */
-export function unfilledTemplateTags(documentXml: string): string[] {
-  const text = documentXml.replace(/<[^>]+>/g, '');
-  return [...new Set([...text.matchAll(/\{[#/^]?([a-z][a-z0-9_]*)\}/g)].map((m) => `{${m[1]}}`))];
-}
+// Chuyển sang `lib/docx-template.ts` (0239) để báo giá dùng chung; giữ lối xuất cũ cho phép thử.
+export { unfilledTemplateTags };
 
 // Dấu ẩn (vùng ký tự riêng của Unicode) bọc giá trị trong tệp XEM TRƯỚC để tô màu theo nguồn.
 const REC_OPEN = '\uE000';

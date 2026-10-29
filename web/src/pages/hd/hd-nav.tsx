@@ -12,14 +12,13 @@ import { cn } from '@/lib/utils';
 const ITEMS = [
   { to: '/hd/hop-dong', label: 'Hợp đồng' },
   { to: '/hd/mau-hop-dong', label: 'Mẫu hợp đồng' },
+  // Lời nhắn Zalo / email gửi khách kèm báo giá (0239).
+  { to: '/hd/mau-loi-nhan', label: 'Mẫu lời nhắn' },
 ];
 
 export function HdNav() {
   return (
-    <nav
-      className="mb-4 flex gap-1.5 overflow-x-auto"
-      aria-label="Màn hình trong phân hệ"
-    >
+    <nav className="mb-4 flex gap-1.5 overflow-x-auto" aria-label="Màn hình trong phân hệ">
       {ITEMS.map((item) => (
         <NavLink
           key={item.to}

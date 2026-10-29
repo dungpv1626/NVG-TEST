@@ -1114,6 +1114,22 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   `127.0.0.1` / `localhost`), `workers/.dev.vars` thêm `ALLOWED_ORIGINS`; Worker `wrangler dev --ip 0.0.0.0`, Vite `npx vite --host
   0.0.0.0` (chạy trong `web/` — `npm run dev -- --host` nuốt cờ). Tường lửa cổng 5173 / 8788 / 55321 phải mở bằng quyền
   Administrator. Kịch bản kiểm `127.0.0.1` trong `backup/` sẽ dừng khi `.env` trỏ IP mạng.
+- **Báo giá gửi khách (0239, 29/10/2026, anh Dũng chọn):** lập báo giá bằng BẢNG HẠNG MỤC (`quote_items`, thành tiền là cột
+  sinh; RLS theo báo giá mẹ; khoá khi rời Nháp — trigger `quote_items_guard`) + thuế suất đã gồm / chưa gồm + giảm giá;
+  `total_value` do CSDL tính (`quotes_sync_totals` → `quote_totals`, gương `computeQuoteTotals` ở `shared/src/quote-items.ts`);
+  lập qua `create_quote_version` (một giao dịch); báo giá cũ không hạng mục giữ tổng, văn bản in một dòng «Giá trị theo báo
+  giá». Văn bản: mẫu Word `contract_templates.document_kind = 'bao_gia'` (3 mẫu DEMO dựng bằng
+  `db/seed-assets/quote-templates/build.mjs`, seed nạp) xem bằng docx-preview, SỬA CÂU CHỮ ngay trên bản xem trước (lời giới
+  thiệu, điều kiện, thanh toán, thời gian, lời kết, người ký — `quote_texts` + lịch sử `quote_text_changes`, sửa được cả sau
+  duyệt; số tiền khoá, `pages/crm/quote-preview-marks.ts`); «Tải lên bản đã sửa trong Word» (`quote_documents`, bất biến, bắt
+  buộc lý do, từ chối tệp còn `{…}`) → từ đó Zalo / email / tải về dùng đúng tệp .docx ấy. PDF dựng thẳng bằng pdf-lib +
+  `@pdf-lib/fontkit` 1.1.1 + Be Vietnam Pro TTF (`web/public/fonts`, OFL), chữ vector, lặp tiêu đề bảng, «Trang i/n», bản chưa
+  duyệt in «Bản nháp» (`lib/quote-pdf.ts`, toán ở `quote-pdf-layout.ts`). Mẫu lời nhắn Zalo / email theo pháp nhân
+  (`message_templates`, Ban Giám đốc / Quản trị sửa ở `/hd/mau-loi-nhan`, mặc định ở `shared/src/quote-message.ts`). Email:
+  Worker `POST /share/email` (`workers/src/share/`) kiểm quyền bằng phiên người gọi → Resend (khoá `RESEND_API_KEY`,
+  `EMAIL_FROM` ở `.dev.vars`; thiếu khoá hoặc `EMAIL_FAKE=1` = GIẢ LẬP) → `outbound_shares` (`via = 'he_thong'`, `simulated`,
+  chỉ Worker ghi) → `send_quote_to_customer` (cơ hội sang Đàm phán). Chưa có khoá Resend — mọi email hiện là giả lập. Phép
+  thử `db/.../bao-gia-hang-muc.test.ts` (9, ba đột biến đã đo đỏ), ảnh `backup/bao-gia/` (kịch bản `chay-thu.cjs`).
 - Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
@@ -1271,7 +1287,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email.
 
-**Migration tiếp theo: 0239.** (Đã dùng tới 0238; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0240.** (Đã dùng tới 0239; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 

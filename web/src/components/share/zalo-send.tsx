@@ -75,7 +75,9 @@ export function ZaloShareHistory({
   entityType: OutboundEntityType;
   entityId: string;
 }) {
-  const { data = [] } = useOutboundShares(entityType, entityId);
+  const { data: all = [] } = useOutboundShares(entityType, entityId);
+  // Email do hệ thống gửi (0239) có khối lịch sử riêng.
+  const data = all.filter((s) => s.channel === 'zalo');
   if (data.length === 0) return null;
   const shown = data.slice(0, 3);
   return (

@@ -27,13 +27,24 @@ export interface QuoteRecord {
   responded_at: string | null;
   valid_until: string | null;
   notes: string | null;
+  /** Thuế suất GTGT (%) — 0239. PostgREST trả `numeric` dạng số. */
+  vat_rate: number | string | null;
+  /** Đơn giá đã gồm thuế (true) / chưa gồm (false). */
+  vat_included: boolean | null;
+  /** Tổng các hạng mục — CSDL tính. */
+  subtotal_value: MoneyValue | null;
+  vat_amount: MoneyValue | null;
+  /** Lập bằng bảng hạng mục (0239); false = báo giá cũ chỉ có tổng. */
+  line_items_based: boolean;
   created_at: string;
+  created_by: string | null;
   created_by_user: { full_name: string } | null;
 }
 
 const QUOTE_SELECT =
   'id, code, company_id, version, is_current_version, total_value, discount_amount, discount_reason, ' +
   'status, sent_to_customer_at, customer_response, responded_at, valid_until, notes, created_at, ' +
+  'vat_rate, vat_included, subtotal_value, vat_amount, line_items_based, created_by, ' +
   'created_by_user:users!quotes_created_by_users_id_fk(full_name)';
 
 /** Danh sách phiên bản báo giá của một cơ hội — mới nhất trước (NEN-05). */
@@ -54,43 +65,58 @@ export function useQuotes(opportunityId: string | undefined) {
   });
 }
 
+export interface NewQuoteItemInput {
+  description: string;
+  unit: string | null;
+  /** Khối lượng dạng CSDL («12.5») — `quantityToDb`. */
+  quantity: string;
+  /** Đơn giá, chuỗi chữ số đồng. */
+  unitPrice: string;
+}
+
 export interface NewQuoteInput {
   opportunityId: string;
   companyId: string;
-  totalValue: string;
+  items: NewQuoteItemInput[];
   discountAmount: string | null;
   discountReason: string | null;
+  /** Thuế suất (%) dạng chuỗi; rỗng = không ghi thuế. */
+  vatRate: string | null;
+  vatIncluded: boolean | null;
   validUntil: string | null;
   notes: string | null;
 }
 
 /**
- * Tạo phiên bản báo giá mới.
+ * Tạo phiên bản báo giá mới kèm bảng hạng mục (`create_quote_version`, 0239 — một giao dịch).
  *
- * KHÔNG truyền `version`, `code` hay `is_current_version`: trigger `quotes_assign_version`
- * cấp số phiên bản, sinh mã và hạ cờ "đang hiệu lực" của bản cũ trong cùng một thao tác.
- * Để trình duyệt tự tính sẽ trùng số khi hai người soạn cùng lúc.
+ * KHÔNG truyền `version`, `code`, `is_current_version` hay `total_value`: trigger
+ * `quotes_assign_version` cấp số phiên bản, sinh mã và hạ cờ "đang hiệu lực" của bản cũ; trigger
+ * `quotes_sync_totals` tính tổng từ hạng mục. Để trình duyệt tự tính sẽ trùng số / lệch tổng.
  */
 export function useCreateQuoteVersion() {
   const queryClient = useQueryClient();
 
   return useMutation<{ id: string }, Error, NewQuoteInput>({
     mutationFn: async (input) => {
-      const { data, error } = await supabase
-        .from('quotes')
-        .insert({
-          opportunity_id: input.opportunityId,
-          company_id: input.companyId,
-          total_value: input.totalValue,
-          discount_amount: input.discountAmount,
-          discount_reason: input.discountReason,
-          valid_until: input.validUntil,
-          notes: input.notes,
-        })
-        .select('id')
-        .single();
+      const { data, error } = await supabase.rpc('create_quote_version', {
+        p_opportunity_id: input.opportunityId,
+        p_company_id: input.companyId,
+        p_items: input.items.map((i) => ({
+          description: i.description,
+          unit: i.unit,
+          quantity: i.quantity,
+          unit_price: i.unitPrice,
+        })),
+        p_discount_amount: input.discountAmount,
+        p_discount_reason: input.discountReason,
+        p_vat_rate: input.vatRate,
+        p_vat_included: input.vatIncluded,
+        p_valid_until: input.validUntil,
+        p_notes: input.notes,
+      });
       if (error) throw error;
-      return data as { id: string };
+      return { id: data as string };
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['quotes'] });
@@ -191,5 +217,33 @@ export function useContractTermSources(opportunityId: string | null) {
         null;
       return { quote, survey: surveys.data?.[0] ?? null };
     },
+  });
+}
+
+export interface QuoteItemRecord {
+  id: string;
+  position: number;
+  description: string;
+  unit: string | null;
+  quantity: number | string;
+  unit_price: MoneyValue;
+  amount: MoneyValue;
+}
+
+/** Hạng mục của một báo giá (0239) — RLS theo báo giá mẹ. */
+export function useQuoteItems(quoteId: string | undefined) {
+  return useQuery<QuoteItemRecord[], Error>({
+    queryKey: ['quotes', 'items', quoteId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('quote_items')
+        .select('id, position, description, unit, quantity, unit_price, amount')
+        .eq('quote_id', quoteId!)
+        .order('position', { ascending: true })
+        .order('created_at', { ascending: true });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as unknown as QuoteItemRecord[];
+    },
+    enabled: Boolean(quoteId),
   });
 }

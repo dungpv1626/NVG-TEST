@@ -2479,6 +2479,7 @@ function skeletonStage(
         }
       : null,
     program: input.program,
+    ...rowsPreferInput(input),
     ...(input.trace ? { trace: input.trace } : {}),
   };
   const candidates = phase === 'rows' ? [] : skeletonCandidates(skeletonInput);
@@ -2540,20 +2541,48 @@ function skeletonStage(
     memo.add(memoKey);
     return first;
   }
-  const second = gateSkeleton(
-    input,
-    intent,
-    footprint,
-    env,
-    stairIds,
-    rows,
-    // Lỗi của khung hai hàng không vào câu nhắc (câu nhắc nói về bản phác của mô hình), và không đánh dấu hình học hỏng
-    // cho các đường khác — kết quả nhớ ở `rowsMemoFor` vì thế không làm lệch lời báo giữa các lần gọi.
-    () => {},
-    new Set(),
-  );
+  // Bản đã chỉnh khu ướt / mặt thoáng (T180, khoá `|q`) lên cổng TRƯỚC: qua thì nó thắng — xếp hạng chung thưởng độ khớp
+  // bản phác, mà bản chỉnh cố ý rời bản phác. Không bản chỉnh nào qua thì mới tới các bản theo bản phác (như T179).
+  // Lỗi của khung hai hàng không vào câu nhắc (câu nhắc nói về bản phác của mô hình), và không đánh dấu hình học hỏng cho
+  // các đường khác — kết quả nhớ ở `rowsMemoFor` vì thế không làm lệch lời báo giữa các lần gọi.
+  const gateRows = (list: readonly SkeletonCandidate[]) =>
+    gateSkeleton(input, intent, footprint, env, stairIds, list, () => {}, new Set());
+  const tuned = rows.filter((candidate) => candidate.key.endsWith('|q'));
+  const firstPass = tuned.length ? gateRows(tuned) : null;
+  const second = firstPass?.winner
+    ? firstPass
+    : gateRows(rows.filter((candidate) => !candidate.key.endsWith('|q')));
   if (!second.winner) memo.add(memoKey);
   return { ...second, built: first.built + second.built };
+}
+
+/**
+ * Những gì bước chỉnh của khung hai hàng (T180) đọc: phòng khô tầng dưới (nhóm `dry_below`), loại phòng `wet` / `habitable`
+ * của từ vựng, `overlap_ratio` của E5 — cùng nguồn thước chấm dùng, không số nào ghi trong mã.
+ */
+function rowsPreferInput(
+  input: ArrangeInput,
+): Pick<
+  SkeletonInput,
+  'dryBelow' | 'wetTypes' | 'habitableTypes' | 'sleepingTypes' | 'wetOverlapRatio'
+> {
+  const groups = input.scoring?.roomGroups;
+  if (!groups || !input.construction.sketch?.skeleton_rows?.prefer) return {};
+  const dryTypes = new Set(groups.dry_below ?? []);
+  const below = input.anchors?.belowRooms ?? [];
+  const ratio = input.scoring?.quality.criteria.find((c) => c.code === 'E5')?.params.overlap_ratio;
+  return {
+    dryBelow: below
+      .filter((room) => dryTypes.has(room.type))
+      .map((room) => {
+        const [x0 = 0, y0 = 0, x1 = 0, y1 = 0] = room.rect;
+        return { x0, y0, x1, y1 };
+      }),
+    wetTypes: new Set(groups.wet ?? []),
+    habitableTypes: new Set(groups.habitable ?? []),
+    sleepingTypes: new Set(groups.sleeping ?? []),
+    ...(typeof ratio === 'number' ? { wetOverlapRatio: ratio } : {}),
+  };
 }
 
 /** Lần khung hai hàng không ra cây qua cổng, theo lượt (khoá theo bảng số đo của lượt — mỗi lượt một đối tượng). */

@@ -84,7 +84,24 @@ export interface SketchNorms {
    * kiểu hành lang áp đầu bước ra của ô thang, dải dọc cạnh thang, dải sâu chia HAI hàng phòng kẹp hành lang. Số ứng viên
    * tối đa, số lần dời phòng giữa các hàng khi chia, bước dò chiều sâu hàng (cm). Vắng hoặc `max_candidates: 0` = tắt.
    */
-  skeleton_rows?: { max_candidates: number; max_moves: number; depth_step_cm: number };
+  skeleton_rows?: {
+    max_candidates: number;
+    max_moves: number;
+    depth_step_cm: number;
+    /**
+     * Bước chỉnh T180 sau khi chia được: dời / đổi phòng cho khu ướt nằm trên khu ướt tầng dưới, không đè chỗ khô (E5), phòng
+     * ở có mặt thoáng (D2). Trọng số chỉ để so các cách xếp với nhau, không phải điểm. Vắng = không chỉnh.
+     */
+    prefer?: {
+      max_moves: number;
+      wet_over_dry: number;
+      dark_room: number;
+      dark_bedroom: number;
+      wet_distance_per_m: number;
+      floor_margin_ratio: number;
+      tight_floor: number;
+    };
+  };
 }
 
 export interface EntryStepNorms {
@@ -415,10 +432,39 @@ function parseSketch(raw: unknown): SketchNorms {
       }
       return value;
     };
+    const preferRaw = rowsRaw?.prefer as Record<string, unknown> | undefined;
+    let prefer: NonNullable<SketchNorms['skeleton_rows']>['prefer'];
+    if (preferRaw !== undefined) {
+      const moves = preferRaw?.max_moves;
+      if (typeof moves !== 'number' || !Number.isInteger(moves) || moves < 0) {
+        throw new ConstructionNormsError(
+          '"sketch.skeleton_rows.prefer.max_moves" phải là số nguyên không âm',
+        );
+      }
+      const weight = (name: string): number => {
+        const value = preferRaw?.[name];
+        if (typeof value !== 'number' || !(value >= 0)) {
+          throw new ConstructionNormsError(
+            `"sketch.skeleton_rows.prefer.${name}" phải là số không âm`,
+          );
+        }
+        return value;
+      };
+      prefer = {
+        max_moves: moves,
+        wet_over_dry: weight('wet_over_dry'),
+        dark_room: weight('dark_room'),
+        dark_bedroom: weight('dark_bedroom'),
+        wet_distance_per_m: weight('wet_distance_per_m'),
+        floor_margin_ratio: weight('floor_margin_ratio'),
+        tight_floor: weight('tight_floor'),
+      };
+    }
     rows = {
       max_candidates: read('max_candidates', false),
       max_moves: read('max_moves', false),
       depth_step_cm: read('depth_step_cm', true),
+      ...(prefer ? { prefer } : {}),
     };
   }
   return {

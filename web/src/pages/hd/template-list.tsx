@@ -156,7 +156,9 @@ export function ContractTemplatePage() {
                     : `${TEMPLATE_DOCUMENT_KIND_LABELS[t.document_kind]} — ${
                         t.document_kind === 'ho_so_du_thau' || t.document_kind === 'thuong_thao'
                           ? 'soạn ở trang gói thầu'
-                          : 'mọi loại hợp đồng'
+                          : t.document_kind === 'bao_gia'
+                            ? 'dùng ở tab Báo giá của cơ hội'
+                            : 'mọi loại hợp đồng'
                       }`}{' '}
                   · {Object.keys(t.tags).length} chỗ trống · tải lên {formatDate(t.created_at)}
                   {t.creator ? ` bởi ${t.creator.full_name}` : ''}

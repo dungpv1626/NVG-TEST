@@ -12,10 +12,11 @@ import { createClient } from '@supabase/supabase-js';
 import { adminApp } from './admin';
 import { assistantApp } from './ai';
 import { publicApp } from './public-showcase';
+import { shareApp, type ShareEnv } from './share';
 import { designApp } from './design';
 import type { DesignEnv } from './design/env';
 
-type Env = DesignEnv & { AI_FAKE?: string };
+type Env = DesignEnv & ShareEnv & { AI_FAKE?: string };
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -92,6 +93,8 @@ app.route('/ai', assistantApp);
 // Trang công khai gửi khách: mẫu công trình (`showcase_public`, 0179) và bản hợp đồng đã ký
 // (`contract_scan_public`, 0189) — chỉ qua hàm CSDL.
 app.route('/public', publicApp);
+// Gửi hồ sơ cho khách do hệ thống gửi — email báo giá qua Resend, giả lập khi chưa có khoá (0239).
+app.route('/share', shareApp);
 
 function serviceClient(env: Env) {
   // service_role vượt RLS — CHỈ dùng ở đây, không bao giờ trong web/ (CLAUDE.md 5.5).

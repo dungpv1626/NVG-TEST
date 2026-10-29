@@ -46,6 +46,16 @@ export interface RowsConfig {
   max_candidates: number;
   max_moves: number;
   depth_step_cm: number;
+  /** Bước chỉnh sau khi chia được (T180): trọng số khu ướt đè chỗ khô / phòng ở tối / khoảng cách tới khu ướt dưới. */
+  prefer?: {
+    max_moves: number;
+    wet_over_dry: number;
+    dark_room: number;
+    dark_bedroom: number;
+    wet_distance_per_m: number;
+    floor_margin_ratio: number;
+    tight_floor: number;
+  };
 }
 
 // ── Hệ toạ độ chuẩn ────────────────────────────────────────────────────────────────────────
@@ -143,6 +153,7 @@ function transformInput(input: SkeletonInput, t: Transform): SkeletonInput {
     elevators: new Map(),
     lightWells: new Map(),
     boxes: new Map([...input.boxes].map(([id, r]) => [id, fwd(r)])),
+    ...(input.dryBelow ? { dryBelow: input.dryBelow.map(fwd) } : {}),
     wetBelow: input.wetBelow.map(fwd),
     avoidWetOver: input.avoidWetOver.map(fwd),
     openSides: new Set([...input.openSides].map((side) => fwdSide(t, side))),
@@ -190,6 +201,7 @@ interface Built {
   program?: SkeletonCandidate['program'];
   leafById?: SkeletonCandidate['leafById'];
   reversed: boolean;
+  tuned: boolean;
 }
 
 interface FrameSpec {
@@ -230,7 +242,7 @@ export function rowsCandidates(
         if (seen.has(signature)) continue;
         seen.add(signature);
         const env = built.leafById ? { ...input.env, leafById: built.leafById } : input.env;
-        const key = `skeleton|rows|${spec.tag}${mirrorX ? '|m' : ''}${built.reversed ? '|r' : ''}`;
+        const key = `skeleton|rows|${spec.tag}${mirrorX ? '|m' : ''}${built.reversed ? '|r' : ''}${built.tuned ? '|q' : ''}`;
         input.trace?.(`  hai hàng ${key}: ${leaves(placed).length} ô`);
         out.push({
           key,
@@ -666,10 +678,35 @@ function buildFrame(
         )} (${slots.map((sl) => `${sl.name}:[${sl.clusters.map((c) => c.item.key).join(',')}]`).join(' ')})`,
     );
   }
-  for (const g of groups) {
-    g.depthA = groupOver(g).depthA;
-    [g.a.rect, g.b.rect] = groupRects(g, g.depthA);
-  }
+  const settleGroups = () => {
+    for (const g of groups) {
+      g.depthA = groupOver(g).depthA;
+      [g.a.rect, g.b.rect] = groupRects(g, g.depthA);
+    }
+  };
+  settleGroups();
+  const sketchOrder = (sl: Slot, reverse: boolean): Cluster[] => {
+    const key = (c: Cluster) => {
+      const box = boxOf(c);
+      return box ? (sl.kind === 'row' ? centre(box).x : centre(box).y) : 0;
+    };
+    const list = [...sl.clusters].sort(
+      (p, q) => key(p) - key(q) || p.item.key.localeCompare(q.item.key),
+    );
+    if (reverse) list.reverse();
+    for (const [pin, first] of [
+      [sl.pinFirst, true],
+      [sl.pinLast, false],
+    ] as const) {
+      if (!pin || !list.includes(pin)) continue;
+      list.splice(list.indexOf(pin), 1);
+      if (first) list.unshift(pin);
+      else list.push(pin);
+    }
+    return list;
+  };
+  /** Thứ tự đã chỉnh (T180) — tắt thì theo bản phác. */
+  let explicit = false;
 
   // ── Dựng cây trong hệ chuẩn ────────────────────────────────────────────────────────────
   const build = (reverse: boolean): Built | null => {
@@ -678,26 +715,8 @@ function buildFrame(
       hallSegments.push(rect);
       return leaf(hallPlaceholder(hallSegments.length - 1), rect);
     };
-    const ordered = (sl: Slot): Cluster[] => {
-      const key = (c: Cluster) => {
-        const box = boxOf(c);
-        return box ? (sl.kind === 'row' ? centre(box).x : centre(box).y) : 0;
-      };
-      const list = [...sl.clusters].sort(
-        (p, q) => key(p) - key(q) || p.item.key.localeCompare(q.item.key),
-      );
-      if (reverse) list.reverse();
-      for (const [pin, first] of [
-        [sl.pinFirst, true],
-        [sl.pinLast, false],
-      ] as const) {
-        if (!pin || !list.includes(pin)) continue;
-        list.splice(list.indexOf(pin), 1);
-        if (first) list.unshift(pin);
-        else list.push(pin);
-      }
-      return list;
-    };
+    const ordered = (sl: Slot): Cluster[] =>
+      explicit ? [...sl.clusters] : sketchOrder(sl, reverse);
     const placeSlot = (sl: Slot): Placed | null => {
       if (!sl.clusters.length) return sl.emptyOk ? pushHall(sl.rect) : null;
       if (sl.kind === 'row')
@@ -784,8 +803,182 @@ function buildFrame(
       ...(named.program ? { program: named.program } : {}),
       ...(named.leafById ? { leafById: named.leafById } : {}),
       reversed: reverse,
+      tuned: explicit,
     };
   };
   // Hai thứ tự trong hàng: theo bản phác, và lật ngược — luật bắt buộc T71 (thờ / WC kề nhau, đối cửa) do cổng quyết.
-  return [build(false), build(true)].filter((b): b is Built => b !== null);
+  const out = [build(false), build(true)];
+  if (config.prefer && config.prefer.max_moves > 0 && tune(config.prefer)) {
+    explicit = true;
+    settleGroups();
+    out.push(build(false));
+  }
+  return out.filter((b): b is Built => b !== null);
+
+  /**
+   * Bước chỉnh (T180): chia đã vừa thì dời / đổi phòng giữa các hàng và đổi chỗ trong hàng sao cho khu ướt (WC, giặt) không
+   * đè chỗ khô tầng dưới (E5) và gần khu ướt tầng dưới (E2), phòng ở có mặt thoáng (D2). Đo trên chính các ô dựng ra; mọi
+   * phép giữ «mọi hàng chứa nổi». Bản chỉnh là ỨNG VIÊN THÊM — bản theo bản phác vẫn lên cổng, cổng + thước chấm chọn.
+   */
+  function tune(prefer: NonNullable<RowsConfig['prefer']>): boolean {
+    const wetTypes = ni.wetTypes ?? new Set<string>();
+    const habitable = ni.habitableTypes ?? new Set<string>();
+    const sleeping = ni.sleepingTypes ?? new Set<string>();
+    const dry = ni.dryBelow ?? [];
+    const wetBelow = ni.wetBelow;
+    const ratio = ni.wetOverlapRatio ?? 0;
+    if (!wetTypes.size && !habitable.size) return false;
+    for (const sl of slots) sl.clusters = sketchOrder(sl, false);
+    const typesOf = (id: string) => ni.env.leafById.get(id)?.types ?? [];
+    const overlap = (a: Rect, b: Rect) =>
+      Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) *
+      Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
+    const lit = (r: Rect, balconies: Rect[]) =>
+      (r.y0 === f.y0 && ni.openSides.has('y0')) ||
+      (r.y1 === f.y1 && ni.openSides.has('y1')) ||
+      (r.x0 === f.x0 && ni.openSides.has('x0')) ||
+      (r.x1 === f.x1 && ni.openSides.has('x1')) ||
+      balconies.some((b) => sharedEdge(b, r) > 0);
+    const slotLeaves = (sl: Slot): { id: string; rect: Rect }[] | null => {
+      if (!sl.clusters.length) return sl.emptyOk ? [] : null;
+      const placed =
+        sl.kind === 'row'
+          ? bandPlaced(
+              sl.rect,
+              sl.clusters.map((c) => asIn(sl, c)),
+              sl.hall,
+              ni,
+              'lo',
+            )
+          : stackAlong(
+              sl.rect,
+              'y',
+              sl.clusters.map((c) => c.item),
+              wall,
+            );
+      return placed ? leaves(placed) : null;
+    };
+    const cost = (): number => {
+      if (totalOver() > 0) return Infinity;
+      settleGroups();
+      const cells: { id: string; rect: Rect }[] = [];
+      for (const sl of slots) {
+        const ls = slotLeaves(sl);
+        if (!ls) return Infinity;
+        cells.push(...ls);
+      }
+      const balconies = cells
+        .filter((c) => ni.env.leafById.get(c.id)?.role === 'open')
+        .map((c) => c.rect);
+      let value = 0;
+      for (const { id, rect } of cells) {
+        const types = typesOf(id);
+        const area = Math.max(1, (rect.x1 - rect.x0) * (rect.y1 - rect.y0));
+        // Sàn đầu bài phải còn dư một phần cho cổng (ước lọt lòng bằng một bề dày tường là ước — T179 còn mở 3): cách xếp
+        // sát sàn bị cổng bác, nên bước chỉnh không được đổi lấy nó.
+        const floor = ni.env.leafById.get(id)?.areaFloor ?? null;
+        if (floor !== null) {
+          const clear =
+            (Math.max(0, rect.x1 - rect.x0 - wall) * Math.max(0, rect.y1 - rect.y0 - wall)) /
+            10_000;
+          if (clear < floor * (1 + prefer.floor_margin_ratio)) value += prefer.tight_floor;
+        }
+        if (types.some((t) => wetTypes.has(t))) {
+          const over = dry.reduce((sum, r) => sum + overlap(rect, r), 0);
+          if (over / area >= ratio) value += prefer.wet_over_dry;
+          if (wetBelow.length) {
+            const cx = (rect.x0 + rect.x1) / 2;
+            const cy = (rect.y0 + rect.y1) / 2;
+            const near = Math.min(
+              ...wetBelow.map((r) =>
+                Math.hypot(Math.max(r.x0 - cx, 0, cx - r.x1), Math.max(r.y0 - cy, 0, cy - r.y1)),
+              ),
+            );
+            value += (prefer.wet_distance_per_m * near) / 100;
+          }
+        } else if (types.some((t) => habitable.has(t)) && !lit(rect, balconies)) {
+          value += prefer.dark_room;
+          if (types.some((t) => sleeping.has(t))) value += prefer.dark_bedroom;
+        }
+      }
+      return value;
+    };
+    const start = cost();
+    if (!Number.isFinite(start)) return false;
+    let current = start;
+    const pinnedIn = (sl: Slot, c: Cluster) => c === sl.pinFirst || c === sl.pinLast;
+    for (let step = 0; step < prefer.max_moves && current > 0; step += 1) {
+      let best: { value: number; apply: () => void } | null = null;
+      const consider = (apply: () => void, undo: () => void) => {
+        apply();
+        const value = cost();
+        undo();
+        if (value < current - 1e-9 && (!best || value < best.value - 1e-9)) best = { value, apply };
+      };
+      // Đổi chỗ trong hàng.
+      for (const sl of slots) {
+        for (let i = 0; i < sl.clusters.length; i += 1)
+          for (let j = i + 1; j < sl.clusters.length; j += 1) {
+            const a = sl.clusters[i]!;
+            const b = sl.clusters[j]!;
+            if (pinnedIn(sl, a) || pinnedIn(sl, b)) continue;
+            const swap = () => {
+              const x = sl.clusters.indexOf(a);
+              const y = sl.clusters.indexOf(b);
+              sl.clusters[x] = b;
+              sl.clusters[y] = a;
+            };
+            consider(swap, swap);
+          }
+      }
+      // Dời sang hàng khác (vào từng chỗ), đổi chỗ hai phòng giữa hai hàng.
+      for (const from of slots)
+        for (const c of [...from.clusters]) {
+          if (!movable(c)) continue;
+          for (const to of slots) {
+            if (to === from || !accepts(to, c)) continue;
+            for (let at = 0; at <= to.clusters.length; at += 1) {
+              const i0 = from.clusters.indexOf(c);
+              consider(
+                () => {
+                  from.clusters.splice(from.clusters.indexOf(c), 1);
+                  to.clusters.splice(at, 0, c);
+                },
+                () => {
+                  to.clusters.splice(to.clusters.indexOf(c), 1);
+                  from.clusters.splice(i0, 0, c);
+                },
+              );
+            }
+          }
+          for (const to of slots) {
+            if (to === from || !accepts(to, c)) continue;
+            for (const d of [...to.clusters]) {
+              if (!movable(d) || !accepts(from, d)) continue;
+              const swap = () => {
+                const x = from.clusters.indexOf(c);
+                if (x >= 0) {
+                  const y = to.clusters.indexOf(d);
+                  from.clusters[x] = d;
+                  to.clusters[y] = c;
+                } else {
+                  from.clusters[from.clusters.indexOf(d)] = c;
+                  to.clusters[to.clusters.indexOf(c)] = d;
+                }
+              };
+              consider(swap, swap);
+            }
+          }
+        }
+      const chosen = best as { value: number; apply: () => void } | null;
+      if (!chosen) break;
+      chosen.apply();
+      current = chosen.value;
+    }
+    settleGroups();
+    ni.trace?.(
+      `  hai hàng t${ni.level} ${spec.tag}: chỉnh khu ướt / mặt thoáng ${start} → ${current}`,
+    );
+    return current < start - 1e-9;
+  }
 }
