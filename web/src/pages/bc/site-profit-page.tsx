@@ -40,6 +40,11 @@ interface SiteProfitRow {
   committed_cost: number;
   profit_to_date: number | null;
   profit_forecast: number | null;
+  /** G4 (0249): lãi dự kiến «lúc nhận việc» — phiên bản hiện hành và phiên bản đầu. */
+  baseline_version: number | null;
+  baseline_captured_at: string | null;
+  baseline_profit: number | null;
+  first_baseline_profit: number | null;
 }
 
 interface SiteProfitDetail {
@@ -223,7 +228,7 @@ export function SiteProfitPage() {
                   Chưa gắn hợp đồng — chưa có doanh thu để tính lãi / lỗ.
                 </p>
               ) : (
-                <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3 lg:grid-cols-6">
+                <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3 lg:grid-cols-7">
                   <div>
                     <dt className="text-fg-subtle">Doanh thu hợp đồng</dt>
                     <dd>
@@ -268,6 +273,22 @@ export function SiteProfitPage() {
                     <dt className="text-fg-subtle">Lãi / lỗ dự kiến khi xong</dt>
                     <dd>
                       <Money value={r.profit_forecast} strong />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-fg-subtle">Lúc nhận việc</dt>
+                    <dd>
+                      {/* Chụp khi khởi công; chưa chụp (công trình chạy trước 0249, chưa có ngân
+                          sách) thì «Chưa đủ dữ liệu» — không dựng lùi. */}
+                      <Money value={r.first_baseline_profit} />
+                      {r.baseline_version != null && r.baseline_version > 1 && (
+                        <span className="block text-xs text-fg-subtle">
+                          sau {r.baseline_version - 1} lần điều chỉnh có duyệt:{' '}
+                          {r.baseline_profit == null
+                            ? EMPTY_STATES.notEnoughData
+                            : formatCurrency(r.baseline_profit)}
+                        </span>
+                      )}
                     </dd>
                   </div>
                 </dl>

@@ -131,6 +131,8 @@ const SCAN_FUNCTIONS = [
   'scan_bid_deadline_reminders',
   // Đơn thuê giàn giáo quá / sắp tới ngày trả (5D — 0209).
   'scan_rental_expiry_reminders',
+  // Bảo lãnh hợp đồng sắp / đã hết hạn, tiền giữ lại bảo hành tới hạn thu hồi (G3 — 0248).
+  'scan_contract_guarantee_reminders',
 ] as const;
 
 export async function runScheduledScans(env: Env): Promise<Record<string, number | string>> {

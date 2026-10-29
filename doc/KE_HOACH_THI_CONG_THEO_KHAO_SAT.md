@@ -93,6 +93,7 @@ Theo QĐ-1, tài liệu chỉ ghi thứ tự và tiêu chí xong, không ghi m�
   - album ảnh theo hạng mục, giúp bớt việc «gom ảnh từ Zalo».
 
 ### T9. Gói bàn giao Dự án → Thi công
+**ĐÃ LÀM (0249, gói G4, 29/10/2026)** — xem A2 của `doc/KE_HOACH_KHOP_KHAO_SAT_ANH_THI.md`.
 - **Làm:** mở rộng khối «Chuẩn bị khởi công» thành danh mục bàn giao: hợp đồng (chỉ phạm vi và tiến độ, không giá), bản vẽ, BOQ, các cam kết, danh sách rủi ro. Mỗi mục có người giao, người nhận.
 - **Giữ:** Mẫu D cho dự toán nội bộ.
 

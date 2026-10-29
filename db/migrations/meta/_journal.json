@@ -1674,6 +1674,20 @@
       "when": 1791920000000,
       "tag": "0247_goi_thau_quyet_dinh_tham_gia",
       "breakpoints": true
+    },
+    {
+      "idx": 247,
+      "version": "7",
+      "when": 1791930000000,
+      "tag": "0248_ho_so_thanh_toan_bao_lanh_giu_lai",
+      "breakpoints": true
+    },
+    {
+      "idx": 248,
+      "version": "7",
+      "when": 1791940000000,
+      "tag": "0249_ban_giao_khoi_cong_ngan_sach",
+      "breakpoints": true
     }
   ]
 }

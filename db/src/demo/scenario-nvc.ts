@@ -435,6 +435,21 @@ export async function loadNvc(): Promise<'created' | 'skipped'> {
       p_planned_end_date: day(120),
     }),
   ) as string;
+  // G4 (0249): điều kiện khởi công bắt buộc của pháp nhân — chỉ huy trưởng xác nhận kèm căn cứ.
+  const startItems = (await one(
+    'đọc điều kiện khởi công',
+    chiHuy.rpc('site_checklist', { p_site_id: siteId, p_kind: 'khoi_cong' }),
+  )) as { id: string; is_required: boolean; label: string }[];
+  for (const item of startItems.filter((i) => i.is_required)) {
+    check(
+      `xác nhận ${item.label}`,
+      await chiHuy.rpc('confirm_start_condition', {
+        p_item_id: item.id,
+        p_done: true,
+        p_note: 'Đã kiểm tại công trường — hồ sơ lưu ở Ban công trường',
+      }),
+    );
+  }
   check(
     'bắt đầu thi công',
     await truongPhong.rpc('move_site_stage', { p_site_id: siteId, p_stage: 'dang_thi_cong' }),

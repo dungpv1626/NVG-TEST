@@ -18,6 +18,7 @@ import {
   TEST_PREFIX,
   markSurveyReportApproved,
 } from './helpers';
+import { confirmStartConditions } from './start-conditions';
 
 const describeDb = hasCredentials ? describe : describe.skip;
 
@@ -697,6 +698,7 @@ describeDb(
         .from('construction_sites')
         .update({ responsible_user_id: ids[0] })
         .eq('id', siteId);
+      await confirmStartConditions(siteId);
       expect(
         (await thiCong.rpc('move_site_stage', { p_site_id: siteId, p_stage: 'dang_thi_cong' }))
           .error,

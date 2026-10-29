@@ -23,6 +23,7 @@ import {
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { useSiteBudgetSource, useSiteBudgetStatus } from '@/hooks/use-construction-sites';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { BudgetAdjustmentPanel } from './budget-adjustment-panel';
 import { SiteBudgetEditor, SiteBudgetSetup } from './site-budget-editor';
 
 /**
@@ -47,7 +48,8 @@ function HealthBadge({ health }: { health: BudgetHealth }) {
   );
 }
 
-export function BudgetPanel({ siteId }: { siteId: string }) {
+/** `started`: công trình đã khởi công — ngân sách chỉ đổi qua «Điều chỉnh ngân sách» (G4, 0249). */
+export function BudgetPanel({ siteId, started = false }: { siteId: string; started?: boolean }) {
   const { data, isLoading, error } = useSiteBudgetStatus(siteId);
   // 0235: ai lập / sửa được ngân sách gắn thẳng công trình, và căn cứ báo giá.
   const { data: source, isLoading: sourceLoading } = useSiteBudgetSource(siteId);
@@ -61,6 +63,14 @@ export function BudgetPanel({ siteId }: { siteId: string }) {
   const showGroup = rows.some((r) => r.name !== COST_GROUP_LABELS[r.cost_group]);
   if (rows.length === 0) {
     // Công trình đi từ cơ hội CRM (không gói thầu / thiết kế): lập ngay tại đây từ báo giá (0235).
+    if (started) {
+      return (
+        <div className="space-y-4">
+          <EmptyState message="Công trình đã khởi công mà chưa có ngân sách. Thêm dòng ngân sách bằng đề nghị điều chỉnh có phê duyệt." />
+          <BudgetAdjustmentPanel siteId={siteId} />
+        </div>
+      );
+    }
     if (source?.can_manage && !source.has_budget) {
       return <SiteBudgetSetup siteId={siteId} source={source} />;
     }
@@ -185,7 +195,11 @@ export function BudgetPanel({ siteId }: { siteId: string }) {
         </table>
       </div>
 
-      {source?.can_manage && source.site_only && <SiteBudgetEditor siteId={siteId} />}
+      {started ? (
+        <BudgetAdjustmentPanel siteId={siteId} />
+      ) : (
+        source?.can_manage && source.site_only && <SiteBudgetEditor siteId={siteId} />
+      )}
     </div>
   );
 }

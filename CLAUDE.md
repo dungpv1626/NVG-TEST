@@ -1110,6 +1110,13 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   Design `9272`: ảnh nội thất, mặt đứng (thêm mã màu `trong_suot`), phối cảnh 5 ảnh ĐẠT; mặt bằng HỎNG với cả Terra, Opus 5.5, Gemini
   3.1 Pro — cùng hỏng tầng 2 (phòng không lối vào / thiếu diện tích); tổng ≈ 3,72 USD. Đang làm: chương trình tự kéo hành lang + nới
   phòng (T177). Kịch bản thử NVC 6 pipeline + NVS: tài liệu Claude Docs https://claude.ai/artifact/QHJGe71KCcwezWrX7UqxPP.
+- **G4 (0249, 29/10/2026) — bàn giao, khởi công, ngân sách có duyệt:** danh mục bàn giao / điều kiện khởi công theo pháp
+  nhân (`site_checklist_templates` → `site_checklist_items`, hàm `site_checklist`, trang `/ban-giao-thi-cong/:id` không bọc
+  ModuleGuard); điều kiện khởi công bắt buộc vào `stage_readiness('site')`; lãi lúc nhận việc `site_profit_baselines`
+  (bất biến); sau khởi công ngân sách chỉ đổi qua `request_budget_adjustment` (loại `budget_adjustment`); vượt ngân sách
+  đổi loại sang `over_budget` bằng trigger trên `approvals`; chọn thầu phụ được duyệt cam kết ngân sách. Phép thử
+  `g4-ban-giao-ngan-sach`; phép thử khởi công công trình khác gọi `confirmStartConditions` (`start-conditions.ts`).
+  `decide_approval` + `stage_readiness` bản mới nhất ở 0249.
 - **Chạy cho máy khác cùng wifi (28/10/2026):** `.env` `VITE_SUPABASE_URL` / `VITE_DESIGN_API_URL` trỏ `192.168.1.3` (bản cũ trỏ
   `127.0.0.1` / `localhost`), `workers/.dev.vars` thêm `ALLOWED_ORIGINS`; Worker `wrangler dev --ip 0.0.0.0`, Vite `npx vite --host
   0.0.0.0` (chạy trong `web/` — `npm run dev -- --host` nuốt cờ). Tường lửa cổng 5173 / 8788 / 55321 phải mở bằng quyền
@@ -1220,6 +1227,24 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   trước ngày cần / đang sửa). Điều chuyển `rental_transfers` (tab «Điều chuyển» của đơn thuê; ký hai bên, kho `rental-transfer-docs`)
   chốt tiền đơn nguồn bằng biên bản BBDC, mở đơn mới, chuyển lô không qua kho. Phép thử `g5-nvs-thue-noi-bo.test.ts` (8, ba đột
   biến đã đo đỏ). Còn: tuổi nợ / dòng tiền tuần chưa loại công nợ nội bộ ở số toàn NVG; khoản NVC trả NVS chưa nối với công nợ.
+- **G3 — hồ sơ thanh toán gửi chủ đầu tư, bảo lãnh, tiền giữ lại (0248, 29/10/2026, kế hoạch A8 + A9):** mở rộng
+  `collection_requests` (không bảng song song). Bốn bước kiểm ký tuần tự ở `collection_request_checks` (KHÔNG đụng
+  `decide_approval`): 1 Ban công trường (`rls_site_writable`) → 2 Trưởng phòng Thi công (`milestone_technical_reviewers`) →
+  3 Dự án / QS (vai `DA_DT` của pháp nhân hoặc người chịu trách nhiệm hợp đồng) → 4 Kế toán; một người không ký hai bước
+  một vòng, trả lại bắt buộc lý do, vòng mới từ bước 1, đang / đã kiểm thì nội dung khoá. Bắt buộc khi
+  `kt.collection_check_chain` (theo pháp nhân — đặt sẵn NVC) và hồ sơ gắn công trình, chụp ở `check_required` lúc lập.
+  Sau khi gửi: `record_collection_owner_approval` (số duyệt + ngày + bản quét, giữ lại theo tỷ lệ điều khoản Bảo hành —
+  `contract_retention_rate`); `record_collection_receivable` (chép 0196, thêm `p_invoice_date`) ghi công nợ = duyệt − giữ
+  lại + khoản `receivables_payables.receivable_kind = 'giu_lai'`, hạn = ngày hết bảo hành muộn nhất (trigger trên
+  `warranties` cập nhật). Đọc `collection_requests` thu về `rls_sees_finance` (trước Thi công / chỉ huy trưởng đọc được vì
+  có quyền xem KT); người kiểm đọc qua `my_collection_checks()` — Thi công không thấy số tiền / số hợp đồng. Bảo lãnh
+  `contract_guarantees` (hai chiều suy từ loại hợp đồng, kho `guarantee-docs`, đóng bằng `close_contract_guarantee`); quét
+  `scan_contract_guarantee_reminders` (thêm vào `workers/src/index.ts`) — `kt.guarantee_remind_days`, `kt.retention_remind_days`
+  TRỐNG (demo `mac-dinh` 30). Công trình kết thúc / hợp đồng quyết toán / lập thanh lý → `notify_retention_release`. Giao diện:
+  khối kiểm + chủ đầu tư duyệt + bảng số ở `/kt/de-nghi-thu/:id`, `/kiem-ho-so-thanh-toan`, `/kt/bao-lanh-giu-lai`, khối
+  «Bảo lãnh và tiền giữ lại» trên hợp đồng, khối thanh lý nhắc phần còn phải thu hồi. Phép thử `g3-thanh-toan-cdt.test.ts`
+  (7; đột biến bỏ kiểm «một người hai bước» và nới quyền đọc bảo lãnh đã đo đỏ). Còn: chưa có lối «mở lại» hồ sơ đã kiểm xong
+  mà Kế toán muốn sửa; bảo lãnh bảo hành thay tiền giữ lại chưa tự trừ.
 - **G6 — gói thầu có hình thức, Ban Giám đốc duyệt tham gia, ý kiến ba phòng (0247, 29/10/2026, kế hoạch A10):**
   `bidding_projects.procurement_form` (chỉ định / chào giá cạnh tranh / đấu thầu) + `work_type` (6 loại, nhãn ở
   `shared/src/bid-participation.ts`); đánh giá sáu tiêu chí (năng lực, tiến độ, dòng tiền, pháp lý, cạnh tranh, sinh lời — mỗi tiêu

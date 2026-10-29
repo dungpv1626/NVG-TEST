@@ -237,8 +237,11 @@ describe('thân lời gọi không mang khoảng trắng thuần', () => {
     // `[[…]]` bật), không đo khuôn. Thêm ~400 ký tự: WC khép kín chỉ mở từ phòng mẹ (P0-02), bếp – WC
     // không chung tường (P0-06 — câu cũ «grouped» nói ngược luật), `knowledge.faces` (P1-04), thứ tự
     // assumptions (P1-10). Câu thang máy / sân thượng / ông bà chưa ghim tầng nay chỉ có khi đúng (P2-01).
+    // 5.500 → 5.700 (29/10/2026, lời dẫn 9.13.0, T183): khu ướt tầng trên vẽ ngay trên khu ướt tầng dưới, không được thì
+    // trên thang / hành lang / kho / gara; phòng ngủ có ban công tránh trục ướt (~160 ký tự). Hồ sơ 9272 hỏng nhóm E đúng ở
+    // chỗ này và bộ xếp (T179–T182) không gỡ được — chỉ bản phác của mô hình quyết được; rẻ hơn một lượt vẽ lại.
     const longest = houseSystem(system, { elevator: true, terrace: true, ong_ba_unset: true });
-    expect(longest.length, `${longest.length} ký tự`).toBeLessThan(5_500);
+    expect(longest.length, `${longest.length} ký tự`).toBeLessThan(5_700);
     expect(longest).not.toMatch(/\[\[|\]\]/);
     expect(system).not.toContain('<example>');
     const schema = JSON.stringify(schemaFor('openai', sent));

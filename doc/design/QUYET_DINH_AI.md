@@ -4994,3 +4994,34 @@ quả: `backup/gd1-mat-bang/replay-t182new-0.jsonl`, `s182new.jsonl`.
 **Còn mở.** (1) 9272 E: cần tìm sâu hơn (ba thay đổi) hoặc đầu vào khác — câu nhắc cho mô hình đặt WC tầng 2 trên khu ướt tầng 1, hay đầu bài
 không bắt ban công hông thuộc phòng ngủ chính. (2) Vòng lâu nhất đang 160–190 s trên máy bận; trần CPU Worker 300 s — cần đo lại khi máy rảnh
 trước khi phát hành. (3) Việc mở của T181 (chọn theo điểm cả nhà) vẫn chưa làm.
+
+## T183 — Lời dẫn 9.13.0: khu ướt tầng trên vẽ ngay trên khu ướt tầng dưới, phòng ngủ có ban công tránh trục ướt (29/10/2026, anh Dũng chọn «dặn mô hình»)
+
+**Bối cảnh.** T179–T182 cho thấy hồ sơ 9272 (`1dd74b99`) không gỡ được nhóm E bằng bộ xếp: phòng ngủ chính tầng 2 mang ban công hông
+bắt buộc (ban công khép kín của nó trong chương trình) và nằm đúng góc trên khu ướt tầng 1; WC chung tầng 2 bị đẩy lên trên phòng ngủ
+tầng 1. Anh Dũng chọn dặn mô hình ngay trong lời dẫn bản phác, rồi một lượt thật (người điều phối chạy, không phải phiên này).
+
+**Làm.** `kb/ai_design_prompts.yaml` khối `floor_level.system` (lời dẫn bản phác lưới cả nhà T45 / T48), mục Sketch — thay câu
+«Upper storeys: a shared wc or laundry over a wet room or shaft below unless impossible, an en-suite wc as near it as its bedroom
+allows.» bằng:
+
+> - Upper storeys: every wc and laundry right above a wet room or shaft below (one stack), an en-suite wc as near as its bedroom
+>   allows; else above the stair, a corridor, a store or the garage, never a bedroom, living, dining, kitchen or altar room. A bedroom
+>   with a balcony stays off that stack.
+
+Không con số nào (lời dẫn không mang ngưỡng — phép thử canh). Luật 8 «Must hold» (không WC trên bếp / thờ; không WC / giặt trên khách,
+ăn, ngủ tầng dưới) giữ nguyên. `version` 9.12.1 → **9.13.0** (đi vào `design_ai_call.prompt_version` và `generator.prompt_version` của
+artifact). Không đụng `contracts/` (không phải chạy `contracts:gen`). Trần độ dài lời dẫn gửi đi (`token-diet.test.ts`) 5.500 → 5.700 ký
+tự: bản dài nhất 5.495 → 5.655.
+
+**Phép thử.** `ai-prompts.test.ts` thêm một ca canh ba ý của câu mới. `ai-prompts`, `token-diet`, `prompt-record`,
+`ai-v6-prompt-consistency`, `ai-design-steps`, `ai-plan`, `ai-mandatory-rules`, `ai-review-t112`, `ai-plan-check`, `ai-program`: xanh.
+Không có cách đo bằng phát lại — câu trả lời đã ghi là của lời dẫn cũ; chỉ một lượt thật nói được mô hình có theo không.
+
+**Kỳ vọng cho lượt thật** (ghi TRƯỚC khi chạy, theo quyết định 28/10): hồ sơ `NVO-TK-2026-9272`
+(`3ef36ba6-471b-450f-b2c7-46626549e729`, đầu bài như `46d6eff3`), GPT-5.6 Terra, «Xếp mặt bằng» 1 phương án, mức chi phí lượt 0,8 USD.
+Tầng 1 qua như mọi lượt trước. Tầng 2: hoặc bản phác qua thẳng / qua nhờ khung hai hàng (T179–T182). Điểm kỳ vọng 66–73 %; nhóm E 40–60 %
+nếu mô hình đặt WC chung + giặt trên góc khu ướt tầng 1 (WC khép kín phòng ngủ chính có thể lệch → E2 nửa); nhóm D 40–62 % (62 % khi
+khung dải ban công mặt tiền T181 dựng tầng 2). Khả năng đạt ngưỡng nhận (≥ 60 %, D ≥ 60 %, nhóm khác ≥ 40 %): khoảng một phần ba — D và E
+cùng qua sàn mới đạt. Lượt có thể vẫn hỏng tầng 2 (phòng không lối vào) như ba lượt 28/10 — khi ấy khung hai hàng là đường cứu; chi phí 1–5
+lời gọi ≈ 0,1–0,5 USD.

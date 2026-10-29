@@ -50,6 +50,7 @@ import { StepTrack } from '@/components/entity/step-track';
 import { useStageReadiness } from '@/hooks/use-stage-readiness';
 import { useSiteMilestones } from '@/hooks/use-site-milestones';
 import { SITE_PREP_ANCHOR, SitePrepCard } from './site-prep-card';
+import { HandoverChecklist, StartConditionsCard } from './site-checklist';
 import { SubcontractorPanel } from './subcontractor-panel';
 import { CrewAttendancePanel } from './crew-attendance-panel';
 import { WarrantyPanel } from './warranty-panel';
@@ -358,7 +359,7 @@ export function SiteDetailPage() {
           {
             id: 'ngan-sach',
             label: 'Ngân sách',
-            content: <BudgetPanel siteId={site.id} />,
+            content: <BudgetPanel siteId={site.id} started={site.stage !== 'chuan_bi'} />,
           },
           {
             // G5 (0245): đề nghị thuê giàn giáo nội bộ của Nhà Việt Steel (QĐ-6).
@@ -437,6 +438,10 @@ export function SiteDetailPage() {
                     highlight={site.stage === 'chuan_bi' && missing.length > 0}
                   />
                 )}
+                {/* G4 (0249): điều kiện khởi công + gói bàn giao. Bàn giao còn hiện sau khởi công để
+                    nhìn lại ai giao gì; danh mục rỗng thì khối tự ẩn. */}
+                {site.stage === 'chuan_bi' && <StartConditionsCard siteId={site.id} />}
+                {site.stage !== 'hoan_thanh' && <HandoverChecklist siteId={site.id} showPageLink />}
                 <DetailFields
                   fields={[
                     { label: 'Bước hiện tại', value: SITE_STAGE_META[site.stage].label },

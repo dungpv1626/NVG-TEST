@@ -22,6 +22,7 @@ import {
   markSurveyReportApproved,
   signAcceptanceWithPaper,
 } from './helpers';
+import { confirmStartConditions } from './start-conditions';
 
 const describeDb = hasCredentials ? describe : describe.skip;
 
@@ -524,6 +525,7 @@ describeDb(
       );
 
       // --- Bước 12. Nghiệm thu đợt 1 với chủ đầu tư (TC-04) -------------------------------
+      await confirmStartConditions(siteId as string);
       const { error: stageError } = await chiHuy.rpc('move_site_stage', {
         p_site_id: siteId as string,
         p_stage: 'dang_thi_cong',

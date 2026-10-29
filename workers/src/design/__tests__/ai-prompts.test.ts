@@ -69,6 +69,17 @@ describe('kb/ai_design_prompts.yaml', () => {
     }
   });
 
+  it('bản phác: khu ướt tầng trên vẽ ngay trên khu ướt tầng dưới, phòng ngủ có ban công tránh trục ướt (T183)', () => {
+    // Phát lại T179–T182: hồ sơ 9272 hỏng nhóm E vì phòng ngủ chính (mang ban công hông bắt buộc) chiếm đúng góc trên
+    // khu ướt tầng 1, WC chung tầng 2 bị đẩy lên trên phòng ngủ tầng 1 — chương trình không gỡ được, phải dặn mô hình.
+    const body = prompts.floorLevel.system.replace(/\s+/g, ' ');
+    expect(body).toMatch(
+      /every wc and laundry right above a wet room or shaft below \(one stack\)/,
+    );
+    expect(body).toMatch(/never a bedroom, living, dining, kitchen or altar room/);
+    expect(body).toMatch(/A bedroom with a balcony stays off that stack/);
+  });
+
   it('lời dẫn mặt bằng không có ví dụ mẫu — lược đồ strict đã ép hình dạng đầu ra (T46)', () => {
     // Ví dụ nhà ống 13 phòng từng chiếm ~3.000 ký tự mỗi lượt gọi và kéo mô hình về bố cục nhà ống.
     expect(prompts.floorLevel.system).not.toMatch(/<example>/);

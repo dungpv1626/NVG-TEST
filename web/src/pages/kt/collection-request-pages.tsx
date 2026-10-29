@@ -5,6 +5,9 @@
  * một bấm». Bản nháp do máy soạn (số tiền theo đợt thu gắn biên bản, căn cứ hợp đồng / biên bản /
  * mốc); Kế toán kiểm, sửa, in gửi chủ đầu tư, đính kèm bản đã ký quét lại, rồi «Ghi công nợ» —
  * chỉ lúc đó khoản phải thu mới sinh ra. Máy không tự ghi công nợ.
+ *
+ * G3 (0248): kiểm nội bộ bốn bước trước khi gửi, số chủ đầu tư duyệt, tiền giữ lại, hoá đơn — các khối ở
+ * `collection-request-g3.tsx`.
  */
 
 import { useEffect, useState } from 'react';
@@ -45,6 +48,13 @@ import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
 import { useCan } from '@/lib/auth';
 import { useCompanyScope } from '@/lib/company-scope';
 import { escapeHtml, openPrintReport } from '@/lib/print-report';
+import {
+  checkBlocksSending,
+  checkLocksContent,
+  CollectionAmounts,
+  CollectionCheckSection,
+  OwnerApprovalSection,
+} from './collection-request-g3';
 import { KtNav } from './kt-nav';
 
 const STATUS_GROUP: Record<CollectionRequestStatus, StatusGroup> = {
@@ -181,6 +191,7 @@ export function CollectionRequestDetailPage() {
   const [dueDate, setDueDate] = useState('');
   const [basis, setBasis] = useState('');
   const [content, setContent] = useState('');
+  const [invoiceDate, setInvoiceDate] = useState('');
   const [scanning, setScanning] = useState(false);
   const [message, setMessage] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null);
 
@@ -193,7 +204,7 @@ export function CollectionRequestDetailPage() {
     setContent(r.content ?? '');
   }, [r]);
 
-  const editable = Boolean(r && canEdit && r.status === 'nhap');
+  const editable = Boolean(r && canEdit && r.status === 'nhap' && !checkLocksContent(r));
   const dirty = Boolean(
     r &&
     editable &&
@@ -252,8 +263,15 @@ export function CollectionRequestDetailPage() {
         id: r.id,
         dueDate: dueDate || null,
         invoiceNumber: invoice.trim() || null,
+        invoiceDate: invoiceDate || null,
       });
-      setMessage({ kind: 'ok', text: 'Đã ghi công nợ phải thu — xem ở màn hình Công nợ.' });
+      setMessage({
+        kind: 'ok',
+        text:
+          r.retention_amount !== null && toMoney(r.retention_amount) > 0n
+            ? 'Đã ghi công nợ phải thu và khoản tiền giữ lại riêng — xem ở màn hình Công nợ.'
+            : 'Đã ghi công nợ phải thu — xem ở màn hình Công nợ.',
+      });
     } catch (e) {
       fail(e);
     }
@@ -264,6 +282,19 @@ export function CollectionRequestDetailPage() {
     try {
       await action.mutateAsync({ kind: 'send', id: r.id });
       setMessage({ kind: 'ok', text: 'Đã ghi «đã gửi khách».' });
+    } catch (e) {
+      fail(e);
+    }
+  }
+
+  async function startCheck() {
+    if (!r || !(await save())) return;
+    try {
+      await action.mutateAsync({ kind: 'start_check', id: r.id });
+      setMessage({
+        kind: 'ok',
+        text: 'Đã gửi kiểm — Ban công trường được báo để xác nhận khối lượng.',
+      });
     } catch (e) {
       fail(e);
     }
@@ -286,6 +317,13 @@ export function CollectionRequestDetailPage() {
   }
 
   const open = r.status === 'nhap' || r.status === 'da_gui';
+  const blocked = checkBlocksSending(r);
+  // Hồ sơ bắt buộc kiểm: công nợ ghi theo số chủ đầu tư duyệt, nên chỉ ghi sau khi đã gửi và đã có số duyệt.
+  const canRecord =
+    canEdit &&
+    open &&
+    !blocked &&
+    (!r.check_required || (r.status === 'da_gui' && r.owner_approved_amount !== null));
   return (
     <>
       <KtNav />
@@ -316,7 +354,7 @@ export function CollectionRequestDetailPage() {
         ]}
         description={r.title}
         actions={
-          canEdit && open ? (
+          canRecord ? (
             <Button variant="primary" onClick={() => void record()} disabled={action.isPending}>
               Ghi công nợ
             </Button>
@@ -424,10 +462,15 @@ export function CollectionRequestDetailPage() {
           >
             In đề nghị
           </Button>
-          {canEdit && r.status === 'nhap' && (
+          {canEdit && r.status === 'nhap' && !blocked && (
             <Button variant="secondary" disabled={action.isPending} onClick={() => void send()}>
               Ghi đã gửi khách
             </Button>
+          )}
+          {canEdit && r.status === 'nhap' && blocked && (
+            <span className="self-center text-sm text-fg-subtle">
+              Gửi chủ đầu tư sau khi hồ sơ qua đủ bốn bước kiểm nội bộ.
+            </span>
           )}
           {canEdit && open && (
             <Button variant="secondary" onClick={() => void cancel()}>
@@ -436,6 +479,30 @@ export function CollectionRequestDetailPage() {
           )}
         </div>
       </section>
+
+      <CollectionCheckSection
+        r={r}
+        canEdit={canEdit}
+        onStart={() => void startCheck()}
+        pending={action.isPending}
+      />
+      <OwnerApprovalSection
+        r={r}
+        canEdit={canEdit}
+        onDone={(text) => setMessage({ kind: 'ok', text })}
+      />
+      {canEdit && open && (
+        <section className="mb-4 rounded-card bg-surface p-4">
+          <Field
+            label="Ngày hoá đơn"
+            optional
+            hint="Hoá đơn điện tử xuất ở phần mềm hoá đơn; ở đây chỉ ghi số và ngày để đối chiếu. Số hoá đơn hỏi khi bấm «Ghi công nợ»."
+          >
+            <DateInput value={invoiceDate} onChange={setInvoiceDate} />
+          </Field>
+        </section>
+      )}
+      <CollectionAmounts r={r} />
 
       <section className="mb-4 rounded-card bg-surface p-4">
         <p className="font-medium">Bản đã ký / đóng dấu</p>

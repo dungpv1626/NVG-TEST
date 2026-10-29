@@ -29,7 +29,8 @@
 # 9.9.3 (13/10/2026, T160 — Haan chấm phương án d084a46e): câu nhắc C14 (ô giao thông to như một phòng), D6 (ban công chính mặt tiền mở từ giao thông chung), D7 (ban công mặt hông nhỏ hơn mặt tiền). Chỉ gửi khi phương án dưới ngưỡng. Gỡ hai câu tự mâu thuẫn: C12 bản phác «draw it one cell wide» (trái `corridor_min_cells` = 2 ô của biệt thự) nay theo `corridor_min_cells`; D5 bỏ thứ tự «bedroom first» (trái D6).
 # 9.10.0 (14/10/2026, T161 — Haan hỏi lỗi d084a46e ở mô hình hay dựng hình): luật 6 — hành lang / khu chung dọc trọn `arrival` của ô thang (tri thức `stair_min_m.arrival` mới, ngay lượt đầu); hành lang đúng `corridor_min_cells` ô, sàn rộng hơn là phòng; luật 10 + `B_balcony` + `R_balcony` — ban công chính mặt tiền lớn nhất, mở từ hành lang / khu chung, ban công khác nhỏ (thay «bedroom first» cho mọi ban công); câu nhắc `balcony_main_access`, `balcony_main_depth` (hai câu đầu bài mới). Rút câu trùng ý để vừa trần T46: câu mở đầu kể lại lược đồ, «Relationships…» (đã có trong lược đồ), «habitable rooms on open_faces» (trùng `knowledge.faces`), «the stair where it is on storey 1» (trùng luật 6).
 # 9.11.0 (23/10/2026, T165 — lượt thật THU5 nhà phố 5 × 18 m có ô tô): `floor_level` luật 7 có câu `[[entry_garage|…]]` — gara được làm entry_room khi hàng đường không đủ cho gara và phòng khách cạnh nhau (luật T115 trước chỉ có ở `house_layout` / `house_bands`); câu nhắc mới sketch_row_too_narrow, entrance_wrong_side_garage, door_outside_on_boundary_garage.
-version: '9.12.1'
+# 9.13.0 (29/10/2026, T183 — anh Dũng chọn «dặn mô hình» cho hồ sơ 9272): `floor_level` (bản phác lưới cả nhà) — mọi WC / giặt / khu ướt tầng trên vẽ NGAY TRÊN khu ướt tầng dưới (một trục ướt); không được thì trên thang, hành lang, kho, gara — không bao giờ trên phòng ngủ, khách, ăn, bếp, thờ; phòng ngủ có ban công riêng tránh các ô trên khu ướt tầng dưới để trục ấy dành cho khu ướt. Lý do: phát lại T179–T182 — khung hai hàng không gỡ được 9272 vì phòng ngủ chính (mang ban công hông bắt buộc) chiếm đúng góc trên khu ướt tầng 1.
+version: '9.13.0'
 
 program:
   system: |
@@ -222,8 +223,10 @@ floor_level:
     - NEVER draw a room inside another room; an en-suite room, a store or a wc is a strip along
       one side of the room it belongs to.
     - The rectangles tile the storey in bands split by straight wall-to-wall lines (no pinwheel).
-    - Upper storeys: a shared wc or laundry over a wet room or shaft below unless impossible, an
-      en-suite wc as near it as its bedroom allows.
+    - Upper storeys: every wc and laundry right above a wet room or shaft below (one stack), an
+      en-suite wc as near as its bedroom allows; else above the stair, a corridor, a store or the
+      garage, never a bedroom, living, dining, kitchen or altar room. A bedroom with a balcony
+      stays off that stack.
 
     Access — doors open only this way:
     - People walk through only `knowledge.walk_through`, and through `knowledge.entry_through` only

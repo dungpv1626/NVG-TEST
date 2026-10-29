@@ -15,6 +15,7 @@ const ITEMS = [
   { to: '/kt/dot-thu', label: 'Đợt thu' },
   { to: '/kt/de-nghi-thu', label: 'Đề nghị thu' },
   { to: '/kt/bien-ban-nghiem-thu', label: 'Biên bản nghiệm thu' },
+  { to: '/kt/bao-lanh-giu-lai', label: 'Bảo lãnh và giữ lại' },
   { to: '/kt/bang-cong-to-doi', label: 'Bảng công tổ đội' },
   { to: '/kt/cong-no', label: 'Công nợ' },
   { to: '/kt/thue-gian-giao', label: 'Thuê giàn giáo' },

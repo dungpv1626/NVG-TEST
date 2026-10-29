@@ -29,6 +29,8 @@ const GLOBAL_NUMBERS: Record<string, number> = {
   'da.document_remind_days': 30,
   'da.deadline_remind_days': 7,
   'sx.rental_remind_days': 3,
+  'kt.guarantee_remind_days': 30,
+  'kt.retention_remind_days': 30,
   defect_rate_threshold: 0.03,
   min_samples_for_metric: 5,
 };

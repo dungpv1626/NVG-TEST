@@ -43,12 +43,25 @@ Còn chờ NVG: mức lợi nhuận tối thiểu từng công ty; có cho Kinh 
 - **Cần NVG:** lợi nhuận tối thiểu từng công ty; Kinh doanh có được xem giá vốn không.
 
 ### A2. Gói bàn giao sang Thi công và lãi dự kiến đóng băng (NVO8, M3, T9)
+**ĐÃ LÀM (0249, gói G4, 29/10/2026)** — danh mục bàn giao + điều kiện khởi công là DỮ LIỆU theo pháp nhân
+(`site_checklist_templates`, mặc định ĐỀ XUẤT DEMO), chụp vào công trình lúc mở; giao / nhận / báo thiếu ghi người + giờ +
+lịch sử, báo thiếu thì bộ phận giao được báo; hợp đồng / bản vẽ / dự toán tự nối, không lộ giá; trang `/ban-giao-thi-cong/:id`
+cho bộ phận giao. Thiếu mục bàn giao bắt buộc CHỈ CẢNH BÁO (tham số `tc.handover_blocks_start` = 1 thì chặn). Điều kiện
+khởi công bắt buộc (mặc định pháp lý + an toàn) chặn sang «Đang thi công». Lãi «lúc nhận việc» (`site_profit_baselines`,
+bất biến, có phiên bản) chụp lúc khởi công và ở mỗi điều chỉnh ngân sách / phát sinh được duyệt; trang lãi / lỗ có cột
+«Lúc nhận việc». Còn: NVG sửa danh mục mặc định.
 - Bàn giao là danh mục: hợp đồng (phạm vi và tiến độ, KHÔNG có giá với Thi công), bản vẽ đang hiệu lực, BOQ / dự toán, danh mục vật tư, cam kết với khách, danh sách rủi ro.
 - Mỗi mục có người giao và người nhận xác nhận. Thiếu mục bắt buộc thì cảnh báo.
 - Lúc ký hợp đồng, chụp lại giá bán và ngân sách được duyệt thành **lãi dự kiến** của công trình. Số này bất biến; về sau chỉ thêm bản điều chỉnh có duyệt.
 - **Xong khi:** trang lãi / lỗ hiện được «lúc nhận việc» bên cạnh «dự báo».
 
 ### A3. Ngân sách có duyệt, mua vượt ngân sách phải duyệt lại (A3, A7, NVO10)
+**ĐÃ LÀM (0249, gói G4, 29/10/2026)** — sau khởi công mọi thay đổi ngân sách qua «Điều chỉnh ngân sách» (lý do, nguyên
+nhân, trách nhiệm, ảnh hưởng; hạn mức Thi công 50 tr → Ban Giám đốc 500 tr → Tổng Giám đốc, GIẢ ĐỊNH), trigger chặn sửa
+thẳng; đề nghị mua / chọn thầu phụ vượt phần còn lại của dòng (trừ phần đề nghị gửi trước giữ chỗ) tự sang loại
+«Vượt ngân sách» (Thi công 50 tr → Ban Giám đốc), hộp duyệt hiện số dòng; dung sai `tc.over_budget_tolerance_percent`
+TRỐNG = không dung sai; chọn thầu phụ được duyệt cam kết ngân sách, chi trả chuyển dần sang thực tế. Còn: đơn hàng có giá
+cao hơn đề nghị đã duyệt chưa đi duyệt lại; hợp đồng khoán khác giá chọn thầu phụ chưa cam kết thêm; NVG trả lời câu A3.
 - Sửa dòng ngân sách sau khi khởi công phải qua phê duyệt «điều chỉnh ngân sách», có lý do, và lưu lịch sử.
 - Đề nghị mua vượt dòng ngân sách còn lại không bị chặn. Thay vào đó nó vào luồng duyệt riêng, lên cấp cao hơn.
 - **Xong khi:** không có đường nào để tổng cam kết vượt ngân sách mà không có người duyệt ghi tên.
@@ -258,10 +271,17 @@ Mục nào chưa có câu trả lời thì làm theo phương án an toàn: tham
 - quyết toán.
 
 Ba việc mới, chưa có ở các giai đoạn trên:
-- **A8 Hồ sơ thanh toán với chủ đầu tư.**
+- **A8 Hồ sơ thanh toán với chủ đầu tư.** **ĐÃ LÀM (0248, gói G3, 29/10/2026)** — mở rộng đề nghị thu tiền
+  (`collection_requests`): bốn bước kiểm ký tuần tự (`collection_request_checks`, không qua `decide_approval`), bắt buộc
+  cho hồ sơ NVC gắn công trình (tham số `kt.collection_check_chain` theo pháp nhân); số chủ đầu tư duyệt + bản quét,
+  giữ lại, hoá đơn (số + ngày), đã thu; «Ghi công nợ» = số duyệt − giữ lại, giữ lại thành khoản phải thu riêng.
+  Trang người kiểm `/kiem-ho-so-thanh-toan`.
   - Công trường → Thi công → Dự án / QS → Kế toán cùng kiểm trước khi gửi chủ đầu tư.
   - Ghi đủ các số: số đề nghị, số chủ đầu tư duyệt, hoá đơn, đã thu, giữ lại.
-- **A9 Bảo lãnh và tiền giữ lại.**
+- **A9 Bảo lãnh và tiền giữ lại.** **ĐÃ LÀM (0248, gói G3, 29/10/2026)** — `contract_guarantees` (tạm ứng / thực hiện /
+  bảo hành, hai chiều), quét đêm nhắc trước `kt.guarantee_remind_days` (trống = chỉ khi hết hạn); khoản giữ lại có hạn =
+  ngày hết bảo hành muộn nhất; công trình kết thúc / hợp đồng quyết toán / lập thanh lý thì báo thu hồi; trang
+  `/kt/bao-lanh-giu-lai`, khối trên trang hợp đồng và khối thanh lý.
   - Bảo lãnh tạm ứng / thực hiện / bảo hành có hạn và được nhắc trước khi hết.
   - Tiền giữ lại có hạn thu hồi; khi thanh lý hợp đồng thì nhắc thu hồi.
 - **A10 Gói thầu có hình thức và quyết định tham gia.** **ĐÃ LÀM (0247, gói G6, 29/10/2026)** — hình thức + loại công trình;

@@ -6,9 +6,16 @@
  */
 
 import { useState } from 'react';
-import { formatDateTime, isPayableContract } from '@nvg/shared';
+import {
+  formatCurrency,
+  formatDate,
+  formatDateTime,
+  isPayableContract,
+  toMoney,
+} from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { useAnnexDocuments } from '@/hooks/use-contract-annex';
+import { GUARANTEE_TYPE_LABELS, useContractOpenRetention } from '@/hooks/use-contract-guarantees';
 import type { ContractDetailRecord } from '@/hooks/use-contracts';
 import { AnnexComposer } from './annex-composer';
 
@@ -20,6 +27,9 @@ export function LiquidationCard({
   canManage: boolean;
 }) {
   const docs = useAnnexDocuments(contract.id);
+  const openItems = useContractOpenRetention(contract.id);
+  const retention = openItems.data ? toMoney(openItems.data.retention_outstanding) : 0n;
+  const guarantees = openItems.data?.open_guarantees ?? [];
   const [open, setOpen] = useState(false);
   const versions = (docs.data ?? []).filter((d) => d.kind === 'thanh_ly');
   const latest = versions[0] ?? null;
@@ -52,6 +62,23 @@ export function LiquidationCard({
           </Button>
         )}
       </div>
+      {(retention > 0n || guarantees.length > 0) && (
+        <div className="mt-3 rounded-md bg-status-pending-bg p-3 text-sm">
+          <p className="font-medium">Trước khi thanh lý còn phải thu hồi</p>
+          <ul className="mt-1 list-disc space-y-0.5 ps-5">
+            {retention > 0n && (
+              <li>Tiền chủ đầu tư giữ lại bảo hành: {formatCurrency(retention)} chưa thu.</li>
+            )}
+            {guarantees.map((g) => (
+              <li key={g.id}>
+                {GUARANTEE_TYPE_LABELS[g.guarantee_type]} {g.bank_name}
+                {g.guarantee_number ? ` số ${g.guarantee_number}` : ''} — {formatCurrency(g.amount)}
+                , hiệu lực đến {formatDate(g.valid_to)}, chưa thu hồi / giải toả.
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {open && (
         <AnnexComposer
           contract={contract}

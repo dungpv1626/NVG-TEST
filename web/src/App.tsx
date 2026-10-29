@@ -192,6 +192,10 @@ const SiteDetailPage = lazy(() =>
   import('@/pages/tc/site-detail').then((m) => ({ default: m.SiteDetailPage })),
 );
 const RfiPage = lazy(() => import('@/pages/tc/rfi-page').then((m) => ({ default: m.RfiPage })));
+// G4 (0249): bàn giao sang Thi công — bộ phận giao không xem được Module TC.
+const HandoverPage = lazy(() =>
+  import('@/pages/tc/handover-page').then((m) => ({ default: m.HandoverPage })),
+);
 const BidReviewListPage = lazy(() =>
   import('@/pages/da/bid-review-page').then((m) => ({ default: m.BidReviewListPage })),
 );
@@ -300,6 +304,14 @@ const CollectionRequestDetailPage = lazy(() =>
   import('@/pages/kt/collection-request-pages').then((m) => ({
     default: m.CollectionRequestDetailPage,
   })),
+);
+const RetentionGuaranteePage = lazy(() =>
+  import('@/pages/kt/retention-guarantee-page').then((m) => ({
+    default: m.RetentionGuaranteePage,
+  })),
+);
+const CollectionCheckPage = lazy(() =>
+  import('@/pages/kt/collection-check-page').then((m) => ({ default: m.CollectionCheckPage })),
 );
 const RentalSettlementPage = lazy(() =>
   import('@/pages/kt/rental-settlement-page').then((m) => ({ default: m.RentalSettlementPage })),
@@ -563,6 +575,7 @@ const router = createBrowserRouter(
           <Route path="kt/de-nghi-thu" element={<CollectionRequestListPage />} />
           <Route path="kt/de-nghi-thu/:id" element={<CollectionRequestDetailPage />} />
           <Route path="kt/bien-ban-nghiem-thu" element={<AcceptanceBillingPage />} />
+          <Route path="kt/bao-lanh-giu-lai" element={<RetentionGuaranteePage />} />
           <Route path="kt/bang-cong-to-doi" element={<CrewTimesheetPage />} />
           <Route path="kt/dong-tien" element={<CashFlowPage />} />
           <Route path="kt/dong-tien-theo-tuan" element={<CashForecastPage />} />
@@ -608,9 +621,15 @@ const router = createBrowserRouter(
         {/* v2 (màn 1.6): đường dẫn tới đúng một hồ sơ chờ duyệt — từ thông báo, gửi cho người khác. */}
         <Route path="viec-can-lam/:id" element={<ApprovalInboxPage />} />
         <Route path="viec-hom-nay" element={<TodayPage />} />
+        {/* Kiểm hồ sơ thanh toán gửi chủ đầu tư (G3, 0248): công trường, Thi công, Dự án / QS không xem được
+            Module KT — CSDL (`my_collection_checks`) chỉ trả hồ sơ đang chờ đúng người, không lộ giá trị với Thi công. */}
+        <Route path="kiem-ho-so-thanh-toan" element={<CollectionCheckPage />} />
         {/* Yêu cầu làm rõ (TC-15): không bọc ModuleGuard — bên trả lời (Thiết kế, Dự án) không xem
             được Module TC; RLS của bảng `rfis` quyết ai đọc được. */}
         <Route path="lam-ro/:id" element={<RfiPage />} />
+        {/* G4 (0249): gói bàn giao Dự án / Thiết kế / Kinh doanh → Thi công. Không bọc ModuleGuard —
+            bộ phận giao không xem được Module TC; `site_checklist` quyết ai đọc, không có giá trị tiền. */}
+        <Route path="ban-giao-thi-cong/:siteId" element={<HandoverPage />} />
         {/* Ý kiến gói thầu (0247): Cung ứng / Thi công / Kế toán không xem được Module DA — CSDL
             (`bid_reviews`) quyết ai đọc, trang chỉ có tóm tắt gói, không giá dự thầu. */}
         <Route path="y-kien-goi-thau" element={<BidReviewListPage />} />

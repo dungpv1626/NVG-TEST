@@ -20,6 +20,7 @@ import {
   signInAs,
   TEST_PREFIX,
 } from './helpers';
+import { confirmStartConditions } from './start-conditions';
 
 const describeDb = hasCredentials ? describe : describe.skip;
 
@@ -576,6 +577,7 @@ describeDb('TC — thứ tự các bước của công trình', () => {
     // Bộ mốc nhà xưởng NVC (câu 15, 27/10/2026) tự áp cho công trình mới và chặn sang nghiệm thu khi chưa đạt đủ mốc.
     // Bài này kiểm THỨ TỰ bước — cổng mốc có phép thử riêng (tc-milestones, 2A) — nên coi như các mốc đã đạt.
     await markMilestonesPassed(fixture.nvcSiteId);
+    await confirmStartConditions(fixture.nvcSiteId);
 
     expect((await step('dang_thi_cong')).error).toBeNull();
     expect((await step('nghiem_thu')).error).toBeNull();

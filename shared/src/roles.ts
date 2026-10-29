@@ -219,6 +219,9 @@ export const APPROVAL_SUBJECTS = [
   'bid_participation',
   // G2 (0246): chọn thầu phụ / tổ đội cho một gói việc của công trình.
   'subcontractor_selection',
+  // G4 (0249): điều chỉnh ngân sách công trình sau khởi công; đề nghị mua / chọn thầu phụ vượt ngân sách.
+  'budget_adjustment',
+  'over_budget',
 ] as const;
 
 export type ApprovalSubject = (typeof APPROVAL_SUBJECTS)[number];
@@ -242,6 +245,8 @@ export const APPROVAL_SUBJECT_LABELS: Readonly<Record<ApprovalSubject, string>> 
   internal_rental: 'Cho thuê giàn giáo nội bộ',
   bid_participation: 'Quyết định tham gia gói thầu',
   subcontractor_selection: 'Chọn thầu phụ / tổ đội',
+  budget_adjustment: 'Điều chỉnh ngân sách',
+  over_budget: 'Vượt ngân sách',
 };
 
 export interface ApprovalLimitSeed {
@@ -353,4 +358,19 @@ export const DEFAULT_APPROVAL_LIMITS: readonly ApprovalLimitSeed[] = [
   { role: 'TC', subject: 'subcontractor_selection', maxAmount: 50n * TRIEU, step: 1 },
   { role: 'BGD', subject: 'subcontractor_selection', maxAmount: 500n * TRIEU, step: 2 },
   { role: 'TGD', subject: 'subcontractor_selection', maxAmount: null, step: 3 },
+
+  // G4 (0249, A3): điều chỉnh ngân sách công trình sau khởi công — hạn mức tính theo |chênh lệch|.
+  // Trưởng phòng Thi công duyệt chênh lệch nhỏ, Ban Giám đốc vừa, Tổng Giám đốc không giới hạn. Chỉ
+  // huy trưởng (CHT) không có dòng nào nên không tự duyệt. Số là GIẢ ĐỊNH — sửa trong Quản trị.
+  { role: 'TC', subject: 'budget_adjustment', maxAmount: 50n * TRIEU, step: 1 },
+  { role: 'BGD', subject: 'budget_adjustment', maxAmount: 500n * TRIEU, step: 2 },
+  { role: 'TGD', subject: 'budget_adjustment', maxAmount: null, step: 3 },
+
+  // G4 (0249, A3): đề nghị mua / chọn thầu phụ vượt phần còn lại của dòng ngân sách — không bị chặn,
+  // vào hồ sơ loại này thay cho loại thường (theo TOÀN BỘ giá trị hồ sơ). Trưởng phòng Thi công trong
+  // hạn mức, rồi Ban Giám đốc. Dung sai `tc.over_budget_tolerance_percent` để trống = không dung sai.
+  // Câu hỏi A3 cho NVG còn mở; sửa trong Quản trị, KHÔNG sửa file này.
+  { role: 'TC', subject: 'over_budget', maxAmount: 50n * TRIEU, step: 1 },
+  { role: 'BGD', subject: 'over_budget', maxAmount: null, step: 2 },
+  { role: 'TGD', subject: 'over_budget', maxAmount: null, step: 2 },
 ] as const;

@@ -16,6 +16,7 @@ import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { cn } from '@/lib/utils';
 import { BidReviewsList } from '@/pages/da/bid-reviews-panel';
 import { BidParticipationPreview } from './bid-participation-preview';
+import { BudgetAdjustmentPreview, OverBudgetPreview } from './budget-approval-preview';
 import { ContractDocumentPreview } from './contract-document-preview';
 import { PurchaseQuotationPreview } from './purchase-quotation-preview';
 import { PriceMarginPreview } from './price-margin-preview';
@@ -84,6 +85,9 @@ function fullRecordPath(item: PendingApproval): string {
     case 'subcontract_selections':
       // G2 (0246): chọn thầu phụ — trang gói việc có bảng so báo giá.
       return `/tc/chon-thau-phu/${item.entity_id}`;
+    case 'budget_adjustments':
+      // G4 (0249): điều chỉnh ngân sách nằm ở tab Ngân sách của công trình — khối xem trước có liên kết.
+      return '/tc/cong-trinh';
     case 'internal_rental_requests':
       return '/sx/thue-noi-bo';
     case 'stocktakes':
@@ -347,6 +351,11 @@ function ApprovalPreview({ row }: { row: PendingApproval }) {
       {row.entity_type === 'subcontract_selections' && (
         <SubcontractSelectionPreview selectionId={row.entity_id} />
       )}
+      {/* G4 (0249): điều chỉnh ngân sách; hồ sơ vượt ngân sách kèm số dòng ngân sách. */}
+      {row.entity_type === 'budget_adjustments' && (
+        <BudgetAdjustmentPreview adjustmentId={row.entity_id} />
+      )}
+      {row.subject === 'over_budget' && <OverBudgetPreview approvalId={row.id} />}
       {row.entity_type === 'site_surveys' ? (
         <SurveyReportPreview surveyId={row.entity_id} />
       ) : (

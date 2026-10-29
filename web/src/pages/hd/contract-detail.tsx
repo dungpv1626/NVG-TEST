@@ -59,6 +59,7 @@ import { TermsPanel } from './terms-panel';
 import { SignContractDialog } from './sign-contract-dialog';
 import { SignedScanLink } from './signed-scan-link';
 import { SignedScanPanel } from './signed-scan-panel';
+import { ContractGuaranteesCard } from './contract-guarantees-card';
 import { LiquidationCard } from './liquidation-card';
 import { openWorkspaceTab, revealById } from '@/components/ui/split-workspace';
 
@@ -72,6 +73,7 @@ export function ContractDetailPage() {
   // (Ban Giám đốc) ghi nhận ký, quyết toán, hủy sau duyệt; Thi công hoặc BGĐ mở công trình.
   // Nút ẩn hẳn khi không có quyền — không hiện rồi báo lỗi (CLAUDE.md 5.4).
   const canApprove = useCan('HD', 'approve');
+  const canEditKt = useCan('KT', 'edit');
   const canApproveSite = useCan('TC', 'approve');
 
   const { data, isLoading, error } = useContract(id);
@@ -479,6 +481,14 @@ export function ContractDetailPage() {
                   <SignedScanPanel
                     contract={contract}
                     canManage={canApprove || (canEdit && isResponsible)}
+                  />
+                )}
+                {(contract.stage === 'da_duyet' ||
+                  contract.stage === 'da_ky' ||
+                  contract.stage === 'hoan_thanh') && (
+                  <ContractGuaranteesCard
+                    contractId={contract.id}
+                    canWrite={canApprove || (canEdit && isResponsible) || canEditKt}
                   />
                 )}
                 {(contract.stage === 'da_ky' || contract.stage === 'hoan_thanh') && (
