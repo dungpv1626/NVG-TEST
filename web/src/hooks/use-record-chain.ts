@@ -16,6 +16,8 @@ export interface ChainRecord {
   code: string;
   title: string;
   stage: string;
+  /** Hợp đồng: thiet_ke · thi_cong · tron_goi (0243); hồ sơ khác rỗng. */
+  scope_kind: string | null;
 }
 
 export function useRecordChain(entityType: ChainKind, id: string | undefined) {

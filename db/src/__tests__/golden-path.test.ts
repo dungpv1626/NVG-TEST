@@ -1077,8 +1077,10 @@ describeDb(
         {
           p_source_type: 'design_projects',
           p_source_id: projectId,
-          p_type: 'thiet_ke',
-          p_title: `${TEST_PREFIX} GP2 Hợp đồng thiết kế nhà phố`,
+          // 0243: trọn gói = loại thi công + phạm vi tron_goi (mẫu NVO-HĐ-02).
+          p_type: 'thi_cong',
+          p_title: `${TEST_PREFIX} GP2 Hợp đồng thiết kế – thi công trọn gói nhà phố`,
+          p_scope_kind: 'tron_goi',
         },
       );
       check('soạn hợp đồng', contractError);

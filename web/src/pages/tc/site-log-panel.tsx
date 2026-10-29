@@ -25,6 +25,7 @@ import {
   formatDate,
   type SiteLogType,
   toNvgDateInput,
+  weekStartOf,
 } from '@nvg/shared';
 import { VoiceRecorder } from '@/components/media/voice-recorder';
 import { Button } from '@/components/ui/button';
@@ -38,8 +39,10 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { siteLogAudioUrl, uploadSiteLogAudio } from '@/hooks/use-site-log-voice';
 import { uploadConstructionPhotos } from '@/hooks/use-site-photos';
 import { useAiStatus } from '@/hooks/use-site-surveys';
+import { useRecordPlanProgress } from '@/hooks/use-site-plan';
 import { draftSiteLog } from '@/lib/ai-api';
 import { PhotoStrip, SitePhotoPicker } from './site-photo-picker';
+import { PlanTickList, ticksToRows, type PlanTicks } from './site-log-plan-ticks';
 
 const TODAY = () => toNvgDateInput(new Date());
 
@@ -53,6 +56,8 @@ interface LogDraft {
   voicePath: string | null;
   voiceTranscript: string | null;
   aiDrafted: boolean;
+  /** T3 (0242): đầu việc tuần này đã làm hôm nay — khối lượng và «xong» tuỳ chọn. */
+  planTicks: PlanTicks;
 }
 
 const EMPTY_DRAFT = (): LogDraft => ({
@@ -64,6 +69,7 @@ const EMPTY_DRAFT = (): LogDraft => ({
   voicePath: null,
   voiceTranscript: null,
   aiDrafted: false,
+  planTicks: {},
 });
 
 /**
@@ -95,6 +101,7 @@ export function SiteLogPanel({
 }) {
   const { data: logs } = useSiteLogs(siteId);
   const createLog = useCreateSiteLog();
+  const recordProgress = useRecordPlanProgress();
 
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<LogDraft>(() => readDraft(siteId));
@@ -118,7 +125,13 @@ export function SiteLogPanel({
 
   useEffect(() => {
     try {
-      if (form.content || form.workforceCount || form.weather || form.voicePath) {
+      if (
+        form.content ||
+        form.workforceCount ||
+        form.weather ||
+        form.voicePath ||
+        Object.keys(form.planTicks).length > 0
+      ) {
         sessionStorage.setItem(draftKey(siteId), JSON.stringify(form));
       } else {
         sessionStorage.removeItem(draftKey(siteId));
@@ -177,7 +190,7 @@ export function SiteLogPanel({
       // Tải ảnh TRƯỚC, ghi nhật ký SAU: nhật ký không bao giờ trỏ vào ảnh chưa có.
       const photoPaths =
         photos.length > 0 ? await uploadConstructionPhotos(siteId, 'nhat-ky', photos) : [];
-      await createLog.mutateAsync({
+      const logId = await createLog.mutateAsync({
         siteId,
         companyId,
         values: {
@@ -196,9 +209,19 @@ export function SiteLogPanel({
             : {}),
         },
       });
+      const ticks = ticksToRows(form.planTicks);
       setForm(EMPTY_DRAFT());
       setPhotos([]);
       setVoiceInfo(null);
+      if (ticks.length > 0) {
+        try {
+          await recordProgress.mutateAsync({ siteId, companyId, logId, ticks });
+        } catch (e) {
+          setError(
+            `Đã lưu nhật ký nhưng chưa ghi được đầu việc đã làm: ${toUserMessage(e, 'create')}`,
+          );
+        }
+      }
     } catch (e) {
       setError(toUserMessage(e, 'create'));
     } finally {
@@ -264,6 +287,15 @@ export function SiteLogPanel({
                 placeholder="Việc đã làm, khối lượng, vướng mắc hoặc sự việc tại hiện trường."
               />
             </Field>
+
+            <PlanTickList
+              className="sm:col-span-2"
+              siteId={siteId}
+              weekStart={weekStartOf(form.logDate)}
+              ticks={form.planTicks}
+              disabled={saving}
+              onChange={(planTicks) => setForm((f) => ({ ...f, planTicks }))}
+            />
 
             <Field label="Ngày xảy ra" hint="Ngày việc thật sự xảy ra, không phải ngày nhập.">
               <DateInput

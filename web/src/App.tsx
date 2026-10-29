@@ -195,6 +195,12 @@ const RfiPage = lazy(() => import('@/pages/tc/rfi-page').then((m) => ({ default:
 const SiteRequestsPage = lazy(() =>
   import('@/pages/tc/site-requests-page').then((m) => ({ default: m.SiteRequestsPage })),
 );
+const SiteReportListPage = lazy(() =>
+  import('@/pages/tc/site-report-pages').then((m) => ({ default: m.SiteReportListPage })),
+);
+const SiteReportDetailPage = lazy(() =>
+  import('@/pages/tc/site-report-pages').then((m) => ({ default: m.SiteReportDetailPage })),
+);
 const SiteBoardPage = lazy(() =>
   import('@/pages/tc/site-board-page').then((m) => ({ default: m.SiteBoardPage })),
 );
@@ -484,6 +490,8 @@ const router = createBrowserRouter(
           <Route path="tc/cong-trinh/:id" element={<SiteDetailPage />} />
           <Route path="tc/de-nghi" element={<SiteRequestsPage />} />
           <Route path="tc/bang-theo-doi" element={<SiteBoardPage />} />
+          <Route path="tc/bao-cao" element={<SiteReportListPage />} />
+          <Route path="tc/bao-cao/:id" element={<SiteReportDetailPage />} />
         </Route>
 
         {/* MH — Mua hàng và vật tư (MH-01 → MH-08). Không có màn hình "tạo đơn hàng":

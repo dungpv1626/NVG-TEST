@@ -65,6 +65,9 @@ export interface OpportunityDetailRecord extends OpportunityRecord {
   updated_at: string;
   /** Báo giá không qua khảo sát — lý do do người chịu trách nhiệm ghi (0160). */
   survey_waived_reason: string | null;
+  /** «Chỉ thiết kế» (0243): khách chỉ mua thiết kế. */
+  design_only_at: string | null;
+  design_only_reason: string | null;
 }
 
 export function useOpportunity(id: string | undefined) {
@@ -78,6 +81,7 @@ export function useOpportunity(id: string | undefined) {
         .from('opportunities')
         .select(
           `${OPPORTUNITY_SELECT}, notes, lost_reason, expected_start_date, updated_at, survey_waived_reason, ` +
+            'design_only_at, design_only_reason, ' +
             'customer_full:customers!opportunities_customer_id_customers_id_fk(id, name, contact_person, phone, email)',
         )
         .eq('id', id!)

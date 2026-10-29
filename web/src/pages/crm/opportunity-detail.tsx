@@ -24,7 +24,7 @@ import { DraftContractButton } from '@/components/contract/draft-contract-button
 import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
 import { RecordChain } from '@/components/entity/record-chain';
 import { StepTrack } from '@/components/entity/step-track';
-import { useOpportunityHasContract } from '@/hooks/use-record-chain';
+import { useContractGroup, useMarkDesignOnly } from '@/hooks/use-contract-group';
 import { useStageReadiness } from '@/hooks/use-stage-readiness';
 import { Button } from '@/components/ui/button';
 import { usePromptDialog } from '@/components/ui/prompt-dialog';
@@ -87,9 +87,10 @@ export function OpportunityDetailPage() {
 
   const { data: contractId } = useContractForSource('opportunities', id);
   const { data: readiness = [] } = useStageReadiness('opportunity', id);
-  // Hợp đồng có thể sinh từ gói thầu / hồ sơ thiết kế của cơ hội này — khi đó KHÔNG mời soạn
-  // bản thứ hai (0159; CSDL cũng chặn).
-  const { data: hasContract } = useOpportunityHasContract(id);
+  // Mọi hợp đồng của cơ hội, kể cả sinh từ gói thầu / hồ sơ thiết kế (0243): một hợp đồng thiết
+  // kế + một hợp đồng thi công, hoặc một hợp đồng trọn gói — chỉ mời soạn phạm vi còn trống.
+  const { data: contractGroup } = useContractGroup('opportunity', id);
+  const markDesignOnly = useMarkDesignOnly();
   const { data: history } = useOpportunityStageHistory(id);
   const moveStage = useMoveStage();
   const waiveSurvey = useWaiveSurvey();
@@ -146,6 +147,28 @@ export function OpportunityDetailPage() {
   // Pháp nhân của cơ hội — chọn phiếu khảo sát riêng (NVC / NVO / NVS) và in tên lên phiếu.
   const company = companies?.find((c) => c.id === data.company_id) ?? null;
   const isHandedOver = data.handed_over_at !== null;
+  const designOnly = data.design_only_at !== null;
+  const designContract = contractGroup?.find((c) => c.scope_kind === 'thiet_ke') ?? null;
+  const hasBuildContract = Boolean(contractGroup?.some((c) => c.scope_kind !== 'thiet_ke'));
+  // «Chỉ thiết kế»: đã có hợp đồng thiết kế, chưa có hợp đồng thi công / trọn gói (0243).
+  const canMarkDesignOnly =
+    !stageMeta.isTerminal && !designOnly && designContract !== null && !hasBuildContract;
+
+  async function markAsDesignOnly() {
+    setMoveError(null);
+    const reason = await promptDialog.ask({
+      title: 'Khách chỉ thuê thiết kế?',
+      label: 'Lý do (không bắt buộc) — ghi vào lịch sử cơ hội',
+      confirmLabel: 'Đánh dấu Chỉ thiết kế',
+      required: false,
+    });
+    if (reason === null) return;
+    try {
+      await markDesignOnly.mutateAsync({ opportunityId: data!.id, reason: reason || null });
+    } catch (e) {
+      setMoveError(toUserMessage(e, 'edit'));
+    }
+  }
 
   function openTab(tab: string, anchor?: string) {
     const next = new URLSearchParams(searchParams);
@@ -292,11 +315,13 @@ export function OpportunityDetailPage() {
               nextRequirements={nextRequirements}
               holder={data.owner?.full_name ?? null}
               extra={
-                data.stage === 'dam_phan' ? (
+                contractGroup &&
+                (data.stage === 'dam_phan' || (designContract && !stageMeta.isTerminal)) ? (
                   <NegotiationNextSteps
                     opportunityId={data.id}
                     contractId={contractId}
-                    hasContract={hasContract}
+                    group={contractGroup}
+                    designOnly={designOnly}
                     canEdit={canEdit && !isHandedOver}
                   />
                 ) : undefined
@@ -331,6 +356,16 @@ export function OpportunityDetailPage() {
                     Đánh dấu mất cơ hội
                   </Button>
                 )}
+                {canMarkDesignOnly && (
+                  <Button
+                    variant="secondary"
+                    disabled={markDesignOnly.isPending}
+                    title="Khách chỉ thuê thiết kế: hợp đồng thiết kế ký là cơ hội thành công"
+                    onClick={() => void markAsDesignOnly()}
+                  >
+                    Chỉ thiết kế
+                  </Button>
+                )}
                 {/* Gửi mẫu công trình cho khách — link gắn với cơ hội, tạo xong ghi nhật ký chăm sóc. */}
                 {!stageMeta.isTerminal && (
                   <Button variant="secondary" asChild>
@@ -352,12 +387,14 @@ export function OpportunityDetailPage() {
                 {(data.stage === 'dam_phan' ||
                   (data.stage === 'bao_gia' &&
                     readiness.some((r) => r.requirement === 'offer_sent' && r.met))) &&
-                  (contractId || hasContract === false) && (
+                  contractGroup && (
                     <DraftContractButton
                       sourceType="opportunities"
                       sourceId={data.id}
                       defaultType="thi_cong"
                       existingContractId={contractId}
+                      group={contractGroup}
+                      designOnly={designOnly}
                     />
                   )}
               </div>
@@ -426,6 +463,16 @@ export function OpportunityDetailPage() {
                       : []),
                     ...(data.lost_reason
                       ? [{ label: 'Nguyên nhân mất cơ hội', value: data.lost_reason }]
+                      : []),
+                    ...(designOnly
+                      ? [
+                          {
+                            label: 'Chỉ thiết kế',
+                            value: `Khách chỉ thuê thiết kế (${formatDate(data.design_only_at)})${
+                              data.design_only_reason ? ` — ${data.design_only_reason}` : ''
+                            }`,
+                          },
+                        ]
                       : []),
                   ]}
                 />

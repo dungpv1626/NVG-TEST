@@ -7,10 +7,16 @@
  */
 
 import { Link } from 'react-router-dom';
-import { DESIGN_DISCIPLINE_LABELS, formatDate, formatDateTime } from '@nvg/shared';
+import {
+  CONTRACT_SCOPE_KIND_LABELS,
+  CONTRACT_STAGE_META,
+  DESIGN_DISCIPLINE_LABELS,
+  formatDate,
+  formatDateTime,
+} from '@nvg/shared';
 import { RelatedGroups, type RelatedGroup } from '@/components/entity/entity-detail';
 import { Skeleton } from '@/components/ui/states';
-import { useContractForSource } from '@/hooks/use-contracts';
+import { useContractGroup } from '@/hooks/use-contract-group';
 import {
   useChangeRequests,
   useDesignBriefs,
@@ -59,7 +65,13 @@ export function ContextColumn({
 // ── Hồ sơ liên quan ───────────────────────────────────────────────────────────
 
 function RelatedPanel({ project }: { project: DesignProjectDetailRecord }) {
-  const { data: contractId } = useContractForSource('design_projects', project.id);
+  // 0243: hợp đồng thiết kế và hợp đồng thi công (hoặc một hợp đồng trọn gói) của hồ sơ / cơ hội gốc.
+  const { data: contracts } = useContractGroup('design', project.id);
+  const contractRecords = (contracts ?? []).map((c) => ({
+    label: c.scope_kind ? CONTRACT_SCOPE_KIND_LABELS[c.scope_kind] : 'Hợp đồng',
+    value: `${c.code} — ${CONTRACT_STAGE_META[c.stage].label}`,
+    to: c.contract_id ? `/hd/hop-dong/${c.contract_id}` : undefined,
+  }));
 
   const related: RelatedGroup = {
     title: 'Hồ sơ liên quan',
@@ -74,11 +86,9 @@ function RelatedPanel({ project }: { project: DesignProjectDetailRecord }) {
         value: project.customer.name,
         to: `/crm/khach-hang/${project.customer.id}`,
       },
-      {
-        label: 'Hợp đồng thiết kế',
-        value: contractId ? 'Xem hợp đồng' : 'Chưa lập',
-        to: contractId ? `/hd/hop-dong/${contractId}` : undefined,
-      },
+      ...(contractRecords.length > 0
+        ? contractRecords
+        : [{ label: 'Hợp đồng', value: 'Chưa lập', to: undefined }]),
     ].filter((r): r is NonNullable<typeof r> => Boolean(r)),
   };
 

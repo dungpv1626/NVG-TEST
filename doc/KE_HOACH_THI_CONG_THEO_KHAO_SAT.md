@@ -47,13 +47,13 @@ Theo QĐ-1, tài liệu chỉ ghi thứ tự và tiêu chí xong, không ghi m�
   - tồn tại quá hạn hiện ở cột «Cần chú ý» của bảng theo dõi.
 - **Xong khi:** nghiệm thu ghi được tồn tại, theo dõi được tới lúc đóng, và quá hạn thì báo.
 
-### T3. Kế hoạch tuần và giao việc cho tổ đội
+### T3. Kế hoạch tuần và giao việc cho tổ đội — ĐÃ LÀM (0242)
 - **Làm:**
   - đầu tuần, chỉ huy trưởng lập đầu việc của tuần: tổ, khối lượng mục tiêu, mốc liên quan;
   - nhật ký ngày đánh dấu đầu việc nào đã làm, chọn từ danh sách, không gõ lại.
 - **Xong khi:** cập nhật hằng ngày vẫn trong 5–10 phút (đo bằng chạy thử trên điện thoại).
 
-### T4. Báo cáo tuần / tháng tự tổng hợp
+### T4. Báo cáo tuần / tháng tự tổng hợp — ĐÃ LÀM (0242, chưa có tóm tắt AI)
 - **Làm:**
   - máy dựng báo cáo từ nhật ký, kế hoạch tuần, mốc, đề nghị đang chờ, tồn tại, điểm danh, phát sinh;
   - chỉ huy trưởng chỉ thêm vài câu nhận định rồi gửi Trưởng phòng Thi công;

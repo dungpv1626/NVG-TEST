@@ -1566,6 +1566,7 @@
     "code": "NVO-DC-04",
     "title": "NVO-DC-04 — Hợp đồng nguyên tắc với nhà cung cấp",
     "contract_type": "mua_vat_tu",
+    "scope_kind": null,
     "document_kind": "hop_dong",
     "replaced": [
       "doi_tac_chuc_vu",
@@ -2151,6 +2152,7 @@
     "code": "NVO-HĐ-01",
     "title": "NVO-HĐ-01 — Hợp đồng tư vấn thiết kế nhà ở",
     "contract_type": "thiet_ke",
+    "scope_kind": "thiet_ke",
     "document_kind": "hop_dong",
     "replaced": [
       "dia_diem",
@@ -2885,6 +2887,7 @@
     "code": "NVO-HĐ-02",
     "title": "NVO-HĐ-02 — Hợp đồng thiết kế – thi công trọn gói nhà ở",
     "contract_type": "thi_cong",
+    "scope_kind": "tron_goi",
     "document_kind": "hop_dong",
     "replaced": [
       "dia_diem",
@@ -4329,6 +4332,7 @@
     "code": "NVO-HĐ-03",
     "title": "NVO-HĐ-03 — Hợp đồng thi công phần thô hoặc hoàn thiện",
     "contract_type": "thi_cong",
+    "scope_kind": "thi_cong",
     "document_kind": "hop_dong",
     "replaced": [
       "dia_diem",
@@ -5017,6 +5021,7 @@
     "code": "NVO-HĐ-04",
     "title": "NVO-HĐ-04 — Hợp đồng thiết kế, sản xuất, lắp đặt nội thất",
     "contract_type": "thi_cong",
+    "scope_kind": "thi_cong",
     "document_kind": "hop_dong",
     "replaced": [
       "doi_tac_dia_chi",
@@ -5528,6 +5533,7 @@
     "code": "NVO-HĐ-05",
     "title": "NVO-HĐ-05 — Hợp đồng giao khoán nhân công tổ đội",
     "contract_type": "khoan_thau_phu",
+    "scope_kind": null,
     "document_kind": "hop_dong",
     "replaced": [
       "dia_diem",
@@ -6012,6 +6018,7 @@
     "code": "NVO-HĐ-06",
     "title": "NVO-HĐ-06 — Hợp đồng mua bán vật tư xây dựng",
     "contract_type": "mua_vat_tu",
+    "scope_kind": null,
     "document_kind": "hop_dong",
     "replaced": [
       "doi_tac_chuc_vu",

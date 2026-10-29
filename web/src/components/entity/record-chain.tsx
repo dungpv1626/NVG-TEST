@@ -10,6 +10,7 @@
 import { Link } from 'react-router-dom';
 import {
   BIDDING_STAGE_META,
+  CONTRACT_SCOPE_KIND_LABELS,
   CONTRACT_STAGE_META,
   DESIGN_STAGE_META,
   OPPORTUNITY_STAGE_META,
@@ -71,10 +72,16 @@ export function RecordChain({ kind, id }: { kind: ChainKind; id: string }) {
 function ChainLink({ record, current }: { record: ChainRecord; current: boolean }) {
   const meta = KIND[record.kind];
   const stage = meta.stages[record.stage]?.label ?? record.stage;
+  // 0243: một cơ hội có thể có hợp đồng thiết kế VÀ hợp đồng thi công — ghi rõ hợp đồng nào.
+  const scope = record.scope_kind as keyof typeof CONTRACT_SCOPE_KIND_LABELS | null;
+  const label =
+    record.kind === 'contract' && scope && CONTRACT_SCOPE_KIND_LABELS[scope]
+      ? CONTRACT_SCOPE_KIND_LABELS[scope]
+      : meta.label;
   const body = (
     <>
       <span className="block text-xs text-ink-subtle">
-        {meta.label} · <span className="font-mono">{record.code}</span>
+        {label} · <span className="font-mono">{record.code}</span>
       </span>
       <span className="block text-xs">{current ? `${stage} — đang xem` : stage}</span>
     </>

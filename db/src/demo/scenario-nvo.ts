@@ -393,8 +393,10 @@ export async function loadNvo(): Promise<'created' | 'skipped'> {
     await thietKe.rpc('create_contract_from_source', {
       p_source_type: 'design_projects',
       p_source_id: project.id,
-      p_type: 'thiet_ke',
+      // 0243: trọn gói = loại thi công + phạm vi tron_goi; hợp đồng thiết kế không mở được bàn giao.
+      p_type: 'thi_cong',
       p_title: clean('Hợp đồng thiết kế và thi công trọn gói nhà phố Tân Mai'),
+      p_scope_kind: 'tron_goi',
     }),
   ) as string;
 

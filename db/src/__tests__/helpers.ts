@@ -154,10 +154,11 @@ export async function attachContractDocument(
 }
 
 /**
- * Hợp đồng thiết kế ĐÃ KÝ cho một hồ sơ thiết kế, dựng thẳng bằng SQL. Từ 0217 (anh Dũng: «không
- * thi công trước hợp đồng») bàn giao thiết kế sang thi công bị chặn khi chưa có hợp đồng đã ký.
+ * Hợp đồng THI CÔNG ĐÃ KÝ cho một hồ sơ thiết kế, dựng thẳng bằng SQL. Từ 0217 (anh Dũng: «không
+ * thi công trước hợp đồng») bàn giao thiết kế sang thi công bị chặn khi chưa có hợp đồng đã ký;
+ * từ 0243 hợp đồng THIẾT KẾ đã ký không đủ — phải là hợp đồng thi công / trọn gói.
  */
-export async function createSignedDesignContract(
+export async function createSignedBuildContract(
   companyId: string,
   designProjectId: string,
 ): Promise<string> {
@@ -167,7 +168,7 @@ export async function createSignedDesignContract(
     const [row] = await sql<{ id: string }[]>`
       INSERT INTO contracts (company_id, code, title, type, stage, source_type, source_id, signed_date)
       VALUES (${companyId}, ${'HDTEST-' + crypto.randomUUID().slice(0, 8)},
-              ${TEST_PREFIX + ' Hợp đồng thiết kế đã ký'}, 'thiet_ke', 'da_ky', 'design_projects',
+              ${TEST_PREFIX + ' Hợp đồng thi công đã ký'}, 'thi_cong', 'da_ky', 'design_projects',
               ${designProjectId}, current_date)
       RETURNING id`;
     return row!.id;

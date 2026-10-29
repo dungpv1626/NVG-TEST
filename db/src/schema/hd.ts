@@ -68,6 +68,12 @@ export const contracts = pgTable(
     type: contractTypeEnum('type').notNull(),
     /** Hình thức giá (0171) — chọn mẫu văn bản và điều khoản điều chỉnh giá. */
     priceForm: contractPriceFormEnum('price_form'),
+    /**
+     * Phạm vi so với cơ hội (0243): thiet_ke · thi_cong · tron_goi (thiết kế – thi công trọn gói,
+     * thay cho cả hai). Trigger suy từ `type`; rỗng với loại khác. Một cơ hội tối đa một hợp đồng
+     * thiết kế + một hợp đồng thi công, hoặc một hợp đồng trọn gói.
+     */
+    scopeKind: text('scope_kind'),
     stage: contractStageEnum('stage').notNull().default('nhap'),
 
     sourceType: contractSourceTypeEnum('source_type'),
@@ -260,6 +266,8 @@ export const contractTemplates = pgTable(
     contractType: contractTypeEnum('contract_type'),
     /** hop_dong · phu_luc · thanh_ly (0229). */
     documentKind: text('document_kind').notNull().default('hop_dong'),
+    /** Mẫu trọn gói (NVO-HĐ-02, NVC-HĐ-02) hay thi công / thiết kế — soạn văn bản từ mẫu đặt `contracts.scope_kind` (0243). */
+    scopeKind: text('scope_kind'),
     priceForm: contractPriceFormEnum('price_form'),
     storagePath: text('storage_path').notNull(),
     fileName: text('file_name').notNull(),

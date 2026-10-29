@@ -50,6 +50,8 @@ interface ContractTemplateAsset {
   title: string;
   /** Rỗng với phụ lục / biên bản thanh lý (0229) và bộ mẫu hồ sơ dự thầu (0236). */
   contract_type?: string | null;
+  /** thiet_ke · thi_cong · tron_goi (0243); rỗng với loại khác. */
+  scope_kind?: string | null;
   /** hop_dong · phu_luc · thanh_ly (0229) · ho_so_du_thau · thuong_thao (0236). */
   document_kind?: string;
   tags: Record<string, unknown>;
@@ -373,6 +375,7 @@ async function main() {
       ).map((m) => ({
         ...m,
         contract_type: m.contract_type ?? null,
+        scope_kind: m.scope_kind ?? null,
         payment_milestones: m.payment_milestones ?? [],
       }));
       for (const m of manifest) {
@@ -386,7 +389,8 @@ async function main() {
             UPDATE public.contract_templates
             SET payment_milestones = ${JSON.stringify(m.payment_milestones)}::jsonb,
                 free_fields = ${JSON.stringify(m.free_fields)}::jsonb,
-                options = ${JSON.stringify(m.options)}::jsonb
+                options = ${JSON.stringify(m.options)}::jsonb,
+                scope_kind = ${m.scope_kind}
             WHERE id = ${same.id}`);
           templateCount++;
           continue;
@@ -403,9 +407,9 @@ async function main() {
           WHERE company_id = ${companyId} AND title = ${m.title} AND is_active`);
         await db.execute(sqlOp`
           INSERT INTO public.contract_templates
-            (company_id, title, contract_type, document_kind, storage_path, file_name, tags,
+            (company_id, title, contract_type, scope_kind, document_kind, storage_path, file_name, tags,
              payment_milestones, free_fields, options, notes)
-          VALUES (${companyId}, ${m.title}, ${m.contract_type}::public.contract_type,
+          VALUES (${companyId}, ${m.title}, ${m.contract_type}::public.contract_type, ${m.scope_kind},
                   ${m.document_kind ?? 'hop_dong'}, ${path},
                   ${m.file}, ${JSON.stringify(m.tags)}::jsonb,
                   ${JSON.stringify(m.payment_milestones)}::jsonb,

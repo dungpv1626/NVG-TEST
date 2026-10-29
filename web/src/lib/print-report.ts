@@ -50,6 +50,8 @@ const PAGE_STYLE = `
   .photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .photos figure { margin: 0; break-inside: avoid; }
   .photos img { width: 100%; height: 150px; object-fit: cover; border: 1px solid #DCDFE4; }
+  .letterhead { display: flex; justify-content: space-between; gap: 16px; border-bottom: 2px solid #172B4D; padding-bottom: 8px; margin-bottom: 16px; font-size: 11px; }
+  .letterhead strong { font-size: 13px; display: block; }
   .photos figcaption { font-size: 10px; color: #44546F; margin-top: 2px; word-break: break-word; }
   @media print {
     body { margin: 0.5cm; }
@@ -60,7 +62,7 @@ const PAGE_STYLE = `
  * Mở cửa sổ in cho một báo cáo. `bodyHtml` do trang gọi tự dựng sẵn (bảng/danh sách đã escape
  * chữ động) — hàm này chỉ lo khung trang in (tiêu đề, thời điểm xuất, style) và gọi in.
  */
-export function openPrintReport(title: string, bodyHtml: string): void {
+export function openPrintReport(title: string, bodyHtml: string, letterheadHtml = ''): void {
   const win = window.open('', '_blank', 'width=960,height=720');
   if (!win) return; // popup bị chặn — không có cách ép, người dùng tự cho phép rồi bấm lại
 
@@ -73,6 +75,7 @@ export function openPrintReport(title: string, bodyHtml: string): void {
 <style>${PAGE_STYLE}</style>
 </head>
 <body>
+${letterheadHtml}
 <h1>${escapeHtml(title)}</h1>
 <p class="meta">Nhà Việt Group — Xuất lúc ${escapeHtml(generatedAt)}</p>
 ${bodyHtml}

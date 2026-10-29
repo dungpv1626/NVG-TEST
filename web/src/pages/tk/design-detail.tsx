@@ -13,8 +13,10 @@
  */
 
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
+  CONTRACT_SCOPE_KIND_LABELS,
+  CONTRACT_STAGE_META,
   DESIGN_DISCIPLINES,
   DESIGN_STAGE_META,
   designDisplayStatus,
@@ -29,6 +31,11 @@ import { Button } from '@/components/ui/button';
 import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { SectionHelp } from '@/components/ui/section-help';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
+import {
+  useContractGroup,
+  useDesignHandoverContracts,
+  type HandoverContractRow,
+} from '@/hooks/use-contract-group';
 import { useContractForSource } from '@/hooks/use-contracts';
 import {
   useDesignProject,
@@ -61,6 +68,10 @@ export function DesignDetailPage() {
   const { data, isLoading, error } = useDesignProject(id);
   const { data: findings } = useDesignSync(id);
   const { data: contractId } = useContractForSource('design_projects', id);
+  // 0243: hồ sơ thiết kế / cơ hội gốc có thể có hợp đồng thiết kế VÀ hợp đồng thi công. Bàn giao
+  // sang thi công chỉ mở bằng hợp đồng thi công / trọn gói đã ký — hợp đồng thiết kế không đủ.
+  const { data: contractGroup } = useContractGroup('design', id);
+  const { data: handoverContracts } = useDesignHandoverContracts(id);
   const updateProject = useUpdateDesignProject();
   const moveStage = useMoveDesignStage();
   const handover = useHandoverToConstruction();
@@ -167,8 +178,9 @@ export function DesignDetailPage() {
             <DraftContractButton
               sourceType="design_projects"
               sourceId={project.id}
-              defaultType="thiet_ke"
+              defaultType="thi_cong"
               existingContractId={contractId}
+              group={contractGroup}
             />
           )}
           <Button
@@ -214,6 +226,10 @@ export function DesignDetailPage() {
         >
           {actionError}
         </p>
+      )}
+
+      {canEdit && project.handed_over_at === null && project.stage !== 'dung_thiet_ke' && (
+        <HandoverGate contracts={handoverContracts} />
       )}
 
       <DesignWorkspace
@@ -400,5 +416,50 @@ export function DesignDetailPage() {
         ]}
       />
     </>
+  );
+}
+
+/**
+ * Hợp đồng nào mở cổng «Bàn giao thi công» (0243): hợp đồng thi công hoặc thiết kế – thi công trọn
+ * gói ĐÃ KÝ, của hồ sơ này hay của cơ hội gốc. Hợp đồng thiết kế đã ký không đủ — nói ra trước để
+ * người bấm bàn giao không gặp câu từ chối của CSDL mới biết.
+ */
+function HandoverGate({ contracts }: { contracts: readonly HandoverContractRow[] | undefined }) {
+  if (!contracts) return null;
+  const signed = contracts.find((c) => c.signed);
+  const pending = contracts.find((c) => !c.signed);
+  const shown = signed ?? pending;
+  const code = shown ? (
+    shown.contract_id ? (
+      <Link
+        to={`/hd/hop-dong/${shown.contract_id}`}
+        className="font-mono font-medium text-brand underline-offset-2 hover:underline"
+      >
+        {shown.code}
+      </Link>
+    ) : (
+      <span className="font-mono">{shown.code}</span>
+    )
+  ) : null;
+
+  return (
+    <p className="mb-3 rounded-sm bg-surface px-3 py-2 text-sm text-ink">
+      {signed ? (
+        <>
+          Bàn giao thi công gắn {CONTRACT_SCOPE_KIND_LABELS[signed.scope_kind].toLowerCase()} {code}{' '}
+          (đã ký).
+        </>
+      ) : pending ? (
+        <>
+          Bàn giao thi công cần {CONTRACT_SCOPE_KIND_LABELS[pending.scope_kind].toLowerCase()}{' '}
+          {code} được ký — đang ở bước «{CONTRACT_STAGE_META[pending.stage].label}».
+        </>
+      ) : (
+        <>
+          Bàn giao thi công cần hợp đồng thi công (hoặc thiết kế – thi công trọn gói) đã ký. Hợp
+          đồng thiết kế không đủ để mở thi công.
+        </>
+      )}
+    </p>
   );
 }

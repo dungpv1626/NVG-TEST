@@ -57,6 +57,9 @@ CATALOG = {
     'NVS-DC-04': ('mua_vat_tu', 'Hợp đồng nguyên tắc với nhà cung cấp'),
 }
 
+# Mẫu thiết kế – thi công trọn gói (loại thi_cong) — `contract_templates.scope_kind` = tron_goi (0243).
+DESIGN_BUILD = {'NVC-HD-02', 'NVO-HD-02'}
+
 # Văn bản kèm theo hợp đồng (0229, anh Dũng 27/10/2026): phụ lục DC-01 gồm BA mẫu trong một tệp (điều chỉnh khối
 # lượng / phát sinh, gia hạn, điều chỉnh nội dung khác) — tách thành ba mẫu theo bảng tiêu đề «CÔNG TY…» mở đầu mỗi mẫu.
 # Hợp đồng lao động (DC-05, DC-06), biên bản nghiệm thu (DC-02), bộ biểu mẫu dự thầu chưa nạp (phân hệ khác).
@@ -677,6 +680,8 @@ def main():
             'code': key.replace('-HD-', '-HĐ-'),
             'title': f'{key.replace("-HD-", "-HĐ-")} — {title}',
             'contract_type': contract_type,
+            # 0243: mẫu trọn gói (thiết kế + thi công) thay cho cả hai hợp đồng của một cơ hội.
+            'scope_kind': 'tron_goi' if key in DESIGN_BUILD else (contract_type if contract_type in ('thiet_ke', 'thi_cong') else None),
             'document_kind': 'hop_dong',
             'replaced': sorted(set(report['replaced'])),
             'payment_table': report['payment_table'],

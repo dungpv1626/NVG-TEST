@@ -55,6 +55,8 @@ import { WarrantyPanel } from './warranty-panel';
 import { SiteChangePanel } from './site-change-panel';
 import { SiteIssuePanel } from './site-issue-panel';
 import { useSiteIssues } from '@/hooks/use-site-changes';
+import { SiteWeekPlanPanel } from './site-week-plan-panel';
+import { SiteReportPanel } from './site-report-panel';
 
 const EM_DASH = '—';
 
@@ -278,6 +280,20 @@ export function SiteDetailPage() {
             content: (
               <SiteLogPanel siteId={site.id} companyId={site.company_id} readOnly={readOnly} />
             ),
+          },
+          {
+            // T3 (0242): đầu việc của tuần cho từng tổ đội — nhật ký ngày chỉ đánh dấu.
+            id: 'ke-hoach',
+            label: 'Kế hoạch tuần',
+            content: (
+              <SiteWeekPlanPanel siteId={site.id} companyId={site.company_id} readOnly={readOnly} />
+            ),
+          },
+          {
+            // T4 (0242): báo cáo tuần / tháng máy tự tổng hợp; chỉ huy trưởng thêm nhận định rồi gửi.
+            id: 'bao-cao',
+            label: 'Báo cáo tuần',
+            content: <SiteReportPanel siteId={site.id} readOnly={readOnly} />,
           },
           {
             // Đợt 2 — 2A: nghiệm thu từng mốc trước khi che khuất (Quy chuẩn Nhà Việt One).

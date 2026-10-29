@@ -6,7 +6,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { canExecuteAmendment, summarizeContractValue } from '../hd';
+import {
+  canExecuteAmendment,
+  contractKindLabel,
+  remainingContractKinds,
+  summarizeContractValue,
+} from '../hd';
 
 describe('HD — giá trị hợp đồng và công nợ (HD-03)', () => {
   it('cộng phát sinh đã duyệt vào giá trị gốc', () => {
@@ -80,5 +85,46 @@ describe('HD — điều kiện thực hiện phát sinh (HD-04)', () => {
         emergencyAuthorizedBy: null,
       }),
     ).toBe(false);
+  });
+});
+
+describe('HD — một hợp đồng thiết kế + một hợp đồng thi công mỗi cơ hội (0243)', () => {
+  const c = (scope_kind: string | null, stage = 'nhap') => ({ scope_kind, stage });
+
+  it('chưa có hợp đồng thì soạn được cả ba phạm vi', () => {
+    expect(remainingContractKinds([])).toEqual(['thiet_ke', 'thi_cong', 'tron_goi']);
+  });
+
+  it('có hợp đồng thiết kế thì còn hợp đồng thi công, không còn trọn gói', () => {
+    expect(remainingContractKinds([c('thiet_ke', 'da_ky')])).toEqual(['thi_cong']);
+  });
+
+  it('có hợp đồng thi công thì còn hợp đồng thiết kế', () => {
+    expect(remainingContractKinds([c('thi_cong')])).toEqual(['thiet_ke']);
+  });
+
+  it('đủ cặp, hoặc có trọn gói, hoặc loại khác thì hết chỗ', () => {
+    expect(remainingContractKinds([c('thiet_ke'), c('thi_cong')])).toEqual([]);
+    expect(remainingContractKinds([c('tron_goi')])).toEqual([]);
+    expect(remainingContractKinds([c(null)])).toEqual([]);
+  });
+
+  it('hợp đồng đã hủy không tính', () => {
+    expect(remainingContractKinds([c('tron_goi', 'huy')])).toEqual([
+      'thiet_ke',
+      'thi_cong',
+      'tron_goi',
+    ]);
+  });
+
+  it('«Chỉ thiết kế» thì không còn hợp đồng thi công', () => {
+    expect(remainingContractKinds([c('thiet_ke', 'da_ky')], true)).toEqual([]);
+    expect(remainingContractKinds([], true)).toEqual(['thiet_ke']);
+  });
+
+  it('nhãn loại hợp đồng phân biệt trọn gói', () => {
+    expect(contractKindLabel('thi_cong', 'tron_goi')).toBe('Hợp đồng thiết kế – thi công trọn gói');
+    expect(contractKindLabel('thi_cong', 'thi_cong')).toBe('Hợp đồng thi công');
+    expect(contractKindLabel('thiet_ke', null)).toBe('Hợp đồng thiết kế');
   });
 });

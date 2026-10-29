@@ -15,7 +15,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   attachContractDocument,
-  createSignedDesignContract,
+  createSignedBuildContract,
   ACCOUNTS,
   anonClient,
   hasCredentials,
@@ -2260,7 +2260,7 @@ describeDb('TK — dự án thiết kế, phiên bản bản vẽ và bàn giao'
         progress_percent: 100,
       });
     }
-    await createSignedDesignContract(project.companyId, project.id);
+    await createSignedBuildContract(project.companyId, project.id);
   }
 
   it('CSDL cấp số phiên bản theo TỪNG bộ môn, không đánh số chung cả dự án (TK-05)', async () => {
@@ -3048,7 +3048,7 @@ describeDb('HD — hợp đồng, điều khoản và phát sinh', () => {
     expect(data!.code).toMatch(/^NVC-HD-\d{4}-\d{4}$/);
   });
 
-  it('một hồ sơ nguồn chỉ sinh MỘT hợp đồng — hai bản là đếm doanh thu hai lần', async () => {
+  it('một cơ hội chỉ sinh MỘT hợp đồng thi công — hai bản là đếm doanh thu hai lần (0243)', async () => {
     const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
     const source = await createSourceOpportunity(kd);
     await createContract(kd, source);

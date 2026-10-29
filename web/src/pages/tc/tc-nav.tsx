@@ -23,15 +23,13 @@ export function TcNav() {
     { to: '/tc/cong-trinh', label: 'Công trình', show: true },
     { to: '/tc/bang-theo-doi', label: 'Bảng theo dõi', show: true },
     { to: '/tc/de-nghi', label: 'Theo dõi đề nghị', show: true },
+    { to: '/tc/bao-cao', label: 'Báo cáo công trường', show: true },
     { to: '/nen/phan-cong', label: 'Phân công', show: managesSites || canViewNen },
     { to: '/ns/cham-cong', label: 'Chấm công công trường', show: confirmsTimesheets },
   ].filter((i) => i.show);
 
   return (
-    <nav
-      className="mb-4 flex gap-1.5 overflow-x-auto"
-      aria-label="Màn hình trong phân hệ"
-    >
+    <nav className="mb-4 flex gap-1.5 overflow-x-auto" aria-label="Màn hình trong phân hệ">
       {items.map((item) => (
         <NavLink
           key={item.to}

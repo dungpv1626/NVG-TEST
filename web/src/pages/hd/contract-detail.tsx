@@ -16,7 +16,7 @@ import {
   CONTRACT_SOURCE_LABELS,
   CONTRACT_SOURCE_ROUTES,
   CONTRACT_STAGE_META,
-  CONTRACT_TYPE_LABELS,
+  contractKindLabel,
   SITE_STAGE_META,
   contractDisplayStatus,
   contractOpensSite,
@@ -485,7 +485,10 @@ export function ContractDetailPage() {
                 <DetailFields
                   fields={[
                     { label: 'Trạng thái', value: CONTRACT_STAGE_META[contract.stage].label },
-                    { label: 'Loại hợp đồng', value: CONTRACT_TYPE_LABELS[contract.type] },
+                    {
+                      label: 'Loại hợp đồng',
+                      value: contractKindLabel(contract.type, contract.scope_kind),
+                    },
                     { label: 'Mã hồ sơ nội bộ', value: contract.code },
                     {
                       label: 'Số hợp đồng',

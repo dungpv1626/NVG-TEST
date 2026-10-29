@@ -28,6 +28,7 @@ vi.mock('@/hooks/use-design-surveys', () => ({ useDesignSurveys: () => empty }))
 vi.mock('@/hooks/use-survey-photos', () => ({ useSurveyPhotos: () => empty }));
 vi.mock('@/hooks/use-estimates', () => ({ useEstimates: () => empty }));
 vi.mock('@/hooks/use-contracts', () => ({ useContractForSource: () => empty }));
+vi.mock('@/hooks/use-contract-group', () => ({ useContractGroup: () => empty }));
 
 const { OverviewPanel } = await import('../overview/overview-panel');
 

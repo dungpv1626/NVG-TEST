@@ -11,7 +11,7 @@
 
 import {
   CONTRACT_STAGE_META,
-  CONTRACT_TYPE_LABELS,
+  contractKindLabel,
   contractDisplayStatus,
   formatCurrency,
 } from '@nvg/shared';
@@ -48,7 +48,7 @@ export function ContractListPage() {
     companyId: c.company_id,
     createdAt: c.created_at,
     stageLabel: CONTRACT_STAGE_META[c.stage].label,
-    typeLabel: CONTRACT_TYPE_LABELS[c.type],
+    typeLabel: contractKindLabel(c.type, c.scope_kind),
     partnerName: c.customer?.name ?? null,
     value: c.value,
     daysLeft: daysLeftOf.get(c.id) ?? null,

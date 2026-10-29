@@ -145,6 +145,11 @@ export const opportunities = pgTable(
     surveyWaivedAt: timestamp('survey_waived_at', { withTimezone: true }),
     surveyWaivedBy: uuid('survey_waived_by').references(() => users.id, { onDelete: 'set null' }),
 
+    /** Khách chỉ mua thiết kế (0243, chỉ qua `mark_opportunity_design_only`): hợp đồng thiết kế ký là thắng. */
+    designOnlyAt: timestamp('design_only_at', { withTimezone: true }),
+    designOnlyReason: text('design_only_reason'),
+    designOnlyBy: uuid('design_only_by').references(() => users.id, { onDelete: 'set null' }),
+
     /**
      * Đã bàn giao sang DA/TK chưa (CRM-06). Sau khi bàn giao, cơ hội chuyển chế độ chỉ xem.
      */

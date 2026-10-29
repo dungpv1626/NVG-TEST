@@ -1380,6 +1380,7 @@
     "code": "NVS-DC-04",
     "title": "NVS-DC-04 — Hợp đồng nguyên tắc với nhà cung cấp",
     "contract_type": "mua_vat_tu",
+    "scope_kind": null,
     "document_kind": "hop_dong",
     "replaced": [
       "doi_tac_chuc_vu",
@@ -1996,6 +1997,7 @@
     "code": "NVS-HĐ-01",
     "title": "NVS-HĐ-01 — Hợp đồng mua bán giàn giáo, kết cấu thép",
     "contract_type": "mua_ban",
+    "scope_kind": null,
     "document_kind": "hop_dong",
     "replaced": [
       "doi_tac_chuc_vu",
@@ -2890,6 +2892,7 @@
     "code": "NVS-HĐ-02",
     "title": "NVS-HĐ-02 — Hợp đồng cho thuê giàn giáo (kèm biên bản giao nhận, thu hồi)",
     "contract_type": "cho_thue",
+    "scope_kind": null,
     "document_kind": "hop_dong",
     "replaced": [
       "dia_diem",
@@ -4568,6 +4571,7 @@
     "code": "NVS-HĐ-03",
     "title": "NVS-HĐ-03 — Hợp đồng gia công, sản xuất theo đơn",
     "contract_type": "mua_ban",
+    "scope_kind": null,
     "document_kind": "hop_dong",
     "replaced": [
       "doi_tac_chuc_vu",
@@ -5131,6 +5135,7 @@
     "code": "NVS-HĐ-04",
     "title": "NVS-HĐ-04 — Hợp đồng nguyên tắc với khách hàng thường xuyên",
     "contract_type": "mua_ban",
+    "scope_kind": null,
     "document_kind": "hop_dong",
     "replaced": [
       "doi_tac_chuc_vu",
@@ -5980,6 +5985,7 @@
     "code": "NVS-HĐ-05",
     "title": "NVS-HĐ-05 — Hợp đồng cho thuê, bán nội bộ (NVC / NVO)",
     "contract_type": "cho_thue",
+    "scope_kind": null,
     "document_kind": "hop_dong",
     "replaced": [
       "ngay_ky",

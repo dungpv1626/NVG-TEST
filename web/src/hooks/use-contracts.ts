@@ -11,6 +11,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   AmendmentStage,
   ContractPriceForm,
+  ContractScopeKind,
   ContractSourceType,
   ContractStage,
   ContractTermType,
@@ -27,6 +28,8 @@ export interface ContractRecord {
   company_id: string;
   title: string;
   type: ContractType;
+  /** thiet_ke · thi_cong · tron_goi (0243); rỗng với loại khác. */
+  scope_kind: ContractScopeKind | null;
   stage: ContractStage;
   value: MoneyValue | null;
   collected_amount: MoneyValue;
@@ -39,7 +42,7 @@ export interface ContractRecord {
 }
 
 const CONTRACT_SELECT =
-  'id, code, contract_number, company_id, title, type, stage, value, collected_amount, ' +
+  'id, code, contract_number, company_id, title, type, scope_kind, stage, value, collected_amount, ' +
   'signed_date, end_date, responsible_user_id, created_at, ' +
   'customer:customers!contracts_customer_id_customers_id_fk(id, name), ' +
   'responsible:users!contracts_responsible_user_id_users_id_fk(full_name)';
@@ -129,20 +132,30 @@ export function useCreateContractFromSource() {
   return useMutation<
     string,
     Error,
-    { sourceType: ContractSourceType; sourceId: string; type: ContractType; title?: string }
+    {
+      sourceType: ContractSourceType;
+      sourceId: string;
+      type: ContractType;
+      title?: string;
+      /** tron_goi = thiết kế – thi công trọn gói (loại thi_cong, 0243). */
+      scopeKind?: ContractScopeKind | null;
+    }
   >({
-    mutationFn: async ({ sourceType, sourceId, type, title }) => {
+    mutationFn: async ({ sourceType, sourceId, type, title, scopeKind }) => {
       const { data, error } = await supabase.rpc('create_contract_from_source', {
         p_source_type: sourceType,
         p_source_id: sourceId,
         p_type: type,
         p_title: title ?? null,
+        p_scope_kind: scopeKind ?? null,
       });
       if (error) throw error;
       return data as string;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      void queryClient.invalidateQueries({ queryKey: ['contract-group'] });
+      void queryClient.invalidateQueries({ queryKey: ['record-chain'] });
     },
   });
 }
@@ -555,6 +568,9 @@ export function useContractForSource(
         .eq('source_id', sourceId!)
         .neq('stage', 'huy')
         .is('deleted_at', null)
+        // 0243: hồ sơ thiết kế có thể sinh hợp đồng thiết kế VÀ hợp đồng thi công — lấy bản mới nhất.
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
       if (error) throw new Error(error.message);
       return (data as { id: string } | null)?.id ?? null;

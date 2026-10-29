@@ -1566,6 +1566,7 @@
     "code": "NVC-DC-04",
     "title": "NVC-DC-04 — Hợp đồng nguyên tắc với nhà cung cấp",
     "contract_type": "mua_vat_tu",
+    "scope_kind": null,
     "document_kind": "hop_dong",
     "replaced": [
       "doi_tac_chuc_vu",
@@ -2151,6 +2152,7 @@
     "code": "NVC-HĐ-01",
     "title": "NVC-HĐ-01 — Hợp đồng thi công xây dựng (với chủ đầu tư)",
     "contract_type": "thi_cong",
+    "scope_kind": "thi_cong",
     "document_kind": "hop_dong",
     "replaced": [
       "dia_diem",
@@ -3218,6 +3220,7 @@
     "code": "NVC-HĐ-02",
     "title": "NVC-HĐ-02 — Hợp đồng thiết kế – thi công (EC / EPC)",
     "contract_type": "thi_cong",
+    "scope_kind": "tron_goi",
     "document_kind": "hop_dong",
     "replaced": [
       "dia_diem",
@@ -3938,6 +3941,7 @@
     "code": "NVC-HĐ-03",
     "title": "NVC-HĐ-03 — Hợp đồng tổng thầu thi công",
     "contract_type": "thi_cong",
+    "scope_kind": "thi_cong",
     "document_kind": "hop_dong",
     "replaced": [
       "dia_diem",
@@ -4519,6 +4523,7 @@
     "code": "NVC-HĐ-04",
     "title": "NVC-HĐ-04 — Hợp đồng giao thầu phụ",
     "contract_type": "khoan_thau_phu",
+    "scope_kind": null,
     "document_kind": "hop_dong",
     "replaced": [
       "doi_tac_chuc_vu",
@@ -5101,6 +5106,7 @@
     "code": "NVC-HĐ-05",
     "title": "NVC-HĐ-05 — Hợp đồng giao khoán nhân công tổ đội",
     "contract_type": "khoan_thau_phu",
+    "scope_kind": null,
     "document_kind": "hop_dong",
     "replaced": [
       "doi_tac_dia_chi",
@@ -5645,6 +5651,7 @@
     "code": "NVC-HĐ-06",
     "title": "NVC-HĐ-06 — Hợp đồng mua vật tư",
     "contract_type": "mua_vat_tu",
+    "scope_kind": null,
     "document_kind": "hop_dong",
     "replaced": [
       "doi_tac_chuc_vu",
@@ -6130,6 +6137,7 @@
     "code": "NVC-HĐ-07",
     "title": "NVC-HĐ-07 — Hợp đồng thuê máy móc thiết bị",
     "contract_type": "thue_thiet_bi",
+    "scope_kind": null,
     "document_kind": "hop_dong",
     "replaced": [
       "doi_tac_chuc_vu",

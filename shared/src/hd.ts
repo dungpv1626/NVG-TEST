@@ -60,6 +60,63 @@ export function contractOpensSite(type: ContractType): boolean {
 }
 
 /**
+ * Phạm vi của hợp đồng so với cơ hội (0243, `contracts.scope_kind`).
+ *
+ * Quy trình NVO (hồ sơ khảo sát, anh Bùi Văn Thi): ký hợp đồng THIẾT KẾ trước, thiết kế được
+ * duyệt mới dự toán và ký hợp đồng THI CÔNG riêng. Một cơ hội vì vậy có tối đa một hợp đồng
+ * thiết kế + một hợp đồng thi công, HOẶC một hợp đồng thiết kế – thi công trọn gói thay cho cả
+ * hai. Trọn gói vẫn mang loại `thi_cong` (mẫu NVO-HĐ-02, NVC-HĐ-02) nên không thêm loại hợp đồng.
+ */
+export const CONTRACT_SCOPE_KINDS = ['thiet_ke', 'thi_cong', 'tron_goi'] as const;
+
+export type ContractScopeKind = (typeof CONTRACT_SCOPE_KINDS)[number];
+
+export const CONTRACT_SCOPE_KIND_LABELS: Readonly<Record<ContractScopeKind, string>> = {
+  thiet_ke: 'Hợp đồng thiết kế',
+  thi_cong: 'Hợp đồng thi công',
+  tron_goi: 'Hợp đồng thiết kế – thi công trọn gói',
+};
+
+/** Loại hợp đồng + phạm vi ghi xuống CSDL khi soạn theo một phạm vi. */
+export const CONTRACT_SCOPE_KIND_TYPE: Readonly<Record<ContractScopeKind, ContractType>> = {
+  thiet_ke: 'thiet_ke',
+  thi_cong: 'thi_cong',
+  tron_goi: 'thi_cong',
+};
+
+/** Nhãn loại hợp đồng có tính trọn gói — bản sao của `contract_scope_kind_for` (0243). */
+export function contractKindLabel(type: ContractType, scopeKind?: string | null): string {
+  if (type === 'thi_cong' && scopeKind === 'tron_goi') return CONTRACT_SCOPE_KIND_LABELS.tron_goi;
+  return CONTRACT_TYPE_LABELS[type];
+}
+
+/** Một hợp đồng đã có của cơ hội (hủy thì không tính). */
+export interface GroupContract {
+  scope_kind: string | null;
+  stage: string;
+}
+
+/**
+ * Còn soạn được hợp đồng phạm vi nào cho cơ hội — gương của trigger `contracts_one_per_kind`
+ * (0243): chỉ cặp thiết kế + thi công được cùng tồn tại; trọn gói hay loại khác đứng một mình.
+ * «Chỉ thiết kế» thì không còn hợp đồng thi công / trọn gói.
+ */
+export function remainingContractKinds(
+  existing: readonly GroupContract[],
+  designOnly = false,
+): ContractScopeKind[] {
+  const active = existing.filter((c) => c.stage !== 'huy');
+  if (active.some((c) => c.scope_kind !== 'thiet_ke' && c.scope_kind !== 'thi_cong')) return [];
+  const hasDesign = active.some((c) => c.scope_kind === 'thiet_ke');
+  const hasBuild = active.some((c) => c.scope_kind === 'thi_cong');
+  const out: ContractScopeKind[] = [];
+  if (!hasDesign) out.push('thiet_ke');
+  if (!hasBuild && !designOnly) out.push('thi_cong');
+  if (!hasDesign && !hasBuild && !designOnly) out.push('tron_goi');
+  return out;
+}
+
+/**
  * Hồ sơ nguồn sinh ra hợp đồng (Backend Schema 4.5: `source_type/id`).
  *
  * Ba loại vì ba con đường vào Giai đoạn 1 — cơ hội của Kinh doanh, gói thầu của Dự án –

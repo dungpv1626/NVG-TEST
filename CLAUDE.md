@@ -1155,6 +1155,39 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   ba đột biến đo đỏ: nới `user_is_site_superior`, bỏ kiểm ảnh sau sửa, bỏ `rls_site_readable` ở hàm trạng thái). Dữ liệu thử
   `NVC-HD-2026-PS01` / `NVC-CT-2026-PS01` (chỉ huy trưởng Đỗ Văn K, tổ «Tổ nề anh Lâm»); ảnh `backup/tc-phat-sinh/` (kịch bản
   `backup/tc-phat-sinh.cjs`). Chưa chạy trọn tới phụ lục trên trình duyệt (phép thử CSDL đã đi trọn tới «đã thực hiện»).
+- **Thi công theo phiếu khảo sát — T3 + T4 (0242, 29/10/2026):** T3 tab «Kế hoạch tuần» (`tc/site-week-plan-panel.tsx`):
+  đầu việc `site_plan_items` (thứ Hai của tuần, tên, tổ đội của công trình HOẶC người Thi công, mục tiêu numeric + đơn vị, mốc,
+  ghi chú — chọn từ gợi ý: tên đã dùng, tổ đội, đơn vị, mốc chưa đạt); «Chép việc chưa xong của tuần trước»
+  (`copy_unfinished_plan_items`, mục tiêu = phần còn lại, bấm lại không nhân bản). Nhật ký ngày có khối «Đầu việc tuần này đã làm
+  hôm nay» (`tc/site-log-plan-ticks.tsx`): một chạm mỗi đầu việc, khối lượng hôm nay + «Xong» tuỳ chọn → `site_log_plan_progress`
+  (gắn MỤC nhật ký, chỉ người ghi mục đó thêm được, chỉ thêm không sửa; «Xong» đóng đầu việc kèm `done_log_id`). Không thêm ô bắt
+  buộc nào vào nhật ký — đo trên trình duyệt: hai đầu việc = 3 chạm + 2 ô số tuỳ chọn. T4 tab «Báo cáo tuần» (`tc/site-report-panel.tsx`,
+  Tuần / Tháng): `site_report_data` (SECURITY DEFINER, kiểm `rls_site_readable` đầu hàm) dựng từ kế hoạch / dấu tiến độ, nhật ký
+  (ngày ghi, quân số cao nhất, thời tiết), mốc, `site_request_tracker`, `site_issues`, điểm danh tổ 0232, `site_change_proposal_states`
+  — KHÔNG có tiền, thiếu dữ liệu thì NULL → «Chưa đủ dữ liệu». Chỉ huy trưởng thêm ba ô nhận định → «Gửi báo cáo»
+  (`send_site_report`) chụp `data` jsonb vào `site_reports` — trình duyệt không INSERT được, trigger `site_reports_frozen` chặn mọi
+  UPDATE / DELETE (kể cả postgres; chỉ xoá dây chuyền khi công trình bị xoá cứng), một báo cáo mỗi kỳ — và báo
+  `_site_report_recipients` (vai trò TC không giới hạn công trường của pháp nhân + TGĐ / BGĐ). Báo cáo tháng kèm nhận định các tuần.
+  Danh sách `/tc/bao-cao` (mục «Báo cáo công trường» của thanh Thi công, khối «Chưa gửi báo cáo tuần này»), trang `/tc/bao-cao/:id`,
+  bản in `printSiteReport` (tiêu đề pháp nhân — `openPrintReport` thêm tham số `letterheadHtml`). Phép thử `tc-bao-cao-tuan.test.ts`
+  (10; ba đột biến đo đỏ: bỏ `rls_site_readable` ở `site_report_data`, gỡ `site_reports_frozen`, bỏ giám đốc khỏi người nhận),
+  `shared/.../tc-site-report.test.ts`. Ảnh `backup/tc-bao-cao-tuan/` (kịch bản `run.cjs`, `print.cjs`); trên `NVC-CT-2026-PS01` đã
+  gửi báo cáo tuần 26/10/2026 (`NVC-BCT-2026-0013`). Chưa làm: tóm tắt AI (để sau), nhắc chỉ huy trưởng khi tới hạn gửi.
+- **Hai hợp đồng một cơ hội (0243, 29/10/2026, anh Dũng duyệt):** theo phiếu khảo sát anh Bùi Văn Thi (NVO ký hợp đồng THIẾT KẾ
+  trước, thiết kế duyệt xong mới ký hợp đồng THI CÔNG). Cột `contracts.scope_kind` (thiet_ke · thi_cong · tron_goi, trigger suy từ
+  `type`; trọn gói = loại `thi_cong` + `tron_goi`, mẫu `contract_templates.scope_kind` NVO-HĐ-02 / NVC-HĐ-02 — soạn văn bản từ mẫu
+  đặt phạm vi). Trigger `contracts_one_per_kind` thay `contracts_one_per_opportunity`: một cơ hội (mọi đường) tối đa một thiết kế
+  + một thi công, hoặc một trọn gói; loại khác đứng một mình; hủy không tính. `create_contract_from_source` thêm `p_scope_kind`
+  (bỏ chặn theo nguồn). Ký hợp đồng thiết kế: cơ hội ở lại (báo người phụ trách), không mở công trình; ký thi công / trọn gói như
+  cũ — trừ khi cơ hội còn hồ sơ thiết kế đang làm (công trình mở lúc bàn giao). Bàn giao thiết kế chỉ gắn hợp đồng thi công /
+  trọn gói đã ký (của hồ sơ hoặc cơ hội gốc) — `_design_build_contracts`, `design_handover_contracts`. «Chỉ thiết kế»:
+  `mark_opportunity_design_only` (cột `opportunities.design_only_*`, ghi lịch sử) — hợp đồng thiết kế ký là cơ hội sang «Ký hợp
+  đồng»; không thêm giai đoạn. Giao diện: `contract_group_contracts` + `useContractGroup`, nút «Soạn hợp đồng thiết kế / thi
+  công» theo chỗ còn trống (`remainingContractKinds` ở `shared/src/hd.ts`), khối Đàm phán nói «Đã ký hợp đồng thiết kế», chuỗi
+  hồ sơ ghi loại hợp đồng (`record_chain` thêm cột `scope_kind`), trang hồ sơ thiết kế nói hợp đồng nào mở cổng bàn giao.
+  Báo cáo cộng theo TỪNG hợp đồng (không gộp theo cơ hội) nên không đếm trùng. Phép thử `hai-hop-dong.test.ts` (10, ba đột biến đo
+  đỏ). Bản mới nhất: `stage_readiness`, `sign_contract`, `contracts_sync_opportunity`, `record_chain`, `contracts_awaiting_site`,
+  `construction_sites_link_design_contract`, `create_contract_from_source` ở 0243.
 - Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
@@ -1312,7 +1345,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email.
 
-**Migration tiếp theo: 0242.** (Đã dùng tới 0241; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0244.** (Đã dùng tới 0243; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -1449,6 +1482,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Bản phác của lượt hỏng chỉ để chẩn đoán, không dựng ảnh khách từ nó | Chưa qua cổng = chưa có tường / cửa / kích thước, còn sai đầu bài (T39) |
 | Mở khoá thửa đa giác khi đã có bảng vẽ (T173) — nhưng chỉ khi anh Dũng quyết, không tự mở | Haan khoá 22/09 vì bộ xếp chưa đo trên hồ sơ thật; anh Dũng chấp nhận rủi ro 27/10 |
 | Chỗ trống tự do liền nhau của cùng câu gộp một câu, ô nằm trong câu | Anh Dũng: «tách ra nhiều quá» — câu 20.2 thành 7 ô, mỗi ô chép lại cả câu |
+| Một cơ hội: tối đa một hợp đồng thiết kế + một hợp đồng thi công, HOẶC một hợp đồng trọn gói; ký thiết kế không đóng cơ hội; «Chỉ thiết kế» là cờ + giai đoạn «Ký hợp đồng» có sẵn (0243) | Phiếu khảo sát anh Bùi Văn Thi: NVO ký hợp đồng thiết kế (thu tiền thiết kế theo đợt) rồi mới dự toán, ký hợp đồng thi công riêng — 0159 một hợp đồng mỗi cơ hội chặn đúng quy trình này. Trọn gói vẫn loại `thi_cong` nên không thêm giá trị enum (mọi chỗ xét `thi_cong` vẫn đúng) |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)
