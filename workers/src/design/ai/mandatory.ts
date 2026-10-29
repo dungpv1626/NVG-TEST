@@ -110,6 +110,9 @@ const ALTAR = 'altar_room';
 const BALCONY = 'balcony';
 const SHAFT = 'shaft';
 
+/** Loại phòng các luật bắt buộc đo — bộ xếp dùng để tránh trước những chỗ cổng sẽ bác (T181). */
+export const MANDATORY_ROOM_TYPES = { wc: WC, kitchen: KITCHEN, altar: ALTAR } as const;
+
 export const MANDATORY_CODES = [
   'wc_over_kitchen',
   'wc_over_altar',

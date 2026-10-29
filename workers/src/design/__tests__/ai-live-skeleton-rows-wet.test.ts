@@ -24,13 +24,17 @@ async function roundThree(prefer: boolean) {
     houseProfile: true,
   });
   const sketch = base.construction.sketch!;
-  const { prefer: _prefer, ...rows } = sketch.skeleton_rows!;
+  // Dải ban công mặt tiền (T181) tắt ở cả hai nhánh: nó lên cổng trước bản chỉnh và ở vòng này đổi khu ướt lấy mặt
+  // thoáng — phép thử này đo riêng bước chỉnh khu ướt T180.
+  const { prefer: _prefer, ...rows } = { ...sketch.skeleton_rows!, main_balcony_strip: false };
   const input = {
     ...base,
     mandatory,
     construction: {
       ...base.construction,
-      sketch: prefer ? sketch : { ...sketch, skeleton_rows: rows },
+      sketch: prefer
+        ? { ...sketch, skeleton_rows: { ...sketch.skeleton_rows!, main_balcony_strip: false } }
+        : { ...sketch, skeleton_rows: rows },
     },
   };
   const context = planContext(input);

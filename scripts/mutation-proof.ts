@@ -2113,6 +2113,31 @@ const MUTATIONS: Mutation[] = [
     find: '    const wetTypes = ni.wetTypes ?? new Set<string>();',
     replace: '    const wetTypes = new Set<string>();',
   },
+  {
+    id: 'M257',
+    axis: 'số đo bản vẽ',
+    file: 'workers/src/design/ai/arrange/skeleton-rows.ts',
+    bug: 'Khung hai hàng (T181) không bao giờ dựng dải ban công chính mặt tiền — ban công chính lại chỉ mở từ phòng riêng, nhỏ hơn ban công hông (46d6eff3 vòng 1 dưới ngưỡng)',
+    find: '    for (const spec of [...specs]) specs.push({ ...spec, tag: `${spec.tag}|S`, strip: true });',
+    replace:
+      '    for (const spec of [...specs]) specs.push({ ...spec, tag: `${spec.tag}|S`, strip: false });',
+  },
+  {
+    id: 'M258',
+    axis: 'số đo bản vẽ',
+    file: 'workers/src/design/ai/arrange/skeleton-rows.ts',
+    bug: 'Dải ban công chính (T181) không thêm sảnh khi đầu hành lang ngắn hơn cửa ra ban công — cổng cửa lại cho ban công mở từ phòng riêng',
+    find: '    if (need > cw) {',
+    replace: '    if (false && need > cw) {',
+  },
+  {
+    id: 'M259',
+    axis: 'số đo bản vẽ',
+    file: 'workers/src/design/ai/arrange/skeleton-rows.ts',
+    bug: 'Bước chỉnh khung hai hàng (T182) bỏ phép đổi chỗ khu ướt một bước — tìm tham dừng ở cách xếp kém (1dd74b99 vòng 2 tụt 69,9 → 65 %)',
+    find: '      if (!best && prefer.wet_swap_insert) {',
+    replace: '      if (false && !best && prefer.wet_swap_insert) {',
+  },
 ];
 
 /** Thư mục mã nguồn được băm trước và sau khi chạy. `db/` không đụng tới nên không băm. */

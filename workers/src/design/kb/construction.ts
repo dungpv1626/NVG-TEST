@@ -86,6 +86,8 @@ export interface SketchNorms {
    */
   skeleton_rows?: {
     max_candidates: number;
+    /** T181: ban công chính mặt tiền thành dải chạy qua đầu hành lang (mở từ giao thông chung). Vắng = không. */
+    main_balcony_strip?: boolean;
     max_moves: number;
     depth_step_cm: number;
     /**
@@ -100,6 +102,10 @@ export interface SketchNorms {
       wet_distance_per_m: number;
       floor_margin_ratio: number;
       tight_floor: number;
+      wet_over_service?: number;
+      altar_near_wc?: number;
+      wet_swap_insert?: boolean;
+      wet_swap_insert_budget?: number;
     };
   };
 }
@@ -458,9 +464,28 @@ function parseSketch(raw: unknown): SketchNorms {
         wet_distance_per_m: weight('wet_distance_per_m'),
         floor_margin_ratio: weight('floor_margin_ratio'),
         tight_floor: weight('tight_floor'),
+        ...(preferRaw?.wet_over_service !== undefined
+          ? { wet_over_service: weight('wet_over_service') }
+          : {}),
+        ...(typeof preferRaw?.wet_swap_insert === 'boolean'
+          ? { wet_swap_insert: preferRaw.wet_swap_insert }
+          : {}),
+        ...(preferRaw?.wet_swap_insert_budget !== undefined
+          ? { wet_swap_insert_budget: weight('wet_swap_insert_budget') }
+          : {}),
+        ...(preferRaw?.altar_near_wc !== undefined
+          ? { altar_near_wc: weight('altar_near_wc') }
+          : {}),
       };
     }
+    const stripRaw = rowsRaw?.main_balcony_strip;
+    if (stripRaw !== undefined && typeof stripRaw !== 'boolean') {
+      throw new ConstructionNormsError(
+        '"sketch.skeleton_rows.main_balcony_strip" phải là true hoặc false',
+      );
+    }
     rows = {
+      ...(stripRaw !== undefined ? { main_balcony_strip: stripRaw } : {}),
       max_candidates: read('max_candidates', false),
       max_moves: read('max_moves', false),
       depth_step_cm: read('depth_step_cm', true),

@@ -80,6 +80,11 @@ export interface SkeletonInput {
   habitableTypes?: ReadonlySet<string>;
   /** Nhóm `sleeping` — phòng ngủ tối bị trừ nặng hơn (D2). */
   sleepingTypes?: ReadonlySet<string>;
+  /** Loại phòng thờ / WC của luật bắt buộc T71 — bước chỉnh tránh thờ cạnh / đối WC (T181). */
+  altarTypes?: ReadonlySet<string>;
+  wcTypes?: ReadonlySet<string>;
+  /** Mặt tiền (đường) — ban công chính của tầng quay ra đây (T181, D6 / D7). */
+  mainFace?: Side;
   /** `overlap_ratio` của tiêu chí E5 — khu ướt «đè» khi phần chồng lên chỗ khô từ tỉ lệ này. */
   wetOverlapRatio?: number;
   trace?: (line: string) => void;

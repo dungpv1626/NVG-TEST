@@ -46,6 +46,8 @@ export interface RowsConfig {
   max_candidates: number;
   max_moves: number;
   depth_step_cm: number;
+  /** T181: ban công chính mặt tiền thành dải áp mặt tiền chạy qua đầu hành lang T (mở từ giao thông chung). */
+  main_balcony_strip?: boolean;
   /** Bước chỉnh sau khi chia được (T180): trọng số khu ướt đè chỗ khô / phòng ở tối / khoảng cách tới khu ướt dưới. */
   prefer?: {
     max_moves: number;
@@ -55,6 +57,10 @@ export interface RowsConfig {
     wet_distance_per_m: number;
     floor_margin_ratio: number;
     tight_floor: number;
+    wet_over_service?: number;
+    altar_near_wc?: number;
+    wet_swap_insert?: boolean;
+    wet_swap_insert_budget?: number;
   };
 }
 
@@ -157,6 +163,7 @@ function transformInput(input: SkeletonInput, t: Transform): SkeletonInput {
     wetBelow: input.wetBelow.map(fwd),
     avoidWetOver: input.avoidWetOver.map(fwd),
     openSides: new Set([...input.openSides].map((side) => fwdSide(t, side))),
+    ...(input.mainFace ? { mainFace: fwdSide(t, input.mainFace) } : {}),
     balconySides: balcony
       ? {
           required: balcony.required.map((side) => fwdSide(t, side)),
@@ -202,6 +209,8 @@ interface Built {
   leafById?: SkeletonCandidate['leafById'];
   reversed: boolean;
   tuned: boolean;
+  /** Có dải ban công chính suốt mặt tiền (T181). */
+  stripped?: boolean;
 }
 
 interface FrameSpec {
@@ -209,6 +218,8 @@ interface FrameSpec {
   v: boolean;
   lft: RegionMode | null;
   under: RegionMode | null;
+  /** Ban công chính mặt tiền là dải áp mặt tiền chạy qua đầu hành lang T (T181). */
+  strip: boolean;
 }
 
 export function rowsCandidates(
@@ -232,7 +243,7 @@ export function rowsCandidates(
   for (const mirrorX of [false, true]) {
     const t = arrivalTransform(input.footprint, arrival, mirrorX);
     const ni = transformInput(input, t);
-    for (const spec of frameSpecs(ni))
+    for (const spec of frameSpecs(ni, config))
       for (const built of buildFrame(ni, spec, config, stairItem.key)) {
         const placed = invPlaced(t, built.placed);
         const signature = leaves(placed)
@@ -258,7 +269,7 @@ export function rowsCandidates(
 }
 
 /** Các khung thử, trong hệ chuẩn (đầu bước ra ở `y0`): V áp cạnh thang phía `x0`; không V khi ô thang chạm mép sau. */
-function frameSpecs(ni: SkeletonInput): FrameSpec[] {
+function frameSpecs(ni: SkeletonInput, config: RowsConfig): FrameSpec[] {
   const f = ni.footprint;
   const s = ni.stair!;
   const cw = ni.corridorWidth.inner;
@@ -269,19 +280,34 @@ function frameSpecs(ni: SkeletonInput): FrameSpec[] {
     const underModes: (RegionMode | null)[] = s.y1 < f.y1 ? ['stack', 'split'] : [null];
     for (const lft of lftModes)
       for (const under of underModes)
-        specs.push({ tag: `V|L${lft ?? '-'}|U${under ?? '-'}`, v: true, lft, under });
+        specs.push({ tag: `V|L${lft ?? '-'}|U${under ?? '-'}`, v: true, lft, under, strip: false });
   }
   if (s.y1 === f.y1)
-    specs.push({ tag: 'noV', v: false, lft: s.x0 > f.x0 ? 'row' : null, under: null });
+    specs.push({
+      tag: 'noV',
+      v: false,
+      lft: s.x0 > f.x0 ? 'row' : null,
+      under: null,
+      strip: false,
+    });
+  // Mặt tiền là đầu của hành lang T (mặt bên trong hệ chuẩn): thêm bản có dải ban công chính chạy qua đầu T (T181).
+  const main = ni.mainFace;
+  if (
+    config.main_balcony_strip &&
+    main &&
+    (main === 'x0' || main === 'x1') &&
+    ni.openSides.has(main) &&
+    !(ni.balconySides?.forbidden ?? []).includes(main)
+  ) {
+    for (const spec of [...specs]) specs.push({ ...spec, tag: `${spec.tag}|S`, strip: true });
+  }
   return specs;
 }
 
-function buildFrame(
-  ni: SkeletonInput,
-  spec: FrameSpec,
-  config: RowsConfig,
-  stairKey: string,
-): Built[] {
+/** Đầu vào trong hệ chuẩn; `landingFor`: dải ban công chính đã tách khỏi hình bao ở cạnh này — cần sảnh mở ra nó. */
+type RowsInput = SkeletonInput & { landingFor?: { leaf: PackItem; side: Side } };
+
+function buildFrame(ni: RowsInput, spec: FrameSpec, config: RowsConfig, stairKey: string): Built[] {
   const f = ni.footprint;
   const s = ni.stair!;
   const cw = ni.corridorWidth.inner;
@@ -294,6 +320,50 @@ function buildFrame(
     fail(why);
     return [];
   };
+  // Dải ban công chính SUỐT mặt tiền (T181): ô thang không chạm mặt tiền thì tách một dải trọn chiều dài mặt ấy, dựng
+  // phần còn lại như một hình bao hẹp hơn rồi ghép dải vào — ban công chính dài nhất tầng (D7) và mở từ sảnh / đầu hành
+  // lang T (D6). Ô thang chạm mặt tiền thì dải chỉ chạy qua dải trước + T (bên dưới).
+  if (spec.strip && ni.mainFace && !ni.landingFor) {
+    const main = ni.mainFace;
+    const chosen = ni.items
+      .filter(
+        (item) =>
+          item.children.length === 0 &&
+          item.primary.needsOpenFace &&
+          item.primary.role === 'open' &&
+          !ni.corridorIds.has(item.key),
+      )
+      .sort((p, q) => q.weight - p.weight || p.key.localeCompare(q.key))[0];
+    if (!chosen) return none('không có ban công nào để làm dải mặt tiền');
+    const thick = balconyThickness(chosen.primary, f.y1 - f.y0, main, ni);
+    const clear = main === 'x0' ? s.x0 >= f.x0 + thick : s.x1 <= f.x1 - thick;
+    if (clear) {
+      const inner: Rect = main === 'x0' ? { ...f, x0: f.x0 + thick } : { ...f, x1: f.x1 - thick };
+      const stripRect: Rect =
+        main === 'x0' ? { ...f, x1: f.x0 + thick } : { ...f, x0: f.x1 - thick };
+      const balcony = ni.balconySides;
+      const innerInput: RowsInput = {
+        ...ni,
+        footprint: inner,
+        items: ni.items.filter((item) => item !== chosen),
+        openSides: new Set([...ni.openSides].filter((side) => side !== main)),
+        balconySides: balcony
+          ? {
+              ...balcony,
+              required: balcony.required.filter((side) => side !== main),
+              forbidden: [...balcony.forbidden, main],
+            }
+          : null,
+        landingFor: { leaf: chosen, side: main },
+      };
+      const stripLeaf = leaf(chosen.key, stripRect);
+      return buildFrame(innerInput, { ...spec, strip: false }, config, stairKey).map((b) => ({
+        ...b,
+        placed: chain(f, 'x', main === 'x0' ? [stripLeaf, b.placed] : [b.placed, stripLeaf]),
+        stripped: true,
+      }));
+    }
+  }
   const frontDepth = s.y0 - cw - f.y0;
   if (frontDepth < 0) return none('ô thang sát mép, không còn chỗ cho hành lang trước thang');
   if (frontDepth > 0 && frontDepth < MIN_CELL_CM) return none(`dải trước chỉ sâu ${frontDepth}`);
@@ -351,7 +421,58 @@ function buildFrame(
     b.group = group;
     groups.push(group);
   };
-  const front = frontDepth > 0 ? slot('front', 'row', 'y1', { ...f, y1: s.y0 - cw }) : null;
+  // Dải ban công chính mặt tiền (T181): áp mặt tiền, chạy suốt dải trước + hành lang T — mở cửa từ T, không chỉ từ phòng riêng.
+  let strip: { leaf: PackItem; rect: Rect } | null = null;
+  if (spec.strip && ni.mainFace) {
+    const main = ni.mainFace;
+    const candidates = ni.items
+      .filter(
+        (item) =>
+          item.children.length === 0 &&
+          item.primary.needsOpenFace &&
+          item.primary.role === 'open' &&
+          !ni.corridorIds.has(item.key),
+      )
+      .sort((p, q) => q.weight - p.weight || p.key.localeCompare(q.key));
+    const chosen = candidates[0];
+    if (!chosen) return none('không có ban công nào để làm dải mặt tiền');
+    const along = s.y0 - f.y0;
+    const thick = balconyThickness(chosen.primary, along, main, ni);
+    if (f.x1 - f.x0 - thick < MIN_CELL_CM * 2) return none('mặt tiền quá hẹp cho dải ban công');
+    strip = {
+      leaf: chosen,
+      rect:
+        main === 'x0'
+          ? { x0: f.x0, y0: f.y0, x1: f.x0 + thick, y1: s.y0 }
+          : { x0: f.x1 - thick, y0: f.y0, x1: f.x1, y1: s.y0 },
+    };
+    if (strip.rect.x1 > s.x0 && strip.rect.x0 < s.x1 && strip.rect.y1 > s.y0)
+      return none('dải ban công chạm ô thang');
+  }
+  const topX0 = strip && ni.mainFace === 'x0' ? strip.rect.x1 : f.x0;
+  const topX1 = strip && ni.mainFace === 'x1' ? strip.rect.x0 : f.x1;
+  // Đầu hành lang T chỉ dài bằng bề rộng hành lang — ngắn hơn đoạn vách cửa ra ban công cần thì thêm một sảnh dọc dải
+  // ban công suốt dải trước, để cửa ban công mở từ giao thông chung (cổng cửa chọn chủ nhà cửa theo vách chung đủ dài).
+  let landing = 0;
+  const landingSide = strip ? ni.mainFace : (ni.landingFor?.side ?? null);
+  const landingLeaf = strip?.leaf ?? ni.landingFor?.leaf ?? null;
+  if (landingLeaf) {
+    const hallLeaf = ni.items.find((item) => ni.corridorIds.has(item.key))?.primary;
+    const need = hallLeaf ? ni.env.doorShared(landingLeaf.primary, hallLeaf) : 0;
+    if (need > cw) {
+      if (frontDepth <= 0)
+        return none('đầu hành lang ngắn hơn cửa ra ban công, không có dải trước để thêm sảnh');
+      landing = Math.ceil(need / 5) * 5;
+    }
+  }
+  const frontX0 = landingSide === 'x0' ? topX0 + landing : topX0;
+  const frontX1 = landingSide === 'x1' ? topX1 - landing : topX1;
+  if (frontDepth > 0 && frontX1 - frontX0 < MIN_CELL_CM)
+    return none('dải trước không còn chỗ sau sảnh ban công');
+  const front =
+    frontDepth > 0
+      ? slot('front', 'row', 'y1', { x0: frontX0, y0: f.y0, x1: frontX1, y1: s.y0 - cw })
+      : null;
   if (lftRect && spec.lft) region('lft', lftRect, spec.lft, 'y0');
   const beside = besideRect ? slot('beside', 'row', 'y0', besideRect, true) : null;
   if (underRect && spec.under) region('under', underRect, spec.under, 'y0');
@@ -369,6 +490,7 @@ function buildFrame(
   const balconies: PackItem[] = [];
   for (const item of ni.items) {
     if (fixedIds.has(item.key) || ni.corridorIds.has(item.key)) continue;
+    if (strip && item === strip.leaf) continue;
     if (isBalcony(item)) balconies.push(item);
     else rooms.push({ item, balconies: [] });
   }
@@ -445,7 +567,7 @@ function buildFrame(
     return touches.find(openSide) ?? null;
   };
   const wanted = (ni.balconySides?.required ?? []).filter(openSide);
-  const covered = new Set<Side>();
+  const covered = new Set<Side>(strip && ni.mainFace ? [ni.mainFace] : []);
   const hostsOn = (side: Side): { sl: Slot; c: Cluster }[] => {
     const out: { sl: Slot; c: Cluster }[] = [];
     for (const sl of slots) {
@@ -750,9 +872,34 @@ function buildFrame(
     if (front) {
       const placed = placeSlot(front);
       if (!placed) return fail('dải trước không dựng được');
-      rows.push(placed);
+      if (landing > 0) {
+        const hall = pushHall(
+          landingSide === 'x0'
+            ? { x0: topX0, y0: f.y0, x1: frontX0, y1: s.y0 - cw }
+            : { x0: frontX1, y0: f.y0, x1: topX1, y1: s.y0 - cw },
+        );
+        rows.push(
+          chain(
+            { x0: topX0, y0: f.y0, x1: topX1, y1: s.y0 - cw },
+            'x',
+            landingSide === 'x0' ? [hall, placed] : [placed, hall],
+          ),
+        );
+      } else rows.push(placed);
     }
-    rows.push(pushHall({ x0: f.x0, y0: s.y0 - cw, x1: f.x1, y1: s.y0 }));
+    const hallT = pushHall({ x0: topX0, y0: s.y0 - cw, x1: topX1, y1: s.y0 });
+    if (strip) {
+      const body = chain({ x0: topX0, y0: f.y0, x1: topX1, y1: s.y0 }, 'y', [...rows, hallT]);
+      const stripLeaf = leaf(strip.leaf.key, strip.rect);
+      rows.length = 0;
+      rows.push(
+        chain(
+          { x0: f.x0, y0: f.y0, x1: f.x1, y1: s.y0 },
+          'x',
+          ni.mainFace === 'x0' ? [stripLeaf, body] : [body, stripLeaf],
+        ),
+      );
+    } else rows.push(hallT);
     const backRect: Rect = { x0: f.x0, y0: s.y0, x1: f.x1, y1: f.y1 };
     const columns: Placed[] = [];
     if (lftRect) {
@@ -871,6 +1018,22 @@ function buildFrame(
         .filter((c) => ni.env.leafById.get(c.id)?.role === 'open')
         .map((c) => c.rect);
       let value = 0;
+      // Phòng thờ cạnh / đối diện WC qua hành lang (luật bắt buộc T71): cổng bác — trừ nặng để bước chỉnh né trước.
+      const altarTypes = ni.altarTypes;
+      const wcTypes = ni.wcTypes;
+      if (altarTypes && wcTypes && prefer.altar_near_wc) {
+        const is = (id: string, set: ReadonlySet<string>) => typesOf(id).some((t) => set.has(t));
+        const altars = cells.filter((c) => is(c.id, altarTypes));
+        const wcs = cells.filter((c) => is(c.id, wcTypes));
+        for (const a of altars)
+          for (const w of wcs) {
+            const gapX = Math.max(a.rect.x0 - w.rect.x1, w.rect.x0 - a.rect.x1);
+            const gapY = Math.max(a.rect.y0 - w.rect.y1, w.rect.y0 - a.rect.y1);
+            const near =
+              (gapX <= 0 && gapY <= 0) || (gapX <= 0 && gapY <= cw) || (gapY <= 0 && gapX <= cw);
+            if (near) value += prefer.altar_near_wc;
+          }
+      }
       for (const { id, rect } of cells) {
         const types = typesOf(id);
         const area = Math.max(1, (rect.x1 - rect.x0) * (rect.y1 - rect.y0));
@@ -886,6 +1049,9 @@ function buildFrame(
         if (types.some((t) => wetTypes.has(t))) {
           const over = dry.reduce((sum, r) => sum + overlap(rect, r), 0);
           if (over / area >= ratio) value += prefer.wet_over_dry;
+          // Bếp / phòng thờ tầng dưới (luật bắt buộc T71): đè lên thì cổng bác — trừ nặng để bước chỉnh không đổi lấy nó.
+          if (ni.avoidWetOver.some((r) => overlap(rect, r) > 0))
+            value += prefer.wet_over_service ?? 0;
           if (wetBelow.length) {
             const cx = (rect.x0 + rect.x1) / 2;
             const cy = (rect.y0 + rect.y1) / 2;
@@ -907,6 +1073,8 @@ function buildFrame(
     if (!Number.isFinite(start)) return false;
     let current = start;
     const pinnedIn = (sl: Slot, c: Cluster) => c === sl.pinFirst || c === sl.pinLast;
+    // Ngân sách số cách xếp phép đổi chỗ một bước được đo trong cả lần chỉnh (T182) — giữ thời gian một vòng dưới trần CPU.
+    let swapBudget = prefer.wet_swap_insert_budget ?? Infinity;
     for (let step = 0; step < prefer.max_moves && current > 0; step += 1) {
       let best: { value: number; apply: () => void } | null = null;
       const consider = (apply: () => void, undo: () => void) => {
@@ -970,6 +1138,42 @@ function buildFrame(
             }
           }
         }
+      // Không phép đơn nào lợi (T182): đổi chỗ một khu ướt với một phòng ở hàng khác, mỗi phòng vào MỌI vị trí của hàng
+      // mới — một bước mà phép đơn cần hai (đổi chỗ rồi dời trong hàng), bước giữa thường tệ hơn nên tìm tham không qua.
+      // Ví dụ 9272: WC chung đổi với phòng làm việc rồi xuống góc sau, nơi khu ướt tầng dưới nằm.
+      if (!best && prefer.wet_swap_insert) {
+        const wetCluster = (c: Cluster) =>
+          [c.item.primary, ...c.item.children].some((l) => l.types.some((t) => wetTypes.has(t)));
+        for (const sa of slots)
+          for (const sb of slots) {
+            if (sa === sb) continue;
+            for (const ca of [...sa.clusters]) {
+              if (!movable(ca) || !wetCluster(ca) || pinnedIn(sa, ca) || !accepts(sb, ca)) continue;
+              for (const cb of [...sb.clusters]) {
+                if (!movable(cb) || pinnedIn(sb, cb) || !accepts(sa, cb)) continue;
+                for (let pa = 0; pa < sa.clusters.length; pa += 1)
+                  for (let pb = 0; pb < sb.clusters.length; pb += 1) {
+                    if (swapBudget <= 0) continue;
+                    swapBudget -= 1;
+                    const a0 = [...sa.clusters];
+                    const b0 = [...sb.clusters];
+                    const apply = () => {
+                      const a = a0.filter((c) => c !== ca);
+                      const b = b0.filter((c) => c !== cb);
+                      a.splice(pa, 0, cb);
+                      b.splice(pb, 0, ca);
+                      sa.clusters = a;
+                      sb.clusters = b;
+                    };
+                    consider(apply, () => {
+                      sa.clusters = a0;
+                      sb.clusters = b0;
+                    });
+                  }
+              }
+            }
+          }
+      }
       const chosen = best as { value: number; apply: () => void } | null;
       if (!chosen) break;
       chosen.apply();

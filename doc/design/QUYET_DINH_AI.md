@@ -4890,3 +4890,107 @@ thấp hơn). Đột biến M255 (bước chỉnh không chạy), M256 (bước 
 ngưỡng; phòng ngủ tối tầng 1 là của tầng 1. (2) Bản chỉnh có thể lùi tổng điểm (`0b7e4957`) vì nó lên trước mà không so điểm với bản
 T179 — muốn chắc thì cho cả hai lên cổng và chọn theo điểm cả nhà (đổi xếp hạng, chưa làm). (3) Luật T71 chưa vào giá — vài bản chỉnh bị
 cổng bác vì thờ cạnh WC. (4) `ai-live-46d6eff3.test.ts` quá 30 s trên máy lúc đo kể cả khi tắt cả khung hai hàng (máy bận), không do T180.
+
+## T181 — Ban công chính mặt tiền là dải suốt mặt tiền, mở từ sảnh / hành lang (D6, D7) (GIỮ) (29/10/2026, anh Dũng đồng ý)
+
+**Bối cảnh.** T180 nâng nhóm E của 9272 (`1dd74b99` v3, v4) lên 60 % nhưng nhóm D «Mặt thoáng» chỉ 42 % trong khi sàn riêng của
+nhóm D là 60 % (`accept_group_floor_by_group.D`). Phần D mất: D6 (ban công chính mặt tiền chỉ mở từ phòng riêng — `bedroom_3`),
+D7 (ban công hông 11,6 m² lớn hơn ban công trước), D2 (phòng ngủ tối, gồm `bedroom_2` tầng 1).
+
+**Làm** (`arrange/skeleton-rows.ts`):
+- **Dải ban công chính** (khung `|S`, khi mặt tiền là đầu của hành lang T trong hệ chuẩn — thang đặt ngang mặt tiền): ô thang không
+  chạm mặt tiền thì tách một dải ban công trọn chiều dài mặt tiền (ban công gốc lớn nhất của tầng), dựng phần còn lại như một hình
+  bao hẹp hơn rồi ghép dải vào; ô thang chạm mặt tiền thì dải chỉ chạy qua dải trước + đầu T. Đầu T chỉ dài bằng bề rộng hành lang —
+  ngắn hơn đoạn vách cửa ra ban công (`env.doorShared`) thì thêm một sảnh dọc dải suốt dải trước, để bộ đặt cửa chọn giao thông
+  chung làm chủ cửa ban công (không có sảnh thì cửa ra ban công vẫn mở từ phòng thờ — đo thật).
+- **Thứ tự lên cổng**: dải + chỉnh → dải → chỉnh → bản theo bản phác; nhóm sau chỉ lên khi các nhóm trước không cây nào qua.
+- **Bước chỉnh T180 né luật bắt buộc**: khu ướt đè bếp / phòng thờ tầng dưới (`wet_over_service` 10) và phòng thờ chung vách / đối
+  diện WC qua một hành lang (`altar_near_wc` 10) bị trừ nặng — trước đó các bản chỉnh hay bị cổng bác đúng vì thế. Loại phòng thờ / WC
+  lấy từ `MANDATORY_ROOM_TYPES` của `ai/mandatory.ts` (một nguồn với cổng).
+- Cấu hình: `sketch.skeleton_rows.main_balcony_strip: true`, `prefer.wet_over_service`, `prefer.altar_near_wc` (vắng = tắt).
+- D2 (phòng ngủ tối tầng 1) KHÔNG đụng: tầng 1 không đi qua khung hai hàng (nó chỉ chạy ở tầng trên).
+
+**Đo** (phát lại 61 lượt / 256 vòng, ngữ cảnh Workflow, một tiến trình; đối chứng = cùng mã, bỏ dải + hai phạt mới; đối chứng trùng
+từng vòng với kết quả T180):
+
+| | Đối chứng (T180) | Có dải |
+| --- | --- | --- |
+| Vòng qua cổng | 25 | 25 — không vòng nào đổi kết quả cổng |
+| **Phương án đạt ngưỡng nhận** (≥ 60 %, D ≥ 60 %, nhóm khác ≥ 40 %) trên 25 vòng qua | **0** | **2** — `46d6eff3` v1, v2 (72,5 %) |
+| Vòng có D ≥ 60 % / E ≥ 40 % | 1 / 4 | 6 / 4 |
+| Điểm trung bình 25 vòng | 67,41 % | 67,78 % |
+| Cả bộ / vòng lâu nhất | 2.441 s / 133,1 s | 3.574 s / 167,5 s (`02982bd7` v4) |
+
+Máy rất bận lúc đo (đối chứng chạy cùng mã T180 lần trước mất 1.924 s / 64 s, lần này 2.441 s / 133 s) — so thời gian chỉ là chỉ dấu;
+có dải chậm hơn đối chứng cùng lúc ~1,46 lần (số khung gấp đôi), vòng lâu nhất 167,5 s, còn dưới trần CPU 300 s nhưng không xa như trước.
+
+Bảy vòng đổi điểm (`backup/gd1-mat-bang/s181new.jsonl`, `s181ctl.jsonl`), dạng % · A · B · C · D · E:
+
+| Vòng | Đối chứng | Có dải |
+| --- | --- | --- |
+| `46d6eff3` v1 | 70,2 · 88 · 100 · 77 · 17 · 0 | **72,5 · 77 · 67 · 82 · 62 · 60 — đạt ngưỡng nhận** |
+| `46d6eff3` v2 | 70,7 · 86 · 67 · 83 · 35 · 60 | **72,5 · 77 · 67 · 82 · 62 · 60 — đạt ngưỡng nhận** |
+| `7c6de305` v2 | 66,8 · 83 · 67 · 88 · 37 · 0 | 71,9 · 77 · 67 · 88 · 48 · 60 |
+| **`1dd74b99` v2** (9272) | 65,8 · 82 · 67 · 76 · 42 · 20 | 65,0 · 73 · 67 · 76 · **62** · 0 |
+| **`1dd74b99` v3** (9272) | 69,3 · 83 · 67 · 77 · 42 · 60 | 67,4 · 75 · 67 · 77 · **62** · 20 |
+| **`1dd74b99` v4** (9272) | 68,8 · 81 · 67 · 77 · 42 · 60 | 66,7 · 73 · 67 · 77 · **62** · 20 |
+| `0b7e4957` v3 / v4 / v5 | 71,8 / 65,7 / 65,5 (D 31) | 67,4 / 70,7 / 69,7 (D 31) |
+
+**9272: D qua sàn 60 % nhưng E lại tụt** (v3 / v4 60 → 20). Không chọn được cả hai trên bản phác này: khu ướt tầng 1 (`wc_1`, `wc_2`)
+nằm ở góc sau trái, ngay dưới phòng ngủ chính tầng 2 — mà phòng ngủ chính phải ở cột trái vì nó mang ban công hông bắt buộc (mặt
+trái); WC chung `wc_4` không còn chỗ nào trên khu ướt hay trên chỗ không khô. Bản «dải» lên cổng trước bản «chỉnh» nên D thắng E. Chưa
+phương án 9272 nào đạt ngưỡng nhận.
+
+**Giữ** (đạt ngưỡng nhận 0 → 2 trên 25 vòng qua, D ≥ 60 % 1 → 6, điểm trung bình không giảm, không mất vòng qua cổng). Phép thử
+`ai-live-skeleton-rows-balcony.test.ts` (46d6eff3 v1: tắt dải → qua cổng mà dưới ngưỡng; bật → đạt ngưỡng, ghi chú khung `S`);
+`ai-live-skeleton-rows-wet.test.ts` (T180) nay tắt dải ở cả hai nhánh để đo riêng bước chỉnh. Đột biến M257 (không dựng khung dải),
+M258 (không thêm sảnh khi đầu hành lang ngắn): đo tay, cả hai ĐỎ. Kết quả: `backup/gd1-mat-bang/replay-t181new-0.jsonl`,
+`replay-t181ctl-0.jsonl`, `zz-replay-t181.test.ts.keep` (`CTL=1` = đối chứng), `zz-score-t181.test.ts.keep`.
+
+**Còn mở.** (1) Chọn giữa «dải» và «chỉnh» theo điểm cả nhà thay vì thứ tự cố định (việc mở 2 của T180) — CHƯA làm: lúc xếp một tầng
+bộ xếp chưa có tầng trên, nên chưa có điểm cả nhà; phải làm ở `evaluateHouseVariants` (thêm một biến thể cả nhà tắt dải, chọn theo
+«đạt ngưỡng» rồi theo điểm) — nhân đôi thời gian những lượt chạm khung hai hàng. (2) 9272: cần WC chung lên được khu ướt — dời ban
+công hông bắt buộc khỏi phòng ngủ chính (sang một phòng khác ở mặt trái) để phòng ngủ chính rời góc sau trái; hoặc câu nhắc cho mô hình
+vẽ khu ướt tầng 1 dưới chỗ WC tầng 2. (3) D2 tầng 1 (`bedroom_2` góc sau phải không mặt thoáng) là của tầng 1 — ngoài khung hai hàng.
+(4) Thời gian: số khung gấp đôi; nếu cần thì chỉ dựng `|S` khi đầu bài bắt buộc ban công mặt tiền.
+
+## T182 — Bước chỉnh khung hai hàng: đổi chỗ khu ướt một bước khi hết phép đơn (GIỮ, lợi nhỏ) (29/10/2026, anh Dũng đồng ý hướng)
+
+**Bối cảnh.** T181: 9272 (`1dd74b99`) D 62 % nhưng E tụt 20 %, vì khu ướt tầng 1 ở góc sau trái nằm dưới phòng ngủ chính tầng 2 —
+phòng ngủ chính mang ban công hông bắt buộc (mặt trái), WC chung `wc_4` không còn chỗ trên khu ướt. Hướng đề xuất ở T181 (chuyển ban
+công hông sang phòng khác cùng mặt) **không làm được**: `balcony_1` là ban công KHÉP KÍN của phòng ngủ chính trong chương trình
+(`ensuite_of`) — gắn sang phòng khác là đổi chương trình, cổng bác `ensuite_door_wrong`; ban công gốc duy nhất đã thành dải mặt tiền T181.
+Phòng ngủ chính vốn dời được dọc mặt trái (ban công khép kín theo nó); chỗ hỏng là tìm tham của bước chỉnh T180 dừng sớm: muốn WC chung
+xuống góc sau phải ĐỒNG THỜI đổi hàng và đổi vị trí trong hàng — hai phép đơn, phép giữa tệ hơn nên không bao giờ được chọn.
+
+**Làm** (`arrange/skeleton-rows.ts` `tune`). Bước nào không phép đơn nào có lợi thì thử một phép ghép: đổi một khu ướt (phòng hay phòng
+khép kín thuộc nhóm `wet`) với một phòng ở hàng khác, mỗi phòng chèn vào MỌI vị trí của hàng mới; nhận phép giảm giá nhiều nhất như mọi
+phép khác. Ngân sách số cách xếp phép ghép được đo trong một lần chỉnh: `prefer.wet_swap_insert_budget` 600 (vòng `b1543b8c` v5 khi
+không ngân sách 103 → 193 s). Cấu hình `prefer.wet_swap_insert: true` (vắng / false = tắt).
+
+**Đo.** 9272 trước (theo yêu cầu, báo tiến độ): `1dd74b99` v2 65,0 → 69,9 %, v3 67,4 → 68,8 %, v4 không đổi; không nhóm nào giảm. Rồi phát
+lại 61 lượt / 256 vòng (ngữ cảnh Workflow, chưa có ngân sách; đối chứng = lượt T181):
+
+| | Đối chứng (T181) | Có phép ghép |
+| --- | --- | --- |
+| Vòng qua cổng | 25 | 25 — không vòng nào đổi kết quả cổng |
+| Đạt ngưỡng nhận (trên 25 vòng qua) | 2 | 2 |
+| D ≥ 60 % / E ≥ 40 % | 6 / 4 | 6 / 5 |
+| Điểm trung bình 25 vòng | 67,78 % | 68,25 % |
+| Cả bộ / vòng lâu nhất | 3.574 s / 167,5 s | 3.166 s / 192,6 s (`b1543b8c` v5 103 → 193 s) |
+
+Ba vòng đổi, % · A · B · C · D · E: `1dd74b99` v2 65,0 · 73 · 67 · 76 · 62 · 0 → **69,9 · 79 · 67 · 83 · 62 · 20**; v3 67,4 · 75 · 67 ·
+77 · 62 · 20 → **68,8 · 75 · 67 · 83 · 62 · 20**; `3ff10f75` v2 61,0 · 64 · 83 · 79 · 22 · 0 → **66,5 · 64 · 67 · 85 · 39 · 60**. Có ngân
+sách 600: ba vòng ấy cùng `b1543b8c` v5 / v6 cho ĐÚNG điểm như không ngân sách (phát lại riêng); thời gian máy lúc đo dao động quá mạnh để
+nói ngân sách nhanh hơn bao nhiêu (`b1543b8c` v5 89 s, v6 162 s ở cùng lần chạy).
+
+**9272 vẫn E 20 %, chưa đạt ngưỡng nhận.** WC chung vẫn rơi góc sau phải (trên `bedroom_2`, chỗ khô): muốn nó vào góc sau trái phải cùng
+lúc dời phòng ngủ chính lên, đưa WC vào góc và đẩy một phòng ngủ sang cột phải — ba thay đổi, phép ghép một bước không với tới.
+
+**Giữ** (điểm trung bình +0,47, ba vòng lên rõ, không vòng nào xuống, không mất vòng qua cổng; ngân sách giữ thời gian). Phép thử
+`ai-live-skeleton-rows-swap.test.ts` (`1dd74b99` v2: có phép ghép điểm cao hơn quá 2 điểm). Đột biến M259 (bỏ phép ghép): đo tay, ĐỎ. Kết
+quả: `backup/gd1-mat-bang/replay-t182new-0.jsonl`, `s182new.jsonl`.
+
+**Còn mở.** (1) 9272 E: cần tìm sâu hơn (ba thay đổi) hoặc đầu vào khác — câu nhắc cho mô hình đặt WC tầng 2 trên khu ướt tầng 1, hay đầu bài
+không bắt ban công hông thuộc phòng ngủ chính. (2) Vòng lâu nhất đang 160–190 s trên máy bận; trần CPU Worker 300 s — cần đo lại khi máy rảnh
+trước khi phát hành. (3) Việc mở của T181 (chọn theo điểm cả nhà) vẫn chưa làm.

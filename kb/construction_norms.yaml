@@ -457,6 +457,10 @@ sketch:
     max_candidates: 12
     max_moves: 24
     depth_step_cm: 10
+    # T181: thêm bản dựng mà ban công chính mặt tiền là một dải áp mặt tiền chạy suốt dải trước và đầu hành lang ngang —
+    # mở cửa từ hành lang (D6), dài bằng cả dải trước nên không nhỏ hơn ban công hông (D7). Chỉ khi mặt tiền là đầu hành
+    # lang (thang đặt ngang). Bỏ dòng hoặc false là tắt.
+    main_balcony_strip: true
     # Bước chỉnh T180: chia đã vừa thì dời / đổi phòng (tối đa `max_moves` bước) cho khu ướt (nhóm `wet`) không đè chỗ khô
     # tầng dưới (nhóm `dry_below`, tỉ lệ chồng theo `overlap_ratio` của E5) và gần khu ướt tầng dưới, phòng ở (nhóm
     # `habitable`) có mặt thoáng hay cửa ra ban công. Trọng số chỉ để so các cách xếp với nhau — không phải điểm; bản chỉnh là
@@ -471,3 +475,11 @@ sketch:
       # phòng có sàn đầu bài mà ước lọt lòng chỉ dư dưới tỉ lệ này thì trừ `tight_floor` — cổng đo kỹ hơn và hay bác
       floor_margin_ratio: 0.05
       tight_floor: 5
+      # T181: khu ướt đè bếp / phòng thờ tầng dưới (luật bắt buộc T71 — cổng bác)
+      wet_over_service: 10
+      # T181: phòng thờ chung vách hay đối diện WC qua một hành lang (luật bắt buộc T71 — cổng bác)
+      altar_near_wc: 10
+      # T182: hết phép đơn thì thử đổi một khu ướt với một phòng hàng khác, mỗi phòng vào mọi chỗ của hàng mới (một bước)
+      wet_swap_insert: true
+      # số cách xếp tối đa phép ấy được đo trong một lần chỉnh — giữ một vòng xa trần CPU 300 s của Worker
+      wet_swap_insert_budget: 600

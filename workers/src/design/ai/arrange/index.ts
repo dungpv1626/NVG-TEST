@@ -128,6 +128,7 @@ import {
   wcOffAxis,
   wetRects,
   type MandatorySetup,
+  MANDATORY_ROOM_TYPES,
 } from '../mandatory';
 
 export {
@@ -2547,11 +2548,15 @@ function skeletonStage(
   // các đường khác — kết quả nhớ ở `rowsMemoFor` vì thế không làm lệch lời báo giữa các lần gọi.
   const gateRows = (list: readonly SkeletonCandidate[]) =>
     gateSkeleton(input, intent, footprint, env, stairIds, list, () => {}, new Set());
-  const tuned = rows.filter((candidate) => candidate.key.endsWith('|q'));
-  const firstPass = tuned.length ? gateRows(tuned) : null;
-  const second = firstPass?.winner
-    ? firstPass
-    : gateRows(rows.filter((candidate) => !candidate.key.endsWith('|q')));
+  // Thứ tự lên cổng: dải ban công chính mặt tiền (T181, `|S`) + chỉnh, dải, chỉnh, rồi bản theo bản phác — nhóm đầu có cây
+  // qua thì thắng; nhóm sau chỉ lên khi các nhóm trước không cây nào qua, nên không cây nào T179 từng qua bị mất.
+  const tier = (candidate: SkeletonCandidate) =>
+    (candidate.key.includes('|S') ? 0 : 2) + (candidate.key.endsWith('|q') ? 0 : 1);
+  let second: ReturnType<typeof gateRows> = { winner: null, passed: 0, built: 0 };
+  for (let t = 0; t < 4 && !second.winner; t += 1) {
+    const list = rows.filter((candidate) => tier(candidate) === t);
+    if (list.length) second = gateRows(list);
+  }
   if (!second.winner) memo.add(memoKey);
   return { ...second, built: first.built + second.built };
 }
@@ -2564,10 +2569,21 @@ function rowsPreferInput(
   input: ArrangeInput,
 ): Pick<
   SkeletonInput,
-  'dryBelow' | 'wetTypes' | 'habitableTypes' | 'sleepingTypes' | 'wetOverlapRatio'
+  | 'dryBelow'
+  | 'wetTypes'
+  | 'habitableTypes'
+  | 'sleepingTypes'
+  | 'wetOverlapRatio'
+  | 'mainFace'
+  | 'altarTypes'
+  | 'wcTypes'
 > {
   const groups = input.scoring?.roomGroups;
-  if (!groups || !input.construction.sketch?.skeleton_rows?.prefer) return {};
+  // Mặt tiền: ban công chính của tầng quay ra đây (T181) — chỉ khi mặt ấy thoáng.
+  const mainFace: Pick<SkeletonInput, 'mainFace'> = input.openFaces.includes('front')
+    ? { mainFace: FACE_SIDE.front }
+    : {};
+  if (!groups || !input.construction.sketch?.skeleton_rows?.prefer) return mainFace;
   const dryTypes = new Set(groups.dry_below ?? []);
   const below = input.anchors?.belowRooms ?? [];
   const ratio = input.scoring?.quality.criteria.find((c) => c.code === 'E5')?.params.overlap_ratio;
@@ -2582,6 +2598,13 @@ function rowsPreferInput(
     habitableTypes: new Set(groups.habitable ?? []),
     sleepingTypes: new Set(groups.sleeping ?? []),
     ...(typeof ratio === 'number' ? { wetOverlapRatio: ratio } : {}),
+    ...(input.mandatory?.rules.altarBesideWc || input.mandatory?.rules.altarFacingWc
+      ? {
+          altarTypes: new Set([MANDATORY_ROOM_TYPES.altar]),
+          wcTypes: new Set([MANDATORY_ROOM_TYPES.wc]),
+        }
+      : {}),
+    ...mainFace,
   };
 }
 
