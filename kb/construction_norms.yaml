@@ -475,6 +475,9 @@ sketch:
     # mở cửa từ hành lang (D6), dài bằng cả dải trước nên không nhỏ hơn ban công hông (D7). Chỉ khi mặt tiền là đầu hành
     # lang (thang đặt ngang). Bỏ dòng hoặc false là tắt.
     main_balcony_strip: true
+    # Như trên cho mặt BÊN đầu bài bắt có ban công (30/10/2026): khung gắn ban công vào phòng của hàng, mà không hàng nào
+    # chạy dọc mặt bên — phát lại 151 lần khung bỏ vì thiếu ban công ở mặt bắt buộc. Bỏ dòng hoặc false là tắt.
+    side_balcony_strip: true
     # Bước chỉnh T180: chia đã vừa thì dời / đổi phòng (tối đa `max_moves` bước) cho khu ướt (nhóm `wet`) không đè chỗ khô
     # tầng dưới (nhóm `dry_below`, tỉ lệ chồng theo `overlap_ratio` của E5) và gần khu ướt tầng dưới, phòng ở (nhóm
     # `habitable`) có mặt thoáng hay cửa ra ban công. Trọng số chỉ để so các cách xếp với nhau — không phải điểm; bản chỉnh là

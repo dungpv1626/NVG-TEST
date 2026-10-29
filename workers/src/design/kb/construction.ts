@@ -95,6 +95,8 @@ export interface SketchNorms {
     max_candidates: number;
     /** T181: ban công chính mặt tiền thành dải chạy qua đầu hành lang (mở từ giao thông chung). Vắng = không. */
     main_balcony_strip?: boolean;
+    /** Như `main_balcony_strip` cho mặt bên đầu bài bắt có ban công (30/10/2026). Vắng = không. */
+    side_balcony_strip?: boolean;
     max_moves: number;
     depth_step_cm: number;
     /**
@@ -493,8 +495,15 @@ function parseSketch(raw: unknown): SketchNorms {
         '"sketch.skeleton_rows.main_balcony_strip" phải là true hoặc false',
       );
     }
+    const sideRaw = rowsRaw?.side_balcony_strip;
+    if (sideRaw !== undefined && typeof sideRaw !== 'boolean') {
+      throw new ConstructionNormsError(
+        '"sketch.skeleton_rows.side_balcony_strip" phải là true hoặc false',
+      );
+    }
     rows = {
       ...(stripRaw !== undefined ? { main_balcony_strip: stripRaw } : {}),
+      ...(sideRaw !== undefined ? { side_balcony_strip: sideRaw } : {}),
       max_candidates: read('max_candidates', false),
       max_moves: read('max_moves', false),
       depth_step_cm: read('depth_step_cm', true),

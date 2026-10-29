@@ -48,6 +48,11 @@ export interface RowsConfig {
   depth_step_cm: number;
   /** T181: ban công chính mặt tiền thành dải áp mặt tiền chạy qua đầu hành lang T (mở từ giao thông chung). */
   main_balcony_strip?: boolean;
+  /**
+   * Như `main_balcony_strip` cho mặt BÊN đầu bài bắt có ban công (30/10/2026): phát lại 151 lần khung bỏ vì «không ban
+   * công nào nằm dọc mặt … đầu bài bắt buộc» — ban công gắn vào phòng của hàng, mà không hàng nào chạy dọc mặt bên.
+   */
+  side_balcony_strip?: boolean;
   /** Bước chỉnh sau khi chia được (T180): trọng số khu ướt đè chỗ khô / phòng ở tối / khoảng cách tới khu ướt dưới. */
   prefer?: {
     max_moves: number;
@@ -220,6 +225,8 @@ interface FrameSpec {
   under: RegionMode | null;
   /** Ban công chính mặt tiền là dải áp mặt tiền chạy qua đầu hành lang T (T181). */
   strip: boolean;
+  /** Mặt (hệ chuẩn) của dải ban công khi `strip`: mặt tiền (T181) hay mặt bên đầu bài bắt có ban công. */
+  stripSide: Side | null;
 }
 
 export function rowsCandidates(
@@ -280,7 +287,14 @@ function frameSpecs(ni: SkeletonInput, config: RowsConfig): FrameSpec[] {
     const underModes: (RegionMode | null)[] = s.y1 < f.y1 ? ['stack', 'split'] : [null];
     for (const lft of lftModes)
       for (const under of underModes)
-        specs.push({ tag: `V|L${lft ?? '-'}|U${under ?? '-'}`, v: true, lft, under, strip: false });
+        specs.push({
+          tag: `V|L${lft ?? '-'}|U${under ?? '-'}`,
+          v: true,
+          lft,
+          under,
+          strip: false,
+          stripSide: null,
+        });
   }
   if (s.y1 === f.y1)
     specs.push({
@@ -289,17 +303,24 @@ function frameSpecs(ni: SkeletonInput, config: RowsConfig): FrameSpec[] {
       lft: s.x0 > f.x0 ? 'row' : null,
       under: null,
       strip: false,
+      stripSide: null,
     });
   // Mặt tiền là đầu của hành lang T (mặt bên trong hệ chuẩn): thêm bản có dải ban công chính chạy qua đầu T (T181).
+  // Mặt bên đầu bài BẮT có ban công cũng vậy (`side_balcony_strip`) — không hàng phòng nào chạy dọc mặt ấy để gắn ban công.
+  const forbidden = ni.balconySides?.forbidden ?? [];
+  const stripSides: Side[] = [];
   const main = ni.mainFace;
-  if (
-    config.main_balcony_strip &&
-    main &&
-    (main === 'x0' || main === 'x1') &&
-    ni.openSides.has(main) &&
-    !(ni.balconySides?.forbidden ?? []).includes(main)
-  ) {
-    for (const spec of [...specs]) specs.push({ ...spec, tag: `${spec.tag}|S`, strip: true });
+  if (config.main_balcony_strip && main) stripSides.push(main);
+  if (config.side_balcony_strip)
+    for (const side of ni.balconySides?.required ?? [])
+      if (!stripSides.includes(side)) stripSides.push(side);
+  const plain = [...specs];
+  for (const side of stripSides) {
+    if ((side !== 'x0' && side !== 'x1') || !ni.openSides.has(side) || forbidden.includes(side))
+      continue;
+    const suffix = side === main ? '|S' : `|S${side}`;
+    for (const spec of plain)
+      specs.push({ ...spec, tag: `${spec.tag}${suffix}`, strip: true, stripSide: side });
   }
   return specs;
 }
@@ -323,8 +344,9 @@ function buildFrame(ni: RowsInput, spec: FrameSpec, config: RowsConfig, stairKey
   // Dải ban công chính SUỐT mặt tiền (T181): ô thang không chạm mặt tiền thì tách một dải trọn chiều dài mặt ấy, dựng
   // phần còn lại như một hình bao hẹp hơn rồi ghép dải vào — ban công chính dài nhất tầng (D7) và mở từ sảnh / đầu hành
   // lang T (D6). Ô thang chạm mặt tiền thì dải chỉ chạy qua dải trước + T (bên dưới).
-  if (spec.strip && ni.mainFace && !ni.landingFor) {
-    const main = ni.mainFace;
+  const stripSide = spec.strip ? spec.stripSide : null;
+  if (stripSide && !ni.landingFor) {
+    const main = stripSide;
     const chosen = ni.items
       .filter(
         (item) =>
@@ -423,8 +445,8 @@ function buildFrame(ni: RowsInput, spec: FrameSpec, config: RowsConfig, stairKey
   };
   // Dải ban công chính mặt tiền (T181): áp mặt tiền, chạy suốt dải trước + hành lang T — mở cửa từ T, không chỉ từ phòng riêng.
   let strip: { leaf: PackItem; rect: Rect } | null = null;
-  if (spec.strip && ni.mainFace) {
-    const main = ni.mainFace;
+  if (stripSide) {
+    const main = stripSide;
     const candidates = ni.items
       .filter(
         (item) =>
@@ -449,12 +471,12 @@ function buildFrame(ni: RowsInput, spec: FrameSpec, config: RowsConfig, stairKey
     if (strip.rect.x1 > s.x0 && strip.rect.x0 < s.x1 && strip.rect.y1 > s.y0)
       return none('dải ban công chạm ô thang');
   }
-  const topX0 = strip && ni.mainFace === 'x0' ? strip.rect.x1 : f.x0;
-  const topX1 = strip && ni.mainFace === 'x1' ? strip.rect.x0 : f.x1;
+  const topX0 = strip && stripSide === 'x0' ? strip.rect.x1 : f.x0;
+  const topX1 = strip && stripSide === 'x1' ? strip.rect.x0 : f.x1;
   // Đầu hành lang T chỉ dài bằng bề rộng hành lang — ngắn hơn đoạn vách cửa ra ban công cần thì thêm một sảnh dọc dải
   // ban công suốt dải trước, để cửa ban công mở từ giao thông chung (cổng cửa chọn chủ nhà cửa theo vách chung đủ dài).
   let landing = 0;
-  const landingSide = strip ? ni.mainFace : (ni.landingFor?.side ?? null);
+  const landingSide = strip ? stripSide : (ni.landingFor?.side ?? null);
   const landingLeaf = strip?.leaf ?? ni.landingFor?.leaf ?? null;
   if (landingLeaf) {
     const hallLeaf = ni.items.find((item) => ni.corridorIds.has(item.key))?.primary;
@@ -567,7 +589,7 @@ function buildFrame(ni: RowsInput, spec: FrameSpec, config: RowsConfig, stairKey
     return touches.find(openSide) ?? null;
   };
   const wanted = (ni.balconySides?.required ?? []).filter(openSide);
-  const covered = new Set<Side>(strip && ni.mainFace ? [ni.mainFace] : []);
+  const covered = new Set<Side>(strip && stripSide ? [stripSide] : []);
   const hostsOn = (side: Side): { sl: Slot; c: Cluster }[] => {
     const out: { sl: Slot; c: Cluster }[] = [];
     for (const sl of slots) {
@@ -896,7 +918,7 @@ function buildFrame(ni: RowsInput, spec: FrameSpec, config: RowsConfig, stairKey
         chain(
           { x0: f.x0, y0: f.y0, x1: f.x1, y1: s.y0 },
           'x',
-          ni.mainFace === 'x0' ? [stripLeaf, body] : [body, stripLeaf],
+          stripSide === 'x0' ? [stripLeaf, body] : [body, stripLeaf],
         ),
       );
     } else rows.push(hallT);

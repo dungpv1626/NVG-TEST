@@ -24,16 +24,27 @@ async function roundThree(prefer: boolean) {
     houseProfile: true,
   });
   const sketch = base.construction.sketch!;
-  // Dải ban công mặt tiền (T181) tắt ở cả hai nhánh: nó lên cổng trước bản chỉnh và ở vòng này đổi khu ướt lấy mặt
+  // Dải ban công mặt tiền (T181) và mặt bên (30/10/2026) tắt ở cả hai nhánh: nó lên cổng trước bản chỉnh và ở vòng này đổi khu ướt lấy mặt
   // thoáng — phép thử này đo riêng bước chỉnh khu ướt T180.
-  const { prefer: _prefer, ...rows } = { ...sketch.skeleton_rows!, main_balcony_strip: false };
+  const { prefer: _prefer, ...rows } = {
+    ...sketch.skeleton_rows!,
+    main_balcony_strip: false,
+    side_balcony_strip: false,
+  };
   const input = {
     ...base,
     mandatory,
     construction: {
       ...base.construction,
       sketch: prefer
-        ? { ...sketch, skeleton_rows: { ...sketch.skeleton_rows!, main_balcony_strip: false } }
+        ? {
+            ...sketch,
+            skeleton_rows: {
+              ...sketch.skeleton_rows!,
+              main_balcony_strip: false,
+              side_balcony_strip: false,
+            },
+          }
         : { ...sketch, skeleton_rows: rows },
     },
   };

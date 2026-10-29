@@ -31,7 +31,12 @@ function roundOne(strip: boolean) {
       ...base.construction,
       sketch: {
         ...sketch,
-        skeleton_rows: { ...sketch.skeleton_rows!, main_balcony_strip: strip },
+        // Dải ban công mặt BÊN (30/10/2026) tắt ở cả hai nhánh — phép thử này đo riêng dải mặt tiền T181.
+        skeleton_rows: {
+          ...sketch.skeleton_rows!,
+          main_balcony_strip: strip,
+          side_balcony_strip: false,
+        },
       },
     },
   };
