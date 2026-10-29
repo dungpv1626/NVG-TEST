@@ -1275,7 +1275,30 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   `create_payment_request_from_period` lập sẵn. `record_chain` nhận `payment_request` / `subcontract_period` /
   `subcontractor`. Phép thử `g2-thau-phu.test.ts` (10; đột biến gỡ chặn thiếu căn cứ / nới trần số tiền / gỡ khoá bất biến đã
   đo đỏ). ⚠️ 0247 chép `decide_approval` từ 0246 — đừng chạy lại cả tệp 0246 trên máy (đè bản 0247); sửa thì áp riêng hàm.
-- Hàm chép-dài bản mới nhất: `decide_approval` ở 0245 (chép 0179, thêm nhánh `rental_quotes`, `internal_rental_requests`), `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
+- **Phiên 29/10/2026 (anh Dũng, commit 80e2de2 → dcd1bac, đã đẩy NVG-TEST):**
+  - Đối chiếu khảo sát: phiếu anh Bùi Văn Thi (Ban Giám đốc, dòng 592–1056) + Chỉ huy – Giám sát công trường (anh Nguyễn Công Minh,
+    4612–5035). Bảng 66 yêu cầu NVO / NVS / phê duyệt / tiền / chung: 19 có, 36 một phần, 11 chưa; NVC 14 bước: 5 có, 9 một phần.
+    Kế hoạch `doc/KE_HOACH_THI_CONG_THEO_KHAO_SAT.md` (T1–T9) và `doc/KE_HOACH_KHOP_KHAO_SAT_ANH_THI.md` (giai đoạn A–E, gói đợt 1
+    G1–G6). Đợt 1 XONG cả 6 gói (0244–0249), T1–T4 (0241, 0242), hai hợp đồng một cơ hội (0243) — chi tiết ở các mục riêng bên trên.
+  - Báo giá: văn bản Word + PDF + sửa chữ trực tiếp + mẫu lời nhắn + email giả lập (0239); NVG tự tải mẫu báo giá (0240); giá vốn
+    (0244); báo giá thường do Ban Giám đốc duyệt (bỏ hạn mức 500 tr của Kinh doanh ở `DEFAULT_APPROVAL_LIMITS` + CSDL máy).
+  - Cơ hội ở Đàm phán: thẻ «Bước tiếp theo» liệt kê việc còn lại tới ký hợp đồng kèm nút soạn / mở (`crm/negotiation-next-steps.tsx`).
+  - Soạn hợp đồng: «Đưa vào văn bản» điền dòng Phạm vi công việc vào chỗ trống Điều 2.1 khi mẫu không in bảng phạm vi
+    (`hd/scope-to-document.tsx`, `scopeFreeField`, `FreeFieldFillContext`).
+  - Máy đọc phiếu khảo sát giấy cắt sơ đồ hiện trạng (trường `sketch` của hợp đồng `ai-survey-paper-read`, cắt từ ảnh ĐÃ CHE); dòng lý
+    do dưới nút «Máy viết báo cáo».
+  - Bản in dùng chung (`lib/print-report.ts`): chờ 0,3 giây sau khi tải rồi mới gọi in + nút «In» dự phòng. Lần kẹt thật của anh Dũng
+    do máy in Windows hỏng (RICOH offline, iR-ADV lỗi, Deli kẹt xoá) + RAM cạn.
+  - Chạy thử trên máy: `devHostUrl` trong `web/vite.config.ts` thay tên máy cục bộ trong `VITE_SUPABASE_URL` / `VITE_DESIGN_API_URL`
+    bằng tên máy trình duyệt đang mở; `.env` trỏ `localhost`. Wifi đổi IP không còn hỏng đăng nhập. Worker vẫn kiểm `ALLOWED_ORIGINS`
+    theo IP (đang có .3, .8) — máy KHÁC gọi Worker khi IP lại đổi thì thêm IP vào `.dev.vars`.
+  - AI Design T179–T184 (`doc/design/QUYET_DINH_AI.md`): khung hai hàng phòng tầng trên; chỉnh khu ướt chồng tầng; ban công chính suốt
+    mặt tiền; đổi chỗ phòng ướt giữa hai hàng; lời dẫn 9.13.0 dặn chồng khu ướt; lượt «Sửa lại» không rơi vào vòng xếp lại (trần ≈ 0,10
+    USD, `edit_calls_max` ở `kb/plan_quality.yaml`). Phát lại 256 vòng: qua cổng 16 → 25, phương án đạt 0 → 2. Lượt thật 9272 cả ngày
+    ≈ 1,02 USD — xem dòng «AI Design trọn luồng» ở bảng trạng thái.
+  - Kịch bản thử đầu cuối (Claude Docs): NVO https://claude.ai/artifact/9UfVoTHcxJyi99xTDu3V6h · NVS
+    https://claude.ai/artifact/2WFmjsEkjidpL3Y3kh6kk7 (dữ liệu thử, 20 / 16 điểm kiểm có cột Đạt / Lỗi).
+- Hàm chép-dài bản mới nhất (29/10/2026): `decide_approval` ở 0249 (chép 0247 → 0246 → 0245; nhánh `rental_quotes`, `internal_rental_requests`, `subcontract_selections`, `bidding_projects`, `budget_adjustments`), `stage_readiness` ở 0249, `record_chain` ở 0246, `site_profit_loss_list` ở 0249, `post_payment_to_budget` ở 0249, `tc_site_board` ở 0241, `create_contract_from_source` ở 0244, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175. Đừng chạy lại CẢ tệp một migration cũ trên máy (đè bản mới của hàm dùng chung) — sửa thì áp riêng hàm.
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
   `backup/dot1-micro/` (không commit).
@@ -1302,8 +1325,8 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Bộ hồ sơ dự thầu demo (câu 19) | Có kịch bản `dau-thau` (`NVC-DA-2026-0648` trên máy) + tài liệu quy trình. CÒN: bộ mẫu Word hồ sơ dự thầu tự điền |
 | Soạn hợp đồng — tối 27/10 | Xong trên máy, kiểm trên trình duyệt (`backup/hd-khung-cao/`), phép thử `preview-follow`, `sentence-runs`. Hợp đồng thử `NVC-HD-2026-WORD1` đang CHỜ DUYỆT với bản 1 là mẫu gốc chưa điền (tải lên ngày 25/10) — cần TGĐ «Từ chối» rồi Kinh doanh gửi lại bằng «Lưu bản mới như màn hình và gửi»; giá trị đã đổi thành 3.000.000.000 đồng (anh Dũng bấm) |
 | Đầu bài dễ điền (0233)                | Xong trên máy, kiểm trên trình duyệt bằng `thietke.nvo@…`: ô thiếu điền tại chỗ, bảng vẽ đa giác (đã mở khoá), điền sẵn (giả lập + 1 lượt Gemini thật ≈ 0,0013 USD). Chưa có lượt thật trên biên bản khảo sát đầy đủ (lượt 2 gặp 503). Công tắc `ai.brief_prefill_enabled` = 1 trên máy |
-| AI Design trọn luồng (`NVO-TK-2026-9272`) | Đầu bài đã xác nhận; mặt bằng lượt thật 28/10 HỎNG (≈ 0,50 USD). Chưa có lượt thật nào cho Ảnh nội thất / Mặt đứng / Phối cảnh. Không có mô hình 3D thật — «3D» chỉ là ảnh phối cảnh do mô hình ảnh vẽ |
-| Worker trên máy                       | ĐANG TẮT (lần khởi động cuối thoát lỗi) — `npm run dev:workers` trước khi thử AI; `AI_FAKE=` rỗng (AI thật); hai khoá Gemini mới đã kiểm bằng `countTokens` |
+| AI Design trọn luồng (`NVO-TK-2026-9272`) | 29/10: lượt thật «Xếp mặt bằng» (lời dẫn 9.13.0, Terra) LƯU «Phương án 2» 68,6 điểm — chưa đạt vì nhóm Mặt thoáng (D) dưới sàn; nhóm khu ướt (E) đã qua sàn; 0,429 USD. Lượt «Sửa lại» 5 ý HỎNG (0,589 USD, rơi vào vòng xếp lại — đã chặn ở T184). Ảnh nội thất / mặt đứng / phối cảnh đã có từ 28/10 (trên Phương án 1). Bước tiếp: kiến trúc sư sửa tay Phương án 2 trên DXF, hoặc chạy lại «Xếp mặt bằng» khi anh Dũng cho |
+| Worker trên máy                       | Chạy (`wrangler dev --ip 0.0.0.0`, cổng 8788); `AI_FAKE=` rỗng (AI thật), `AI_REPLAY=1`. Máy khởi động lại thì Docker Desktop → `npm run db:start` → Worker → Vite (9.6). Trước khi bật Worker tắt HẾT cây `wrangler` / `workerd` cũ — hai bản cùng nghe 8788 thì mọi yêu cầu treo |
 | Bộ mẫu hợp đồng                       | Bản DỰ THẢO (anh Dũng gửi, dùng như chính thức) — chờ pháp chế NVG rà; bảng hỏi mục 6 trong tệp «00_Huong_dan» từng bộ chờ NVG trả lời. Tài khoản ngân hàng ba công ty là số DEMO                                                                                                                                                                                               |
 | AI trên máy                           | **Chạy THẬT**: Whisper (Workers AI) + Gemini 2.5 Flash trả phí — `workers/.dev.vars` `AI_FAKE=` rỗng, công tắc `ai.transcribe_enabled` / `ai.survey_summary_enabled` = 1 ở CSDL máy. Muốn quay về giả lập: `AI_FAKE=1`                                                                                                                                                          |
 | Bản demo cũ `nvg.tests99.workers.dev` | Vẫn chạy bản trước GĐ1, CSDL `awaiwegmuykhctnysvou` — ở tài khoản khác, máy này KHÔNG vào được                                                                                                                                                                                                                                                                                  |
@@ -1312,7 +1335,25 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 
 #### Bước tiếp theo
 
-0. **Việc tiếp theo (sau phiên 27/10/2026), theo thứ tự đề xuất:**
+0. **Việc tiếp theo (sau phiên 29/10/2026) — chờ anh Dũng chọn:**
+   (1) **Kiểm đợt 1 khớp khảo sát anh Thi (G1–G6, 0244–0249) trên trình duyệt bằng đúng vai** — chưa gói nào chạy thử trên trình
+   duyệt (máy thiếu RAM khi các agent làm). Dùng kịch bản thử NVO https://claude.ai/artifact/9UfVoTHcxJyi99xTDu3V6h và NVS
+   https://claude.ai/artifact/2WFmjsEkjidpL3Y3kh6kk7 (Claude Docs; kịch bản NVO đã theo luồng HAI hợp đồng).
+   (2) **Lập gói đợt 2** theo `doc/KE_HOACH_KHOP_KHAO_SAT_ANH_THI.md`: A5 giá trị đã làm chưa nghiệm thu / chưa thu, A6 quyết toán +
+   lãi / lỗ thực tế, A7 dòng tiền theo công trình + công nợ có người đòi, NVO tỷ lệ chuyển thiết kế → thi công, B1 ủy quyền duyệt,
+   B2 quá hạn tự chuyển cấp, D1 màn hình buổi sáng đủ 10 mục, C4 sửa chữa / hiệu suất tài sản NVS, C5 đơn bán NVS; C6 sản xuất chờ
+   Xưởng. Cách chạy đã chứng minh: tối đa 2 agent song song, mỗi gói một số migration chia trước, agent KHÔNG sửa `_journal.json`
+   (người gộp thêm mục rồi `npm run db:migrate` để đăng ký), phép thử CSDL qua `dbtest-lock.cjs` ở scratchpad, sau mỗi lượt chạy lại
+   phép thử của mọi gói cùng lượt (G4 từng chặn chi phí thuê nội bộ của G5 — chỉ lộ khi chạy chung).
+   (3) **Thi công T6–T8** (an toàn, máy móc, ảnh GPS — `doc/KE_HOACH_THI_CONG_THEO_KHAO_SAT.md`); T5 + T9 đã làm trong G2 / G4.
+   (4) **Câu hỏi NVG còn mở của đợt 1:** lợi nhuận tối thiểu từng công ty (`min_margin_percent` TRỐNG); hạn mức chọn thầu phụ (seed
+   giả định TC 50 tr / BGĐ 500 tr / TGĐ), tổ đội nhỏ có miễn so giá; ai duyệt vượt ngân sách + dung sai; điều kiện khởi công / mục bàn
+   giao nào bắt buộc, thiếu bàn giao có chặn khởi công; NVO có bắt buộc kiểm 4 bước hồ sơ thanh toán; tỷ lệ giữ lại; số ngày nhắc bảo
+   lãnh / giữ lại; hạn mức công nợ khách NVS; giá thuê nội bộ thật; hợp đồng nội thất có thành loại riêng; ai bỏ được «Chỉ thiết kế».
+   (5) **Gửi email thật:** anh Dũng tạo tài khoản Resend + DNS nhavietgroup.vn, đưa `RESEND_API_KEY`, `EMAIL_FROM` vào `.dev.vars`.
+   (6) **AI Design 9272:** kiến trúc sư sửa tay Phương án 2, hoặc thêm lượt thật (xin phép, ghi kỳ vọng trước; lượt sửa nay ≈ 0,10 USD).
+
+   **Việc tiếp theo cũ (sau phiên 27/10/2026), giữ để tra:**
    (a) **Bộ mẫu Word hồ sơ dự thầu tự điền** (phần còn lại của câu 19): đơn dự thầu, thư giảm giá, bảng tổng hợp giá, nhân sự
    chủ chốt, thiết bị, kê khai hợp đồng tương tự, cam kết — dùng lại cách của 0229 (`document_kind` mới, bộ soạn gắn trang gói
    thầu, máy điền hành chính / năng lực / giá, phần kỹ thuật để nháp). Anh Dũng chưa trả lời «làm luôn hay chạy thử trước».
@@ -1432,7 +1473,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email.
 
-**Migration tiếp theo: 0244.** (Đã dùng tới 0243; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0250.** (Đã dùng tới 0249; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 
@@ -1570,6 +1611,17 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Mở khoá thửa đa giác khi đã có bảng vẽ (T173) — nhưng chỉ khi anh Dũng quyết, không tự mở | Haan khoá 22/09 vì bộ xếp chưa đo trên hồ sơ thật; anh Dũng chấp nhận rủi ro 27/10 |
 | Chỗ trống tự do liền nhau của cùng câu gộp một câu, ô nằm trong câu | Anh Dũng: «tách ra nhiều quá» — câu 20.2 thành 7 ô, mỗi ô chép lại cả câu |
 | Một cơ hội: tối đa một hợp đồng thiết kế + một hợp đồng thi công, HOẶC một hợp đồng trọn gói; ký thiết kế không đóng cơ hội; «Chỉ thiết kế» là cờ + giai đoạn «Ký hợp đồng» có sẵn (0243) | Phiếu khảo sát anh Bùi Văn Thi: NVO ký hợp đồng thiết kế (thu tiền thiết kế theo đợt) rồi mới dự toán, ký hợp đồng thi công riêng — 0159 một hợp đồng mỗi cơ hội chặn đúng quy trình này. Trọn gói vẫn loại `thi_cong` nên không thêm giá trị enum (mọi chỗ xét `thi_cong` vẫn đúng) |
+| Bổ sung theo đúng thứ tự anh Thi chọn: thí điểm trọn vòng tiền một công trình (cơ hội → giá → hợp đồng → bàn giao → ngân sách → chi phí → nghiệm thu → thu tiền → lãi / lỗ) trước, rồi phê duyệt, NVS, số liệu, liên công ty | Phiếu Ban Giám đốc dòng 959–965; đối chiếu 29/10 thấy chuỗi đứt ở khối lượng, thanh toán thầu phụ, quyết toán |
+| Kinh doanh không thấy giá vốn, lợi nhuận, cả %; báo giá thường chuyển Ban Giám đốc duyệt; dưới lợi nhuận tối thiểu chỉ Tổng Giám đốc (0244) | Anh Dũng 29/10; Kinh doanh có hạn mức duyệt mà không thấy giá vốn là duyệt mù |
+| Thanh toán tổ đội / thầu phụ chặn ở CSDL khi thiếu đợt khối lượng đã xác nhận hoặc biên bản đã ký (0246) | Phiếu công trường: tranh chấp nhiều nhất ở khối lượng; anh Thi: «không thanh toán chỉ dựa trên đề nghị miệng hoặc tin nhắn» |
+| Khoán thầu phụ có cả đơn giá lẫn khoán gọn, giữ lại tùy chọn từng tổ; phát sinh khẩn cấp chỉ cấp trên chỉ huy trưởng cho phép; tồn tại chưa đóng chỉ cảnh báo; báo cáo tuần gửi Trưởng phòng Thi công + giám đốc; biên bản theo mẫu NVC | Anh Dũng trả lời 6 câu của kế hoạch Thi công (29/10) |
+| Vượt ngân sách không chặn người gửi mà đổi sang loại duyệt «Vượt ngân sách»; sau khởi công sửa ngân sách phải duyệt; thiếu mục bàn giao chỉ cảnh báo, thiếu điều kiện khởi công bắt buộc thì chặn (0249) | Anh Thi dòng 830, 834; chặn cứng người gửi làm công trường dừng chờ |
+| Hồ sơ thanh toán chủ đầu tư kiểm 4 bước bắt buộc với NVC, NVO / NVS tùy chọn; tiền giữ lại là khoản phải thu riêng có hạn theo bảo hành (0248) | Anh Thi dòng 759 tả đúng quy trình NVC; tách khoản giữ lại để không đếm trùng số tập đoàn |
+| Thuê giàn giáo nội bộ: cờ do CSDL đặt, giá nội bộ áp lúc xuất không hồi tố, chi phí vào ngân sách công trình khi ký biên bản thu hồi, số toàn NVG loại phần nội bộ (0245) | QĐ-6; anh Thi dòng 791 «vẫn phải có đề nghị, phê duyệt… như khách hàng bên ngoài» |
+| Gói thầu từ chối tham gia là bước riêng «Không tham gia», không tính trượt thầu; chưa duyệt tham gia thì không lập dự toán (0247) | Anh Thi dòng 739; trộn vào trượt thầu làm sai tỷ lệ trúng |
+| Lượt «Sửa lại» AI Design chỉ dùng lời gọi sửa rẻ, không bao giờ rơi vào vòng xếp lại cả nhà (T184) | Lượt sửa 29/10 tốn 0,589 USD (1,4 lần một lượt xếp mới) mà không lưu gì; ước báo trước 0,1 USD là sai |
+| Chạy thử trên máy: địa chỉ CSDL / Worker theo tên máy trình duyệt đang mở, không ghi cứng IP | Wifi đổi IP ba lần trong hai ngày làm hỏng đăng nhập |
+| Làm song song bằng agent: tối đa hai gói, số migration chia trước, agent không sửa nhật ký migration, người gộp đăng ký + chạy lại phép thử chung | Máy 8 GB; hai gói cùng sửa `decide_approval` / chặn nhau (G4 chặn G5) chỉ lộ khi chạy phép thử chung sau khi gộp |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)
@@ -1681,6 +1733,10 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   (`.bin` rỗng, `npx tsc` / `prettier` báo không thấy). Mã nguồn không mất; `npm install` theo lockfile dựng lại. Còn sót
   thư mục thì kiểm `(Get-Item <thư mục>/node_modules).LinkType` và gỡ liên kết bằng `cmd //c rmdir` trước.
 - Đổi nhánh git khi Worker `wrangler dev` đang chạy = Worker nạp mã nhánh mới giữa chừng — đừng đổi nhánh khi đang có lượt AI.
+- Máy khởi động lại (29/10/2026 20:07): Docker Desktop không tự bật — mở `C:\Program Files\Docker\Docker\Docker Desktop.exe`, chờ
+  `docker info` → `npm run db:start` → Worker → Vite. Agent con có thể treo «no progress for 600 s» khi RAM cạn — gửi tin cho chính
+  agent đó để chạy tiếp, mã đã sửa vẫn còn trong cây làm việc.
+- Hộp thoại in Chrome đứng «Loading preview…» cả ở ô Destination: máy in Windows hỏng / RAM cạn, không phải mã — đổi đích «Save as PDF».
 - Thử nhanh trên máy: «AB» `bd36f4d6-857f-49ff-a94d-f69c3cbf499c`, «Ok» `ad60f61f-6b09-47d4-9823-a92366659fb2`,
   công trình NVO `NVO-CT-2026-0901` (`a705ba2b-885f-4b9f-a971-b12364e7e4fd`). Khách thử «Dũng đen» trùng số với đầu mối
   NVC-DM-2026-0043 — để lại có chủ đích (chưa xoá).
