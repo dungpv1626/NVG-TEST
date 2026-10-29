@@ -38,12 +38,14 @@ export interface EstimateRecord {
   bid_price: MoneyValue | null;
   basis_notes: string | null;
   approved_at: string | null;
+  /** Rủi ro người trình nêu khi gửi duyệt giá (0244). */
+  risk_note: string | null;
   created_at: string;
   prepared: { full_name: string } | null;
 }
 
 const ESTIMATE_SELECT =
-  'id, code, version, is_current_version, status, bid_price, basis_notes, approved_at, ' +
+  'id, code, version, is_current_version, status, bid_price, basis_notes, approved_at, risk_note, ' +
   'created_at, prepared:users!estimates_prepared_by_users_id_fk(full_name)';
 
 /** Toàn bộ phiên bản dự toán của một gói thầu, mới nhất lên đầu (DA-07). */
@@ -251,14 +253,18 @@ export function useSaveEstimateItems() {
   });
 }
 
-/** Trình duyệt giá dự thầu (DA-07) — hồ sơ vào thẳng Hộp thư Phê duyệt chung. */
+/**
+ * Trình duyệt giá dự thầu (DA-07) — hồ sơ vào thẳng Hộp thư Phê duyệt chung, kèm ghi chú rủi ro (0244).
+ * Lợi nhuận dưới mức tối thiểu của pháp nhân thì CSDL chuyển Tổng Giám đốc.
+ */
 export function useRequestEstimateApproval() {
   const queryClient = useQueryClient();
 
-  return useMutation<string, Error, { estimateId: string }>({
-    mutationFn: async ({ estimateId }) => {
+  return useMutation<string, Error, { estimateId: string; riskNote?: string | null }>({
+    mutationFn: async ({ estimateId, riskNote }) => {
       const { data, error } = await supabase.rpc('request_estimate_approval', {
         p_estimate_id: estimateId,
+        p_risk_note: riskNote ?? null,
       });
       if (error) throw error;
       return data as string;

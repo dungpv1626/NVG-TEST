@@ -18,8 +18,12 @@ import {
   formatDate,
   formatDateTime,
   formatQuantity,
+  QUOTE_SCOPE_KINDS,
   QUOTE_STAGES,
+  quoteKindsAvailable,
+  quoteScopeKindLabel,
   vatNote,
+  type QuoteScopeKind,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
@@ -35,8 +39,11 @@ import {
   useSendQuote,
   type QuoteRecord,
 } from '@/hooks/use-quotes';
+import { useSeesCost } from '@/hooks/use-quote-costs';
 import { cn } from '@/lib/utils';
+import { TEXTAREA_BOX } from '@/components/ui/field-box';
 import { QuoteDocumentActions } from './quote-document';
+import { QuoteCostPanel } from './quote-cost-panel';
 
 const EM_DASH = '—';
 
@@ -46,8 +53,11 @@ export function QuotePanel({
   isHandedOver,
   stage,
   missingForQuote = [],
+  companyCode = null,
 }: {
   opportunityId: string;
+  /** Pháp nhân của cơ hội — NVC / NVO tách báo giá thiết kế / thi công / trọn gói (0244), NVS không. */
+  companyCode?: string | null;
   canEdit: boolean;
   isHandedOver: boolean;
   /** Bước hiện tại của cơ hội — chỉ Báo giá / Đàm phán mới lập báo giá (0184). */
@@ -62,6 +72,7 @@ export function QuotePanel({
   );
 
   const requestApproval = useRequestQuoteApproval();
+  const { data: seesCost = false } = useSeesCost();
   const sendQuote = useSendQuote();
   const recordResponse = useRecordQuoteResponse();
 
@@ -93,7 +104,10 @@ export function QuotePanel({
   if (isLoading) return <TableSkeleton rows={3} columns={4} />;
 
   const list = quotes ?? [];
-  const effectiveQuoteId = findEffectiveQuoteId(list);
+  const currentKinds = list.filter((q) => q.is_current_version).map((q) => q.scope_kind);
+  const kinds = quoteKindsAvailable(companyCode, currentKinds);
+  // Nhóm theo loại (0244): mỗi loại một chuỗi phiên bản, một bản «Đang hiệu lực» riêng.
+  const groups = groupByKind(list);
 
   return (
     <div className="space-y-4">
@@ -114,52 +128,99 @@ export function QuotePanel({
       )}
 
       {editable && QUOTE_STAGES.includes(stage) && (
-        <div className="flex justify-end">
-          <Button variant="secondary" asChild>
-            <Link to={`/crm/co-hoi/${opportunityId}/bao-gia/lap-moi`}>
-              {list.length === 0 ? 'Lập báo giá' : 'Lập phiên bản mới'}
-            </Link>
-          </Button>
+        <div className="flex flex-wrap justify-end gap-2">
+          {kinds.length === 0 ? (
+            <Button variant="secondary" asChild>
+              <Link to={`/crm/co-hoi/${opportunityId}/bao-gia/lap-moi`}>
+                {list.length === 0 ? 'Lập báo giá' : 'Lập phiên bản mới'}
+              </Link>
+            </Button>
+          ) : (
+            kinds.map((k) => (
+              <Button key={k} variant="secondary" asChild>
+                <Link to={`/crm/co-hoi/${opportunityId}/bao-gia/lap-moi?loai=${k}`}>
+                  {currentKinds.includes(k)
+                    ? `Lập phiên bản mới — ${quoteScopeKindLabel(k).toLowerCase()}`
+                    : `Lập ${quoteScopeKindLabel(k).toLowerCase()}`}
+                </Link>
+              </Button>
+            ))
+          )}
         </div>
+      )}
+      {editable && kinds.length === 1 && kinds[0] === 'tron_goi' && (
+        <p className="text-xs text-fg-subtle">
+          Cơ hội đang có báo giá trọn gói nên không lập báo giá thiết kế / thi công riêng.
+        </p>
       )}
 
       {list.length === 0 ? (
         <EmptyState message="Chưa có báo giá nào. Báo giá phải được phê duyệt nội bộ trước khi gửi khách hàng." />
       ) : (
-        <ol className="space-y-3">
-          {list.map((quote) => (
-            <QuoteVersionCard
-              key={quote.id}
-              quote={quote}
-              isEffective={quote.id === effectiveQuoteId}
-              approvals={approvals.data?.get(quote.id) ?? []}
-              editable={editable}
-              canSend={canEdit}
-              opportunityId={opportunityId}
-              busy={requestApproval.isPending || sendQuote.isPending || recordResponse.isPending}
-              isResponding={respondingTo === quote.id}
-              responseText={responseText}
-              onResponseTextChange={setResponseText}
-              onRequestApproval={() => void run(() => requestApproval.mutateAsync(quote.id))}
-              onSend={() => void run(() => sendQuote.mutateAsync(quote.id))}
-              onStartResponse={() => {
-                setRespondingTo(quote.id);
-                setResponseText(quote.customer_response ?? '');
-              }}
-              onCancelResponse={() => setRespondingTo(null)}
-              onSaveResponse={() =>
-                void run(async () => {
-                  await recordResponse.mutateAsync({ quoteId: quote.id, response: responseText });
-                  setRespondingTo(null);
-                  setResponseText('');
-                })
-              }
-            />
-          ))}
-        </ol>
+        <div className="space-y-5">
+          {groups.map((g) => {
+            const effectiveQuoteId = findEffectiveQuoteId(g.quotes);
+            return (
+              <section key={g.kind ?? 'chung'} aria-label={quoteScopeKindLabel(g.kind)}>
+                {groups.length > 1 || g.kind !== null ? (
+                  <h3 className="mb-2 font-semibold">{quoteScopeKindLabel(g.kind)}</h3>
+                ) : null}
+                <ol className="space-y-3">
+                  {g.quotes.map((quote) => (
+                    <QuoteVersionCard
+                      key={quote.id}
+                      quote={quote}
+                      seesCost={seesCost}
+                      isEffective={quote.id === effectiveQuoteId}
+                      approvals={approvals.data?.get(quote.id) ?? []}
+                      editable={editable}
+                      canSend={canEdit}
+                      opportunityId={opportunityId}
+                      busy={
+                        requestApproval.isPending || sendQuote.isPending || recordResponse.isPending
+                      }
+                      isResponding={respondingTo === quote.id}
+                      responseText={responseText}
+                      onResponseTextChange={setResponseText}
+                      onRequestApproval={(riskNote) =>
+                        void run(() => requestApproval.mutateAsync({ quoteId: quote.id, riskNote }))
+                      }
+                      onSend={() => void run(() => sendQuote.mutateAsync(quote.id))}
+                      onStartResponse={() => {
+                        setRespondingTo(quote.id);
+                        setResponseText(quote.customer_response ?? '');
+                      }}
+                      onCancelResponse={() => setRespondingTo(null)}
+                      onSaveResponse={() =>
+                        void run(async () => {
+                          await recordResponse.mutateAsync({
+                            quoteId: quote.id,
+                            response: responseText,
+                          });
+                          setRespondingTo(null);
+                          setResponseText('');
+                        })
+                      }
+                    />
+                  ))}
+                </ol>
+              </section>
+            );
+          })}
+        </div>
       )}
     </div>
   );
+}
+
+/** Nhóm phiên bản theo loại, thứ tự thiết kế → thi công → trọn gói → báo giá chung. */
+export function groupByKind<T extends { scope_kind: QuoteScopeKind | null }>(
+  quotes: readonly T[],
+): { kind: QuoteScopeKind | null; quotes: T[] }[] {
+  const order: (QuoteScopeKind | null)[] = [...QUOTE_SCOPE_KINDS, null];
+  return order
+    .map((kind) => ({ kind, quotes: quotes.filter((q) => q.scope_kind === kind) }))
+    .filter((g) => g.quotes.length > 0);
 }
 
 /**
@@ -184,6 +245,8 @@ export function findEffectiveQuoteId(
 
 interface QuoteVersionCardProps {
   quote: QuoteRecord;
+  /** Vai trò xem được giá vốn (Mẫu D) — hiện khối «Giá vốn và lợi nhuận». */
+  seesCost: boolean;
   /** Bản đang có hiệu lực với KHÁCH HÀNG — xem `findEffectiveQuoteId`. */
   isEffective: boolean;
   approvals: ApprovalHistoryEntry[];
@@ -195,7 +258,7 @@ interface QuoteVersionCardProps {
   isResponding: boolean;
   responseText: string;
   onResponseTextChange: (v: string) => void;
-  onRequestApproval: () => void;
+  onRequestApproval: (riskNote: string | null) => void;
   onSend: () => void;
   onStartResponse: () => void;
   onCancelResponse: () => void;
@@ -204,6 +267,7 @@ interface QuoteVersionCardProps {
 
 function QuoteVersionCard({
   quote,
+  seesCost,
   isEffective,
   approvals,
   editable,
@@ -220,6 +284,9 @@ function QuoteVersionCard({
   onSaveResponse,
 }: QuoteVersionCardProps) {
   const sent = quote.sent_to_customer_at !== null;
+  // Gửi phê duyệt mở ô «Rủi ro» trước (0244) — người duyệt cần biết rủi ro cùng lúc với giá.
+  const [submitting, setSubmitting] = useState(false);
+  const [riskNote, setRiskNote] = useState(quote.risk_note ?? '');
   const hasDiscount = quote.discount_amount !== null && BigInt(quote.discount_amount) > 0n;
 
   /**
@@ -229,7 +296,8 @@ function QuoteVersionCard({
   const action = (() => {
     if (!editable || !quote.is_current_version) return null;
     if (quote.status === 'draft') {
-      return { label: 'Gửi phê duyệt', onClick: onRequestApproval };
+      if (submitting) return null;
+      return { label: 'Gửi phê duyệt', onClick: () => setSubmitting(true) };
     }
     if (quote.status === 'completed' && !sent) {
       return { label: 'Gửi cho khách hàng', onClick: onSend, primary: true };
@@ -313,6 +381,50 @@ function QuoteVersionCard({
         )}
       </div>
 
+      {submitting && quote.status === 'draft' && (
+        <div className="mt-3 space-y-2 rounded-sm border border-border p-3">
+          <label className="block space-y-1.5">
+            <span className="block font-medium">Rủi ro cần người duyệt biết (tùy chọn)</span>
+            <textarea
+              value={riskNote}
+              onChange={(e) => setRiskNote(e.target.value)}
+              rows={3}
+              maxLength={2000}
+              autoFocus
+              placeholder="Giá vật tư biến động, khách thanh toán chậm, mặt bằng khó thi công…"
+              className={TEXTAREA_BOX}
+            />
+          </label>
+          <p className="text-xs text-fg-subtle">
+            Người duyệt thấy cùng doanh thu, lợi nhuận và điều kiện thanh toán. Lợi nhuận dưới mức
+            tối thiểu của pháp nhân thì Tổng Giám đốc duyệt.
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={busy}
+              onClick={() => {
+                onRequestApproval(riskNote.trim() || null);
+                setSubmitting(false);
+              }}
+            >
+              {busy ? 'Đang xử lý…' : 'Gửi phê duyệt'}
+            </Button>
+            <Button variant="subtle" size="sm" onClick={() => setSubmitting(false)}>
+              Hủy
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {quote.risk_note && quote.status !== 'draft' && (
+        <p className="mt-2 rounded-sm bg-surface-sunken px-3 py-2">
+          <span className="font-medium">Rủi ro đã nêu khi gửi duyệt: </span>
+          {quote.risk_note}
+        </p>
+      )}
+
       {editable && nextStep && (
         <p
           role="status"
@@ -343,6 +455,11 @@ function QuoteVersionCard({
       )}
 
       {quote.line_items_based && <QuoteItemsTable quote={quote} />}
+
+      {/* 0244: giá vốn — chỉ vai trò xem được giá vốn; Kinh doanh không thấy khối này. */}
+      {seesCost && quote.is_current_version && quote.line_items_based && (
+        <QuoteCostPanel quote={quote} />
+      )}
 
       {quote.notes && <p className="mt-2 text-fg-subtle">{quote.notes}</p>}
 

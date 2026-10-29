@@ -23,6 +23,7 @@ import {
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { TEXTAREA_BOX } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
 import { EmptyState } from '@/components/ui/states';
@@ -80,6 +81,8 @@ export function EstimatePanel({
   const [showCosts, setShowCosts] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bidPrice, setBidPrice] = useState<string | null>(null);
+  // Ghi chú rủi ro gửi kèm lúc trình duyệt giá (0244) — người duyệt đọc cùng lợi nhuận.
+  const [riskNote, setRiskNote] = useState('');
   const [draftItems, setDraftItems] = useState<EstimateItemInput[] | null>(null);
 
   const { data: costs, isFetching: loadingCosts } = useCostBreakdown(current?.id, showCosts);
@@ -167,7 +170,12 @@ export function EstimatePanel({
                   variant="primary"
                   disabled={requestApproval.isPending}
                   onClick={() =>
-                    void run(() => requestApproval.mutateAsync({ estimateId: current.id }))
+                    void run(() =>
+                      requestApproval.mutateAsync({
+                        estimateId: current.id,
+                        riskNote: riskNote.trim() || null,
+                      }),
+                    )
                   }
                 >
                   {BUTTONS.submitForApproval}
@@ -180,6 +188,31 @@ export function EstimatePanel({
             </div>
           )}
         </div>
+
+        {!readOnly && current.status === 'draft' ? (
+          <label className="mt-4 block space-y-1.5">
+            <span className="block font-medium">Rủi ro cần người duyệt biết (tùy chọn)</span>
+            <textarea
+              value={riskNote}
+              onChange={(e) => setRiskNote(e.target.value)}
+              rows={2}
+              maxLength={2000}
+              placeholder="Hạn nộp gấp, khối lượng chưa khớp bản vẽ, điều kiện thanh toán bất lợi…"
+              className={TEXTAREA_BOX}
+            />
+            <span className="block text-xs text-fg-subtle">
+              Gửi kèm khi bấm «{BUTTONS.submitForApproval}». Lợi nhuận dưới mức tối thiểu của pháp
+              nhân thì Tổng Giám đốc duyệt.
+            </span>
+          </label>
+        ) : (
+          current.risk_note && (
+            <p className="mt-3 rounded-sm bg-surface-sunken px-3 py-2">
+              <span className="font-medium">Rủi ro đã nêu khi trình duyệt: </span>
+              {current.risk_note}
+            </p>
+          )
+        )}
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Field label="Giá dự thầu" hint="Con số gửi cho chủ đầu tư. Đơn vị đồng.">

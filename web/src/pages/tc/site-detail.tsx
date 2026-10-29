@@ -24,6 +24,7 @@ import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/
 import { StageHistory } from '@/components/entity/stage-history';
 import { Button } from '@/components/ui/button';
 import { usePromptDialog } from '@/components/ui/prompt-dialog';
+import { SiteScaffoldingPanel } from './site-scaffolding-panel';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import {
   useAcceptanceRecords,
@@ -358,6 +359,12 @@ export function SiteDetailPage() {
             id: 'ngan-sach',
             label: 'Ngân sách',
             content: <BudgetPanel siteId={site.id} />,
+          },
+          {
+            // G5 (0245): đề nghị thuê giàn giáo nội bộ của Nhà Việt Steel (QĐ-6).
+            id: 'gian-giao',
+            label: 'Giàn giáo',
+            content: <SiteScaffoldingPanel siteId={site.id} readOnly={readOnly} />,
           },
           {
             id: 'de-nghi',

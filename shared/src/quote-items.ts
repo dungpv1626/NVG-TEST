@@ -393,3 +393,97 @@ export function unknownQuoteTemplateTags(tags: Readonly<Record<string, unknown>>
   }
   return unknown;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Loại báo giá và lợi nhuận (migration 0244)
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Báo giá thiết kế / thi công / trọn gói — cùng ba loại với `contracts.scope_kind` (0243). Mỗi (cơ hội,
+ * loại) một bản đang hiệu lực; trọn gói không đi cùng hai loại kia (`quotes_assign_version`, 0244).
+ * Rỗng = báo giá chung (NVS, báo giá lập trước 0244).
+ */
+export const QUOTE_SCOPE_KINDS = ['thiet_ke', 'thi_cong', 'tron_goi'] as const;
+export type QuoteScopeKind = (typeof QUOTE_SCOPE_KINDS)[number];
+
+export const QUOTE_SCOPE_KIND_LABELS: Readonly<Record<QuoteScopeKind, string>> = {
+  thiet_ke: 'Báo giá thiết kế',
+  thi_cong: 'Báo giá thi công',
+  tron_goi: 'Báo giá thiết kế – thi công trọn gói',
+};
+
+/** Nhãn loại của một báo giá; rỗng = «Báo giá». */
+export function quoteScopeKindLabel(kind: string | null | undefined): string {
+  return kind && kind in QUOTE_SCOPE_KIND_LABELS
+    ? QUOTE_SCOPE_KIND_LABELS[kind as QuoteScopeKind]
+    : 'Báo giá';
+}
+
+export function isQuoteScopeKind(v: unknown): v is QuoteScopeKind {
+  return typeof v === 'string' && (QUOTE_SCOPE_KINDS as readonly string[]).includes(v);
+}
+
+/**
+ * Loại báo giá chọn được khi lập bản mới, theo pháp nhân và các bản đang hiệu lực.
+ *
+ * NVS (cho thuê, bán thép) không tách loại — trả mảng rỗng, báo giá chung. NVC / NVO: còn bản trọn gói đang
+ * hiệu lực thì chỉ lập tiếp trọn gói; có bản thiết kế / thi công đang hiệu lực thì không lập trọn gói —
+ * gương phép kiểm của `quotes_assign_version`.
+ */
+export function quoteKindsAvailable(
+  companyCode: string | null | undefined,
+  currentKinds: readonly (string | null)[],
+): QuoteScopeKind[] {
+  if (companyCode !== 'NVC' && companyCode !== 'NVO') return [];
+  if (currentKinds.includes('tron_goi')) return ['tron_goi'];
+  if (currentKinds.includes('thiet_ke') || currentKinds.includes('thi_cong')) {
+    return ['thiet_ke', 'thi_cong'];
+  }
+  return [...QUOTE_SCOPE_KINDS];
+}
+
+/**
+ * Báo giá làm nguồn cho hợp đồng có phạm vi `scopeKind`: bản đúng loại trước, rồi báo giá chung (loại rỗng).
+ * Gương của điều kiện trong `create_contract_from_source` (0244). `scopeKind` rỗng = mọi bản.
+ */
+export function quotesForScope<T extends { scope_kind: string | null }>(
+  quotes: readonly T[],
+  scopeKind: string | null | undefined,
+): T[] {
+  if (!scopeKind) return [...quotes];
+  return [
+    ...quotes.filter((q) => q.scope_kind === scopeKind),
+    ...quotes.filter((q) => q.scope_kind === null),
+  ];
+}
+
+/** Điều kiện lợi nhuận của một hồ sơ giá như `price_margin_brief` trả (0244). */
+export interface MarginCheck {
+  /** Người xem được giá vốn — vai khác nhận rỗng ở mọi số giá vốn / lợi nhuận / mức tối thiểu. */
+  seesCost: boolean;
+  marginPercent: number | null;
+  minMargin: number | null;
+  costComplete: boolean;
+  /** Hồ sơ duyệt đang mở đã mang loại «Giá dưới mức lợi nhuận tối thiểu». */
+  routedToCeo: boolean;
+  needsCeo: boolean | null;
+}
+
+const pct = (n: number) => `${formatNumber(n, 2)}%`;
+
+/**
+ * Câu cảnh báo trên hộp duyệt / khối giá vốn; `null` khi không có gì phải cảnh báo. Người không xem được giá
+ * vốn chỉ biết hồ sơ đã chuyển Tổng Giám đốc, không thấy con số (Mẫu D).
+ */
+export function marginWarning(c: MarginCheck): string | null {
+  if (c.seesCost && c.needsCeo && c.minMargin !== null) {
+    if (c.costComplete && c.marginPercent !== null) {
+      return `Lợi nhuận ${pct(c.marginPercent)} dưới mức tối thiểu ${pct(c.minMargin)} của pháp nhân — chỉ Tổng Giám đốc duyệt được.`;
+    }
+    return `Chưa đủ giá vốn để kiểm mức lợi nhuận tối thiểu ${pct(c.minMargin)} — chỉ Tổng Giám đốc duyệt được. Nhập giá vốn từng hạng mục hoặc chọn dự toán đã duyệt.`;
+  }
+  if (!c.seesCost && c.routedToCeo) {
+    return 'Hồ sơ chuyển Tổng Giám đốc duyệt vì lợi nhuận chưa đạt mức tối thiểu của pháp nhân.';
+  }
+  return null;
+}

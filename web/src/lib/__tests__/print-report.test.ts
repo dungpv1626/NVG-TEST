@@ -30,6 +30,8 @@ describe('openPrintReport', () => {
       document: { write, close, images: [] },
       focus,
       print,
+      // Chạy ngay lệnh hẹn giờ: phép thử chỉ cần biết in được gọi SAU khi tải xong.
+      setTimeout: (fn: () => void) => fn(),
     } as unknown as Window;
     const openSpy = vi.spyOn(window, 'open').mockReturnValue(fakeWindow);
 
@@ -42,6 +44,8 @@ describe('openPrintReport', () => {
     expect(html).toContain('<table><tr><td>A</td></tr></table>');
     expect(html).toContain('Nhà Việt Group');
     expect(close).toHaveBeenCalledTimes(1);
+    // Lối dự phòng khi hộp thoại in kẹt «Loading preview…»: nút In trên trang, ẩn khi in.
+    expect(html).toContain('onclick="window.print()"');
 
     // `onload` chỉ được GÁN, chưa gọi — mô phỏng trình duyệt tải xong rồi mới in.
     expect(print).not.toHaveBeenCalled();

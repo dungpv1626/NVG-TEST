@@ -210,6 +210,11 @@ export const APPROVAL_SUBJECTS = [
   'recruitment_position',
   'survey_report',
   'showcase_delete',
+  // 0244: lợi nhuận dưới mức tối thiểu của pháp nhân (hoặc chưa đủ giá vốn để kiểm) — chỉ Tổng Giám đốc.
+  'low_margin_price',
+  // G5 (0245): báo giá thuê giàn giáo có giá đặc biệt / vượt hạn mức công nợ; cho thuê nội bộ.
+  'rental_quote',
+  'internal_rental',
 ] as const;
 
 export type ApprovalSubject = (typeof APPROVAL_SUBJECTS)[number];
@@ -228,6 +233,9 @@ export const APPROVAL_SUBJECT_LABELS: Readonly<Record<ApprovalSubject, string>> 
   recruitment_position: 'Yêu cầu tuyển dụng',
   survey_report: 'Báo cáo khảo sát',
   showcase_delete: 'Xoá mẫu công trình',
+  low_margin_price: 'Giá dưới mức lợi nhuận tối thiểu',
+  rental_quote: 'Báo giá thuê giàn giáo',
+  internal_rental: 'Cho thuê giàn giáo nội bộ',
 };
 
 export interface ApprovalLimitSeed {
@@ -280,11 +288,10 @@ export const DEFAULT_APPROVAL_LIMITS: readonly ApprovalLimitSeed[] = [
 
   // Báo giá gửi khách hàng (CRM-04) — "báo giá phải qua phê duyệt nội bộ trước khi gửi".
   //
-  // ⚠️ GIẢ ĐỊNH CẦN NVG XÁC NHẬN: tài liệu KHÔNG nói ai duyệt báo giá thường (không giảm
-  // giá). Tạm đặt Kinh doanh duyệt tới 500 triệu, trên mức đó chuyển Tổng Giám đốc — suy
-  // ra từ DA-07 (Trưởng nhóm kiểm tra → Trưởng phòng/TGĐ duyệt giá cuối cùng). Khi NVG ban
-  // hành quy chế, sửa trong Quản trị hệ thống, KHÔNG sửa file này.
-  { role: 'KD', subject: 'quote_price', maxAmount: 500n * TRIEU, step: 1 },
+  // Ban Giám đốc duyệt (anh Dũng 29/10/2026): Kinh doanh không xem giá vốn / lợi nhuận (0244),
+  // nên không tự duyệt giá được — trước đây Kinh doanh duyệt tới 500 triệu. Khi NVG ban hành quy
+  // chế, sửa trong Quản trị hệ thống, KHÔNG sửa file này.
+  { role: 'BGD', subject: 'quote_price', maxAmount: null, step: 1 },
   { role: 'TGD', subject: 'quote_price', maxAmount: null, step: 2 },
 
   // Giảm giá đặc biệt — chỉ Tổng Giám đốc (CRM-05)
@@ -315,4 +322,17 @@ export const DEFAULT_APPROVAL_LIMITS: readonly ApprovalLimitSeed[] = [
   // Xoá mẫu công trình (Đợt 1 — 1H, 0179): Thiết kế đề nghị, Giám đốc đồng ý (chủ dự án chốt).
   { role: 'BGD', subject: 'showcase_delete', maxAmount: null, step: 1 },
   { role: 'TGD', subject: 'showcase_delete', maxAmount: null, step: 1 },
+
+  // Giá dưới mức lợi nhuận tối thiểu (0244, A1 — anh Dũng): báo giá / giá dự thầu có lợi nhuận dưới
+  // `min_margin_percent` của pháp nhân chỉ Tổng Giám đốc duyệt. Tham số để trống thì không loại nào
+  // mở ra hồ sơ này.
+  { role: 'TGD', subject: 'low_margin_price', maxAmount: null, step: 1 },
+
+  // G5 (0245): báo giá thuê giàn giáo có giá thấp hơn bảng giá hoặc công nợ khách vượt hạn mức,
+  // và đề nghị thuê giàn giáo nội bộ của NVC / NVO — Ban Giám đốc duyệt (Xưởng `SX` không có quyền
+  // duyệt). Phiếu khảo sát Ban Giám đốc, mảng giàn giáo bước 3 và 11.
+  { role: 'BGD', subject: 'rental_quote', maxAmount: null, step: 1 },
+  { role: 'TGD', subject: 'rental_quote', maxAmount: null, step: 1 },
+  { role: 'BGD', subject: 'internal_rental', maxAmount: null, step: 1 },
+  { role: 'TGD', subject: 'internal_rental', maxAmount: null, step: 1 },
 ] as const;

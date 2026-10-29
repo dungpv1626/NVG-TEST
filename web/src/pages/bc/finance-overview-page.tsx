@@ -30,6 +30,7 @@ import { BcNav } from './bc-nav';
 import {
   CashChart,
   FinanceMetricStrip,
+  InternalExcludedNote,
   ReceivableAgingChart,
   RevenueChart,
   SiteProfitChart,
@@ -142,7 +143,7 @@ export function FinanceOverviewPage() {
   const canSeeFinance = access.data?.finance === true;
   const canSeeProfit = access.data?.profit === true;
   const [period, setPeriod] = useState<DashboardPeriod>(DEFAULT_DASHBOARD_PERIOD);
-  const { today, daily, days, ranges, current, previous } = useFinanceOverview(
+  const { today, daily, days, ranges, current, previous, excluded } = useFinanceOverview(
     period,
     canSeeFinance,
   );
@@ -195,6 +196,7 @@ export function FinanceOverviewPage() {
             <ReportFreshness dataUpdatedAt={daily.dataUpdatedAt} />
           </div>
           <FinanceMetricStrip days={days} current={current} previous={previous} today={today} />
+          <InternalExcludedNote excluded={excluded} />
           <RevenueChart
             days={days}
             today={today}

@@ -15,6 +15,7 @@
  * (không có nút "Thử lại": thử lại không đổi được kết quả).
  */
 
+import { useQuery } from '@tanstack/react-query';
 import { Download, Printer } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BUTTONS, formatCurrency, toNvgDateInput } from '@nvg/shared';
@@ -27,6 +28,7 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { useProfitLossReport, type ProfitLossRow } from '@/hooks/use-reports';
 import { useCompanyScope } from '@/lib/company-scope';
 import { escapeHtml, openPrintReport } from '@/lib/print-report';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { BcNav } from './bc-nav';
 import { ReportFreshness } from './report-meta';
@@ -153,6 +155,29 @@ function printPdf(
   openPrintReport('Báo cáo lãi/lỗ theo công trình', summary + table);
 }
 
+/**
+ * Chi phí thuê giàn giáo NỘI BỘ đã vào giá vốn các công trình trong báo cáo (QĐ-6, 0245). Xem toàn
+ * NVG thì phần này bị loại khỏi tổng giá vốn — doanh thu tương ứng nằm ở NVS, cùng một tập đoàn.
+ */
+function useInternalRentalCost(siteIds: string[], enabled: boolean) {
+  return useQuery<Map<string, bigint>, Error>({
+    queryKey: ['internal-rental-charges', 'by-site', siteIds.join(',')],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('internal_rental_charges')
+        .select('construction_site_id, amount')
+        .in('construction_site_id', siteIds);
+      if (error) throw new Error(error.message);
+      const out = new Map<string, bigint>();
+      for (const r of (data ?? []) as { construction_site_id: string; amount: number | string }[]) {
+        out.set(r.construction_site_id, (out.get(r.construction_site_id) ?? 0n) + BigInt(r.amount));
+      }
+      return out;
+    },
+    enabled: enabled && siteIds.length > 0,
+  });
+}
+
 export function ProfitLossReportPage() {
   const scope = useCompanyScope();
   // Hỏi quyền trước rồi mới gọi báo cáo: gọi thẳng thì CSDL từ chối, React Query thử lại ba
@@ -164,6 +189,16 @@ export function ProfitLossReportPage() {
     access.data?.profit === true,
   );
   const companyOf = useCompanyLookup(scope.isAggregate);
+  const internal = useInternalRentalCost(
+    (data ?? []).map((r) => r.construction_site_id),
+    scope.isAggregate,
+  );
+  const byInternal = scope.isAggregate ? internal.data : undefined;
+  const internalCost = [...(byInternal?.values() ?? [])].reduce((t, v) => t + v, 0n);
+  // Lãi/lỗ thực tế chỉ có ở công trình đã gắn hợp đồng — cộng lại đúng phần của các công trình ấy.
+  const internalInProfit = (data ?? [])
+    .filter((r) => r.profit_actual !== null)
+    .reduce((t, r) => t + (byInternal?.get(r.construction_site_id) ?? 0n), 0n);
 
   return (
     <>
@@ -225,7 +260,9 @@ export function ProfitLossReportPage() {
               </div>
               <div>
                 <dt className="text-xs text-fg-subtle">Giá vốn thực tế</dt>
-                <dd className="mt-0.5">{formatCurrency(sum(data, 'actual_cost'))}</dd>
+                <dd className="mt-0.5">
+                  {formatCurrency(sum(data, 'actual_cost') - internalCost)}
+                </dd>
               </div>
               <div>
                 <dt className="text-xs text-fg-subtle">Lãi/lỗ dự kiến (theo dự toán)</dt>
@@ -236,10 +273,16 @@ export function ProfitLossReportPage() {
               <div>
                 <dt className="text-xs text-fg-subtle">Lãi/lỗ thực tế tới hiện tại</dt>
                 <dd className="mt-0.5">
-                  <ProfitAmount value={sum(data, 'profit_actual')} />
+                  <ProfitAmount value={sum(data, 'profit_actual') + internalInProfit} />
                 </dd>
               </div>
             </dl>
+            {internalCost > 0n && (
+              <p className="mt-3 text-sm text-fg-subtle">
+                Đã loại giao dịch nội bộ: {formatCurrency(internalCost)} tiền thuê giàn giáo của Nhà
+                Việt Steel trong giá vốn — số từng công trình bên dưới vẫn giữ.
+              </p>
+            )}
           </section>
 
           <div className="overflow-x-auto rounded-card bg-surface">

@@ -38,6 +38,8 @@ export const parameterScopeEnum = pgEnum('parameter_scope', [
   'company',
   'product',
   'role',
+  // 0245: hạn mức công nợ riêng từng khách (`sx.customer_credit_limit`).
+  'customer',
 ]);
 
 /**

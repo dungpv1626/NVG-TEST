@@ -53,8 +53,11 @@ const PAGE_STYLE = `
   .letterhead { display: flex; justify-content: space-between; gap: 16px; border-bottom: 2px solid #172B4D; padding-bottom: 8px; margin-bottom: 16px; font-size: 11px; }
   .letterhead strong { font-size: 13px; display: block; }
   .photos figcaption { font-size: 10px; color: #44546F; margin-top: 2px; word-break: break-word; }
+  .print-bar { position: sticky; top: 0; display: flex; gap: 12px; align-items: center; justify-content: flex-end; padding: 8px 0; margin-bottom: 8px; background: #fff; border-bottom: 1px solid #DCDFE4; font-size: 12px; color: #44546F; }
+  .print-bar button { font: inherit; font-size: 13px; font-weight: 600; padding: 6px 16px; border-radius: 6px; border: 1px solid #172B4D; background: #172B4D; color: #fff; cursor: pointer; }
   @media print {
     body { margin: 0.5cm; }
+    .print-bar { display: none; }
   }
 `;
 
@@ -75,6 +78,7 @@ export function openPrintReport(title: string, bodyHtml: string, letterheadHtml 
 <style>${PAGE_STYLE}</style>
 </head>
 <body>
+<div class="print-bar">Hộp thoại in không tự mở hoặc đứng ở «đang tải» thì bấm lại <button type="button" onclick="window.print()">In</button></div>
 ${letterheadHtml}
 <h1>${escapeHtml(title)}</h1>
 <p class="meta">Nhà Việt Group — Xuất lúc ${escapeHtml(generatedAt)}</p>
@@ -82,9 +86,12 @@ ${bodyHtml}
 </body>
 </html>`);
   win.document.close();
+  // Gọi in NGAY trong `onload` của cửa sổ dựng bằng `document.write` làm Chrome đứng ở «Loading preview…»
+  // (anh Dũng 29/10/2026, phiếu khảo sát trống) — chờ một nhịp cho trang dựng xong rồi mới in. Thanh «In» trên
+  // trang là lối dự phòng khi hộp thoại vẫn kẹt.
   win.onload = () => {
     win.focus();
-    void printWhenImagesReady(win);
+    win.setTimeout(() => printWhenImagesReady(win), 300);
   };
 }
 
@@ -103,9 +110,7 @@ const IMAGE_WAIT_MS = 15_000;
 
 function printWhenImagesReady(win: Window): void {
   const pending = Array.from(win.document.images).filter((img) => !img.complete);
-  // Không có ảnh nào phải chờ thì in NGAY trong cùng lượt gọi, không lùi sang microtask:
-  // `window.print()` phải nằm trong ngăn xếp của thao tác người dùng để trình duyệt không
-  // coi là cửa sổ tự bật hộp thoại.
+  // Không có ảnh nào phải chờ thì in luôn.
   if (pending.length === 0) {
     win.print();
     return;

@@ -448,6 +448,7 @@ function InfoSection({
   // đọc `contracts.value`. Hợp đồng từ cơ hội thì gợi ý giá trị báo giá đã gửi khách, người soạn bấm mới dùng.
   const sources = useContractTermSources(
     editable && contract.source_type === 'opportunities' ? contract.source_id : null,
+    contract.scope_kind,
   );
   const quoteValue = sources.data ? suggestContractTerms(sources.data.quote, null).gia_tri : null;
   const [form, setForm] = useState({

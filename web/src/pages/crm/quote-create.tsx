@@ -13,7 +13,7 @@
  */
 
 import { useMemo, useRef, useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Plus, Trash2 } from 'lucide-react';
 import {
   BUTTONS,
@@ -23,9 +23,13 @@ import {
   lineAmount,
   moneyToVietnameseWords,
   parseQuantity,
+  isQuoteScopeKind,
   QUOTE_STAGES,
   QUOTE_VAT_RATES,
   quantityToDb,
+  quoteKindsAvailable,
+  quoteScopeKindLabel,
+  type QuoteScopeKind,
 } from '@nvg/shared';
 import { RecordNotFound } from '@/components/entity/entity-detail';
 import { PageHeader } from '@/components/layout/app-shell';
@@ -41,6 +45,7 @@ import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useOpportunity } from '@/hooks/use-opportunities';
 import { useCreateQuoteVersion, useQuotes } from '@/hooks/use-quotes';
+import { useCompanies } from '@/hooks/use-companies';
 import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard';
 import { useCan } from '@/lib/auth';
 
@@ -82,6 +87,25 @@ export function QuoteCreatePage() {
   const { data: opportunity, isLoading, error } = useOpportunity(opportunityId);
   const { data: quotes } = useQuotes(opportunityId);
   const createVersion = useCreateQuoteVersion();
+  const { data: companies } = useCompanies();
+  const [searchParams] = useSearchParams();
+
+  // Loại báo giá (0244): NVC / NVO tách thiết kế / thi công / trọn gói; NVS không tách (mảng rỗng).
+  const companyCode = companies?.find((c) => c.id === opportunity?.company_id)?.code ?? null;
+  const kinds = quoteKindsAvailable(
+    companyCode,
+    (quotes ?? []).filter((q) => q.is_current_version).map((q) => q.scope_kind),
+  );
+  const asked = searchParams.get('loai');
+  const [pickedKind, setPickedKind] = useState<QuoteScopeKind | null>(null);
+  const scopeKind: QuoteScopeKind | null =
+    kinds.length === 0
+      ? null
+      : pickedKind && kinds.includes(pickedKind)
+        ? pickedKind
+        : isQuoteScopeKind(asked) && kinds.includes(asked)
+          ? asked
+          : kinds[0]!;
 
   const nextKey = useRef(2);
   const [items, setItems] = useState<ItemDraft[]>([emptyItem(1)]);
@@ -119,10 +143,11 @@ export function QuoteCreatePage() {
     vatIncluded: vatMode === 'included',
   });
 
-  const nextVersion = useMemo(
-    () => (quotes?.length ? Math.max(...quotes.map((q) => q.version)) + 1 : 1),
-    [quotes],
-  );
+  // Số phiên bản đếm trong cùng loại — mỗi loại một chuỗi (0244, `quotes_assign_version`).
+  const nextVersion = useMemo(() => {
+    const same = (quotes ?? []).filter((q) => q.scope_kind === scopeKind);
+    return same.length ? Math.max(...same.map((q) => q.version)) + 1 : 1;
+  }, [quotes, scopeKind]);
 
   function update(field: keyof typeof form, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -186,6 +211,7 @@ export function QuoteCreatePage() {
         vatIncluded: vatRate ? vatMode === 'included' : null,
         validUntil: form.validUntil || null,
         notes: form.notes.trim() || null,
+        scopeKind,
       });
       setDirty(false);
       releaseUnsavedGuard();
@@ -247,7 +273,10 @@ export function QuoteCreatePage() {
   return (
     <>
       <PageHeader
-        title={nextVersion === 1 ? 'Lập báo giá' : `Lập báo giá — phiên bản ${nextVersion}`}
+        title={
+          (scopeKind ? `Lập ${quoteScopeKindLabel(scopeKind).toLowerCase()}` : 'Lập báo giá') +
+          (nextVersion === 1 ? '' : ` — phiên bản ${nextVersion}`)
+        }
         breadcrumbs={breadcrumbs}
       />
 
@@ -261,6 +290,25 @@ export function QuoteCreatePage() {
             'Đã duyệt thì tải PDF, gửi Zalo hoặc email cho khách; gửi xong cơ hội tự sang Đàm phán.',
           ]}
         >
+          {kinds.length > 1 && (
+            <div className="space-y-1.5">
+              <span className="block font-medium">Loại báo giá</span>
+              <SegmentedControl
+                options={kinds}
+                value={scopeKind ?? kinds[0]!}
+                onChange={(k) => {
+                  setPickedKind(k);
+                  setDirty(true);
+                }}
+                getLabel={(k) => quoteScopeKindLabel(k)}
+              />
+              <p className="text-xs text-fg-subtle">
+                Báo giá thiết kế và báo giá thi công theo hai chuỗi phiên bản riêng, cùng đang hiệu
+                lực được; trọn gói thay cho cả hai.
+              </p>
+            </div>
+          )}
+
           {nextVersion > 1 && (
             <p className="rounded-field bg-pill px-3 py-2 text-ink-subtle">
               Phiên bản {nextVersion - 1} sẽ chuyển thành bản cũ khi lưu. Phiên bản mới bắt đầu ở

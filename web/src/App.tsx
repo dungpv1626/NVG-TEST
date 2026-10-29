@@ -336,6 +336,11 @@ const RentalAgreementListPage = lazy(() =>
 const RentalQuotePage = lazy(() =>
   import('@/pages/sx/rental-quote-page').then((m) => ({ default: m.RentalQuotePage })),
 );
+const InternalRentalRequestsPage = lazy(() =>
+  import('@/pages/sx/internal-requests-page').then((m) => ({
+    default: m.InternalRentalRequestsPage,
+  })),
+);
 const RentalAgreementDetailPage = lazy(() =>
   import('@/pages/sx/rental-detail').then((m) => ({ default: m.RentalAgreementDetailPage })),
 );
@@ -567,6 +572,7 @@ const router = createBrowserRouter(
           <Route path="sx/tai-san-cho-thue" element={<RentalAgreementListPage />} />
           <Route path="sx/tai-san-cho-thue/:id" element={<RentalAgreementDetailPage />} />
           <Route path="sx/bao-gia-thue" element={<RentalQuotePage />} />
+          <Route path="sx/thue-noi-bo" element={<InternalRentalRequestsPage />} />
           <Route path="sx/lenh-san-xuat" element={<ProductionOrderListPage />} />
           <Route path="sx/lenh-san-xuat/:id" element={<ProductionOrderDetailPage />} />
         </Route>

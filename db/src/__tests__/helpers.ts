@@ -245,6 +245,27 @@ export async function cleanupTestData(): Promise<void> {
     // SX: hợp đồng thuê kéo theo dòng thuê (CASCADE); phải xoá TRƯỚC vật tư
     // (`rental_agreement_items.material_id` là RESTRICT) và trước khách hàng
     // (`rental_agreements.customer_id` là RESTRICT).
+    // Thuê nội bộ (0245): bên thuê là hồ sơ khách của pháp nhân NVG (không mang tiền tố test) —
+    // nhận ra qua công trình test. Công nợ của đơn ấy cũng mang khách thật, nên xoá tường minh.
+    // Gom id công nợ TRƯỚC: xoá công nợ khi biên bản thu hồi đã ký còn đó thì khoá ngoại SET NULL
+    // đụng khoá «biên bản đã ký» (frozen_after_signed) — nên xoá đơn (kéo biên bản) trước.
+    const internalReceivables = await sql<{ id: string }[]>`
+      SELECT rp.id FROM receivables_payables rp
+        JOIN rental_agreements ra ON ra.id = rp.rental_agreement_id
+        JOIN construction_sites s ON s.id = ra.construction_site_id
+       WHERE s.name LIKE ${'%' + TEST_PREFIX + '%'}`;
+    await sql`DELETE FROM rental_agreements WHERE construction_site_id IN (
+      SELECT id FROM construction_sites WHERE name LIKE ${'%' + TEST_PREFIX + '%'}
+    )`;
+    if (internalReceivables.length > 0) {
+      await sql`DELETE FROM receivables_payables WHERE id IN ${sql(internalReceivables.map((r) => r.id))}`;
+    }
+    await sql`DELETE FROM internal_rental_requests WHERE construction_site_id IN (
+      SELECT id FROM construction_sites WHERE name LIKE ${'%' + TEST_PREFIX + '%'}
+    )`;
+    await sql`DELETE FROM rental_quotes WHERE customer_id IN (
+      SELECT id FROM customers WHERE name LIKE ${TEST_PREFIX + '%'}
+    )`;
     await sql`DELETE FROM rental_agreements WHERE customer_id IN (
       SELECT id FROM customers WHERE name LIKE ${TEST_PREFIX + '%'}
     )`;

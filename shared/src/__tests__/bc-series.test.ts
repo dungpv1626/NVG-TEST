@@ -9,6 +9,7 @@ import {
   percentChange,
   seriesFrom,
   sumFinance,
+  withoutInternal,
   type FinanceDay,
 } from '../bc-series';
 
@@ -145,5 +146,41 @@ describe('vạch trục tròn', () => {
 
   it('toàn số 0 thì chỉ một vạch', () => {
     expect(niceMoneyTicks([0, 0])).toEqual([0]);
+  });
+});
+
+describe('số hợp nhất toàn NVG loại giao dịch nội bộ (QĐ-6, 0245)', () => {
+  it('trừ phần nội bộ khỏi doanh thu, hợp đồng ký, tiền thu; giữ nguyên số đã chi', () => {
+    const days = [
+      day('2026-10-20', {
+        company_id: 'nvs',
+        rental_revenue: '700000',
+        internal_revenue: '200000',
+        collected: '300000',
+        internal_collected: '100000',
+        paid_out: '50000',
+      }),
+      day('2026-10-21', {
+        company_id: 'nvc',
+        revenue_accepted: '1000000',
+        contracts_signed: '900000',
+        internal_contracts_signed: '400000',
+      }),
+    ];
+    const perCompany = sumFinance(days);
+    expect(perCompany.revenue).toBe(1700000n);
+    const { days: group, excluded } = withoutInternal(days);
+    const total = sumFinance(group);
+    expect(total.revenue).toBe(1500000n);
+    expect(total.contractsSigned).toBe(500000n);
+    expect(total.collected).toBe(200000n);
+    expect(total.paidOut).toBe(50000n);
+    expect(excluded).toEqual({ revenue: 200000n, contractsSigned: 400000n, collected: 100000n });
+  });
+
+  it('dữ liệu không có cột nội bộ thì không đổi', () => {
+    const { days, excluded } = withoutInternal([day('2026-10-20', { rental_revenue: '5' })]);
+    expect(sumFinance(days).revenue).toBe(5n);
+    expect(excluded.revenue).toBe(0n);
   });
 });

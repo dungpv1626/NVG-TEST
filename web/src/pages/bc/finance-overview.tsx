@@ -27,6 +27,7 @@ import {
   formatMoneyCompact,
   percentChange,
   sumFinance,
+  withoutInternal,
   type FinanceBucketRow,
   type FinanceDay,
   type SeriesBucket,
@@ -38,6 +39,7 @@ import { MetricTile } from '@/components/charts/metric-tile';
 import { MoneyChart, type ChartRow, type ChartSeries } from '@/components/charts/money-chart';
 import { useAgingBuckets, useReceivables } from '@/hooks/use-accounting';
 import { useFinanceDaily, useProfitLossReport } from '@/hooks/use-reports';
+import { useCompanyScope } from '@/lib/company-scope';
 import { cn } from '@/lib/utils';
 
 /** Tải từ đầu: dữ liệu theo ngày thưa (chỉ ngày có phát sinh), đủ cho cả kỳ «Tất cả». */
@@ -74,14 +76,46 @@ function describeSeries(
 
 export function useFinanceOverview(period: DashboardPeriod, enabled: boolean) {
   const today = toNvgDateInput(new Date());
+  const scope = useCompanyScope();
   const daily = useFinanceDaily(SERIES_EPOCH, today, enabled);
-  const days = useMemo(() => daily.data ?? [], [daily.data]);
   const ranges = comparisonRanges(period, today);
+  const { from: curFrom, to: curTo } = ranges.current;
+  // QĐ-6 (0245): xem gộp toàn NVG thì loại giao dịch giữa các pháp nhân NVG — thuê giàn giáo nội
+  // bộ, hợp đồng và tiền thu với pháp nhân NVG. Xem một công ty thì giữ nguyên.
+  const { days, excluded } = useMemo(() => {
+    const raw = daily.data ?? [];
+    if (!scope.isAggregate) return { days: raw, excluded: null };
+    const inRange = raw.filter((d) => d.day >= curFrom && d.day <= curTo);
+    return { days: withoutInternal(raw).days, excluded: withoutInternal(inRange).excluded };
+  }, [daily.data, scope.isAggregate, curFrom, curTo]);
   const current = sumFinance(days, ranges.current.from, ranges.current.to);
   const previous = ranges.previous
     ? sumFinance(days, ranges.previous.from, ranges.previous.to)
     : null;
-  return { today, daily, days, ranges, current, previous };
+  return { today, daily, days, ranges, current, previous, excluded };
+}
+
+/** Một dòng dưới dải chỉ số khi xem toàn NVG: bao nhiêu giao dịch nội bộ đã loại khỏi tổng. */
+export function InternalExcludedNote({
+  excluded,
+}: {
+  excluded: ReturnType<typeof withoutInternal>['excluded'] | null;
+}) {
+  if (!excluded) return null;
+  const parts = [
+    excluded.revenue > 0n ? `doanh thu ${formatCurrency(excluded.revenue)}` : null,
+    excluded.contractsSigned > 0n
+      ? `hợp đồng ký ${formatCurrency(excluded.contractsSigned)}`
+      : null,
+    excluded.collected > 0n ? `tiền thu ${formatCurrency(excluded.collected)}` : null,
+  ].filter(Boolean);
+  if (parts.length === 0) return null;
+  return (
+    <p className="text-sm text-fg-subtle">
+      Đã loại giao dịch nội bộ: {parts.join(' · ')}. Đây là giao dịch giữa các pháp nhân trong NVG —
+      số của từng công ty vẫn giữ.
+    </p>
+  );
 }
 
 function tileChange(cur: bigint, prev: bigint | undefined, previousHasData: boolean) {
@@ -329,7 +363,7 @@ export function FinanceOverviewSection({
   canSeeProfit: boolean;
   className?: string;
 }) {
-  const { today, daily, days, current, previous } = useFinanceOverview(period, true);
+  const { today, daily, days, current, previous, excluded } = useFinanceOverview(period, true);
   return (
     <section aria-label="Tổng quan tài chính" className={cn('flex flex-col gap-4', className)}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -339,6 +373,7 @@ export function FinanceOverviewSection({
         </Link>
       </div>
       <FinanceMetricStrip days={days} current={current} previous={previous} today={today} />
+      <InternalExcludedNote excluded={excluded} />
       <div className="grid gap-4 lg:grid-cols-2">
         <RevenueChart days={days} today={today} isLoading={daily.isLoading} />
         <CashChart days={days} today={today} isLoading={daily.isLoading} />

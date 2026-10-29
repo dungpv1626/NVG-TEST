@@ -1188,7 +1188,39 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   Báo cáo cộng theo TỪNG hợp đồng (không gộp theo cơ hội) nên không đếm trùng. Phép thử `hai-hop-dong.test.ts` (10, ba đột biến đo
   đỏ). Bản mới nhất: `stage_readiness`, `sign_contract`, `contracts_sync_opportunity`, `record_chain`, `contracts_awaiting_site`,
   `construction_sites_link_design_contract`, `create_contract_from_source` ở 0243.
-- Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
+- **G1 — giá bán có giá vốn, lợi nhuận tối thiểu (0244, 29/10/2026, kế hoạch khớp khảo sát anh Thi A1 + NVO việc 2):**
+  giá vốn báo giá CRM ở bảng RIÊNG `quote_item_costs` (không quyền nào cho trình duyệt; `save_quote_costs`,
+  `quote_cost_lines`, `quote_cost_estimate_options`, ghi `sensitive_access_logs`) hoặc lấy từ dự toán đã duyệt của gói
+  thầu / hồ sơ thiết kế gắn cơ hội (`quotes.cost_estimate_id`). Ai nhập: vai trò qua `rls_sees_sensitive('cost')`, khi
+  Nháp HOẶC đang chờ duyệt (khối «Giá vốn và lợi nhuận» ở tab Báo giá); Kinh doanh không thấy giá vốn, lợi nhuận, cả %.
+  Tham số `min_margin_percent` theo pháp nhân (TRỐNG): có số mà lợi nhuận dưới mức hoặc chưa đủ giá vốn → hồ sơ duyệt loại
+  mới `low_margin_price` (hạn mức seed: chỉ TGĐ); chọn ở `_quote_approval_route`, giá vốn nhập lúc chờ duyệt thì đổi loại;
+  lưới an toàn trigger `approval_decisions_margin_gate`; mức chụp vào `min_margin_applied` lúc gửi (không hồi tố). Áp cả
+  dự toán thầu. Hộp duyệt: `price_margin_brief` (doanh thu trước thuế, giá vốn, lợi nhuận, %, điều kiện thanh toán của
+  `quote_texts`, rủi ro `risk_note` — tham số mới của `request_quote_approval` / `request_estimate_approval`).
+  `quotes.scope_kind` (thiết kế / thi công / trọn gói, rỗng = chung — NVS, báo giá cũ): một bản hiệu lực mỗi (cơ hội,
+  loại), trọn gói không đi cùng loại khác; `create_contract_from_source` và gợi ý điều khoản lấy báo giá đúng loại.
+  Hàm chép bản mới nhất ở 0244: `quotes_assign_version`, `quotes_open_approval`, `request_quote_approval`,
+  `create_quote_version`, `request_estimate_approval`, `create_contract_from_source`, `_site_budget_source_quote`.
+  Phép thử `db/src/__tests__/bao-gia-gia-von.test.ts` (8, ba đột biến đo đỏ), `shared/.../quote-margin.test.ts`.
+- **G5 — NVS cho thuê (0245, 29/10/2026, kế hoạch `doc/KE_HOACH_KHOP_KHAO_SAT_ANH_THI.md` C1–C3):** đơn thuê nối hợp đồng
+  cho thuê đã ký (`rental_agreements.contract_id`; «Lập từ hợp đồng cho thuê đã ký» ở `/sx/tai-san-cho-thue` điền khách, ngày, dòng
+  hàng + giá từ báo giá đã duyệt; hợp đồng hiện các đơn thuê); báo giá thuê LƯU được (`rental_quotes` + dòng mua / thuê,
+  `/sx/bao-gia-thue`): giá thấp hơn `sx.rental_daily_rate` hoặc công nợ khách vượt `sx.customer_credit_limit` (chung hoặc phạm vi
+  mới `customer`, TRỐNG = không kiểm) → loại duyệt `rental_quote` (Ban Giám đốc, Xưởng không duyệt). Thuê nội bộ QĐ-6:
+  `is_internal` + `renter_company_id` do trigger đặt (công trình / khách là pháp nhân NVG — `customers.nvg_company_id`, hồ sơ khách
+  do `nvg_entity_customer` tạo), không gỡ được; chỉ huy trưởng gửi «Đề nghị thuê giàn giáo nội bộ» ở tab «Giàn giáo» của công
+  trình (mẫu E) → Xưởng `/sx/thue-noi-bo` gửi duyệt (`internal_rental`) → Ban Giám đốc NVS duyệt → «Xuất giàn giáo»; giá
+  `internal_rental_price` áp lúc xuất vào `daily_rate` (`price_source = 'noi_bo'`), không hồi tố, chưa cấu hình thì không xuất.
+  Chi phí: biên bản thu hồi / điều chuyển ĐÃ KÝ của đơn nội bộ → trigger ghi `internal_rental_charges` + cộng `actual_amount`
+  dòng ngân sách mã `THUE_GIAN_GIAO_NB` của công trình (thiếu thì máy lập, dự trù 0). Hợp nhất: `finance_daily` thêm
+  `internal_revenue` / `internal_contracts_signed` / `internal_collected`; BC «Tổng quan tài chính» + khối tài chính Dashboard khi
+  xem toàn NVG trừ ra (`withoutInternal`, dòng «Đã loại giao dịch nội bộ»), BC «Lãi/lỗ theo công trình» trừ chi phí nội bộ khỏi
+  tổng giá vốn — số từng công ty / công trình giữ nguyên. Kiểm tồn ba nhóm `rental_availability` (chắc chắn / dự kiến thu hồi
+  trước ngày cần / đang sửa). Điều chuyển `rental_transfers` (tab «Điều chuyển» của đơn thuê; ký hai bên, kho `rental-transfer-docs`)
+  chốt tiền đơn nguồn bằng biên bản BBDC, mở đơn mới, chuyển lô không qua kho. Phép thử `g5-nvs-thue-noi-bo.test.ts` (8, ba đột
+  biến đã đo đỏ). Còn: tuổi nợ / dòng tiền tuần chưa loại công nợ nội bộ ở số toàn NVG; khoản NVC trả NVS chưa nối với công nợ.
+- Hàm chép-dài bản mới nhất: `decide_approval` ở 0245 (chép 0179, thêm nhánh `rental_quotes`, `internal_rental_requests`), `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
   `backup/dot1-micro/` (không commit).

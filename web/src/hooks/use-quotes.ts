@@ -8,7 +8,12 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { MoneyValue, StatusGroup } from '@nvg/shared';
+import {
+  quotesForScope,
+  type MoneyValue,
+  type QuoteScopeKind,
+  type StatusGroup,
+} from '@nvg/shared';
 import { supabase } from '@/lib/supabase';
 
 export interface QuoteRecord {
@@ -36,6 +41,10 @@ export interface QuoteRecord {
   vat_amount: MoneyValue | null;
   /** Lập bằng bảng hạng mục (0239); false = báo giá cũ chỉ có tổng. */
   line_items_based: boolean;
+  /** Thiết kế / thi công / trọn gói (0244); rỗng = báo giá chung. */
+  scope_kind: QuoteScopeKind | null;
+  /** Rủi ro người gửi nêu lúc gửi phê duyệt (0244). */
+  risk_note: string | null;
   created_at: string;
   created_by: string | null;
   created_by_user: { full_name: string } | null;
@@ -44,7 +53,7 @@ export interface QuoteRecord {
 const QUOTE_SELECT =
   'id, code, company_id, version, is_current_version, total_value, discount_amount, discount_reason, ' +
   'status, sent_to_customer_at, customer_response, responded_at, valid_until, notes, created_at, ' +
-  'vat_rate, vat_included, subtotal_value, vat_amount, line_items_based, created_by, ' +
+  'vat_rate, vat_included, subtotal_value, vat_amount, line_items_based, scope_kind, risk_note, created_by, ' +
   'created_by_user:users!quotes_created_by_users_id_fk(full_name)';
 
 /** Danh sách phiên bản báo giá của một cơ hội — mới nhất trước (NEN-05). */
@@ -85,6 +94,8 @@ export interface NewQuoteInput {
   vatIncluded: boolean | null;
   validUntil: string | null;
   notes: string | null;
+  /** Loại báo giá (0244); rỗng = báo giá chung (NVS). */
+  scopeKind: QuoteScopeKind | null;
 }
 
 /**
@@ -114,6 +125,7 @@ export function useCreateQuoteVersion() {
         p_vat_included: input.vatIncluded,
         p_valid_until: input.validUntil,
         p_notes: input.notes,
+        p_scope_kind: input.scopeKind,
       });
       if (error) throw error;
       return { id: data as string };
@@ -139,13 +151,19 @@ function useQuoteFlowInvalidation() {
   };
 }
 
-/** Gửi phê duyệt nội bộ — bắt buộc trước khi gửi khách hàng (CRM-04). */
+/**
+ * Gửi phê duyệt nội bộ — bắt buộc trước khi gửi khách hàng (CRM-04). Kèm ghi chú rủi ro cho người duyệt
+ * (0244). CSDL chọn người duyệt: dưới mức lợi nhuận tối thiểu thì Tổng Giám đốc.
+ */
 export function useRequestQuoteApproval() {
   const invalidate = useQuoteFlowInvalidation();
 
-  return useMutation<void, Error, string>({
-    mutationFn: async (quoteId) => {
-      const { error } = await supabase.rpc('request_quote_approval', { p_quote_id: quoteId });
+  return useMutation<void, Error, { quoteId: string; riskNote: string | null }>({
+    mutationFn: async ({ quoteId, riskNote }) => {
+      const { error } = await supabase.rpc('request_quote_approval', {
+        p_quote_id: quoteId,
+        p_risk_note: riskNote,
+      });
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -184,17 +202,19 @@ export function useRecordQuoteResponse() {
 /**
  * Nguồn gợi ý điều khoản hợp đồng (`suggestContractTerms`): báo giá đang hiệu lực với khách
  * (bản mới nhất đã gửi; chưa gửi thì bản đã duyệt mới nhất) và báo cáo khảo sát đã duyệt mới nhất.
+ * Hợp đồng thiết kế lấy báo giá thiết kế, hợp đồng thi công / trọn gói lấy báo giá cùng loại; không có
+ * thì báo giá chung (0244, gương `create_contract_from_source`).
  */
-export function useContractTermSources(opportunityId: string | null) {
+export function useContractTermSources(opportunityId: string | null, scopeKind?: string | null) {
   return useQuery({
-    queryKey: ['quotes', 'term-sources', opportunityId],
+    queryKey: ['quotes', 'term-sources', opportunityId, scopeKind ?? null],
     enabled: Boolean(opportunityId),
     queryFn: async () => {
       const [quotes, surveys] = await Promise.all([
         supabase
           .from('quotes')
           .select(
-            'code, version, status, total_value, discount_amount, discount_reason, notes, sent_to_customer_at',
+            'code, version, status, total_value, discount_amount, discount_reason, notes, sent_to_customer_at, scope_kind',
           )
           .eq('opportunity_id', opportunityId!)
           .is('deleted_at', null)
@@ -210,7 +230,7 @@ export function useContractTermSources(opportunityId: string | null) {
       ]);
       if (quotes.error) throw new Error(quotes.error.message);
       if (surveys.error) throw new Error(surveys.error.message);
-      const list = quotes.data ?? [];
+      const list = quotesForScope(quotes.data ?? [], scopeKind);
       const quote =
         list.find((q) => q.sent_to_customer_at !== null) ??
         list.find((q) => q.status === 'completed') ??

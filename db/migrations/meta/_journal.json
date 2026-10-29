@@ -1646,6 +1646,20 @@
       "when": 1791880000000,
       "tag": "0243_hai_hop_dong_mot_co_hoi",
       "breakpoints": true
+    },
+    {
+      "idx": 243,
+      "version": "7",
+      "when": 1791890000000,
+      "tag": "0244_bao_gia_gia_von_loi_nhuan",
+      "breakpoints": true
+    },
+    {
+      "idx": 244,
+      "version": "7",
+      "when": 1791900000000,
+      "tag": "0245_nvs_thue_noi_bo_bao_gia_dieu_chuyen",
+      "breakpoints": true
     }
   ]
 }

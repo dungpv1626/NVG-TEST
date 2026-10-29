@@ -323,6 +323,11 @@ export const quotes = pgTable(
     validUntil: date('valid_until'),
     notes: text('notes'),
 
+    /** Báo giá thiết kế / thi công / trọn gói (0244); rỗng = báo giá chung (NVS, báo giá trước 0244). */
+    scopeKind: text('scope_kind'),
+    /** Rủi ro người gửi nêu khi gửi phê duyệt (0244). */
+    riskNote: text('risk_note'),
+
     ...auditColumns(),
     ...softDelete(),
   },
@@ -336,8 +341,9 @@ export const quotes = pgTable(
      * đang hiệu lực sẽ khiến người bán và khách hàng nói về hai mức giá khác nhau mà
      * không ai phát hiện. Trigger `quotes_assign_version` giữ cho ràng buộc này luôn đúng.
      */
+    // 0244: một bản đang hiệu lực cho mỗi (cơ hội, loại báo giá) — loại rỗng là một nhóm riêng.
     uniqueIndex('quotes_one_current_version')
-      .on(t.opportunityId)
+      .on(t.opportunityId, sql`COALESCE(${t.scopeKind}, '')`)
       .where(sql`${t.isCurrentVersion} AND ${t.deletedAt} IS NULL`),
   ],
 );

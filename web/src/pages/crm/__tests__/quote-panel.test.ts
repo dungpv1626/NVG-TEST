@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { findEffectiveQuoteId } from '../quote-panel';
+import { findEffectiveQuoteId, groupByKind } from '../quote-panel';
 
 const quote = (id: string, version: number, sentAt: string | null) => ({
   id,
@@ -43,5 +43,19 @@ describe('findEffectiveQuoteId', () => {
       quote('v2', 2, '2026-08-22T00:00:00Z'),
     ];
     expect(findEffectiveQuoteId(list)).toBe('v3');
+  });
+});
+
+describe('nhóm báo giá theo loại (0244)', () => {
+  it('thiết kế → thi công → trọn gói → báo giá chung; mỗi nhóm một bản «Đang hiệu lực» riêng', () => {
+    const list = [
+      { id: 'tc2', scope_kind: 'thi_cong' as const, version: 2, sent_to_customer_at: null },
+      { id: 'cu', scope_kind: null, version: 1, sent_to_customer_at: '2026-10-01' },
+      { id: 'tk1', scope_kind: 'thiet_ke' as const, version: 1, sent_to_customer_at: '2026-10-02' },
+      { id: 'tc1', scope_kind: 'thi_cong' as const, version: 1, sent_to_customer_at: '2026-10-03' },
+    ];
+    const groups = groupByKind(list);
+    expect(groups.map((g) => g.kind)).toEqual(['thiet_ke', 'thi_cong', null]);
+    expect(groups.map((g) => findEffectiveQuoteId(g.quotes))).toEqual(['tk1', 'tc1', 'cu']);
   });
 });

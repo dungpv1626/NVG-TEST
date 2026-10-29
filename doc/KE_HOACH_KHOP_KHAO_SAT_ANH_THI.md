@@ -29,6 +29,12 @@ Kế hoạch Thi công T5–T9 (`doc/KE_HOACH_THI_CONG_THEO_KHAO_SAT.md`) đư�
 **Xong giai đoạn khi:** một công trình NVC thử đi trọn vòng trên bằng đúng các vai, và lãi / lỗ ba cấp đối soát được bằng tay.
 
 ### A1. Giá bán có giá vốn và lợi nhuận khi duyệt (NVO6, A1, M6)
+**ĐÃ LÀM (0244, gói G1, 29/10/2026)** — giá vốn từng hạng mục hoặc từ dự toán đã duyệt (Mẫu D, bảng riêng, chỉ qua
+hàm có nhật ký); Kinh doanh không thấy giá vốn / lợi nhuận / % (cùng cách `estimate_cost_breakdown`); người có quyền xem
+giá vốn nhập khi Nháp hoặc đang chờ duyệt; `min_margin_percent` theo pháp nhân để TRỐNG, có số thì dưới mức (hoặc chưa đủ
+giá vốn) chỉ Tổng Giám đốc duyệt (`low_margin_price`), áp cả dự toán thầu; hộp duyệt hiện doanh thu, giá vốn, lợi nhuận,
+%, điều kiện thanh toán, rủi ro. Kèm NVO việc 2: báo giá thiết kế / thi công / trọn gói tách chuỗi phiên bản.
+Còn chờ NVG: mức lợi nhuận tối thiểu từng công ty; có cho Kinh doanh xem % lợi nhuận không.
 - Báo giá CRM có cột giá vốn từng dòng, hoặc lấy từ dự toán gắn kèm. Gói thầu NVC đã có dự toán với lợi nhuận.
 - Hộp duyệt giá hiện doanh thu, giá vốn, lợi nhuận, % lợi nhuận và điều kiện thanh toán.
 - Tham số `min_margin_percent` cho từng pháp nhân. Dưới mức này thì phê duyệt chuyển lên Tổng Giám đốc và hiện cảnh báo. Tham số để TRỐNG thì không áp.
@@ -120,6 +126,7 @@ Kế hoạch Thi công T5–T9 (`doc/KE_HOACH_THI_CONG_THEO_KHAO_SAT.md`) đư�
 **Xong giai đoạn khi:** một đơn thuê ngoài, một đơn thuê nội bộ NVC, một đơn bán đi trọn từ báo giá tới tất toán, và sổ giàn giáo đối soát được với Kế toán.
 
 ### C1. Đơn thuê nối hợp đồng, báo giá thuê có duyệt (NVS3, NVS1)
+- **Đã làm (0245, 29/10/2026, G5):** `contract_id` + «Lập từ hợp đồng cho thuê đã ký»; `rental_quotes` lưu theo khách, dòng mua / thuê, vận chuyển, in; giá dưới bảng giá hoặc vượt `sx.customer_credit_limit` (trống = không kiểm) → Ban Giám đốc duyệt (`rental_quote`).
 - `rental_agreements.contract_id`. Lập đơn thuê từ hợp đồng cho thuê đã ký, lấy sẵn khách, hàng và giá, không nhập lại.
 - Báo giá thuê lưu được, đi qua phê duyệt khi có giá đặc biệt, in theo mẫu.
 - Có hạn mức công nợ khách: vượt thì phải duyệt.
@@ -127,6 +134,7 @@ Kế hoạch Thi công T5–T9 (`doc/KE_HOACH_THI_CONG_THEO_KHAO_SAT.md`) đư�
 - **Cần NVG:** hạn mức công nợ từng khách hoặc chung.
 
 ### C2. Thuê nội bộ NVC / NVO — QĐ-6 (NVS11, X6, M16)
+- **Đã làm (0245, G5):** cờ `is_internal` do trigger đặt; đề nghị từ tab «Giàn giáo» của công trình → Xưởng → Ban Giám đốc NVS → xuất; giá nội bộ lưu ở `daily_rate` (`price_source = noi_bo`); chi phí vào ngân sách công trình (`THUE_GIAN_GIAO_NB`, `internal_rental_charges`); BC Tổng quan tài chính và Lãi/lỗ khi xem toàn NVG loại phần nội bộ. Còn: tuổi nợ / dòng tiền tuần toàn NVG.
 - Đơn thuê có cờ nội bộ, bắt buộc khi khách là pháp nhân trong NVG.
 - Giá nội bộ tự áp từ tham số `internal_rental_price`, lưu `unit_price_applied`, không hồi tố.
 - Chỉ huy trưởng gửi đề nghị thuê từ công trình; NVS duyệt.
@@ -136,6 +144,7 @@ Kế hoạch Thi công T5–T9 (`doc/KE_HOACH_THI_CONG_THEO_KHAO_SAT.md`) đư�
 - **Cần NVG:** chính sách giá nội bộ (đang để DEMO 70 % giá ngoài).
 
 ### C3. Kiểm tồn đúng và điều chuyển khi đang thuê (NVS2, NVS8)
+- **Đã làm (0245, G5):** `rental_availability` ba nhóm riêng; `rental_transfers` ký hai bên, chốt tiền đơn nguồn, mở đơn mới, chuyển lô không qua kho. «Hàng đang sửa sắp xong» chưa có ngày dự kiến sửa xong (C4) — hiện cả nhóm đang sửa.
 - Kiểm tồn khi báo giá cộng thêm hàng dự kiến thu hồi trước ngày giao và hàng đang sửa sắp xong. Hai nhóm này hiện riêng, không trộn vào tồn chắc chắn.
 - Điều chuyển hàng giữa hai công trình của cùng khách, hoặc từ công trình nội bộ này sang công trình khác, mà không qua kho; có biên bản.
 
@@ -232,3 +241,52 @@ Kế hoạch Thi công T5–T9 (`doc/KE_HOACH_THI_CONG_THEO_KHAO_SAT.md`) đư�
 11. Cách phân bổ nhân sự dùng chung (E1).
 
 Mục nào chưa có câu trả lời thì làm theo phương án an toàn: tham số để TRỐNG, chỉ cảnh báo, không chặn. Phương án dùng được ghi rõ trong mô tả tham số.
+
+---
+
+## Bổ sung: luồng nhà xưởng NVC (phiếu anh Thi dòng 735–765)
+
+Đối chiếu ngày 29/10/2026 cho 14 bước: 5 Đã có, 9 Một phần, 0 Chưa có. Chuỗi «dự toán thầu → ngân sách → mua hàng → khối lượng → nghiệm thu → thanh toán → quyết toán → lãi / lỗ» (dòng 765) đứt ở ba khâu:
+- khối lượng;
+- thanh toán nhà thầu phụ;
+- quyết toán.
+
+Ba việc mới, chưa có ở các giai đoạn trên:
+- **A8 Hồ sơ thanh toán với chủ đầu tư.**
+  - Công trường → Thi công → Dự án / QS → Kế toán cùng kiểm trước khi gửi chủ đầu tư.
+  - Ghi đủ các số: số đề nghị, số chủ đầu tư duyệt, hoá đơn, đã thu, giữ lại.
+- **A9 Bảo lãnh và tiền giữ lại.**
+  - Bảo lãnh tạm ứng / thực hiện / bảo hành có hạn và được nhắc trước khi hết.
+  - Tiền giữ lại có hạn thu hồi; khi thanh lý hợp đồng thì nhắc thu hồi.
+- **A10 Gói thầu có hình thức và quyết định tham gia.**
+  - Gói thầu ghi rõ hình thức: chỉ định / chào giá / đấu thầu.
+  - Ban Giám đốc duyệt có tham gia hay không, kèm lý do.
+  - Cung ứng, Thi công, Kế toán góp ý ngay trên gói thầu.
+
+## Gói việc giao agent (đợt 1)
+
+**Quy tắc chung cho mọi gói:**
+- **Migration:** mỗi gói có dải số migration riêng, áp tay bằng psql. Agent KHÔNG sửa `_journal.json`; người gộp thêm mục journal khi gộp.
+- **Phép thử:** phép thử CSDL qua khoá chung, `maxForks=1`.
+- **Chạy thử trình duyệt:** chỉ khi máy còn hơn 1,5 GB RAM.
+- **Cấm:** không commit, không gọi AI trả phí.
+- **Chưa có câu trả lời của NVG:** tham số để TRỐNG, chỉ cảnh báo, không chặn.
+- **Máy 8 GB:** chạy tối đa hai gói cùng lúc.
+
+| Gói | Nội dung | Mục kế hoạch | Công ty | Migration | Đi cặp |
+|---|---|---|---|---|---|
+| G1 | Báo giá có giá vốn, lợi nhuận, mức tối thiểu → Tổng Giám đốc; tách báo giá thiết kế / thi công; dự toán thầu có mức tối thiểu và rủi ro | A1 + NVO việc 2 | NVO, NVC | 0244 | Đợt 1a |
+| G5 | Đơn thuê nối hợp đồng, báo giá thuê lưu và duyệt, hạn mức công nợ; thuê nội bộ QĐ-6; kiểm tồn có lịch thu hồi; điều chuyển | C1–C3 | NVS (+ NVC / NVO nhận) | 0245 | Đợt 1a |
+| G2 | Nhà thầu phụ trọn vòng: so giá → duyệt chọn → hợp đồng khoán → xác nhận khối lượng đợt → đề nghị thanh toán gắn đợt / nghiệm thu, không vượt số còn lại → công nợ, đánh giá | A4 (+ T5) | NVC, NVO | 0246 | Đợt 1b |
+| G6 | Gói thầu: hình thức, duyệt tham gia, góp ý Cung ứng / Thi công / Kế toán | A10 | NVC | 0247 | Đợt 1b |
+| G3 | Hồ sơ thanh toán chủ đầu tư; bảo lãnh; tiền giữ lại | A8, A9 | NVC (+ NVO) | 0248 | Đợt 1c |
+| G4 | Gói bàn giao, điều kiện khởi công, lãi dự kiến chốt lúc ký; ngân sách sửa có duyệt; mua vượt ngân sách phải duyệt lại | A2, A3 | NVC, NVO | 0249 | Đợt 1c |
+
+**Các đợt sau** (lập gói khi xong đợt 1):
+- A5 khối lượng chưa nghiệm thu, A6 quyết toán và lãi / lỗ thực tế, A7 dòng tiền theo công trình;
+- NVO tỷ lệ chuyển thiết kế → thi công;
+- C4 sửa chữa và hiệu suất tài sản, C5 đơn bán;
+- B1–B5 phê duyệt;
+- D1–D5 số liệu;
+- C6 sản xuất (chờ Xưởng);
+- E.

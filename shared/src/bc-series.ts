@@ -81,6 +81,52 @@ export interface FinanceDay {
   contracts_signed: MoneyValue;
   collected: MoneyValue;
   paid_out: MoneyValue;
+  /**
+   * Phần trong các cột trên là giao dịch với pháp nhân NVG khác (QĐ-6, 0245): tiền thuê giàn giáo
+   * nội bộ, hợp đồng ký với pháp nhân NVG, tiền thu từ pháp nhân NVG. Số từng công ty GIỮ phần này;
+   * chỉ số toàn NVG trừ ra (`withoutInternal`). Thiếu cột (CSDL cũ) = 0.
+   */
+  internal_revenue?: MoneyValue;
+  internal_contracts_signed?: MoneyValue;
+  internal_collected?: MoneyValue;
+}
+
+/** Tổng phần nội bộ đã loại khỏi số toàn NVG, đồng. */
+export interface InternalExcluded {
+  revenue: bigint;
+  contractsSigned: bigint;
+  collected: bigint;
+}
+
+/**
+ * Số hợp nhất toàn NVG (QĐ-6): trừ phần giao dịch nội bộ ra khỏi từng ngày. Dùng CHỈ khi đang xem
+ * gộp nhiều pháp nhân — xem một công ty thì giao dịch nội bộ vẫn là doanh thu / tiền thu thật của nó.
+ * Chi phí nội bộ không nằm trong các cột này (đi vào ngân sách công trình), nên không có gì để trừ ở
+ * cột «đã chi».
+ */
+export function withoutInternal(days: readonly FinanceDay[]): {
+  days: FinanceDay[];
+  excluded: InternalExcluded;
+} {
+  const excluded: InternalExcluded = { revenue: 0n, contractsSigned: 0n, collected: 0n };
+  const out = days.map((d) => {
+    const rev = toMoney(d.internal_revenue ?? 0);
+    const sig = toMoney(d.internal_contracts_signed ?? 0);
+    const col = toMoney(d.internal_collected ?? 0);
+    excluded.revenue += rev;
+    excluded.contractsSigned += sig;
+    excluded.collected += col;
+    return {
+      ...d,
+      rental_revenue: (toMoney(d.rental_revenue) - rev).toString(),
+      contracts_signed: (toMoney(d.contracts_signed) - sig).toString(),
+      collected: (toMoney(d.collected) - col).toString(),
+      internal_revenue: '0',
+      internal_contracts_signed: '0',
+      internal_collected: '0',
+    };
+  });
+  return { days: out, excluded };
 }
 
 export interface FinanceTotals {

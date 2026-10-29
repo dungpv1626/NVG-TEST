@@ -16,6 +16,7 @@ import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { cn } from '@/lib/utils';
 import { ContractDocumentPreview } from './contract-document-preview';
 import { PurchaseQuotationPreview } from './purchase-quotation-preview';
+import { PriceMarginPreview } from './price-margin-preview';
 import { SurveyReportPreview } from './survey-report-preview';
 import { PageHeader } from '@/components/layout/app-shell';
 import { ApprovalInbox, type ApprovalItem } from '@/components/entity/approval-inbox';
@@ -71,6 +72,11 @@ function fullRecordPath(item: PendingApproval): string {
     case 'site_surveys':
       // Báo cáo khảo sát nằm ở tab Khảo sát của Chi tiết Cơ hội (Đợt 1 — 1D).
       return item.parent_id ? `/crm/co-hoi/${item.parent_id}?tab=khao-sat` : '/crm/co-hoi';
+    case 'rental_quotes':
+      // G5 (0245): báo giá thuê giàn giáo nằm ở màn hình Báo giá thuê, mở đúng báo giá.
+      return `/sx/bao-gia-thue?bao-gia=${item.entity_id}`;
+    case 'internal_rental_requests':
+      return '/sx/thue-noi-bo';
     case 'stocktakes':
       // Kiểm kê không có trang theo id — màn hình Kiểm kê liệt kê các đợt đang mở.
       return '/kho/kiem-ke';
@@ -303,6 +309,10 @@ function ApprovalPreview({ row }: { row: PendingApproval }) {
       </div>
 
       {row.entity_type === 'contracts' && <ContractDocumentPreview contractId={row.entity_id} />}
+      {/* 0244: giá bán — doanh thu, giá vốn, lợi nhuận, điều kiện thanh toán, rủi ro (Mẫu D do CSDL quyết). */}
+      {(row.entity_type === 'quotes' || row.entity_type === 'estimates') && (
+        <PriceMarginPreview entityType={row.entity_type} entityId={row.entity_id} />
+      )}
       {/* Đợt 4 — 4B: đề nghị mua kèm bảng so giá nhà cung cấp. */}
       {row.entity_type === 'purchase_requests' && (
         <PurchaseQuotationPreview requestId={row.entity_id} />

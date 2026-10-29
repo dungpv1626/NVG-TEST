@@ -52,6 +52,7 @@ import { WaitingOn } from '@/components/entity/waiting-on';
 import { useApprovalHistory } from '@/hooks/use-approvals';
 import { useStageReadiness } from '@/hooks/use-stage-readiness';
 import { AfterSignCard } from './after-sign-card';
+import { ContractRentalsCard } from './contract-rentals-card';
 import { AmendmentPanel } from './amendment-panel';
 import { DocumentPanel } from './document-panel';
 import { TermsPanel } from './terms-panel';
@@ -470,6 +471,10 @@ export function ContractDetailPage() {
                     hasScan={Boolean(contract.signed_scan_path)}
                   />
                 )}
+                {contract.type === 'cho_thue' &&
+                  (contract.stage === 'da_ky' || contract.stage === 'hoan_thanh') && (
+                    <ContractRentalsCard contractId={contract.id} />
+                  )}
                 {(contract.stage === 'da_ky' || contract.stage === 'hoan_thanh') && (
                   <SignedScanPanel
                     contract={contract}
@@ -608,6 +613,7 @@ export function ContractDetailPage() {
                     opportunityId={
                       contract.source_type === 'opportunities' ? contract.source_id : null
                     }
+                    scopeKind={contract.scope_kind}
                   />
                 }
               />

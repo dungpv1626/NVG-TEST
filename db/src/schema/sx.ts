@@ -26,7 +26,7 @@
  * `kho.ts ↔ sx.ts`, cùng cách `design_projects.construction_site_id` đã làm trước khi có TC).
  */
 
-import { date, index, numeric, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { boolean, date, index, numeric, pgTable, text, uuid } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { auditColumns } from './_audit';
 import { productionOrderStatusEnum, rentalAgreementStatusEnum } from './_enums';
@@ -141,6 +141,17 @@ export const rentalAgreements = pgTable(
     totalCompensation: money('total_compensation'),
 
     notes: text('notes'),
+
+    /**
+     * G5 (0245). Khoá ngoại khai ở migration (tránh vòng phụ thuộc giữa các tệp schema). Thuê nội bộ
+     * (QĐ-6): trigger `rental_agreements_internal_guard` đặt `is_internal` / `renter_company_id`.
+     */
+    contractId: uuid('contract_id'),
+    rentalQuoteId: uuid('rental_quote_id'),
+    internalRequestId: uuid('internal_request_id'),
+    isInternal: boolean('is_internal').notNull().default(false),
+    renterCompanyId: uuid('renter_company_id'),
+    transferredFromId: uuid('transferred_from_id'),
 
     ...auditColumns(),
     ...softDelete(),

@@ -11,15 +11,13 @@ import { cn } from '@/lib/utils';
 const ITEMS = [
   { to: '/sx/tai-san-cho-thue', label: 'Cho thuê giàn giáo' },
   { to: '/sx/bao-gia-thue', label: 'Báo giá thuê' },
+  { to: '/sx/thue-noi-bo', label: 'Thuê nội bộ' },
   { to: '/sx/lenh-san-xuat', label: 'Lệnh sản xuất' },
 ];
 
 export function SxNav() {
   return (
-    <nav
-      className="mb-4 flex gap-1.5 overflow-x-auto"
-      aria-label="Màn hình trong phân hệ"
-    >
+    <nav className="mb-4 flex gap-1.5 overflow-x-auto" aria-label="Màn hình trong phân hệ">
       {ITEMS.map((item) => (
         <NavLink
           key={item.to}

@@ -45,6 +45,11 @@ export interface RentalAgreementRecord {
   delivery_nvg_signature_path: string | null;
   delivery_paper_scan_path: string | null;
   delivery_signed_at: string | null;
+  /** G5 (0245): thuê nội bộ giữa hai pháp nhân NVG (QĐ-6) — trigger đặt, không sửa tay. */
+  is_internal: boolean;
+  contract_id: string | null;
+  internal_request_id: string | null;
+  transferred_from_id: string | null;
   customer: { code: string; name: string } | null;
   site: { code: string; name: string } | null;
   creator: { full_name: string } | null;
@@ -56,6 +61,7 @@ const RENTAL_AGREEMENT_SELECT =
   'total_compensation, notes, created_at, updated_at, settled_at, settlement_deposit_offset, ' +
   'settlement_refund, delivery_customer_representative, delivery_customer_signature_path, ' +
   'delivery_nvg_signature_path, delivery_paper_scan_path, delivery_signed_at, ' +
+  'is_internal, contract_id, internal_request_id, transferred_from_id, ' +
   'customer:customers!rental_agreements_customer_id_customers_id_fk(code, name), ' +
   'site:construction_sites!rental_agreements_construction_site_id_construction_sites_id_fk(code, name), ' +
   'creator:users!rental_agreements_created_by_users_id_fk(full_name)';

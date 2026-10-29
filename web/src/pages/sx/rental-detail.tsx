@@ -36,6 +36,7 @@ import { useRentalReturns } from '@/hooks/use-rental-returns';
 import { useCan } from '@/lib/auth';
 import { RentalDeliveryPanel } from './rental-delivery-panel';
 import { RentalReturnsPanel } from './rental-returns-panel';
+import { RentalTransferPanel } from './rental-transfer-panel';
 
 const EM_DASH = '—';
 
@@ -220,6 +221,16 @@ export function RentalAgreementDetailPage() {
                         {agreement.customer?.code ?? ''} — {agreement.customer?.name ?? EM_DASH}
                       </Link>
                     ),
+                  },
+                  {
+                    // G5 (0245): QĐ-6 — giá nội bộ, chi phí vào ngân sách công trình, loại khỏi
+                    // số hợp nhất.
+                    label: 'Loại đơn',
+                    value: agreement.is_internal
+                      ? 'Thuê nội bộ giữa hai pháp nhân NVG — giá nội bộ, loại khỏi số hợp nhất'
+                      : agreement.contract_id
+                        ? 'Thực hiện hợp đồng cho thuê đã ký'
+                        : 'Thuê lẻ, không theo hợp đồng',
                   },
                   {
                     label: 'Công trình nhận',
@@ -455,6 +466,13 @@ export function RentalAgreementDetailPage() {
           id: 'phieu-giao',
           label: 'Phiếu giao',
           content: <RentalDeliveryPanel agreement={agreement} canSign={canEdit} />,
+        },
+        {
+          id: 'dieu-chuyen',
+          label: 'Điều chuyển',
+          content: (
+            <RentalTransferPanel agreement={agreement} items={items ?? []} canEdit={canEdit} />
+          ),
         },
         {
           id: 'bien-ban',

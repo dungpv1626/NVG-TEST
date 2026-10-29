@@ -706,7 +706,7 @@ describeDb(
 );
 
 describeDb('Không tự phê duyệt hồ sơ của chính mình (0156)', () => {
-  it('Kinh doanh gửi báo giá thì không tự duyệt được, dù trong hạn mức của mình', async () => {
+  it('Kinh doanh gửi báo giá thì không tự duyệt được (từ 29/10/2026 Kinh doanh không còn hạn mức duyệt báo giá)', async () => {
     const kd = await signInAs(ACCOUNTS.kinhDoanhNvc);
     const tgd = await signInAs(ACCOUNTS.tgd);
     const { data: company } = await kd.from('companies').select('id').eq('code', 'NVC').single();
@@ -757,7 +757,9 @@ describeDb('Không tự phê duyệt hồ sơ của chính mình (0156)', () => 
       p_approval_id: approval!.id,
       p_decision: 'approved',
     });
-    expect(self?.message).toContain('chính mình');
+    // Báo giá do Ban Giám đốc / Tổng Giám đốc duyệt (anh Dũng 29/10/2026) — Kinh doanh bị chặn vì
+    // không có hạn mức; chặn tự duyệt (0156) vẫn còn và phủ các loại phê duyệt khác trong tệp này.
+    expect(self).not.toBeNull();
 
     // Người khác có hạn mức thì duyệt bình thường.
     const { error } = await tgd.rpc('decide_approval', {

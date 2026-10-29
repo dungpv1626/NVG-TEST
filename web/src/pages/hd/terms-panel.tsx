@@ -131,6 +131,7 @@ export function TermsPanel({
   contractType,
   priceForm = null,
   opportunityId = null,
+  scopeKind = null,
 }: {
   contractId: string;
   companyId: string;
@@ -142,9 +143,11 @@ export function TermsPanel({
   contractValue?: MoneyValue | null;
   /** Cơ hội nguồn — có thì máy gợi ý Phạm vi / Giá trị từ báo giá và khảo sát. */
   opportunityId?: string | null;
+  /** Phạm vi hợp đồng (0243) — gợi ý lấy từ báo giá đúng loại (0244). */
+  scopeKind?: string | null;
 }) {
   const { data: terms } = useContractTerms(contractId);
-  const sources = useContractTermSources(readOnly ? null : opportunityId);
+  const sources = useContractTermSources(readOnly ? null : opportunityId, scopeKind);
   const suggestions: Partial<Record<ContractTermType, TermSuggestion | null>> = sources.data
     ? suggestContractTerms(sources.data.quote, sources.data.survey)
     : {};

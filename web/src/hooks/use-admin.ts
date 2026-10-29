@@ -207,7 +207,7 @@ export function useSaveApprovalLimit() {
 export interface SystemParameterRecord {
   id: string;
   param_key: string;
-  scope_type: 'global' | 'company' | 'product' | 'role';
+  scope_type: 'global' | 'company' | 'product' | 'role' | 'customer';
   scope_id: string | null;
   /** Rỗng nghĩa là CHƯA CÓ DỮ LIỆU THẬT — màn hình hiện "Chưa đủ dữ liệu", không hiện 0. */
   value: unknown;

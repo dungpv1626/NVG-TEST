@@ -33,6 +33,11 @@ import {
   useRentalAgreements,
   type RentalItemInput,
 } from '@/hooks/use-sx';
+import {
+  useCreateRentalFromContract,
+  useRentalContractsReady,
+  useRentalQuotes,
+} from '@/hooks/use-sx-rental';
 import { useCan } from '@/lib/auth';
 import { useCompanyScope } from '@/lib/company-scope';
 import { SxNav } from './sx-nav';
@@ -84,8 +89,18 @@ export function RentalAgreementListPage() {
   );
 
   const create = useCreateRentalAgreement();
+  const createFromContract = useCreateRentalFromContract();
+  const companyId = scope.isAggregate ? null : scope.companyId;
+  // G5 (0245): đơn thuê lập từ hợp đồng cho thuê đã ký — khách, ngày, hàng và giá lấy sẵn.
+  const { data: readyContracts } = useRentalContractsReady(canEdit ? companyId : null);
+  const { data: quotes } = useRentalQuotes(canEdit ? companyId : null);
 
   const [isFormOpen, setFormOpen] = useState(false);
+  const [contractId, setContractId] = useState('');
+  const [quoteId, setQuoteId] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [deposit, setDeposit] = useState('');
   const [customerId, setCustomerId] = useState('');
   const [siteId, setSiteId] = useState('');
   const [siteAddress, setSiteAddress] = useState('');
@@ -93,12 +108,45 @@ export function RentalAgreementListPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   function resetForm() {
+    setContractId('');
+    setQuoteId(null);
+    setStartDate('');
+    setEndDate('');
+    setDeposit('');
     setCustomerId('');
     setSiteId('');
     setSiteAddress('');
     setItems([emptyItem(Date.now())]);
     setFormError(null);
   }
+
+  /** Chọn hợp đồng: điền khách, ngày; báo giá đã duyệt gần nhất của khách điền dòng hàng + giá. */
+  function chooseContract(id: string) {
+    setContractId(id);
+    const k = readyContracts?.find((c) => c.contract_id === id);
+    if (!k) {
+      setQuoteId(null);
+      return;
+    }
+    setCustomerId(k.customer_id);
+    setStartDate(k.start_date ?? '');
+    setEndDate(k.end_date ?? '');
+    const q = quotes?.find((x) => x.id === k.quote_id);
+    setQuoteId(q?.id ?? null);
+    const rentLines = (q?.items ?? []).filter((i) => i.kind === 'thue');
+    if (rentLines.length > 0) {
+      setItems(
+        rentLines.map((i, n) => ({
+          key: Date.now() + n,
+          materialId: i.material_id,
+          quantity: String(i.quantity),
+          dailyRate: String(i.unit_price),
+        })),
+      );
+      if (q?.deposit_amount) setDeposit(String(q.deposit_amount));
+    }
+  }
+  const chosenContract = readyContracts?.find((c) => c.contract_id === contractId) ?? null;
 
   const rows: RentalRow[] = (data ?? []).map((a) => ({
     id: a.id,
@@ -125,6 +173,10 @@ export function RentalAgreementListPage() {
       setFormError('Chọn khách thuê.');
       return;
     }
+    if (!startDate) {
+      setFormError('Chọn ngày bắt đầu thuê.');
+      return;
+    }
 
     const form = new FormData(event.currentTarget);
     const preparedItems: RentalItemInput[] = items
@@ -141,17 +193,28 @@ export function RentalAgreementListPage() {
     }
 
     try {
-      const id = await create.mutateAsync({
-        companyId: scope.companyId,
-        customerId,
-        constructionSiteId: siteId || null,
-        siteAddress: siteAddress.trim() || null,
-        startDate: String(form.get('start_date') ?? ''),
-        expectedEndDate: String(form.get('expected_end_date') ?? '') || null,
-        depositAmount: Number(form.get('deposit_amount') ?? 0),
-        notes: String(form.get('notes') ?? ''),
-        items: preparedItems,
-      });
+      const id = contractId
+        ? await createFromContract.mutateAsync({
+            contractId,
+            quoteId,
+            startDate,
+            expectedEndDate: endDate || null,
+            siteAddress: siteAddress.trim() || null,
+            depositAmount: Number(deposit || 0),
+            notes: String(form.get('notes') ?? ''),
+            items: preparedItems,
+          })
+        : await create.mutateAsync({
+            companyId: scope.companyId,
+            customerId,
+            constructionSiteId: siteId || null,
+            siteAddress: siteAddress.trim() || null,
+            startDate,
+            expectedEndDate: endDate || null,
+            depositAmount: Number(deposit || 0),
+            notes: String(form.get('notes') ?? ''),
+            items: preparedItems,
+          });
       resetForm();
       setFormOpen(false);
       // Lưu xong đi thẳng vào Chi tiết hồ sơ vừa tạo (Webapp Flow 4.4).
@@ -198,10 +261,38 @@ export function RentalAgreementListPage() {
             </p>
           )}
 
+          {(readyContracts ?? []).length > 0 && (
+            <Field
+              label="Lập từ hợp đồng cho thuê đã ký"
+              hint={
+                chosenContract
+                  ? quoteId
+                    ? `Đã lấy khách, ngày và dòng hàng theo báo giá ${chosenContract.quote_code}.`
+                    : 'Đã lấy khách và ngày theo hợp đồng. Khách chưa có báo giá đã duyệt — nhập dòng hàng.'
+                  : 'Để trống khi khách thuê lẻ, không có hợp đồng.'
+              }
+            >
+              <select
+                value={contractId}
+                onChange={(e) => chooseContract(e.target.value)}
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
+              >
+                <option value="">Không theo hợp đồng</option>
+                {(readyContracts ?? []).map((c) => (
+                  <option key={c.contract_id} value={c.contract_id}>
+                    {c.contract_number ?? c.code} — {c.customer_name ?? ''}
+                    {c.agreements > 0 ? ` (đã có ${c.agreements} đơn)` : ''}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Khách thuê" required className="lg:col-span-2">
               <select
                 value={customerId}
+                disabled={contractId !== ''}
                 onChange={(e) => setCustomerId(e.target.value)}
                 required
                 className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
@@ -216,10 +307,10 @@ export function RentalAgreementListPage() {
             </Field>
 
             <Field label="Ngày bắt đầu thuê" required>
-              <DateInput name="start_date" required />
+              <DateInput value={startDate} onChange={setStartDate} required />
             </Field>
             <Field label="Ngày dự kiến trả">
-              <DateInput name="expected_end_date" />
+              <DateInput value={endDate} onChange={setEndDate} />
             </Field>
 
             <Field
@@ -228,6 +319,7 @@ export function RentalAgreementListPage() {
             >
               <select
                 value={siteId}
+                disabled={contractId !== ''}
                 onChange={(e) => setSiteId(e.target.value)}
                 className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
               >
@@ -247,7 +339,7 @@ export function RentalAgreementListPage() {
               />
             </Field>
             <Field label="Tiền đặt cọc (đồng)">
-              <MoneyInput name="deposit_amount" />
+              <MoneyInput value={deposit} onChange={setDeposit} />
             </Field>
           </div>
 
@@ -321,7 +413,11 @@ export function RentalAgreementListPage() {
             />
           </Field>
 
-          <Button type="submit" variant="primary" disabled={create.isPending}>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={create.isPending || createFromContract.isPending}
+          >
             Xuất giàn giáo và lập hợp đồng
           </Button>
         </form>

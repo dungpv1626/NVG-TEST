@@ -510,6 +510,7 @@ export function OpportunityDetailPage() {
                 canEdit={canEdit}
                 isHandedOver={isHandedOver}
                 stage={data.stage}
+                companyCode={company?.code ?? null}
                 missingForQuote={readiness
                   .filter((r) => r.for_stage === 'bao_gia' && !r.met)
                   .map((r) => r.label)}
