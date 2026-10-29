@@ -197,7 +197,21 @@ by_house_profile:
     # giếng trời vẫn chỉ đề xuất khi đầu bài hỏi tới). Số chưa đo — chờ Haan.
     light_well_advice_depth_m: 12
   pho: { door_width_m: 0.9, wc_door_width_m: 0.7, door_margin_m: 0.05, corridor_clear_m: 1.0 }
-  vuon: { door_width_m: 0.9, wc_door_width_m: 0.7, door_margin_m: 0.05, corridor_clear_m: 1.2 }
+  # Kiểm ánh sáng TRƯỚC lượt «Xếp mặt bằng» (29/10/2026, lượt thật 9272: biệt thự 15 × 17 m chỉ thoáng mặt trước + trái, ~51 %
+  # sàn sâu hơn 4,5 m tính từ mặt thoáng → phòng ngủ tối dù mô hình xếp thế nào). Chỉ CẢNH BÁO, không chặn, không tự vẽ giếng
+  # trời (T96). Nhà phố / nhà ống không khai: phòng ngủ phụ của nhà phố được lấy sáng gián tiếp (D1 chỉ đòi khách + ngủ chính).
+  # ⚑ Số ĐỀ XUẤT, chưa đo trên hồ sơ NVO — 4,5 m ≈ chiều sâu một phòng ngủ lấy sáng một phía; 30 % ≈ phần thang + WC + kho +
+  # hành lang của một tầng biệt thự. Chờ Haan / KTS NVO.
+  bt: { daylight_reach_m: 4.5, daylight_interior_share_advice: 0.3 }
+  vuon:
+    {
+      door_width_m: 0.9,
+      wc_door_width_m: 0.7,
+      door_margin_m: 0.05,
+      corridor_clear_m: 1.2,
+      daylight_reach_m: 4.5,
+      daylight_interior_share_advice: 0.3,
+    }
 circulation:
   corridor_clear_m: 1.2
   # Khung bề rộng LỌT LÒNG hành lang (Haan 30/09/2026, T104): tối thiểu 0,9 m (không để đoạn giao thông chính

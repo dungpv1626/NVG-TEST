@@ -17,9 +17,10 @@ import { mergeAllowed, passageRules, roomGroups, zoneDefaults } from '../kb/voca
 import { roomVocabulary } from '../kb/vocabulary-data';
 import { NO_RULE_PACKS, selectedRulePack } from './rule-packs';
 import { nationalRulePack, nvgExperiencePack } from '../rules/rule-pack-data';
-import { withHouseProfile } from './house-profile-norms';
+import { daylightPreflightAdvice, withHouseProfile } from './house-profile-norms';
 import { mandatoryRules } from './mandatory-data';
 import { briefAdvice, briefInfeasible, planContext, type PlanContextInput } from './plan';
+import { askedTypes } from './program';
 import { planQuality } from './plan-quality-data';
 import { aiPrompts } from './prompts-data';
 import { withStairShape } from './stair-choice';
@@ -75,6 +76,14 @@ export function planPreflight(
   const quality = planQuality();
   return {
     blocking: briefInfeasible({ ...input, quality }, context),
-    warnings: briefAdvice(input, context),
+    warnings: [
+      ...briefAdvice(input, context),
+      ...[
+        daylightPreflightAdvice(input.construction, digest, context.buildable, context.openFaces, {
+          required: new Set(context.knowledge.brief_spaces.map((row) => row.type)),
+          allowed: askedTypes(context.knowledge),
+        }),
+      ].filter((line): line is string => line !== null),
+    ],
   };
 }

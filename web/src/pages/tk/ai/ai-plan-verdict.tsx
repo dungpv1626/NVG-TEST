@@ -32,8 +32,8 @@ const DARK_ROOM_CODES = new Set(['D1', 'D2']);
 
 /**
  * Phòng tối mà phương án không có giếng trời / sân trong: gợi ý thêm vào đầu bài (lượt thật 9272, 29/10/2026 — biệt thự
- * 15 × 20 m chỉ hai mặt thoáng, ba phòng không cửa sổ). Theo T96 mô hình chỉ được đề xuất giếng trời khi đầu bài có hỏi
- * tới, nên gọi lại mô hình không gỡ được chỗ này — người khai đầu bài quyết. `roomTypes` = loại phòng CÓ trong phương án
+ * 15 × 20 m chỉ hai mặt thoáng, ba phòng không cửa sổ). Đầu bài 9272 có «chỗ phơi ngoài trời» nên sân trong được PHÉP mà không
+ * BẮT, và mô hình đã bỏ qua; chỉ dòng «Không gian gia chủ yêu cầu» buộc được (T96), nên người khai đầu bài quyết. `roomTypes` = loại phòng CÓ trong phương án
  * (`roomList` từng tầng). Trả danh sách phòng tối; rỗng = không gợi ý.
  */
 export function lightWellAdvice(
@@ -142,8 +142,9 @@ export function PlanVerdict({
       {darkRooms.length > 0 && (
         <p className="mt-3 rounded-field border border-status-pending/40 px-3 py-2 text-sm">
           {darkRooms.map((id) => roomName(id, review.roomLabels)).join(', ')} không có cửa sổ ra mặt
-          thoáng. Đầu bài chưa có giếng trời hay sân trong nên AI không được tự thêm — muốn có thì
-          thêm «Giếng trời» ở mục «Không gian gia chủ yêu cầu» của đầu bài rồi xếp lại.
+          thoáng, và phương án không có giếng trời hay sân trong. Muốn các phòng này sáng thì ghi
+          «Giếng trời» ở mục «Không gian gia chủ yêu cầu» của đầu bài rồi xếp lại — có ở đó thì AI
+          buộc phải xếp.
         </p>
       )}
       {canFix && items.length > 0 && (

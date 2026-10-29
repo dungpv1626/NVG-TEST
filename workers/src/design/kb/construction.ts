@@ -39,6 +39,13 @@ export interface HouseProfileNorms {
    * T96: không tự vẽ, không trừ điểm, không chặn).
    */
   light_well_advice_depth_m?: number;
+  /**
+   * Kiểm ánh sáng TRƯỚC khi gọi mô hình: phần khối nhà xa mọi mặt thoáng hơn `daylight_reach_m` không đặt được phòng
+   * có cửa sổ ra mặt thoáng. Phần ấy chiếm quá `daylight_interior_share_advice` diện tích tầng mà đầu bài không hỏi giếng
+   * trời / sân trong → cảnh báo trước lượt (không chặn, không tự vẽ — T96). Vắng một trong hai = không kiểm.
+   */
+  daylight_reach_m?: number;
+  daylight_interior_share_advice?: number;
 }
 
 /** Phần của `openings` không phải một quy cách ô cửa — cách chọn quy cách (T40). */
@@ -292,6 +299,8 @@ const HOUSE_PROFILE_KEYS: readonly (keyof HouseProfileNorms)[] = [
   'door_margin_m',
   'corridor_clear_m',
   'light_well_advice_depth_m',
+  'daylight_reach_m',
+  'daylight_interior_share_advice',
 ];
 
 function parseHouseProfiles(raw: unknown): Record<string, HouseProfileNorms> {
