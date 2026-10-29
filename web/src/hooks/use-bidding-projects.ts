@@ -7,7 +7,14 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { BiddingStage, MoneyValue } from '@nvg/shared';
+import type {
+  BidAssessment,
+  BidParticipationStatus,
+  BiddingStage,
+  BidWorkType,
+  MoneyValue,
+  ProcurementForm,
+} from '@nvg/shared';
 import { useCompanyScope, withCompanyScope } from '@/lib/company-scope';
 import { supabase } from '@/lib/supabase';
 
@@ -65,6 +72,14 @@ export interface BiddingProjectDetailRecord extends BiddingProjectRecord {
   lost_reason: string | null;
   notes: string | null;
   updated_at: string;
+  procurement_form: ProcurementForm | null;
+  work_type: BidWorkType | null;
+  participation_status: BidParticipationStatus;
+  participation_assessment: BidAssessment | null;
+  participation_approval_id: string | null;
+  participation_submitted_at: string | null;
+  participation_decided_at: string | null;
+  participation_decision_note: string | null;
   opportunity: { id: string; code: string; name: string } | null;
 }
 
@@ -76,7 +91,9 @@ export function useBiddingProject(id: string | undefined) {
         .from('bidding_projects')
         .select(
           `${PROJECT_SELECT}, opportunity_id, site_address, clarification_notes, survey_notes, ` +
-            'lost_reason, notes, updated_at, ' +
+            'lost_reason, notes, updated_at, procurement_form, work_type, participation_status, ' +
+            'participation_assessment, participation_approval_id, participation_submitted_at, ' +
+            'participation_decided_at, participation_decision_note, ' +
             'opportunity:opportunities!bidding_projects_opportunity_id_opportunities_id_fk(id, code, name)',
         )
         .eq('id', id!)
@@ -99,6 +116,8 @@ export interface NewBiddingProjectInput {
   submissionDeadline: string | null;
   siteAddress: string | null;
   clarificationNotes: string | null;
+  procurementForm: ProcurementForm | null;
+  workType: BidWorkType | null;
 }
 
 export function useCreateBiddingProject() {
@@ -119,6 +138,8 @@ export function useCreateBiddingProject() {
           submission_deadline: input.submissionDeadline,
           site_address: input.siteAddress,
           clarification_notes: input.clarificationNotes,
+          procurement_form: input.procurementForm,
+          work_type: input.workType,
         })
         .select('id')
         .single();

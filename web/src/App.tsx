@@ -192,11 +192,30 @@ const SiteDetailPage = lazy(() =>
   import('@/pages/tc/site-detail').then((m) => ({ default: m.SiteDetailPage })),
 );
 const RfiPage = lazy(() => import('@/pages/tc/rfi-page').then((m) => ({ default: m.RfiPage })));
+const BidReviewListPage = lazy(() =>
+  import('@/pages/da/bid-review-page').then((m) => ({ default: m.BidReviewListPage })),
+);
+const BidReviewPage = lazy(() =>
+  import('@/pages/da/bid-review-page').then((m) => ({ default: m.BidReviewPage })),
+);
 const SiteRequestsPage = lazy(() =>
   import('@/pages/tc/site-requests-page').then((m) => ({ default: m.SiteRequestsPage })),
 );
 const SiteReportListPage = lazy(() =>
   import('@/pages/tc/site-report-pages').then((m) => ({ default: m.SiteReportListPage })),
+);
+const SubcontractSelectionPage = lazy(() =>
+  import('@/pages/tc/subcontract-selection-page').then((m) => ({
+    default: m.SubcontractSelectionPage,
+  })),
+);
+const SubcontractorPage = lazy(() =>
+  import('@/pages/tc/subcontractor-page').then((m) => ({ default: m.SubcontractorPage })),
+);
+const SubcontractPeriodPage = lazy(() =>
+  import('@/pages/tc/subcontract-period-page').then((m) => ({
+    default: m.SubcontractPeriodPage,
+  })),
 );
 const SiteReportDetailPage = lazy(() =>
   import('@/pages/tc/site-report-pages').then((m) => ({ default: m.SiteReportDetailPage })),
@@ -497,6 +516,10 @@ const router = createBrowserRouter(
           <Route path="tc/bang-theo-doi" element={<SiteBoardPage />} />
           <Route path="tc/bao-cao" element={<SiteReportListPage />} />
           <Route path="tc/bao-cao/:id" element={<SiteReportDetailPage />} />
+          {/* G2 (0246): chọn thầu phụ, trang tổ đội, đợt xác nhận khối lượng. */}
+          <Route path="tc/chon-thau-phu/:id" element={<SubcontractSelectionPage />} />
+          <Route path="tc/thau-phu/:id" element={<SubcontractorPage />} />
+          <Route path="tc/dot-khoi-luong/:id" element={<SubcontractPeriodPage />} />
         </Route>
 
         {/* MH — Mua hàng và vật tư (MH-01 → MH-08). Không có màn hình "tạo đơn hàng":
@@ -588,6 +611,10 @@ const router = createBrowserRouter(
         {/* Yêu cầu làm rõ (TC-15): không bọc ModuleGuard — bên trả lời (Thiết kế, Dự án) không xem
             được Module TC; RLS của bảng `rfis` quyết ai đọc được. */}
         <Route path="lam-ro/:id" element={<RfiPage />} />
+        {/* Ý kiến gói thầu (0247): Cung ứng / Thi công / Kế toán không xem được Module DA — CSDL
+            (`bid_reviews`) quyết ai đọc, trang chỉ có tóm tắt gói, không giá dự thầu. */}
+        <Route path="y-kien-goi-thau" element={<BidReviewListPage />} />
+        <Route path="y-kien-goi-thau/:id" element={<BidReviewPage />} />
 
         {/* NEN — Quản trị hệ thống. Mọi giá trị cấu hình của NEN-02, NEN-07 và NEN-12 phải
                   sửa được TẠI ĐÂY: tài liệu nhiều chỗ hứa "quản trị viên sửa sau", mà lời hứa đó

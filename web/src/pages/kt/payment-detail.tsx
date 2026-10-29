@@ -51,6 +51,8 @@ import {
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useAuth, useCan } from '@/lib/auth';
 import { PaymentFilesPanel } from './payment-files-panel';
+import { RecordChain } from '@/components/entity/record-chain';
+import { SubcontractBasisPanel } from './subcontract-basis-panel';
 import { AllocationPanel } from './allocation-panel';
 import { KtNav } from './kt-nav';
 import { paymentDisplayStatus } from './payment-list';
@@ -346,6 +348,7 @@ export function PaymentRequestDetailPage() {
         deadline={request.due_date}
         actions={actions}
         related={related}
+        progress={<RecordChain kind="payment_request" id={request.id} />}
         historyContent={
           (steps ?? []).length === 0 ? (
             <EmptyState message="Chưa có bước kiểm nào được xử lý. Lịch sử xuất hiện ngay khi hồ sơ được gửi đi và người đầu tiên xác nhận." />
@@ -369,6 +372,16 @@ export function PaymentRequestDetailPage() {
           )
         }
         tabs={[
+          // G2 (0246): khoản trả tổ đội — căn cứ khối lượng đã nghiệm thu, đã ký, đã xác nhận.
+          ...(request.subcontract_period_id
+            ? [
+                {
+                  id: 'can-cu',
+                  label: 'Căn cứ khối lượng',
+                  content: <SubcontractBasisPanel periodId={request.subcontract_period_id} />,
+                },
+              ]
+            : []),
           {
             id: 'phan-bo',
             label: 'Phân bổ chi phí',

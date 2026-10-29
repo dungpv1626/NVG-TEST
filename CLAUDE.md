@@ -1220,6 +1220,36 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   trước ngày cần / đang sửa). Điều chuyển `rental_transfers` (tab «Điều chuyển» của đơn thuê; ký hai bên, kho `rental-transfer-docs`)
   chốt tiền đơn nguồn bằng biên bản BBDC, mở đơn mới, chuyển lô không qua kho. Phép thử `g5-nvs-thue-noi-bo.test.ts` (8, ba đột
   biến đã đo đỏ). Còn: tuổi nợ / dòng tiền tuần chưa loại công nợ nội bộ ở số toàn NVG; khoản NVC trả NVS chưa nối với công nợ.
+- **G6 — gói thầu có hình thức, Ban Giám đốc duyệt tham gia, ý kiến ba phòng (0247, 29/10/2026, kế hoạch A10):**
+  `bidding_projects.procurement_form` (chỉ định / chào giá cạnh tranh / đấu thầu) + `work_type` (6 loại, nhãn ở
+  `shared/src/bid-participation.ts`); đánh giá sáu tiêu chí (năng lực, tiến độ, dòng tiền, pháp lý, cạnh tranh, sinh lời — mỗi tiêu
+  chí «Thuận lợi / Cần lưu ý / Rủi ro cao» + ghi chú, bắt buộc khi khác «Thuận lợi») + đề xuất, jsonb `participation_assessment`;
+  `submit_bid_participation` → loại duyệt `bid_participation` (Ban Giám đốc / Tổng Giám đốc). Từ chối = bước mới `khong_tham_gia`
+  (nhánh rẽ, KHÔNG tính trượt thầu), lý do vào `lost_reason`, cơ hội gốc theo quy tắc 0217. Chưa duyệt thì người dùng không lập được
+  dự toán và gói không vào Lập dự toán trở đi (trigger, kể cả qua hàm; việc không có người đăng nhập — seed, migration — không bị
+  chặn); gói đã có dự toán lúc migrate = `truoc_quy_dinh` (không đòi, không phải «đã duyệt»). `stage_readiness('bidding')` nói lý do
+  dưới nút «Lập dự toán». Ý kiến `bid_department_reviews` (MH / TC / KT+CFO, mỗi gói một dòng mỗi phòng; `request_bid_reviews` báo
+  người của phòng, `submit_bid_review` báo người xin; tệp báo giá kho `bid-review-files`); phòng không xem DA đọc tóm tắt gói (không
+  giá dự thầu, không dự toán) qua `bid_reviews()` ở trang `/y-kien-goi-thau/:id` (+ khối trên Việc hôm nay). Hộp duyệt tham gia và
+  duyệt giá dự toán hiện các ý kiến. Phép thử `goi-thau-tham-gia.test.ts` (5, ba đột biến đã đo đỏ); helper
+  `markBidParticipationApproved` cho phép thử khác. Hàm chép-dài: `decide_approval` ở 0247 (chép 0246), `stage_readiness` ở 0247
+  (chép 0243), `bidding_projects_notify_opportunity` ở 0247. Còn: bộ soạn hồ sơ dự thầu (0236) vẫn mở cho gói «Không tham gia».
+- **G2 — Nhà thầu phụ trọn vòng (0246, 29/10/2026, kế hoạch A4 + T5):** gói việc `subcontract_selections` + báo giá
+  `subcontract_offers` (`/tc/chon-thau-phu/:id`, khối «Chọn thầu phụ» ở tab Tổ đội) → phê duyệt `subcontractor_selection`
+  (hạn mức seed: TC 50 tr → BGĐ 500 tr → TGĐ, GIẢ ĐỊNH; một báo giá / không chọn giá thấp nhất bắt buộc lý do; bắt buộc dòng
+  ngân sách) → `_apply_subcontract_selection` tạo / cập nhật `subcontractors` (cột mới `pricing_method` đơn giá / khoán gọn,
+  `retention_rate` tùy chọn, `cost_code`, `selection_id`). Hợp đồng khoán: `create_subcontract_contract` (loại
+  `khoan_thau_phu`, KHÔNG có hồ sơ nguồn — `create_contract_from_source` không đổi; người tạo hợp đồng nhận việc ở khối «Tổ đội
+  đã duyệt chọn — chờ hợp đồng khoán» trên `/hd/hop-dong`). Trang tổ đội `/tc/thau-phu/:id`: bảng đơn giá `subcontract_lines`
+  (khoán gọn = một dòng khối lượng 1, kỳ này ghi %), sổ theo dõi `subcontractor_ledger`, đánh giá theo đợt. Đợt
+  `/tc/dot-khoi-luong/:id` (`subcontract_periods` + `_lines`): dòng không có biên bản đã ký hai bên / mốc đã đạt thì CSDL tự
+  loại kèm lý do; tổ trưởng ký (kho `subcontract-docs`), máy chụp đơn giá + `retention_rate_applied` lúc ký; Trưởng phòng Thi
+  công / BGĐ (`milestone_technical_reviewers`, không phải người lập) xác nhận kèm điểm chất lượng / an toàn; đã xác nhận thì
+  bất biến (trigger, cả kết nối trực tiếp). Cổng `payment_requests_subcontract_gate`: đề nghị gắn tổ đội / hợp đồng khoán phải
+  có đợt đã xác nhận hoặc biên bản nghiệm thu tổ đội đã ký, không vượt số còn lại (biên bản đã vào đợt thì không trả lần hai);
+  `create_payment_request_from_period` lập sẵn. `record_chain` nhận `payment_request` / `subcontract_period` /
+  `subcontractor`. Phép thử `g2-thau-phu.test.ts` (10; đột biến gỡ chặn thiếu căn cứ / nới trần số tiền / gỡ khoá bất biến đã
+  đo đỏ). ⚠️ 0247 chép `decide_approval` từ 0246 — đừng chạy lại cả tệp 0246 trên máy (đè bản 0247); sửa thì áp riêng hàm.
 - Hàm chép-dài bản mới nhất: `decide_approval` ở 0245 (chép 0179, thêm nhánh `rental_quotes`, `internal_rental_requests`), `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,

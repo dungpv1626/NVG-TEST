@@ -129,6 +129,26 @@ export async function markSurveyReportApproved(opportunityId: string): Promise<v
 }
 
 /**
+ * Đánh dấu gói thầu ĐÃ được Ban Giám đốc duyệt tham gia, chạy thẳng trên CSDL (không phiên đăng
+ * nhập). Từ 0247, người dùng chỉ lập dự toán / trình giá khi đã duyệt tham gia; phép thử của các
+ * luồng phía sau không kiểm lại bước đó — `goi-thau-tham-gia.test.ts` kiểm riêng.
+ */
+export async function markBidParticipationApproved(biddingProjectId: string): Promise<void> {
+  const { createConnection } = await import('../client');
+  const { sql } = createConnection();
+  try {
+    await sql`
+      UPDATE bidding_projects
+         SET participation_status = 'da_duyet', participation_decided_at = now(),
+             procurement_form = COALESCE(procurement_form, 'dau_thau'),
+             work_type = COALESCE(work_type, 'xay_moi_nha_xuong')
+       WHERE id = ${biddingProjectId}`;
+  } finally {
+    await sql.end();
+  }
+}
+
+/**
  * Lập một văn bản hợp đồng (0176): pháp nhân có mẫu Word đang dùng — từ 0185 cả ba pháp nhân đều
  * có bộ mẫu — thì gửi phê duyệt phải kèm văn bản. Tệp chỉ là đầu ZIP; nội dung không được kiểm.
  */

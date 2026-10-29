@@ -9,10 +9,14 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
+  BID_WORK_TYPE_LABELS,
   BIDDING_FLOW,
   BIDDING_STAGE_META,
   BUTTONS,
+  bidParticipationCleared,
   biddingDisplayStatus,
+  PROCUREMENT_FORM_LABELS,
+  stepWindow,
   formatCurrency,
   formatDate,
   formatDateTime,
@@ -21,7 +25,7 @@ import {
 import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
 import { RecordChain } from '@/components/entity/record-chain';
 import { StageHistory } from '@/components/entity/stage-history';
-import { StepTrack } from '@/components/entity/step-track';
+import { StepTrack, type StepRequirement } from '@/components/entity/step-track';
 import { Button } from '@/components/ui/button';
 import { usePromptDialog } from '@/components/ui/prompt-dialog';
 import { CardGridSkeleton, ErrorState } from '@/components/ui/states';
@@ -36,7 +40,10 @@ import { DraftContractButton } from '@/components/contract/draft-contract-button
 import { BoqPanel } from '@/components/estimate/boq-panel';
 import { EstimatePanel } from '@/components/estimate/estimate-panel';
 import { toUserMessage } from '@/hooks/use-error-message';
-import { companyCodeOf, useAuth, useCan } from '@/lib/auth';
+import { useStageReadiness } from '@/hooks/use-stage-readiness';
+import { companyCodeOf, useAuth, useCan, useIsResponsible } from '@/lib/auth';
+import { BidParticipationPanel } from './bid-participation-panel';
+import { BidReviewsPanel } from './bid-reviews-panel';
 import { BidDocumentsPanel } from './bid-documents-panel';
 import { BidFormsCard } from './bid-forms-card';
 import { BidCapabilityPanel, BidClarificationPanel, BidGuaranteePanel } from './bid-extras-panels';
@@ -53,6 +60,7 @@ const STAGE_TAB: Record<BiddingStage, string> = {
   nop_thau: 'tong-quan',
   trung_thau: 'tong-quan',
   truot_thau: 'tong-quan',
+  khong_tham_gia: 'tong-quan',
 };
 
 const EM_DASH = '—';
@@ -68,6 +76,8 @@ export function BiddingDetailPage() {
   const updateProject = useUpdateBiddingProject();
   const recordResult = useRecordBidResult();
   const generateBudget = useGenerateBudget();
+  const { data: readiness = [] } = useStageReadiness('bidding', id);
+  const isResponsible = useIsResponsible(data?.responsible_user_id);
   const [actionError, setActionError] = useState<string | null>(null);
 
   if (isLoading) return <CardGridSkeleton count={3} />;
@@ -86,6 +96,28 @@ export function BiddingDetailPage() {
   // Nộp thầu rồi thì hồ sơ đóng băng — bộ trên hệ thống phải khớp bộ đã gửi chủ đầu tư.
   const readOnly = !canEdit || project.submitted_at !== null;
   const companyCode = companyCodeOf(profile, project.company_id) ?? 'NVC';
+  const terminal = BIDDING_STAGE_META[project.stage].isTerminal;
+  // Người chịu trách nhiệm gói (hoặc lãnh đạo) — đúng điều kiện `rls_owner_can_write` của CSDL.
+  const canOwn = canEdit && isResponsible;
+
+  // 0247: Ban Giám đốc duyệt tham gia trước khi lập dự toán — cùng điều kiện CSDL chặn.
+  const participation = readiness.find(
+    (r) => r.requirement === 'participation_approved' && r.for_stage === 'du_toan',
+  );
+  const nextStage = stepWindow(BIDDING_FLOW, project.stage).next;
+  const nextRequirements: StepRequirement[] = readiness
+    .filter((r) => r.for_stage === nextStage)
+    .map((r) => ({ label: r.label, met: r.met }));
+  if (
+    participation &&
+    !participation.met &&
+    (nextStage === 'khao_sat' || nextStage === 'boc_tach')
+  ) {
+    nextRequirements.push({ label: participation.label, met: false, reminder: true });
+  }
+  const estimateBlocked = bidParticipationCleared(project.participation_status)
+    ? undefined
+    : (participation?.label ?? 'Gói thầu chưa được Ban Giám đốc duyệt tham gia.');
 
   async function run(action: () => Promise<unknown>) {
     setActionError(null);
@@ -169,6 +201,7 @@ export function BiddingDetailPage() {
               flow={BIDDING_FLOW}
               current={project.stage}
               holder={project.responsible?.full_name ?? null}
+              nextRequirements={nextRequirements}
             />
           </>
         }
@@ -178,44 +211,64 @@ export function BiddingDetailPage() {
             id: 'tong-quan',
             label: 'Tổng quan',
             content: (
-              <DetailFields
-                fields={[
-                  { label: 'Bước hiện tại', value: BIDDING_STAGE_META[project.stage].label },
-                  {
-                    label: 'Chủ đầu tư',
-                    value: project.customer ? (
-                      <Link
-                        to={`/crm/khach-hang/${project.customer.id}`}
-                        className="font-medium text-brand hover:underline"
-                      >
-                        {project.customer.name}
-                      </Link>
-                    ) : (
-                      EM_DASH
-                    ),
-                  },
-                  {
-                    label: 'Giá trị dự kiến',
-                    value:
-                      project.estimated_value != null
-                        ? formatCurrency(project.estimated_value)
+              <div className="space-y-4">
+                <DetailFields
+                  fields={[
+                    { label: 'Bước hiện tại', value: BIDDING_STAGE_META[project.stage].label },
+                    {
+                      label: 'Hình thức lựa chọn nhà thầu',
+                      value: project.procurement_form
+                        ? PROCUREMENT_FORM_LABELS[project.procurement_form]
                         : EM_DASH,
-                  },
-                  {
-                    label: 'Hạn nộp thầu',
-                    value: project.submission_deadline
-                      ? formatDate(project.submission_deadline)
-                      : EM_DASH,
-                  },
-                  { label: 'Địa điểm công trình', value: project.site_address ?? EM_DASH },
-                  {
-                    label: 'Nội dung cần làm rõ',
-                    value: project.clarification_notes ?? EM_DASH,
-                  },
-                  { label: 'Nguyên nhân trượt thầu', value: project.lost_reason ?? EM_DASH },
-                  { label: 'Ghi chú', value: project.notes ?? EM_DASH },
-                ]}
-              />
+                    },
+                    {
+                      label: 'Loại công trình',
+                      value: project.work_type ? BID_WORK_TYPE_LABELS[project.work_type] : EM_DASH,
+                    },
+                    {
+                      label: 'Chủ đầu tư',
+                      value: project.customer ? (
+                        <Link
+                          to={`/crm/khach-hang/${project.customer.id}`}
+                          className="font-medium text-brand hover:underline"
+                        >
+                          {project.customer.name}
+                        </Link>
+                      ) : (
+                        EM_DASH
+                      ),
+                    },
+                    {
+                      label: 'Giá trị dự kiến',
+                      value:
+                        project.estimated_value != null
+                          ? formatCurrency(project.estimated_value)
+                          : EM_DASH,
+                    },
+                    {
+                      label: 'Hạn nộp thầu',
+                      value: project.submission_deadline
+                        ? formatDate(project.submission_deadline)
+                        : EM_DASH,
+                    },
+                    { label: 'Địa điểm công trình', value: project.site_address ?? EM_DASH },
+                    {
+                      label: 'Nội dung cần làm rõ',
+                      value: project.clarification_notes ?? EM_DASH,
+                    },
+                    {
+                      label:
+                        project.stage === 'khong_tham_gia'
+                          ? 'Lý do không tham gia'
+                          : 'Nguyên nhân trượt thầu',
+                      value: project.lost_reason ?? EM_DASH,
+                    },
+                    { label: 'Ghi chú', value: project.notes ?? EM_DASH },
+                  ]}
+                />
+                <BidParticipationPanel project={project} canEdit={canOwn} />
+                <BidReviewsPanel projectId={project.id} canRequest={canOwn && !terminal} />
+              </div>
             ),
           },
           {
@@ -265,6 +318,7 @@ export function BiddingDetailPage() {
                 companyId={project.company_id}
                 companyCode={companyCode}
                 readOnly={readOnly}
+                createBlockedReason={estimateBlocked}
               />
             ),
           },
@@ -359,7 +413,7 @@ export function BiddingDetailPage() {
               entityId={project.id}
               stage={project.stage}
               meta={BIDDING_STAGE_META}
-              negativeStages={['truot_thau']}
+              negativeStages={['truot_thau', 'khong_tham_gia']}
             />
           </div>
         }

@@ -19,6 +19,7 @@ export * from './crm';
 export * from './survey-forms';
 export * from './survey-paper-read';
 export * from './da';
+export * from './bid-participation';
 export * from './tk';
 export * from './hd';
 export * from './hd-template';

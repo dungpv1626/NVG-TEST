@@ -8,7 +8,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
-export type ChainKind = 'opportunity' | 'bidding' | 'design' | 'contract' | 'site';
+export type ChainKind =
+  | 'opportunity'
+  | 'bidding'
+  | 'design'
+  | 'contract'
+  | 'site'
+  // G2 (0246): tổ đội → đợt xác nhận khối lượng → đề nghị thanh toán.
+  | 'subcontractor'
+  | 'subcontract_period'
+  | 'payment_request';
 
 export interface ChainRecord {
   kind: ChainKind;
@@ -16,7 +25,7 @@ export interface ChainRecord {
   code: string;
   title: string;
   stage: string;
-  /** Hợp đồng: thiet_ke · thi_cong · tron_goi (0243); hồ sơ khác rỗng. */
+  /** Hợp đồng: thiet_ke · thi_cong · tron_goi (0243); tổ đội: cách khoán (0246); hồ sơ khác rỗng. */
   scope_kind: string | null;
 }
 

@@ -14,6 +14,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { approveParticipationDemo } from './bid-participation';
 import { ACCOUNTS, check, companyId, day, nextCode, one, signIn, userId } from './client';
 import { clean } from './names';
 
@@ -253,6 +254,31 @@ export async function loadNvc(): Promise<'created' | 'skipped'> {
       })),
     ),
   );
+
+  // Ban Giám đốc duyệt tham gia trước khi lập dự toán (0247) — đánh giá DEMO.
+  await approveParticipationDemo(dauThau, tgd, project.id, {
+    procurementForm: 'chao_gia_canh_tranh',
+    workType: 'xay_moi_nha_xuong',
+    assessment: {
+      criteria: {
+        nang_luc: { rating: 'thuan_loi' },
+        tien_do: { rating: 'thuan_loi' },
+        dong_tien: {
+          rating: 'can_luu_y',
+          note: 'Ví dụ minh hoạ — tạm ứng 10 %, ứng vốn thép tháng đầu.',
+        },
+        phap_ly: { rating: 'thuan_loi' },
+        canh_tranh: {
+          rating: 'can_luu_y',
+          note: 'Ví dụ minh hoạ — chủ đầu tư mời ba nhà thầu chào giá.',
+        },
+        loi_nhuan: { rating: 'thuan_loi' },
+      },
+      recommendation: 'tham_gia',
+      summary: 'Ví dụ minh hoạ — khách cũ của Kinh doanh, nhà xưởng tiêu chuẩn.',
+    },
+    decisionNote: 'Ví dụ minh hoạ — Đồng ý tham gia.',
+  });
 
   const estimate = (await one(
     'lập dự toán',

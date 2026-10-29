@@ -9,11 +9,12 @@
 
 import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { formatDeadline } from '@nvg/shared';
+import { BID_REVIEW_DEPARTMENT_LABELS, formatDeadline, formatWaiting } from '@nvg/shared';
 import { TodayFollowups } from '@/components/crm/today-followups';
 import { WaitingOn } from '@/components/entity/waiting-on';
 import { PageHeader } from '@/components/layout/app-shell';
 import { useApprovalBox, usePendingApprovals } from '@/hooks/use-approvals';
+import { useBidReviews } from '@/hooks/use-bid-participation';
 import { useCan } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
@@ -25,6 +26,9 @@ export function TodayPage() {
   const { data: pending, isLoading: loadingPending } = usePendingApprovals();
   const { data: sent, isLoading: loadingSent } = useApprovalBox('sent');
   const sentWaiting = (sent ?? []).filter((r) => r.status === 'pending_approval');
+  // 0247: gói thầu xin ý kiến phòng mình (Cung ứng / Thi công / Kế toán) — chỉ hiện khi có.
+  const { data: reviews } = useBidReviews();
+  const reviewsWaiting = (reviews ?? []).filter((r) => r.can_respond && r.status === 'cho_y_kien');
 
   return (
     <>
@@ -38,6 +42,41 @@ export function TodayPage() {
         {canSeeCrm && (
           <section className="xl:col-span-2">
             <TodayFollowups />
+          </section>
+        )}
+
+        {reviewsWaiting.length > 0 && (
+          <section
+            className="rounded-card bg-surface p-5 xl:col-span-2"
+            aria-labelledby="y-kien-goi-thau"
+          >
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 id="y-kien-goi-thau" className="text-md font-semibold">
+                Gói thầu cần ý kiến của phòng · {reviewsWaiting.length}
+              </h2>
+              <Link
+                to="/y-kien-goi-thau"
+                className="flex items-center gap-1 font-medium text-brand hover:underline"
+              >
+                Xem tất cả <ArrowRight className="size-4" aria-hidden />
+              </Link>
+            </div>
+            <ul className="divide-y divide-line-soft">
+              {reviewsWaiting.slice(0, PREVIEW_LIMIT).map((r) => (
+                <li key={r.id} className="py-2.5">
+                  <Link
+                    to={`/y-kien-goi-thau/${r.id}`}
+                    className="font-semibold text-ink underline-offset-2 hover:underline"
+                  >
+                    {r.bid_code} — {r.bid_name}
+                  </Link>
+                  <div className="mt-0.5 text-xs text-ink-subtle">
+                    Phòng {BID_REVIEW_DEPARTMENT_LABELS[r.department]} ·{' '}
+                    {formatWaiting(r.requested_at)}
+                  </div>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 

@@ -24,6 +24,7 @@ import {
   signInAs,
   TEST_PREFIX,
   markSurveyReportApproved,
+  markBidParticipationApproved,
 } from './helpers';
 
 // Không có thông tin kết nối thì bỏ qua thay vì làm hỏng cả bộ test (ví dụ trên CI chưa cấu hình).
@@ -1602,6 +1603,8 @@ describeDb('DA — gói thầu, dự toán và ngân sách', () => {
       .select('id, code')
       .single();
     if (error) throw new Error(error.message);
+    // Đã duyệt tham gia (0247) — bước đó kiểm riêng ở goi-thau-tham-gia.test.ts.
+    await markBidParticipationApproved((data as { id: string }).id);
     return { ...(data as { id: string; code: string }), companyId: company!.id };
   }
 

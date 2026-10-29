@@ -22,6 +22,7 @@ import { daysLeftLabel, useExpiringContracts } from '@/hooks/use-expiring-contra
 import type { MoneyValue } from '@nvg/shared';
 import { APP_HELP } from '@/lib/help-texts';
 import { HdNav } from './hd-nav';
+import { AwaitingSubcontractContracts } from './awaiting-subcontract-contracts';
 
 interface ContractRow extends EntityRow {
   stageLabel: string;
@@ -62,6 +63,7 @@ export function ContractListPage() {
         breadcrumbs={[{ label: 'Hợp đồng' }]}
       />
       <HdNav />
+      <AwaitingSubcontractContracts />
 
       <EntityTable<ContractRow>
         rows={rows}

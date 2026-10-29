@@ -79,7 +79,7 @@ export function bidFormEditable(
   if (kind === 'thuong_thao') return project.stage === 'trung_thau';
   return (
     project.submitted_at === null &&
-    !['nop_thau', 'trung_thau', 'truot_thau'].includes(project.stage)
+    !['nop_thau', 'trung_thau', 'truot_thau', 'khong_tham_gia'].includes(project.stage)
   );
 }
 

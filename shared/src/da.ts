@@ -26,6 +26,9 @@ export const BIDDING_STAGES = [
   'nop_thau',
   'trung_thau',
   'truot_thau',
+  // G6 (0247): Ban Giám đốc quyết định không tham gia — nhánh rẽ riêng, KHÔNG tính là trượt thầu
+  // (tỷ lệ trúng / trượt chỉ đếm gói đã nộp). Thêm sau nên nằm CUỐI (enum Postgres chỉ thêm vào cuối).
+  'khong_tham_gia',
 ] as const;
 
 export type BiddingStage = (typeof BIDDING_STAGES)[number];
@@ -92,6 +95,12 @@ export const BIDDING_STAGE_META: Readonly<Record<BiddingStage, BiddingStageMeta>
     label: 'Trượt thầu',
     statusGroup: 'draft',
     description: 'Không trúng thầu. Nguyên nhân được ghi lại để rút kinh nghiệm cho gói sau.',
+    isTerminal: true,
+  },
+  khong_tham_gia: {
+    label: 'Không tham gia',
+    statusGroup: 'draft',
+    description: 'Ban Giám đốc quyết định không tham gia gói thầu. Lý do được ghi lại.',
     isTerminal: true,
   },
 };
@@ -176,7 +185,11 @@ export function biddingDisplayStatus(
   submissionDeadline: string | null,
 ): StatusGroup {
   const meta = BIDDING_STAGE_META[stage];
-  const notSubmittedYet = stage !== 'nop_thau' && stage !== 'trung_thau' && stage !== 'truot_thau';
+  const notSubmittedYet =
+    stage !== 'nop_thau' &&
+    stage !== 'trung_thau' &&
+    stage !== 'truot_thau' &&
+    stage !== 'khong_tham_gia';
 
   if (notSubmittedYet && submissionDeadline) {
     const deadline = new Date(submissionDeadline);

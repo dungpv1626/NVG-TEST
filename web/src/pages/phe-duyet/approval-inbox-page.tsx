@@ -14,10 +14,13 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { WaitingOn } from '@/components/entity/waiting-on';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { cn } from '@/lib/utils';
+import { BidReviewsList } from '@/pages/da/bid-reviews-panel';
+import { BidParticipationPreview } from './bid-participation-preview';
 import { ContractDocumentPreview } from './contract-document-preview';
 import { PurchaseQuotationPreview } from './purchase-quotation-preview';
 import { PriceMarginPreview } from './price-margin-preview';
 import { SurveyReportPreview } from './survey-report-preview';
+import { SubcontractSelectionPreview } from './subcontract-selection-preview';
 import { PageHeader } from '@/components/layout/app-shell';
 import { ApprovalInbox, type ApprovalItem } from '@/components/entity/approval-inbox';
 import { StatusLozenge, StatusWithLabel } from '@/components/ui/status-lozenge';
@@ -55,6 +58,9 @@ function fullRecordPath(item: PendingApproval): string {
       return item.parent_module === 'TK'
         ? `/tk/du-an/${item.parent_id}?tab=du-toan`
         : `/da/goi-thau/${item.parent_id}?tab=du-toan`;
+    case 'bidding_projects':
+      // G6 (0247): quyết định tham gia — khối đánh giá ở tab Tổng quan của gói thầu.
+      return `/da/goi-thau/${item.entity_id}?tab=tong-quan`;
     case 'contracts':
       return `/hd/hop-dong/${item.entity_id}`;
     case 'contract_amendments':
@@ -75,6 +81,9 @@ function fullRecordPath(item: PendingApproval): string {
     case 'rental_quotes':
       // G5 (0245): báo giá thuê giàn giáo nằm ở màn hình Báo giá thuê, mở đúng báo giá.
       return `/sx/bao-gia-thue?bao-gia=${item.entity_id}`;
+    case 'subcontract_selections':
+      // G2 (0246): chọn thầu phụ — trang gói việc có bảng so báo giá.
+      return `/tc/chon-thau-phu/${item.entity_id}`;
     case 'internal_rental_requests':
       return '/sx/thue-noi-bo';
     case 'stocktakes':
@@ -114,7 +123,12 @@ export function ApprovalInboxPage() {
     amount: row.amount,
     fullRecordPath: fullRecordPath(row),
     preview: <ApprovalPreview row={row} />,
-    rejectLabel: row.entity_type === 'site_surveys' ? 'Trả về kèm ý kiến' : undefined,
+    rejectLabel:
+      row.entity_type === 'site_surveys'
+        ? 'Trả về kèm ý kiến'
+        : row.entity_type === 'bidding_projects'
+          ? 'Không tham gia'
+          : undefined,
   }));
 
   return (
@@ -313,9 +327,25 @@ function ApprovalPreview({ row }: { row: PendingApproval }) {
       {(row.entity_type === 'quotes' || row.entity_type === 'estimates') && (
         <PriceMarginPreview entityType={row.entity_type} entityId={row.entity_id} />
       )}
+      {/* 0247: giá dự thầu đọc cùng ý kiến Cung ứng / Thi công / Kế toán của gói thầu. */}
+      {row.entity_type === 'estimates' && row.parent_module !== 'TK' && row.parent_id && (
+        <div>
+          <dt className="mb-1 text-xs text-fg-subtle">Ý kiến các phòng</dt>
+          <dd>
+            <BidReviewsList projectId={row.parent_id} showMissing={false} />
+          </dd>
+        </div>
+      )}
+      {row.entity_type === 'bidding_projects' && (
+        <BidParticipationPreview projectId={row.entity_id} />
+      )}
       {/* Đợt 4 — 4B: đề nghị mua kèm bảng so giá nhà cung cấp. */}
       {row.entity_type === 'purchase_requests' && (
         <PurchaseQuotationPreview requestId={row.entity_id} />
+      )}
+      {/* G2 (0246): chọn thầu phụ kèm bảng so báo giá và ngân sách còn lại. */}
+      {row.entity_type === 'subcontract_selections' && (
+        <SubcontractSelectionPreview selectionId={row.entity_id} />
       )}
       {row.entity_type === 'site_surveys' ? (
         <SurveyReportPreview surveyId={row.entity_id} />

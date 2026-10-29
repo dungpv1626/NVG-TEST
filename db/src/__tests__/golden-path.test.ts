@@ -133,6 +133,49 @@ describeDb(
       const projectId = (project as { id: string }).id;
       await moveOpportunity('bao_gia');
 
+      // --- Bước 2b. Ban Giám đốc quyết định tham gia (0247, A10) — chưa duyệt thì chưa lập dự toán.
+      check(
+        'ghi hình thức + đánh giá tham gia',
+        (
+          await dauThau
+            .from('bidding_projects')
+            .update({
+              procurement_form: 'chao_gia_canh_tranh',
+              work_type: 'xay_moi_nha_xuong',
+              participation_assessment: {
+                criteria: Object.fromEntries(
+                  ['nang_luc', 'tien_do', 'dong_tien', 'phap_ly', 'canh_tranh', 'loi_nhuan'].map(
+                    (k) => [k, { rating: 'thuan_loi' }],
+                  ),
+                ),
+                recommendation: 'tham_gia',
+              },
+            })
+            .eq('id', projectId)
+        ).error,
+      );
+      check(
+        'gửi quyết định tham gia',
+        (await dauThau.rpc('submit_bid_participation', { p_bidding_project_id: projectId })).error,
+      );
+      const { data: participation } = await tgd
+        .from('approvals')
+        .select('id')
+        .eq('entity_type', 'bidding_projects')
+        .eq('entity_id', projectId)
+        .eq('status', 'pending_approval')
+        .single();
+      check(
+        'Ban Giám đốc duyệt tham gia',
+        (
+          await tgd.rpc('decide_approval', {
+            p_approval_id: (participation as { id: string }).id,
+            p_decision: 'approved',
+            p_note: 'Tham gia.',
+          })
+        ).error,
+      );
+
       // --- Bước 3. Bóc khối lượng (DA-04) ------------------------------------------------
       const { error: boqError } = await dauThau.from('boq_items').insert([
         {

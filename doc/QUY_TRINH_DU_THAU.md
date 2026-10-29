@@ -42,8 +42,16 @@ hồ sơ và lưu dấu vết.
 3. Đối chiếu nhanh yêu cầu năng lực với kho hồ sơ năng lực (Dự án – Đấu thầu → Hồ sơ năng lực). Thiếu điều kiện nào
    không bù được (chứng chỉ hạng, doanh thu) thì báo Ban Giám đốc **trước khi làm tiếp** — quyết định tham gia là của Ban
    Giám đốc.
+4. (0247) Ghi «Hình thức lựa chọn nhà thầu» (chỉ định / chào giá cạnh tranh / đấu thầu) và «Loại công trình». Ở tab Tổng
+   quan, khối «Ý kiến các phòng» → «Xin ý kiến» Cung ứng (báo giá nhà cung cấp), Thi công (biện pháp, năng lực), Kế toán –
+   Tài chính (dòng tiền, bảo lãnh, điều kiện thanh toán) — các phòng được báo và trả lời ở trang «Ý kiến gói thầu».
+5. Điền «Đánh giá và quyết định tham gia»: sáu tiêu chí (năng lực, tiến độ, dòng tiền, pháp lý, cạnh tranh, khả năng sinh
+   lời), mỗi tiêu chí «Thuận lợi / Cần lưu ý / Rủi ro cao» kèm lý do, cộng đề xuất → «Gửi Ban Giám đốc quyết định». Ban Giám
+   đốc duyệt trong Hộp thư Phê duyệt (đọc cùng ý kiến các phòng); từ chối = «Không tham gia», ghi lý do, gói đóng.
+   **Chưa duyệt tham gia thì không lập được dự toán** (khảo sát, bóc tách vẫn làm được).
 
-**Kiểm:** đã có hạn nộp thầu trên hệ thống (máy nhắc theo hạn); đã đọc đủ hồ sơ mời thầu và các văn bản sửa đổi.
+**Kiểm:** đã có hạn nộp thầu trên hệ thống (máy nhắc theo hạn); đã đọc đủ hồ sơ mời thầu và các văn bản sửa đổi; Ban Giám
+đốc đã duyệt tham gia trước khi lập dự toán.
 
 ### Bước 2 — Làm rõ hồ sơ mời thầu
 

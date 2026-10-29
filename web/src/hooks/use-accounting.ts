@@ -53,6 +53,9 @@ export interface PaymentRequestRecord {
   receivable_id: string | null;
   purchase_order_id: string | null;
   contract_id: string | null;
+  /** G2 (0246): đợt xác nhận khối lượng tổ đội làm căn cứ, và biên bản nghiệm thu tổ đội. */
+  subcontract_period_id: string | null;
+  acceptance_record_id: string | null;
   accounting_period: string | null;
   due_date: string | null;
   submitted_at: string | null;
@@ -75,7 +78,8 @@ export interface PaymentRequestRecord {
 const PAYMENT_SELECT =
   'id, company_id, code, request_type, title, stage, amount, department, origin_module, ' +
   'supplier_id, payee_name, advance_user_id, advance_due_date, advance_override_reason, ' +
-  'settles_advance_id, receivable_id, purchase_order_id, contract_id, accounting_period, ' +
+  'settles_advance_id, receivable_id, purchase_order_id, contract_id, subcontract_period_id, ' +
+  'acceptance_record_id, accounting_period, ' +
   'due_date, submitted_at, approved_at, payment_method, paid_date, payment_reference, ' +
   'paid_amount, posted_at, posted_reference, closed_reason, notes, created_at, requested_by, ' +
   'requester:users!payment_requests_requested_by_users_id_fk(full_name), ' +

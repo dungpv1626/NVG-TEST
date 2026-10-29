@@ -114,7 +114,8 @@ export async function removeDemoData(): Promise<Record<string, number>> {
         UNION SELECT id FROM g_pays UNION SELECT id FROM g_recv UNION SELECT id FROM g_rentals
         UNION SELECT id FROM g_estimates UNION SELECT id FROM g_accepts
         UNION SELECT id FROM g_deliveries UNION SELECT id FROM g_designs
-        UNION SELECT id FROM g_rfis`;
+        UNION SELECT id FROM g_rfis
+        UNION SELECT id FROM bid_department_reviews WHERE bidding_project_id IN (SELECT id FROM g_bids)`;
 
       // --- Xoá, con trước cha --------------------------------------------------------------
       await del(

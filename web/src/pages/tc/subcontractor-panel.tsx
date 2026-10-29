@@ -6,12 +6,13 @@
  * trống thì màn hình nói rõ ai đang chịu — chỉ huy trưởng của công trình — chứ không im lặng
  * để việc rơi vào khoảng không.
  *
- * ⚠️ Đánh giá chất lượng hiện chỉ giữ lần gần nhất. TC-06 yêu cầu "lịch sử đánh giá"; lịch
- * sử đầy đủ theo từng đợt chờ khảo sát Chỉ huy – Giám sát công trường (PRD Mục 10) vì chưa
- * biết công trường đánh giá theo đợt nghiệm thu, theo tháng hay theo hạng mục.
+ * G2 (0246): khối «Chọn thầu phụ» (gói việc → so báo giá → duyệt theo hạn mức) đứng đầu tab; mỗi tổ
+ * đội có trang riêng (bảng đơn giá, đợt xác nhận khối lượng, sổ theo dõi). Đánh giá chất lượng / an
+ * toàn ghi theo TỪNG ĐỢT xác nhận khối lượng — ô ở đây là đánh giá gần nhất.
  */
 
 import { useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   BUTTONS,
   SUBCONTRACTOR_STATUS_META,
@@ -33,6 +34,14 @@ import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { useActiveUsers } from '@/hooks/use-active-users';
 import { useSaveSubcontractor, useSubcontractors } from '@/hooks/use-construction-sites';
 import { toUserMessage } from '@/hooks/use-error-message';
+import {
+  SELECTION_STATUS_META,
+  useCreateSelection,
+  useSiteCostLines,
+  useSubcontractLedger,
+  useSubcontractSelections,
+  type LedgerRow,
+} from '@/hooks/use-subcontracts';
 
 const EMPTY_FORM = {
   name: '',
@@ -60,6 +69,7 @@ export function SubcontractorPanel({
   const { data: crews } = useSubcontractors(siteId);
   const { data: users } = useActiveUsers();
   const saveCrew = useSaveSubcontractor();
+  const { data: ledger } = useSubcontractLedger(siteId);
 
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,6 +116,8 @@ export function SubcontractorPanel({
 
   return (
     <div className="space-y-4">
+      <SelectionsSection siteId={siteId} readOnly={readOnly} />
+
       {error && (
         <p role="alert" className="rounded-sm bg-status-overdue-bg px-3 py-2 text-status-overdue">
           {error}
@@ -233,6 +245,10 @@ export function SubcontractorPanel({
               </div>
 
               <p className="whitespace-pre-wrap">{c.scope_of_work}</p>
+              <LedgerLine row={(ledger ?? []).find((r) => r.subcontractor_id === c.id)} />
+              <Link to={`/tc/thau-phu/${c.id}`} className="text-brand hover:underline">
+                Bảng đơn giá, khối lượng, thanh toán
+              </Link>
 
               <p className="mt-1 text-fg-subtle">
                 {c.contract_value != null && <span>{formatCurrency(c.contract_value)} · </span>}
@@ -266,7 +282,11 @@ export function SubcontractorPanel({
                     </select>
                   </Field>
 
-                  <Field label="Đánh giá chất lượng" className="w-48" hint="Thang 1–5.">
+                  <Field
+                    label="Đánh giá gần nhất"
+                    className="w-48"
+                    hint="Thang 1–5. Đánh giá theo đợt ghi khi xác nhận khối lượng."
+                  >
                     <select
                       value={c.quality_rating ?? ''}
                       onChange={(e) =>
@@ -293,5 +313,133 @@ export function SubcontractorPanel({
         </ul>
       )}
     </div>
+  );
+}
+
+function LedgerLine({ row }: { row: LedgerRow | undefined }) {
+  if (!row || row.periods === 0) return null;
+  return (
+    <p className="mt-1 text-fg-subtle">
+      Đã xác nhận {formatCurrency(row.confirmed_net)} · đã chi {formatCurrency(row.paid)} · còn phải
+      trả {formatCurrency(row.remaining_payable)}
+    </p>
+  );
+}
+
+/** Gói việc chọn thầu phụ của công trình + lập gói mới (G2, 0246). */
+function SelectionsSection({ siteId, readOnly }: { siteId: string; readOnly: boolean }) {
+  const { data } = useSubcontractSelections(siteId);
+  const { data: costLines } = useSiteCostLines(siteId);
+  const create = useCreateSelection();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [workPackage, setWorkPackage] = useState('');
+  const [scope, setScope] = useState('');
+  const [costCode, setCostCode] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const rows = data ?? [];
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!workPackage.trim()) {
+      setError('Ghi tên gói việc cần chọn thầu phụ.');
+      return;
+    }
+    try {
+      const id = await create.mutateAsync({
+        siteId,
+        workPackage: workPackage.trim(),
+        scope: scope.trim() || null,
+        costCode: costCode || null,
+      });
+      void navigate(`/tc/chon-thau-phu/${id}`);
+    } catch (err) {
+      setError(toUserMessage(err, 'create'));
+    }
+  }
+
+  if (readOnly && rows.length === 0) return null;
+  return (
+    <section className="rounded-card bg-surface p-4">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-semibold">Chọn thầu phụ</h2>
+        {!readOnly && !open && (
+          <Button variant="secondary" onClick={() => setOpen(true)}>
+            Lập gói việc chọn thầu phụ
+          </Button>
+        )}
+      </div>
+      {open && (
+        <form
+          onSubmit={(e) => void submit(e)}
+          noValidate
+          className="mb-3 grid gap-3 sm:grid-cols-2"
+        >
+          <Field label="Gói việc" required>
+            <Input value={workPackage} onChange={(e) => setWorkPackage(e.target.value)} autoFocus />
+          </Field>
+          <Field label="Nguồn ngân sách" hint="Dòng ngân sách chi trả.">
+            <select
+              value={costCode}
+              onChange={(e) => setCostCode(e.target.value)}
+              className="h-11 w-full rounded-field border border-border-strong bg-surface px-3"
+            >
+              <option value="">Chọn sau</option>
+              {(costLines ?? []).map((l) => (
+                <option key={l.cost_code} value={l.cost_code}>
+                  {l.cost_code} — {l.name} (còn {formatCurrency(l.remaining)})
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Phạm vi công việc" className="sm:col-span-2">
+            <textarea
+              value={scope}
+              onChange={(e) => setScope(e.target.value)}
+              rows={2}
+              className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
+            />
+          </Field>
+          {error && (
+            <p role="alert" className="text-status-overdue sm:col-span-2">
+              {error}
+            </p>
+          )}
+          <div className="flex gap-2 sm:col-span-2">
+            <Button type="submit" variant="primary" disabled={create.isPending}>
+              Lập và nhập báo giá
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+              {BUTTONS.cancel}
+            </Button>
+          </div>
+        </form>
+      )}
+      {rows.length === 0 ? (
+        <p className="text-fg-subtle">
+          Chưa có gói việc nào. Thuê tổ đội / thầu phụ thì so 2–3 báo giá và gửi duyệt ở đây.
+        </p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {rows.map((r) => (
+            <li key={r.id} className="flex flex-wrap items-center gap-3 py-2">
+              <Link
+                to={`/tc/chon-thau-phu/${r.id}`}
+                className="font-medium text-brand hover:underline"
+              >
+                {r.code} — {r.work_package}
+              </Link>
+              <StatusLozenge status={SELECTION_STATUS_META[r.status].statusGroup} />
+              {SELECTION_STATUS_META[r.status].label !== 'Nháp' && (
+                <span className="text-xs text-fg-subtle">
+                  {SELECTION_STATUS_META[r.status].label}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

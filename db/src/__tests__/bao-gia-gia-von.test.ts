@@ -128,8 +128,9 @@ describeDb('báo giá có giá vốn, lợi nhuận tối thiểu (0244)', () =>
         SELECT id, 'quote_price', 1000000000, 1, ${nvc!.id} FROM roles WHERE code = 'DA_DT'
         RETURNING id`;
       const [bid] = await sql<{ id: string }[]>`
-        INSERT INTO bidding_projects (company_id, code, name)
-        VALUES (${nvc!.id}, ${'DA-BGGV-' + stamp}, ${TEST_PREFIX + ' Gói thầu giá vốn ' + stamp})
+        -- Đã duyệt tham gia (0247) — kiểm riêng ở goi-thau-tham-gia.test.ts.
+        INSERT INTO bidding_projects (company_id, code, name, participation_status)
+        VALUES (${nvc!.id}, ${'DA-BGGV-' + stamp}, ${TEST_PREFIX + ' Gói thầu giá vốn ' + stamp}, 'da_duyet')
         RETURNING id`;
       return {
         nvcId: nvc!.id,

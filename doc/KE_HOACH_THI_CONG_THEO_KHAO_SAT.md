@@ -61,7 +61,7 @@ Theo QĐ-1, tài liệu chỉ ghi thứ tự và tiêu chí xong, không ghi m�
   - tóm tắt bằng AI là tùy chọn, có công tắc riêng, mặc định tắt.
 - **Xong khi:** báo cáo tuần ra không cần nhập thêm số nào.
 
-### T5. Xác nhận khối lượng tổ đội / nhà thầu phụ theo đợt
+### T5. Xác nhận khối lượng tổ đội / nhà thầu phụ theo đợt — ĐÃ LÀM (0246, gói G2)
 - **Vấn đề:** đây là chỗ hay tranh chấp nhất theo phiếu.
 - **Làm:**
   - **Bảng khối lượng mỗi đợt:** hạng mục trong phạm vi khoán, khối lượng kỳ này, luỹ kế, đơn giá khoán.

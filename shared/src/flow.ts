@@ -172,11 +172,12 @@ export const BIDDING_FLOW: Flow<BiddingStage> = {
     'nop_thau',
     'trung_thau',
   ],
-  exits: ['truot_thau'],
+  exits: ['truot_thau', 'khong_tham_gia'],
   steps: {
     tiep_nhan_ho_so: {
       label: BIDDING_STAGE_META.tiep_nhan_ho_so.label,
-      owner: 'Đấu thầu kiểm hồ sơ mời thầu, ghi nội dung cần làm rõ',
+      owner:
+        'Đấu thầu kiểm hồ sơ mời thầu, ghi hình thức, đánh giá và gửi Ban Giám đốc quyết định tham gia',
       next: [],
     },
     khao_sat: {
@@ -195,7 +196,7 @@ export const BIDDING_FLOW: Flow<BiddingStage> = {
       label: BIDDING_STAGE_META.du_toan.label,
       owner: 'Đấu thầu lập dự toán và giá dự thầu, rồi gửi phê duyệt giá',
       next: [],
-      auto: 'Tự chuyển khi lập dự toán ở tab Dự toán',
+      auto: 'Tự chuyển khi lập dự toán ở tab Dự toán — cần Ban Giám đốc đã duyệt tham gia',
     },
     cho_duyet_gia: {
       label: BIDDING_STAGE_META.cho_duyet_gia.label,
@@ -224,6 +225,11 @@ export const BIDDING_FLOW: Flow<BiddingStage> = {
     truot_thau: {
       label: BIDDING_STAGE_META.truot_thau.label,
       owner: 'Đã ghi nhận trượt thầu kèm nguyên nhân',
+      next: [],
+    },
+    khong_tham_gia: {
+      label: BIDDING_STAGE_META.khong_tham_gia.label,
+      owner: 'Ban Giám đốc quyết định không tham gia, lý do đã ghi',
       next: [],
     },
   },

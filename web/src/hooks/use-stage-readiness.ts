@@ -18,7 +18,7 @@ export interface StageRequirement {
   waivable: boolean;
 }
 
-export type StageEntity = 'opportunity' | 'contract' | 'site';
+export type StageEntity = 'opportunity' | 'contract' | 'site' | 'bidding';
 
 /**
  * Khoá nằm DƯỚI khoá của hồ sơ để mọi lần làm mới hồ sơ (kể cả từ bảng con: biên bản nghiệm thu
@@ -29,7 +29,9 @@ const keyFor = (entity: StageEntity, id: string | undefined): unknown[] =>
     ? ['opportunities', 'readiness', id]
     : entity === 'contract'
       ? ['contracts', 'readiness', id]
-      : ['construction-sites', id, 'readiness'];
+      : entity === 'bidding'
+        ? ['bidding_projects', 'readiness', id]
+        : ['construction-sites', id, 'readiness'];
 
 export function useStageReadiness(entityType: StageEntity, id: string | undefined) {
   return useQuery<StageRequirement[], Error>({

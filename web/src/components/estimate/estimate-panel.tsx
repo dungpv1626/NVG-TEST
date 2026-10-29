@@ -59,6 +59,7 @@ export function EstimatePanel({
   companyCode,
   readOnly,
   readOnlyReason,
+  createBlockedReason,
 }: {
   parent: EstimateParent;
   companyId: string;
@@ -66,6 +67,11 @@ export function EstimatePanel({
   readOnly: boolean;
   /** Vì sao chỉ xem, khi KHÔNG phải do vai trò — ví dụ hồ sơ thiết kế đã bàn giao (08/10/2026). */
   readOnlyReason?: string;
+  /**
+   * Chưa lập dự toán được vì sao (0247: gói thầu chưa được Ban Giám đốc duyệt tham gia) — nút khoá,
+   * lý do ghi ngay dưới nút. CSDL chặn cùng điều kiện.
+   */
+  createBlockedReason?: string;
 }) {
   const { profile } = useAuth();
   const { data: estimates } = useEstimates(parent);
@@ -131,9 +137,23 @@ export function EstimatePanel({
         }
         action={
           readOnly ? undefined : (
-            <Button variant="secondary" onClick={() => void newVersion()}>
-              Lập dự toán
-            </Button>
+            <div className="space-y-1.5">
+              <Button
+                variant="secondary"
+                disabled={Boolean(createBlockedReason)}
+                onClick={() => void newVersion()}
+              >
+                Lập dự toán
+              </Button>
+              {createBlockedReason && (
+                <p className="max-w-md text-sm text-fg-subtle">{createBlockedReason}</p>
+              )}
+              {error && (
+                <p role="alert" className="text-sm text-status-overdue">
+                  {error}
+                </p>
+              )}
+            </div>
           )
         }
       />

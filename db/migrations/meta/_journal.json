@@ -1660,6 +1660,20 @@
       "when": 1791900000000,
       "tag": "0245_nvs_thue_noi_bo_bao_gia_dieu_chuyen",
       "breakpoints": true
+    },
+    {
+      "idx": 245,
+      "version": "7",
+      "when": 1791910000000,
+      "tag": "0246_thau_phu_tron_vong",
+      "breakpoints": true
+    },
+    {
+      "idx": 246,
+      "version": "7",
+      "when": 1791920000000,
+      "tag": "0247_goi_thau_quyet_dinh_tham_gia",
+      "breakpoints": true
     }
   ]
 }

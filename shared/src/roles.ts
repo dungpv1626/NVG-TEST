@@ -215,6 +215,10 @@ export const APPROVAL_SUBJECTS = [
   // G5 (0245): báo giá thuê giàn giáo có giá đặc biệt / vượt hạn mức công nợ; cho thuê nội bộ.
   'rental_quote',
   'internal_rental',
+  // G6 (0247): Ban Giám đốc quyết định có tham gia gói thầu hay không.
+  'bid_participation',
+  // G2 (0246): chọn thầu phụ / tổ đội cho một gói việc của công trình.
+  'subcontractor_selection',
 ] as const;
 
 export type ApprovalSubject = (typeof APPROVAL_SUBJECTS)[number];
@@ -236,6 +240,8 @@ export const APPROVAL_SUBJECT_LABELS: Readonly<Record<ApprovalSubject, string>> 
   low_margin_price: 'Giá dưới mức lợi nhuận tối thiểu',
   rental_quote: 'Báo giá thuê giàn giáo',
   internal_rental: 'Cho thuê giàn giáo nội bộ',
+  bid_participation: 'Quyết định tham gia gói thầu',
+  subcontractor_selection: 'Chọn thầu phụ / tổ đội',
 };
 
 export interface ApprovalLimitSeed {
@@ -335,4 +341,16 @@ export const DEFAULT_APPROVAL_LIMITS: readonly ApprovalLimitSeed[] = [
   { role: 'TGD', subject: 'rental_quote', maxAmount: null, step: 1 },
   { role: 'BGD', subject: 'internal_rental', maxAmount: null, step: 1 },
   { role: 'TGD', subject: 'internal_rental', maxAmount: null, step: 1 },
+
+  // G6 (0247, A10): quyết định tham gia gói thầu — Ban Giám đốc duyệt (đã chốt). Đấu thầu không có
+  // hạn mức nên không tự duyệt gói của mình. Không gắn giá trị tiền.
+  { role: 'BGD', subject: 'bid_participation', maxAmount: null, step: 1 },
+  { role: 'TGD', subject: 'bid_participation', maxAmount: null, step: 1 },
+
+  // G2 (0246): chọn thầu phụ / tổ đội — phiếu khảo sát «duyệt theo hạn mức». Trưởng phòng Thi công
+  // duyệt gói nhỏ, Ban Giám đốc gói vừa, Tổng Giám đốc không giới hạn. Số là GIẢ ĐỊNH — NVG chưa
+  // quyết hạn mức (câu hỏi A4); sửa trong Quản trị hệ thống, KHÔNG sửa file này.
+  { role: 'TC', subject: 'subcontractor_selection', maxAmount: 50n * TRIEU, step: 1 },
+  { role: 'BGD', subject: 'subcontractor_selection', maxAmount: 500n * TRIEU, step: 2 },
+  { role: 'TGD', subject: 'subcontractor_selection', maxAmount: null, step: 3 },
 ] as const;

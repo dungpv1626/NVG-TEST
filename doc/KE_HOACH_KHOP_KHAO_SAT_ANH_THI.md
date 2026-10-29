@@ -55,6 +55,12 @@ Còn chờ NVG: mức lợi nhuận tối thiểu từng công ty; có cho Kinh 
 - **Cần NVG:** ai duyệt vượt ngân sách; có dung sai (ví dụ 5 %) không.
 
 ### A4. Thanh toán gắn căn cứ (A5, M2, NVO10, A4, T5)
+**ĐÃ LÀM (0246, gói G2, 29/10/2026)** — chọn thầu phụ (gói việc, 2–3 báo giá, một báo giá / không chọn giá thấp nhất
+phải có lý do, nguồn ngân sách) → phê duyệt `subcontractor_selection` theo hạn mức (mặc định seed: Thi công 50 triệu →
+Ban Giám đốc 500 triệu → Tổng Giám đốc, GIẢ ĐỊNH) → tổ đội tự có; hợp đồng khoán `create_subcontract_contract` (người soạn
+hợp đồng nhận việc ở danh sách Hợp đồng); bảng đơn giá / khoán gọn; đợt xác nhận khối lượng (T5); cổng
+`payment_requests_subcontract_gate`; sổ theo dõi; chuỗi hồ sơ từ đề nghị thanh toán. Còn: trả tiền giữ lại bảo hành khi
+hết hạn (chưa có đường), tổ đội nhỏ miễn so giá (chưa hỏi NVG), đề nghị thanh toán nhà cung cấp chưa bị chặn vượt đơn hàng.
 - **Xác nhận khối lượng tổ đội / nhà thầu phụ theo đợt** (T5): kỳ này, luỹ kế, chỉ tính phần đã nghiệm thu, tổ trưởng ký, Trưởng phòng Thi công xác nhận.
   - Hai cách khoán (bảng đơn giá / khoán gọn) và tỷ lệ giữ lại bảo hành tùy chọn: anh Dũng đã chốt.
 - **Đề nghị thanh toán** cho tổ đội / nhà thầu phụ bắt buộc gắn đợt xác nhận khối lượng hoặc biên bản nghiệm thu.
@@ -258,7 +264,10 @@ Ba việc mới, chưa có ở các giai đoạn trên:
 - **A9 Bảo lãnh và tiền giữ lại.**
   - Bảo lãnh tạm ứng / thực hiện / bảo hành có hạn và được nhắc trước khi hết.
   - Tiền giữ lại có hạn thu hồi; khi thanh lý hợp đồng thì nhắc thu hồi.
-- **A10 Gói thầu có hình thức và quyết định tham gia.**
+- **A10 Gói thầu có hình thức và quyết định tham gia.** **ĐÃ LÀM (0247, gói G6, 29/10/2026)** — hình thức + loại công trình;
+  đánh giá sáu tiêu chí (ba mức + ghi chú) và đề xuất → Ban Giám đốc duyệt (`bid_participation`); từ chối = «Không tham gia»
+  kèm lý do, gói đóng, cơ hội theo 0217; chưa duyệt thì không lập dự toán (chặn ở CSDL); Cung ứng / Thi công / Kế toán góp ý
+  qua yêu cầu có thông báo, đọc tóm tắt gói không có giá; hộp duyệt tham gia và duyệt giá hiện các ý kiến.
   - Gói thầu ghi rõ hình thức: chỉ định / chào giá / đấu thầu.
   - Ban Giám đốc duyệt có tham gia hay không, kèm lý do.
   - Cung ứng, Thi công, Kế toán góp ý ngay trên gói thầu.

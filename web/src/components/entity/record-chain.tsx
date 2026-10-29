@@ -14,8 +14,11 @@ import {
   CONTRACT_STAGE_META,
   DESIGN_STAGE_META,
   OPPORTUNITY_STAGE_META,
+  PAYMENT_REQUEST_STAGE_META,
   SITE_STAGE_META,
+  SUBCONTRACTOR_STATUS_META,
 } from '@nvg/shared';
+import { PERIOD_STATUS_META } from '@/hooks/use-subcontracts';
 import { useRecordChain, type ChainKind, type ChainRecord } from '@/hooks/use-record-chain';
 import { cn } from '@/lib/utils';
 import { DetailAside } from './detail-aside';
@@ -29,6 +32,17 @@ const KIND: Record<
   design: { label: 'Thiết kế', route: '/tk/du-an', stages: DESIGN_STAGE_META },
   contract: { label: 'Hợp đồng', route: '/hd/hop-dong', stages: CONTRACT_STAGE_META },
   site: { label: 'Công trình', route: '/tc/cong-trinh', stages: SITE_STAGE_META },
+  subcontractor: { label: 'Tổ đội', route: '/tc/thau-phu', stages: SUBCONTRACTOR_STATUS_META },
+  subcontract_period: {
+    label: 'Đợt khối lượng',
+    route: '/tc/dot-khoi-luong',
+    stages: PERIOD_STATUS_META,
+  },
+  payment_request: {
+    label: 'Đề nghị thanh toán',
+    route: '/kt/de-nghi-thanh-toan',
+    stages: PAYMENT_REQUEST_STAGE_META,
+  },
 };
 
 export function RecordChain({ kind, id }: { kind: ChainKind; id: string }) {
@@ -81,7 +95,15 @@ function ChainLink({ record, current }: { record: ChainRecord; current: boolean 
   const body = (
     <>
       <span className="block text-xs text-ink-subtle">
-        {label} · <span className="font-mono">{record.code}</span>
+        {label}
+        {record.code ? (
+          <>
+            {' '}
+            · <span className="font-mono">{record.code}</span>
+          </>
+        ) : (
+          ` · ${record.title}`
+        )}
       </span>
       <span className="block text-xs">{current ? `${stage} — đang xem` : stage}</span>
     </>

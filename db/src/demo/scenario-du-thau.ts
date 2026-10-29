@@ -6,7 +6,8 @@
  * xem lại từng bước trên màn hình:
  *   1. Tiếp nhận hồ sơ mời thầu — thông tin gói, hạn nộp, bảo đảm dự thầu, hình thức.
  *   2. Làm rõ hồ sơ mời thầu — câu hỏi NVG gửi chủ đầu tư, văn bản làm rõ của chủ đầu tư, gia hạn nộp thầu.
- *   3. Khảo sát hiện trạng — điều kiện thi công, rủi ro.
+ *   3. Khảo sát hiện trạng — điều kiện thi công, rủi ro. Cung ứng / Thi công / Kế toán góp ý, Ban Giám đốc duyệt
+ *      tham gia (0247) — chưa duyệt thì chưa lập dự toán được.
  *   4. Bóc tách khối lượng — 24 dòng theo hạng mục, đối chiếu BOQ của chủ đầu tư.
  *   5. Lập dự toán và giá dự thầu — chi phí theo nhóm, cơ cấu giá, Tổng Giám đốc duyệt giá.
  *   6. Hồ sơ năng lực — giấy tờ pháp lý, chứng chỉ, báo cáo tài chính 3 năm, thiết bị — gắn vào gói.
@@ -17,6 +18,8 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { BidAssessment } from '@nvg/shared';
+import { approveParticipationDemo, reviewDemo } from './bid-participation';
 import { ACCOUNTS, check, companyId, day, nextCode, one, signIn, userId } from './client';
 import { clean } from './names';
 
@@ -154,6 +157,82 @@ const BID_DOCS: [string, string, boolean][] = [
   ['bang_gia', 'Bảng phân tích đơn giá các công việc chính', true],
 ];
 
+/** Đánh giá tham gia DEMO — sáu tiêu chí của phiếu Ban Giám đốc (dòng 739). */
+const BID_DEMO_ASSESSMENT: BidAssessment = {
+  criteria: {
+    nang_luc: {
+      rating: 'thuan_loi',
+      note: 'Ví dụ minh hoạ — đã làm 4 nhà xưởng khung thép nhịp ≥ 30 m trong 3 năm; đủ chỉ huy trưởng, kỹ sư kết cấu.',
+    },
+    tien_do: {
+      rating: 'can_luu_y',
+      note: 'Ví dụ minh hoạ — 180 ngày trùng 2 công trình đang chạy tới tháng 3; cần thêm một tổ lắp dựng.',
+    },
+    dong_tien: {
+      rating: 'can_luu_y',
+      note: 'Ví dụ minh hoạ — tạm ứng 15 %, thanh toán theo đợt 30 ngày; ứng vốn thép khoảng 3,5 tỷ đồng trong 2 tháng đầu.',
+    },
+    phap_ly: {
+      rating: 'thuan_loi',
+      note: 'Ví dụ minh hoạ — chủ đầu tư FDI, dự án đã có giấy phép xây dựng.',
+    },
+    canh_tranh: {
+      rating: 'rui_ro_cao',
+      note: 'Ví dụ minh hoạ — 5 nhà thầu mua hồ sơ, hai đơn vị từng chào thấp hơn NVC 4–6 %.',
+    },
+    loi_nhuan: {
+      rating: 'can_luu_y',
+      note: 'Ví dụ minh hoạ — lợi nhuận kỳ vọng 6–7 %; giá thép biến động là rủi ro chính.',
+    },
+  },
+  recommendation: 'tham_gia',
+  summary:
+    'Ví dụ minh hoạ — Đề xuất tham gia: năng lực phù hợp, chủ đầu tư uy tín. Cần chuẩn bị dòng tiền và chốt giá thép sớm.',
+};
+
+/** Cung ứng, Thi công, Kế toán góp ý — nội dung DEMO. */
+async function bidReviewsDemo(dauThau: SupabaseClient, projectId: string): Promise<void> {
+  const [muaHang, thiCong, keToan] = await Promise.all([
+    signIn(ACCOUNTS.muaHang),
+    signIn(ACCOUNTS.truongPhongTc),
+    signIn(ACCOUNTS.ketoan),
+  ]);
+  await reviewDemo(
+    dauThau,
+    { MH: muaHang, TC: thiCong, KT: keToan },
+    projectId,
+    {
+      MH: {
+        recommendation: 'dong_y',
+        supplier_quotes:
+          'Ví dụ minh hoạ — Thép tổ hợp: 3 báo giá (27,5–28,4 triệu đồng/tấn, giao 15 ngày). Tôn mái 0,47 mm: 2 báo giá ' +
+          '(205–218 nghìn đồng/m²). Bê tông M300: trạm KCN 1,46 triệu đồng/m³.',
+        summary: 'Ví dụ minh hoạ — Giá thép giữ được 30 ngày; sau đó cần chốt lại.',
+      },
+      TC: {
+        recommendation: 'dong_y_co_dieu_kien',
+        method:
+          'Ví dụ minh hoạ — Ép cọc trước, móng cuốn chiếu từ trục 1; lắp dựng kết cấu bằng cẩu 25 tấn, hạn chế giờ cẩu ' +
+          'phía giáp nhà xưởng số 1.',
+        capacity:
+          'Ví dụ minh hoạ — Có chỉ huy trưởng từ tháng 1; cần thuê thêm một tổ lắp dựng thép trong 2 tháng cao điểm.',
+        summary:
+          'Ví dụ minh hoạ — Đồng ý nếu tiến độ cho phép gối đầu 2 tuần với công trình đang chạy.',
+      },
+      KT: {
+        recommendation: 'dong_y',
+        cash_flow:
+          'Ví dụ minh hoạ — Âm tiền tháng thứ 2–3 khoảng 3,5 tỷ đồng; bù bằng hạn mức vay vốn lưu động còn 6 tỷ.',
+        guarantee:
+          'Ví dụ minh hoạ — Bảo lãnh dự thầu 185 triệu và bảo lãnh thực hiện 10 % trong hạn mức ngân hàng còn lại.',
+        payment_terms:
+          'Ví dụ minh hoạ — Tạm ứng 15 %, thanh toán theo khối lượng hằng tháng, giữ lại 5 % bảo hành 12 tháng.',
+      },
+    },
+    'Ví dụ minh hoạ — Cần ý kiến trước khi trình Ban Giám đốc quyết định tham gia.',
+  );
+}
+
 async function approve(
   approver: SupabaseClient,
   entityType: string,
@@ -192,7 +271,25 @@ export async function loadBidDemo(): Promise<'created' | 'skipped'> {
     .eq('name', BID_DEMO_PROJECT)
     .is('deleted_at', null)
     .maybeSingle();
-  if (existing.data) return 'skipped';
+  if (existing.data) {
+    // Gói demo nạp trước 0247 (đã nộp thầu, `truoc_quy_dinh`): bổ sung hình thức, loại công trình và
+    // ý kiến ba phòng — KHÔNG dựng lùi quyết định tham gia (gói đã qua bước đó trước khi có quy định).
+    const id = (existing.data as { id: string }).id;
+    const reviews = check(
+      'đọc ý kiến các phòng',
+      await dauThau.rpc('bid_reviews', { p_bidding_project_id: id }),
+    ) as unknown[];
+    if (reviews.length > 0) return 'skipped';
+    check(
+      'bổ sung hình thức, loại công trình (0247)',
+      await dauThau
+        .from('bidding_projects')
+        .update({ procurement_form: 'dau_thau', work_type: 'xay_moi_nha_xuong' })
+        .eq('id', id),
+    );
+    await bidReviewsDemo(dauThau, id);
+    return 'created';
+  }
 
   // --- Bước 1: tiếp nhận hồ sơ mời thầu ---------------------------------------------------------------------------
   const customer = (await one(
@@ -311,6 +408,16 @@ export async function loadBidDemo(): Promise<'created' | 'skipped'> {
       })
       .eq('id', project.id),
   );
+
+  // --- Bước 3b: xin ý kiến ba phòng, Ban Giám đốc quyết định tham gia (0247, A10) ------------------------------------
+  await bidReviewsDemo(dauThau, project.id);
+  await approveParticipationDemo(dauThau, tgd, project.id, {
+    procurementForm: 'dau_thau',
+    workType: 'xay_moi_nha_xuong',
+    assessment: BID_DEMO_ASSESSMENT,
+    decisionNote:
+      'Ví dụ minh hoạ — Đồng ý tham gia. Chuẩn bị bảo lãnh dự thầu, chốt giá thép với nhà cung cấp trước khi trình giá.',
+  });
 
   // --- Bước 4: bóc tách khối lượng --------------------------------------------------------------------------------
   check(
@@ -470,7 +577,9 @@ export async function loadBidDemo(): Promise<'created' | 'skipped'> {
           expiry_date: c.years > 0 ? day(c.years * 365 - 400) : null,
           fiscal_year: c.fiscal ?? null,
           responsible_user_id: await userId(dauThau),
-          notes: clean('Giấy tờ minh hoạ cho quy trình đấu thầu — NVG thay bằng bản thật (câu 19).'),
+          notes: clean(
+            'Giấy tờ minh hoạ cho quy trình đấu thầu — NVG thay bằng bản thật (câu 19).',
+          ),
         })
         .select('id')
         .single(),

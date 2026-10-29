@@ -8,7 +8,16 @@
 
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BUTTONS, ERRORS } from '@nvg/shared';
+import {
+  BID_WORK_TYPE_LABELS,
+  BID_WORK_TYPES,
+  BUTTONS,
+  ERRORS,
+  PROCUREMENT_FORM_LABELS,
+  PROCUREMENT_FORMS,
+  type BidWorkType,
+  type ProcurementForm,
+} from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { FormLayout, FormSection } from '@/components/ui/form-page';
@@ -64,6 +73,8 @@ export function BiddingCreatePage() {
     submissionDeadline: '',
     siteAddress: '',
     clarificationNotes: '',
+    procurementForm: '',
+    workType: '',
   });
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -123,6 +134,8 @@ export function BiddingCreatePage() {
         submissionDeadline: form.submissionDeadline || null,
         siteAddress: form.siteAddress.trim() || null,
         clarificationNotes: form.clarificationNotes.trim() || null,
+        procurementForm: (form.procurementForm || null) as ProcurementForm | null,
+        workType: (form.workType || null) as BidWorkType | null,
       });
 
       setDirty(false);
@@ -187,6 +200,7 @@ export function BiddingCreatePage() {
           afterSave={[
             'Mở thẳng trang gói thầu vừa tạo — dự toán, hồ sơ năng lực, vòng làm rõ nhập tiếp ở đó.',
             'Chưa chọn người chịu trách nhiệm thì người tạo phụ trách.',
+            'Lập dự toán sau khi Ban Giám đốc duyệt tham gia — gửi đánh giá ở tab Tổng quan.',
           ]}
         >
           <FormSection n={1} title="Thông tin gói thầu">
@@ -255,6 +269,39 @@ export function BiddingCreatePage() {
                 value={form.submissionDeadline}
                 onChange={(v) => update('submissionDeadline', v)}
               />
+            </Field>
+
+            <Field
+              label="Hình thức lựa chọn nhà thầu"
+              hint="Cần có trước khi gửi Ban Giám đốc quyết định tham gia."
+            >
+              <select
+                value={form.procurementForm}
+                onChange={(e) => update('procurementForm', e.target.value)}
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
+              >
+                <option value="">Chưa chọn</option>
+                {PROCUREMENT_FORMS.map((f) => (
+                  <option key={f} value={f}>
+                    {PROCUREMENT_FORM_LABELS[f]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Loại công trình">
+              <select
+                value={form.workType}
+                onChange={(e) => update('workType', e.target.value)}
+                className="h-11 w-full rounded-field border border-border-strong bg-surface px-3 sm:h-9"
+              >
+                <option value="">Chưa chọn</option>
+                {BID_WORK_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {BID_WORK_TYPE_LABELS[t]}
+                  </option>
+                ))}
+              </select>
             </Field>
 
             <Field label="Địa điểm công trình" className="sm:col-span-2">
