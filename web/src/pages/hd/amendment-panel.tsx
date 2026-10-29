@@ -41,6 +41,8 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { useAnnexDocuments } from '@/hooks/use-contract-annex';
 import type { ContractDetailRecord } from '@/hooks/use-contracts';
 import { AnnexComposer } from './annex-composer';
+import { useSiteChangeProposals } from '@/hooks/use-site-changes';
+import { SiteChangeInbox, SiteChangeSummary } from './site-change-inbox';
 
 const EM_DASH = '—';
 
@@ -126,6 +128,8 @@ export function AmendmentPanel({
           {error}
         </p>
       )}
+
+      <SiteChangeInbox contractId={contractId} readOnly={readOnly} />
 
       {!readOnly &&
         (adding ? (
@@ -282,6 +286,10 @@ function AmendmentCard({
   const promptDialog = usePromptDialog();
   const annexDocs = useAnnexDocuments(contract?.id);
   const annexVersions = (annexDocs.data ?? []).filter((d) => d.amendment_id === amendment.id);
+  const { data: siteChanges } = useSiteChangeProposals({
+    contractId: amendment.site_change_proposal_id ? contract?.id : undefined,
+  });
+  const fromSite = siteChanges?.find((p) => p.id === amendment.site_change_proposal_id);
   const [composing, setComposing] = useState(false);
   const markQuoteSent = useMarkAmendmentQuoteSent();
   const submitApproval = useSubmitAmendmentApproval();
@@ -390,6 +398,16 @@ function AmendmentCard({
       </div>
 
       <p className="mt-2 whitespace-pre-wrap">{amendment.content}</p>
+      {fromSite && (
+        <details className="mt-2 rounded-sm border border-border p-2">
+          <summary className="cursor-pointer text-sm font-medium">
+            Đề xuất gốc của công trường {fromSite.code}
+          </summary>
+          <div className="mt-2">
+            <SiteChangeSummary proposal={fromSite} />
+          </div>
+        </details>
+      )}
       <p className="mt-1 text-fg-subtle">Nguyên nhân: {amendment.reason}</p>
 
       <dl className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-3">

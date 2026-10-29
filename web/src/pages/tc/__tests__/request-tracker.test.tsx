@@ -174,4 +174,12 @@ describe('nudgeAvailability', () => {
       ),
     ).toEqual({ visible: true, allowed: true, reason: null });
   });
+
+  it('đề xuất phát sinh (0241): văn phòng giữ thì thúc được, đang chờ duyệt / chờ khách thì không', () => {
+    const at = (holder_kind: 'office' | 'reviewer' | 'external') =>
+      nudgeAvailability({ is_closed: false, holder_kind, next_nudge_at: null }, true, now).visible;
+    expect(at('office')).toBe(true);
+    expect(at('reviewer')).toBe(false);
+    expect(at('external')).toBe(false);
+  });
 });

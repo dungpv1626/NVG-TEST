@@ -20,6 +20,8 @@ export interface StepRequirement {
   met: boolean;
   /** Lối tới đúng chỗ làm việc này (mở tab, mở ô nhập) — hiện cạnh điều kiện CHƯA đạt. */
   action?: React.ReactNode;
+  /** Chỉ nhắc, không phải điều kiện chặn (vd tồn tại chưa khắc phục — 0241): nhãn «Nhắc» thay «Cần». */
+  reminder?: boolean;
 }
 
 export interface StepTrackProps<S extends string> {
@@ -95,10 +97,14 @@ export function StepTrack<S extends string>({
               <span
                 className={cn(
                   'shrink-0 rounded-full px-2 font-semibold',
-                  r.met ? 'bg-pill text-shell' : 'bg-brand-accent text-ink',
+                  r.met
+                    ? 'bg-pill text-shell'
+                    : r.reminder
+                      ? 'bg-status-pending-bg text-status-pending'
+                      : 'bg-brand-accent text-ink',
                 )}
               >
-                {r.met ? 'Đạt' : 'Cần'}
+                {r.met ? 'Đạt' : r.reminder ? 'Nhắc' : 'Cần'}
               </span>
               <span className={cn(r.met && 'text-ink-subtle')}>
                 {r.label}

@@ -34,6 +34,7 @@ function problemsOf(r: SiteBoardRow): string[] {
   if (r.overdue_requests > 0) out.push(`${r.overdue_requests} đề nghị quá ngày cần`);
   if (r.overdue_warranty_claims > 0)
     out.push(`${r.overdue_warranty_claims} phiếu bảo hành quá hạn`);
+  if (r.overdue_issues > 0) out.push(`${r.overdue_issues} tồn tại quá hạn khắc phục`);
   if (r.milestones_waiting_check > 0) out.push(`${r.milestones_waiting_check} mốc chờ kiểm`);
   return out;
 }
@@ -96,10 +97,7 @@ export function SiteBoardPage() {
       {!isLoading && !error && (
         <dl className="mb-4 grid grid-cols-3 gap-2">
           {summary.map((s) => (
-            <div
-              key={s.label}
-              className="rounded-card bg-surface px-3 py-2 sm:px-4 sm:py-3"
-            >
+            <div key={s.label} className="rounded-card bg-surface px-3 py-2 sm:px-4 sm:py-3">
               <dt className="text-xs text-fg-subtle sm:text-sm">{s.label}</dt>
               <dd
                 className={cn(
@@ -168,6 +166,17 @@ export function SiteBoardPage() {
             key: 'log',
             header: 'Nhật ký',
             render: (r) => <LogCell r={r.board} />,
+          },
+          {
+            key: 'issues',
+            header: 'Tồn tại đang mở',
+            numeric: true,
+            render: (r) =>
+              r.board.open_issues === 0 ? (
+                <span className="text-fg-subtle">—</span>
+              ) : (
+                r.board.open_issues
+              ),
           },
           {
             key: 'warranty',

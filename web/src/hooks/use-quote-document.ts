@@ -72,14 +72,16 @@ export function useQuoteDocument(quote: QuoteRecord | null, opportunityId: strin
               .eq('id', me.data as string)
               .maybeSingle()
           : Promise.resolve({ data: null, error: null }),
-        supabase
-          .from('contract_templates')
-          .select('id, title, storage_path')
-          .eq('company_id', q.company_id)
-          .eq('document_kind', 'bao_gia')
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(1),
+        // Mẫu nào dựng văn bản do CSDL quyết (0240): đã gửi khách = mẫu lúc gửi; chưa gửi = mẫu NVG tải lên
+        // trước mẫu DEMO.
+        supabase.rpc('quote_template_for', { p_quote_id: q.id }).then(async (pick) => {
+          if (pick.error || !pick.data) return { data: null, error: pick.error };
+          return supabase
+            .from('contract_templates')
+            .select('id, title, storage_path')
+            .eq('id', pick.data as string)
+            .maybeSingle();
+        }),
         supabase.from('quote_texts').select('texts').eq('quote_id', q.id).maybeSingle(),
         supabase
           .from('quote_documents')
@@ -125,7 +127,7 @@ export function useQuoteDocument(quote: QuoteRecord | null, opportunityId: strin
           preparedBy: (creator.data ?? null) as QuoteDocumentSource['preparedBy'],
           texts: ((texts.data as { texts: QuoteTexts } | null)?.texts ?? {}) as QuoteTexts,
         },
-        template: (template.data?.[0] ?? null) as QuoteDocumentBundle['template'],
+        template: (template.data ?? null) as QuoteDocumentBundle['template'],
         uploads: (uploads.data ?? []) as unknown as QuoteUploadedDocument[],
         customerEmail: o?.customer?.email ?? null,
         customerPhone: o?.customer?.phone ?? null,

@@ -1618,6 +1618,20 @@
       "when": 1791840000000,
       "tag": "0239_bao_gia_hang_muc",
       "breakpoints": true
+    },
+    {
+      "idx": 239,
+      "version": "7",
+      "when": 1791850000000,
+      "tag": "0240_mau_bao_gia_tai_len",
+      "breakpoints": true
+    },
+    {
+      "idx": 240,
+      "version": "7",
+      "when": 1791860000000,
+      "tag": "0241_phat_sinh_ton_tai_cong_truong",
+      "breakpoints": true
     }
   ]
 }

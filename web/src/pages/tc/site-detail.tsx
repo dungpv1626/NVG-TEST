@@ -52,6 +52,9 @@ import { SITE_PREP_ANCHOR, SitePrepCard } from './site-prep-card';
 import { SubcontractorPanel } from './subcontractor-panel';
 import { CrewAttendancePanel } from './crew-attendance-panel';
 import { WarrantyPanel } from './warranty-panel';
+import { SiteChangePanel } from './site-change-panel';
+import { SiteIssuePanel } from './site-issue-panel';
+import { useSiteIssues } from '@/hooks/use-site-changes';
 
 const EM_DASH = '—';
 
@@ -76,6 +79,7 @@ export function SiteDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const { data: readiness = [] } = useStageReadiness('site', id);
   const { data: milestones } = useSiteMilestones(id);
+  const { data: issues } = useSiteIssues(id);
   const [searchParams, setSearchParams] = useSearchParams();
 
   if (isLoading) return <CardGridSkeleton count={3} />;
@@ -127,6 +131,28 @@ export function SiteDetailPage() {
     warranties_expired: { tab: 'bao-hanh', label: 'Xem bảo hành' },
     claims_closed: { tab: 'bao-hanh', label: 'Xem yêu cầu bảo hành' },
   };
+  // T2 (0241): tồn tại chưa khắc phục CHỈ NHẮC, không chặn bàn giao (anh Dũng chốt) — không nằm trong
+  // `stage_readiness` (mọi dòng ở đó chặn đổi bước), không tính vào `missing`.
+  const openIssues = (issues ?? []).filter((i) => i.status === 'dang_mo').length;
+  const issueReminder =
+    next && openIssues > 0 && ['nghiem_thu', 'bao_hanh', 'hoan_thanh'].includes(next.stage)
+      ? [
+          {
+            label: `Còn ${openIssues} tồn tại chưa khắc phục — chỉ nhắc, không chặn bàn giao`,
+            met: false,
+            reminder: true,
+            action: (
+              <button
+                type="button"
+                className="font-medium text-brand underline-offset-2 hover:underline"
+                onClick={() => openTab('ton-tai')}
+              >
+                Xem tồn tại
+              </button>
+            ),
+          },
+        ]
+      : [];
   // Điều kiện bước kế tiếp (0164, 0166) — cùng điều kiện CSDL chặn.
   const missing = next
     ? readiness.filter((r) => r.for_stage === next.stage && !r.met).map((r) => r.label)
@@ -237,7 +263,7 @@ export function SiteDetailPage() {
             <StepTrack
               flow={SITE_FLOW}
               current={site.stage}
-              nextRequirements={nextRequirements}
+              nextRequirements={[...nextRequirements, ...issueReminder]}
               holder={site.responsible?.full_name ?? null}
             />
           </>
@@ -323,10 +349,34 @@ export function SiteDetailPage() {
             content: <SitePurchaseRequestPanel siteId={site.id} readOnly={isClosed} />,
           },
           {
+            // T1 (0241): phát sinh lập từ công trường — Thi công thấy trạng thái, không thấy giá.
+            id: 'phat-sinh',
+            label: 'Phát sinh',
+            content: (
+              <SiteChangePanel
+                siteId={site.id}
+                companyId={site.company_id}
+                hasContract={site.contract_id !== null}
+                readOnly={readOnly}
+              />
+            ),
+          },
+          {
             id: 'nghiem-thu',
             label: 'Nghiệm thu',
             badge: acceptances?.length || undefined,
-            content: <AcceptancePanel siteId={site.id} readOnly={readOnly} />,
+            content: (
+              <AcceptancePanel siteId={site.id} companyId={site.company_id} readOnly={readOnly} />
+            ),
+          },
+          {
+            // T2 (0241): tồn tại có người xử lý và hạn.
+            id: 'ton-tai',
+            label: 'Tồn tại',
+            badge: openIssues || undefined,
+            content: (
+              <SiteIssuePanel siteId={site.id} companyId={site.company_id} readOnly={readOnly} />
+            ),
           },
           {
             id: 'to-doi',

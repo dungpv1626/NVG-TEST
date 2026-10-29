@@ -103,7 +103,7 @@ import {
   type WorkspaceTab,
 } from '@/components/ui/split-workspace';
 import { FullscreenFrame } from '@/components/ui/fullscreen-frame';
-import { ChosenTemplateContext } from './chosen-template';
+import { ChosenTemplateContext, FreeFieldFillContext, type FreeFieldFill } from './chosen-template';
 import { followPreview, previewKeysOf, previewLabelOf } from './preview-follow';
 import { cn } from '@/lib/utils';
 
@@ -144,6 +144,14 @@ export function DocumentPanel({
   const [templateId, setTemplateId] = useState<string>('');
   const chosen = candidates.find((t) => t.id === templateId) ?? candidates[0] ?? null;
   const inputs = useDocumentInputsState(contract, editable);
+  // Khối điều khoản đưa nội dung vào chỗ trống tự do của mẫu (vd «Phạm vi công việc» → Điều 2.1) qua cùng bộ giá trị
+  // đang lưu dần — không ghi thẳng CSDL, kẻo bản đang gõ ở trang đè mất.
+  const freeFill: FreeFieldFill | null = chosen
+    ? {
+        valueOf: (key) => inputs.values[freeKey(chosen.id, key)] ?? '',
+        fill: (key, value) => inputs.setValue(freeKey(chosen.id, key), value),
+      }
+    : null;
   const { data: versions } = useContractDocuments(contract.id);
   const versionsSection = (
     <VersionsSection
@@ -198,7 +206,9 @@ export function DocumentPanel({
         content: (
           <div id="dieu-khoan">
             <ChosenTemplateContext.Provider value={chosen}>
-              {termsPanel}
+              <FreeFieldFillContext.Provider value={null}>
+                {termsPanel}
+              </FreeFieldFillContext.Provider>
             </ChosenTemplateContext.Provider>
           </div>
         ),
@@ -307,7 +317,9 @@ export function DocumentPanel({
                 <>
                   <div id="dieu-khoan">
                     <ChosenTemplateContext.Provider value={chosen}>
-                      {termsPanel}
+                      <FreeFieldFillContext.Provider value={freeFill}>
+                        {termsPanel}
+                      </FreeFieldFillContext.Provider>
                     </ChosenTemplateContext.Provider>
                   </div>
                   <NextStep

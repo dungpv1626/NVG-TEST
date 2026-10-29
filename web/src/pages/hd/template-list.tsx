@@ -7,6 +7,10 @@
  *
  * Ai tải lên: người có quyền phê duyệt HD (Ban Giám đốc) hoặc Quản trị — cùng hàm CSDL
  * `auth_can_manage_contract_templates`. Không xoá mẫu: thay bằng bản mới rồi «Ngừng dùng».
+ *
+ * Từ 0240 cũng nhận mẫu BÁO GIÁ (`document_kind = 'bao_gia'`): kiểm theo danh mục chỗ trống của báo giá
+ * (`QUOTE_TEMPLATE_FIELDS` + bảng `{#hang_muc}`), không theo chỗ trống hợp đồng. Mẫu người tải lên thay mẫu DEMO;
+ * báo giá đã gửi khách giữ mẫu lúc gửi (`quote_template_for`).
  */
 
 import { useState } from 'react';
@@ -19,7 +23,10 @@ import {
   TEMPLATE_FIELDS,
   TEMPLATE_FIELD_GROUP_LABELS,
   TEMPLATE_LOOP_COLUMNS,
+  QUOTE_LOOP_COLUMNS,
+  QUOTE_TEMPLATE_FIELDS,
   formatDate,
+  unknownQuoteTemplateTags,
   type ContractPriceForm,
   type ContractType,
   type TemplateFieldGroup,
@@ -89,6 +96,9 @@ export function ContractTemplatePage() {
               onClick={() => saveBlob(buildSampleTemplate(), 'Mau vi du hop dong.docx')}
             >
               <Download className="size-4" aria-hidden /> Tải mẫu ví dụ
+            </Button>
+            <Button variant="secondary" onClick={() => void downloadQuoteSample(setError)}>
+              <Download className="size-4" aria-hidden /> Tải mẫu báo giá ví dụ
             </Button>
             {canManage && !uploading && (
               <Button variant="primary" onClick={() => setUploading(true)}>
@@ -205,6 +215,7 @@ export function ContractTemplatePage() {
       )}
 
       <PlaceholderGuide />
+      <QuotePlaceholderGuide />
       <CompanyInfoSection canEdit={isAdmin} />
     </>
   );
@@ -224,6 +235,7 @@ function UploadForm({ onDone }: { onDone: () => void }) {
   const [form, setForm] = useState({
     companyId: '',
     title: '',
+    kind: 'hop_dong' as UploadKind,
     contractType: 'thi_cong' as ContractType,
     priceForm: '' as ContractPriceForm | '',
     notes: '',
@@ -237,7 +249,7 @@ function UploadForm({ onDone }: { onDone: () => void }) {
   const companyId =
     form.companyId || allowed.find((c) => c.id === scope.companyId)?.id || allowed[0]?.id || '';
 
-  async function chooseFile(f: File | null) {
+  async function chooseFile(f: File | null, kind: UploadKind = form.kind) {
     setFile(f);
     setCheck(null);
     if (!f) return;
@@ -248,14 +260,18 @@ function UploadForm({ onDone }: { onDone: () => void }) {
       });
       return;
     }
-    const result = inspectTemplate(await f.arrayBuffer());
+    // Báo giá kiểm theo danh mục chỗ trống của báo giá, hợp đồng theo danh mục hợp đồng (0240).
+    const result = inspectTemplate(
+      await f.arrayBuffer(),
+      kind === 'bao_gia' ? unknownQuoteTemplateTags : undefined,
+    );
     if (!result.ok) {
       setCheck({ ok: false, problems: result.errors });
     } else if (result.unknown.length > 0) {
       setCheck({
         ok: false,
         problems: [
-          `Hệ thống không biết ${result.unknown.length} chỗ trống: ${result.unknown.map((u) => `{${u}}`).join(', ')}. Sửa tên theo bảng «Cách viết chỗ trống» bên dưới rồi chọn lại tệp.`,
+          `Hệ thống không biết ${result.unknown.length} chỗ trống: ${result.unknown.map((u) => `{${u}}`).join(', ')}. Sửa tên theo bảng «${kind === 'bao_gia' ? 'Cách viết chỗ trống — mẫu báo giá' : 'Cách viết chỗ trống'}» bên dưới rồi chọn lại tệp.`,
         ],
       });
     } else if (Object.keys(result.tags).length === 0) {
@@ -280,8 +296,9 @@ function UploadForm({ onDone }: { onDone: () => void }) {
       await upload.mutateAsync({
         companyId,
         title: form.title.trim(),
-        contractType: form.contractType,
-        priceForm: form.priceForm || null,
+        documentKind: form.kind,
+        contractType: form.kind === 'bao_gia' ? null : form.contractType,
+        priceForm: form.kind === 'bao_gia' ? null : form.priceForm || null,
         file,
         tags: check.tags,
         notes: form.notes.trim() || null,
@@ -317,37 +334,62 @@ function UploadForm({ onDone }: { onDone: () => void }) {
             ))}
           </select>
         </Field>
-        <Field label="Loại hợp đồng" required>
+        <Field label="Loại văn bản" required>
           <select
-            value={form.contractType}
-            onChange={(e) =>
-              setForm((s) => ({ ...s, contractType: e.target.value as ContractType }))
-            }
+            value={form.kind}
+            onChange={(e) => {
+              const kind = e.target.value as UploadKind;
+              setForm((s) => ({ ...s, kind }));
+              // Đổi loại thì kiểm lại tệp đã chọn theo danh mục chỗ trống của loại mới.
+              if (file) void chooseFile(file, kind);
+            }}
             className={cn(FIELD_BOX, 'w-full')}
           >
-            {CONTRACT_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {CONTRACT_TYPE_LABELS[t]}
-              </option>
-            ))}
+            <option value="hop_dong">Hợp đồng</option>
+            <option value="bao_gia">Báo giá</option>
           </select>
         </Field>
-        <Field label="Hình thức giá" hint="Để «Mọi hình thức giá» nếu mẫu dùng chung.">
-          <select
-            value={form.priceForm}
-            onChange={(e) =>
-              setForm((s) => ({ ...s, priceForm: e.target.value as ContractPriceForm | '' }))
-            }
-            className={cn(FIELD_BOX, 'w-full')}
-          >
-            <option value="">Mọi hình thức giá</option>
-            {CONTRACT_PRICE_FORMS.map((p) => (
-              <option key={p} value={p}>
-                {CONTRACT_PRICE_FORM_LABELS[p]}
-              </option>
-            ))}
-          </select>
-        </Field>
+        {form.kind === 'hop_dong' && (
+          <>
+            <Field label="Loại hợp đồng" required>
+              <select
+                value={form.contractType}
+                onChange={(e) =>
+                  setForm((s) => ({ ...s, contractType: e.target.value as ContractType }))
+                }
+                className={cn(FIELD_BOX, 'w-full')}
+              >
+                {CONTRACT_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {CONTRACT_TYPE_LABELS[t]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Hình thức giá" hint="Để «Mọi hình thức giá» nếu mẫu dùng chung.">
+              <select
+                value={form.priceForm}
+                onChange={(e) =>
+                  setForm((s) => ({ ...s, priceForm: e.target.value as ContractPriceForm | '' }))
+                }
+                className={cn(FIELD_BOX, 'w-full')}
+              >
+                <option value="">Mọi hình thức giá</option>
+                {CONTRACT_PRICE_FORMS.map((p) => (
+                  <option key={p} value={p}>
+                    {CONTRACT_PRICE_FORM_LABELS[p]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </>
+        )}
+        {form.kind === 'bao_gia' && (
+          <p className="text-sm text-fg-subtle sm:col-span-2 lg:col-span-2">
+            Mẫu báo giá dùng cho mọi báo giá của pháp nhân. Lưu xong, mẫu này thay mẫu DEMO; báo giá
+            đã gửi khách giữ mẫu lúc gửi.
+          </p>
+        )}
         <Field label="Tên mẫu" required>
           <Input
             value={form.title}
@@ -378,7 +420,8 @@ function UploadForm({ onDone }: { onDone: () => void }) {
       {check?.ok && (
         <p className="mt-3 flex items-center gap-2 text-status-completed">
           <CheckCircle2 className="size-4" aria-hidden />
-          Mẫu hợp lệ — {Object.keys(check.tags).length} chỗ trống hệ thống điền được.
+          Mẫu {form.kind === 'bao_gia' ? 'báo giá' : 'hợp đồng'} hợp lệ —{' '}
+          {Object.keys(check.tags).length} chỗ trống hệ thống điền được.
         </p>
       )}
       {error && (
@@ -404,6 +447,60 @@ function UploadForm({ onDone }: { onDone: () => void }) {
 }
 
 // ---------------------------------------------------------------------------------------------
+
+type UploadKind = 'hop_dong' | 'bao_gia';
+
+/** Mẫu báo giá DEMO (cùng tệp seed nạp, `db/seed-assets/quote-templates/build.mjs`) — để NVG sửa từ đó. */
+const QUOTE_SAMPLE_URL = '/mau/bao-gia-vi-du.docx';
+
+async function downloadQuoteSample(setError: (m: string | null) => void) {
+  setError(null);
+  try {
+    const res = await fetch(QUOTE_SAMPLE_URL);
+    if (!res.ok) throw new Error(String(res.status));
+    saveBlob(await res.blob(), 'Mau bao gia vi du.docx');
+  } catch {
+    setError('Không tải được mẫu báo giá ví dụ. Kiểm tra mạng rồi thử lại.');
+  }
+}
+
+function QuotePlaceholderGuide() {
+  return (
+    <details className="mt-3 rounded-card bg-surface p-4">
+      <summary className="cursor-pointer font-medium">Cách viết chỗ trống — mẫu báo giá</summary>
+      <div className="mt-3 space-y-1 text-sm">
+        <p>
+          Bắt đầu từ «Tải mẫu báo giá ví dụ», sửa câu chữ và định dạng trong Word, giữ tên chỗ trống
+          trong cặp ngoặc nhọn. Ô chưa có dữ liệu in dải chấm.
+        </p>
+        <p>
+          Bảng hạng mục: đặt <code>{'{#hang_muc}'}</code> ở ô đầu và <code>{'{/hang_muc}'}</code> ở
+          ô cuối của MỘT hàng bảng — mỗi hạng mục thành một hàng. Ô trong hàng:{' '}
+          {QUOTE_LOOP_COLUMNS.map(([k, label], i) => (
+            <span key={k}>
+              {i > 0 && ', '}
+              <code>{`{${k}}`}</code> ({label.toLowerCase()})
+            </span>
+          ))}
+          .
+        </p>
+        <p>
+          Số tiền (đơn giá, thành tiền, giảm giá, thuế, tổng) lấy từ báo giá đã duyệt; câu chữ (giới
+          thiệu, điều kiện, thanh toán, thời gian, lời kết, người ký) Kinh doanh sửa được trên bản
+          xem trước.
+        </p>
+      </div>
+      <ul className="mt-3 grid gap-x-4 gap-y-0.5 text-sm sm:grid-cols-2 lg:grid-cols-3">
+        {QUOTE_TEMPLATE_FIELDS.map((f) => (
+          <li key={f.key}>
+            <code>{f.key === 'hang_muc' ? '{#hang_muc}…{/hang_muc}' : `{${f.key}}`}</code>{' '}
+            <span className="text-fg-subtle">— {f.label}</span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
 
 function PlaceholderGuide() {
   const groups = Object.keys(TEMPLATE_FIELD_GROUP_LABELS) as TemplateFieldGroup[];

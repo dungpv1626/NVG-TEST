@@ -44,7 +44,13 @@ import {
 import { rankTemplates, useTemplatesForContract } from '@/hooks/use-contract-templates';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useContractTermSources } from '@/hooks/use-quotes';
-import { templatePrintsAny, useChosenTemplate } from './chosen-template';
+import {
+  scopeFreeField,
+  templatePrintsAny,
+  useChosenTemplate,
+  useFreeFieldFill,
+} from './chosen-template';
+import { ScopeToDocument, scopeText } from './scope-to-document';
 import { PREVIEW_KEYS_ATTR, PREVIEW_LABEL_ATTR, termPreviewKeys } from './preview-follow';
 
 interface TermForm {
@@ -149,6 +155,8 @@ export function TermsPanel({
   const chosenTemplate = useChosenTemplate();
   const printedBy = (type: ContractTermType) =>
     !chosenTemplate || templatePrintsAny(chosenTemplate.tags, termPreviewKeys(type).split(' '));
+  const freeFill = useFreeFieldFill();
+  const scopeTarget = scopeFreeField(chosenTemplate?.free_fields);
   const templates = useTemplatesForContract(readOnly ? undefined : companyId, contractType);
   // Mẫu Word có bảng các đợt → gợi ý «Tiến độ thanh toán» theo đúng mốc mẫu đề xuất (0185).
   const milestoneTemplate =
@@ -335,13 +343,31 @@ export function TermsPanel({
                 </span>
               )}
             </div>
-            {!printedBy(type) && (
-              <p className="-mt-1 mb-3 rounded-field bg-pill px-3 py-2 text-sm text-ink-subtle">
-                Mẫu đang chọn không in dòng của phần này — câu chữ đã viết sẵn trong mẫu. Dòng ghi ở
-                đây chỉ lưu trên hồ sơ (nhắc hạn, đối chiếu). Muốn văn bản đổi: bấm chỗ vàng của
-                phần này trên văn bản, hoặc điền ở «3. Nội dung riêng».
-              </p>
-            )}
+            {!printedBy(type) &&
+              (type === 'pham_vi' && scopeTarget && freeFill && !readOnly ? (
+                <ScopeToDocument
+                  field={scopeTarget}
+                  text={scopeText(rows)}
+                  current={freeFill.valueOf(scopeTarget.key)}
+                  onFill={(value) => {
+                    freeFill.fill(scopeTarget.key, value);
+                    // Cho bản xem trước dựng lại rồi cuộn tới chỗ vừa điền.
+                    setTimeout(
+                      () =>
+                        document
+                          .querySelector(`[data-key="${scopeTarget.key}"]`)
+                          ?.scrollIntoView({ block: 'center', behavior: 'smooth' }),
+                      400,
+                    );
+                  }}
+                />
+              ) : (
+                <p className="-mt-1 mb-3 rounded-field bg-pill px-3 py-2 text-sm text-ink-subtle">
+                  Mẫu đang chọn không in dòng của phần này — câu chữ đã viết sẵn trong mẫu. Dòng ghi
+                  ở đây chỉ lưu trên hồ sơ (nhắc hạn, đối chiếu). Muốn văn bản đổi: bấm chỗ vàng của
+                  phần này trên văn bản, hoặc điền ở «3. Nội dung riêng».
+                </p>
+              ))}
 
             {suggestion && !formOpen && (
               <div className="mb-3 rounded-sm border border-status-progress bg-status-progress-bg px-3 py-2">

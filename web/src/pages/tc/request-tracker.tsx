@@ -14,6 +14,7 @@ import { BellRing } from 'lucide-react';
 import {
   PURCHASE_REQUEST_STAGE_META,
   RFI_STATUS_LABEL,
+  SITE_CHANGE_STATUS_META,
   formatDate,
   formatDateTime,
   formatDeadline,
@@ -23,6 +24,7 @@ import {
   toNvgTimeInput,
   type PurchaseRequestStage,
   type RfiStatus,
+  type SiteChangeDisplayStatus,
 } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
@@ -58,7 +60,8 @@ export function nudgeAvailability(
   const officeHolds =
     row.holder_kind === 'approver' ||
     row.holder_kind === 'purchasing' ||
-    row.holder_kind === 'answerer';
+    row.holder_kind === 'answerer' ||
+    row.holder_kind === 'office';
   if (row.is_closed || !officeHolds || !canAct) {
     return { visible: false, allowed: false, reason: null };
   }
@@ -116,13 +119,19 @@ function RequestCard({
 
   // Hai loại dòng (0154): đề nghị mua và yêu cầu làm rõ — khác nhãn bước, đường dẫn, ý nghĩa ngày.
   const isRfi = row.entity_type === 'rfis';
+  // Đề xuất phát sinh (0241): bước là trạng thái hiển thị đã suy ở CSDL, không có giá.
+  const change =
+    row.entity_type === 'site_change_proposals'
+      ? SITE_CHANGE_STATUS_META[row.stage as SiteChangeDisplayStatus]
+      : null;
   const stage = row.stage as PurchaseRequestStage;
   const canAct = row.requested_by === meId || canEditSite;
   const availability = nudgeAvailability(row, canAct);
   const officeHolds =
     row.holder_kind === 'approver' ||
     row.holder_kind === 'purchasing' ||
-    row.holder_kind === 'answerer';
+    row.holder_kind === 'answerer' ||
+    row.holder_kind === 'office';
 
   async function onNudge() {
     setNotice(null);
@@ -146,7 +155,13 @@ function RequestCard({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <Link
-            to={isRfi ? `/lam-ro/${row.entity_id}` : `/mh/de-nghi-mua/${row.entity_id}`}
+            to={
+              change
+                ? `/tc/cong-trinh/${row.site_id}?tab=phat-sinh`
+                : isRfi
+                  ? `/lam-ro/${row.entity_id}`
+                  : `/mh/de-nghi-mua/${row.entity_id}`
+            }
             className="font-medium text-brand underline-offset-4 hover:underline"
           >
             {row.code ?? 'Mở đề nghị'}
@@ -160,18 +175,22 @@ function RequestCard({
         </div>
         <StatusLozenge
           status={
-            isRfi
-              ? rfiDisplayStatus(row.stage as RfiStatus, row.needed_date ?? '')
-              : purchaseRequestDisplayStatus(stage, row.needed_date)
+            change
+              ? change.statusGroup
+              : isRfi
+                ? rfiDisplayStatus(row.stage as RfiStatus, row.needed_date ?? '')
+                : purchaseRequestDisplayStatus(stage, row.needed_date)
           }
         />
       </div>
 
       <dl className="grid gap-1 text-sm sm:grid-cols-2">
         <Line label="Bước hiện tại">
-          {isRfi
-            ? `Yêu cầu làm rõ — ${RFI_STATUS_LABEL[row.stage as RfiStatus]}`
-            : PURCHASE_REQUEST_STAGE_META[stage].label}
+          {change
+            ? `Đề xuất phát sinh — ${change.label}`
+            : isRfi
+              ? `Yêu cầu làm rõ — ${RFI_STATUS_LABEL[row.stage as RfiStatus]}`
+              : PURCHASE_REQUEST_STAGE_META[stage].label}
         </Line>
         {holder && <Line label="Đang giữ">{holder}</Line>}
         {!row.is_closed && row.waiting_since && (

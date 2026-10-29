@@ -56,6 +56,13 @@ import {
 } from './acceptance-checklist-field';
 import { PhotoStrip } from './site-photo-picker';
 import { SignAcceptanceForm, printAcceptance } from './acceptance-sign';
+import { useCreateSiteIssues, useSiteIssues } from '@/hooks/use-site-changes';
+import {
+  AcceptanceIssues,
+  IssueDraftRows,
+  issueRowsFromDrafts,
+  type IssueDraft,
+} from './site-issue-panel';
 
 /** Kết quả từng mục của một biên bản đã ký — chỉ đọc. */
 export function ChecklistResults({ acceptanceId }: { acceptanceId: string }) {
@@ -89,7 +96,15 @@ export function ChecklistResults({ acceptanceId }: { acceptanceId: string }) {
 
 const TODAY = () => toNvgDateInput(new Date());
 
-export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly: boolean }) {
+export function AcceptancePanel({
+  siteId,
+  companyId,
+  readOnly,
+}: {
+  siteId: string;
+  companyId: string;
+  readOnly: boolean;
+}) {
   const promptDialog = usePromptDialog();
   const { data: records } = useAcceptanceRecords(siteId);
   const { data: crews } = useSubcontractors(siteId);
@@ -100,6 +115,11 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
   const [answers, setAnswers] = useState<ChecklistAnswers>({});
   const [saving, setSaving] = useState(false);
   const cancelAcceptance = useCancelAcceptance();
+  const createIssues = useCreateSiteIssues();
+  const { data: siteIssues } = useSiteIssues(siteId);
+  const recordsWithIssueRows = new Set((siteIssues ?? []).map((i) => i.acceptance_record_id));
+  // T2 (0241): mỗi tồn tại một dòng có người xử lý và hạn, thay ô chữ tự do.
+  const [issueDrafts, setIssueDrafts] = useState<IssueDraft[]>([]);
 
   const [adding, setAdding] = useState(false);
   const [signingId, setSigningId] = useState<string | null>(null);
@@ -112,7 +132,6 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
     acceptedDate: TODAY(),
     subcontractorId: '',
     counterpartSignedBy: '',
-    outstandingIssues: '',
   });
 
   const needsBilling = triggersBilling(form.acceptanceType);
@@ -127,10 +146,10 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
       acceptedDate: TODAY(),
       subcontractorId: '',
       counterpartSignedBy: '',
-      outstandingIssues: '',
     });
     setChecklistId('');
     setAnswers({});
+    setIssueDrafts([]);
     setError(null);
     setAdding(true);
   }
@@ -151,6 +170,20 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
       }
     }
     setSaving(true);
+    // Biên bản in vẫn ghi tồn tại bằng chữ (ô `outstanding_issues`) — chép từ các dòng tồn tại.
+    const issuesText =
+      issueDrafts
+        .map((d) => d.description.trim())
+        .filter(Boolean)
+        .map((t, i, all) => (all.length > 1 ? `${i + 1}. ${t}` : t))
+        .join('\n') || null;
+    const saveIssues = async (acceptanceRecordId: string) => {
+      const rows = await issueRowsFromDrafts(
+        issueDrafts.map((d) => ({ ...d, workItem: d.workItem || form.stageName.trim() })),
+        { siteId, companyId, acceptanceRecordId },
+      );
+      await createIssues.mutateAsync(rows);
+    };
     try {
       if (checklist) {
         // Ảnh tải TRƯỚC, biên bản ghi SAU — biên bản đã ký không bao giờ trỏ vào ảnh chưa có.
@@ -177,8 +210,9 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
           acceptedDate: form.acceptedDate || null,
           subcontractorId: form.subcontractorId || null,
           counterpartSignedBy: form.counterpartSignedBy.trim() || null,
-          outstandingIssues: form.outstandingIssues.trim() || null,
+          outstandingIssues: issuesText,
         });
+        await saveIssues(newId);
         setAdding(false);
         setSigningId(newId);
         return;
@@ -192,8 +226,9 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
         acceptedDate: form.acceptedDate || null,
         subcontractorId: form.subcontractorId || null,
         counterpartSignedBy: form.counterpartSignedBy.trim() || null,
-        outstandingIssues: form.outstandingIssues.trim() || null,
+        outstandingIssues: issuesText,
       });
+      await saveIssues(newId);
       setAdding(false);
       setSigningId(newId);
     } catch (e) {
@@ -356,13 +391,16 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
             <Field
               label="Tồn tại cần khắc phục"
               className="sm:col-span-2"
-              hint="Ghi ngay trên biên bản — đây là chỗ hay bị bỏ quên nhất khi bàn giao."
+              group
+              hint="Mỗi tồn tại một dòng có người xử lý và hạn — theo dõi tới khi chụp ảnh khắc phục xong. Không chặn bàn giao."
             >
-              <textarea
-                value={form.outstandingIssues}
-                onChange={(e) => setForm((f) => ({ ...f, outstandingIssues: e.target.value }))}
-                rows={2}
-                className="w-full rounded-field border border-border-strong bg-surface px-3 py-2"
+              <IssueDraftRows
+                siteId={siteId}
+                companyId={companyId}
+                drafts={issueDrafts}
+                onChange={setIssueDrafts}
+                disabled={saving}
+                defaultWorkItem={form.stageName}
               />
             </Field>
           </div>
@@ -418,13 +456,14 @@ export function AcceptancePanel({ siteId, readOnly }: { siteId: string; readOnly
                 </p>
               )}
 
-              {r.outstanding_issues && (
+              {r.outstanding_issues && !recordsWithIssueRows.has(r.id) && (
                 <p className="mt-2 rounded-sm bg-status-pending-bg px-3 py-2 text-status-pending">
                   Tồn tại cần khắc phục: {r.outstanding_issues}
                 </p>
               )}
 
               <ChecklistResults acceptanceId={r.id} />
+              <AcceptanceIssues siteId={siteId} acceptanceId={r.id} readOnly={readOnly} />
 
               {r.cancel_reason && (
                 <p className="mt-2 text-status-overdue">Đã hủy: {r.cancel_reason}</p>

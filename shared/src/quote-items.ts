@@ -358,3 +358,38 @@ export const QUOTE_TEMPLATE_FIELDS: readonly { key: string; label: string }[] = 
   { key: 'nguoi_lap', label: 'Người lập báo giá' },
   { key: 'nguoi_lap_dien_thoai', label: 'Điện thoại người lập' },
 ];
+
+/** Cột của bảng lặp `{#hang_muc}…{/hang_muc}` — đúng các khoá `buildQuoteDocumentData` đưa vào mỗi dòng. */
+export const QUOTE_LOOP_COLUMNS: readonly (readonly [string, string])[] = [
+  ['stt', 'Số thứ tự'],
+  ['noi_dung', 'Hạng mục'],
+  ['don_vi', 'Đơn vị'],
+  ['khoi_luong', 'Khối lượng'],
+  ['don_gia', 'Đơn giá'],
+  ['thanh_tien', 'Thành tiền'],
+];
+
+const QUOTE_FIELD_KEYS: ReadonlySet<string> = new Set(QUOTE_TEMPLATE_FIELDS.map((f) => f.key));
+const QUOTE_LOOP_KEYS: ReadonlySet<string> = new Set(QUOTE_LOOP_COLUMNS.map(([k]) => k));
+
+/**
+ * Chỗ trống lạ trong một mẫu Word BÁO GIÁ (cây chỗ trống như `inspectTemplate` đọc): khoá không có trong
+ * `QUOTE_TEMPLATE_FIELDS`, cột lạ trong bảng `hang_muc`, hoặc bảng lặp nào khác `hang_muc`.
+ */
+export function unknownQuoteTemplateTags(tags: Readonly<Record<string, unknown>>): string[] {
+  const unknown: string[] = [];
+  for (const [key, inner] of Object.entries(tags)) {
+    if (!QUOTE_FIELD_KEYS.has(key)) {
+      unknown.push(key);
+      continue;
+    }
+    const cols = inner && typeof inner === 'object' ? Object.keys(inner) : [];
+    if (key === 'hang_muc') {
+      for (const col of cols) if (!QUOTE_LOOP_KEYS.has(col)) unknown.push(`${key}.${col}`);
+    } else {
+      // Một ô thường bị dùng như bảng lặp ({#tong_cong}…{/tong_cong}) — bộ điền không lặp được.
+      for (const col of cols) unknown.push(`${key}.${col}`);
+    }
+  }
+  return unknown;
+}

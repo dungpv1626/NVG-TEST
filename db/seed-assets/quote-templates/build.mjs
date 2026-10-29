@@ -315,8 +315,6 @@ const TAGS = (() => {
     'nvg_ma_so_thue',
     'nvg_dien_thoai',
     'nvg_email',
-    'nvg_dai_dien',
-    'nvg_chuc_vu',
     'so_bao_gia',
     'phien_ban',
     'ngay_bao_gia',
@@ -361,6 +359,12 @@ for (const code of ['NVC', 'NVO', 'NVS']) {
   const { buffer, sha } = buildDocx();
   const file = `${code}-BG-01_Bao_gia.docx`;
   writeFileSync(new URL(file, dir), buffer);
+  // Bản ví dụ cho trang Mẫu hợp đồng («Tải mẫu báo giá ví dụ», 0240) — cùng nội dung ba pháp nhân.
+  if (code === 'NVC') {
+    const sampleDir = new URL('../../../web/public/mau/', import.meta.url);
+    mkdirSync(sampleDir, { recursive: true });
+    writeFileSync(new URL('bao-gia-vi-du.docx', sampleDir), buffer);
+  }
   const manifest = [
     {
       file,

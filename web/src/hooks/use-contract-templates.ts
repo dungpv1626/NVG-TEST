@@ -118,14 +118,26 @@ export function useUploadContractTemplate() {
     {
       companyId: string;
       title: string;
-      contractType: ContractType;
+      /** Rỗng với mẫu báo giá (0240). */
+      contractType: ContractType | null;
+      /** hop_dong (mặc định) hoặc bao_gia — 0240. */
+      documentKind?: 'hop_dong' | 'bao_gia';
       priceForm: ContractPriceForm | null;
       file: File;
       tags: TemplateTags;
       notes: string | null;
     }
   >({
-    mutationFn: async ({ companyId, title, contractType, priceForm, file, tags, notes }) => {
+    mutationFn: async ({
+      companyId,
+      title,
+      contractType,
+      documentKind = 'hop_dong',
+      priceForm,
+      file,
+      tags,
+      notes,
+    }) => {
       const path = `${companyId}/${crypto.randomUUID()}.docx`;
       const up = await supabase.storage
         .from(TEMPLATE_BUCKET)
@@ -140,8 +152,9 @@ export function useUploadContractTemplate() {
         .insert({
           company_id: companyId,
           title,
-          contract_type: contractType,
-          price_form: priceForm,
+          contract_type: documentKind === 'bao_gia' ? null : contractType,
+          document_kind: documentKind,
+          price_form: documentKind === 'bao_gia' ? null : priceForm,
           storage_path: path,
           file_name: file.name,
           tags,

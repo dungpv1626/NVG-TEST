@@ -12,11 +12,20 @@ import { supabase } from '@/lib/supabase';
  * `answerer` = bên được hỏi của một yêu cầu làm rõ (Thiết kế / Dự án); `external` = chủ đầu tư —
  * người ngoài hệ thống, không thúc được (0154).
  */
-export type RequestHolderKind = 'requester' | 'approver' | 'purchasing' | 'answerer' | 'external';
+export type RequestHolderKind =
+  | 'requester'
+  | 'approver'
+  | 'purchasing'
+  | 'answerer'
+  | 'external'
+  /** Đề xuất phát sinh (0241): văn phòng (người chịu trách nhiệm hợp đồng) đang giữ — thúc được. */
+  | 'office'
+  /** Đề xuất phát sinh đang chờ phê duyệt — người gửi phát sinh (văn phòng) thúc, không phải công trường. */
+  | 'reviewer';
 
 export interface SiteRequestRow {
-  /** Đề nghị mua (0134) hoặc yêu cầu làm rõ (0154). */
-  entity_type: 'purchase_requests' | 'rfis';
+  /** Đề nghị mua (0134), yêu cầu làm rõ (0154) hoặc đề xuất phát sinh (0241). */
+  entity_type: 'purchase_requests' | 'rfis' | 'site_change_proposals';
   entity_id: string;
   code: string | null;
   title: string;

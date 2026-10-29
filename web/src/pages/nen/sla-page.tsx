@@ -51,12 +51,19 @@ import { NenNav } from './nen-nav';
  * công trường vẫn chờ — hiện có «Mua hàng lập đơn sau khi đề nghị đã duyệt» (TC-10,
  * `site_request_tracker` đọc loại `purchase_ordering`).
  */
-type SlaRequestType = ApprovalSubject | 'purchase_ordering';
+type SlaRequestType = ApprovalSubject | 'purchase_ordering' | 'site_change_proposal';
 
-const SLA_REQUEST_TYPES: readonly SlaRequestType[] = [...APPROVAL_SUBJECTS, 'purchase_ordering'];
+const SLA_REQUEST_TYPES: readonly SlaRequestType[] = [
+  ...APPROVAL_SUBJECTS,
+  'purchase_ordering',
+  'site_change_proposal',
+];
 
 function slaTypeLabel(type: string): string {
   if (type === 'purchase_ordering') return 'Mua hàng lập đơn sau khi đề nghị được duyệt';
+  // 0241: từ lúc công trường gửi đề xuất phát sinh tới khi văn phòng trình duyệt phát sinh.
+  if (type === 'site_change_proposal')
+    return 'Văn phòng lập báo giá phát sinh từ đề xuất của công trường';
   return APPROVAL_SUBJECT_LABELS[type as ApprovalSubject] ?? type;
 }
 

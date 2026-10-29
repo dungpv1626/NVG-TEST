@@ -1130,6 +1130,31 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   `EMAIL_FROM` ở `.dev.vars`; thiếu khoá hoặc `EMAIL_FAKE=1` = GIẢ LẬP) → `outbound_shares` (`via = 'he_thong'`, `simulated`,
   chỉ Worker ghi) → `send_quote_to_customer` (cơ hội sang Đàm phán). Chưa có khoá Resend — mọi email hiện là giả lập. Phép
   thử `db/.../bao-gia-hang-muc.test.ts` (9, ba đột biến đã đo đỏ), ảnh `backup/bao-gia/` (kịch bản `chay-thu.cjs`).
+  **0240 — NVG tự tải mẫu báo giá:** trang Mẫu hợp đồng có ô «Loại văn bản» Hợp đồng / Báo giá; mẫu báo giá kiểm theo
+  `unknownQuoteTemplateTags` (danh mục `QUOTE_TEMPLATE_FIELDS` + cột `QUOTE_LOOP_COLUMNS`, phép thử canh khớp hai chiều với
+  `buildQuoteDocumentData`), «Tải mẫu báo giá ví dụ» (`web/public/mau/bao-gia-vi-du.docx`, build.mjs ghi), bảng «Cách viết
+  chỗ trống — mẫu báo giá». Chọn mẫu ở CSDL: `quote_template_for` (mẫu người tải lên trước mẫu DEMO; báo giá đã gửi giữ
+  `quotes.template_id` ghi lúc gửi — không hồi tố). Quyền giữ `auth_can_manage_contract_templates`. Phép thử
+  `bao-gia-mau-tai-len.test.ts`, `web/src/lib/__tests__/quote-template-assets.test.ts`; chạy thử `backup/bao-gia/mau-tai-len.cjs`.
+- **Thi công theo phiếu khảo sát — T1 + T2 (0241, 29/10/2026, `doc/KE_HOACH_THI_CONG_THEO_KHAO_SAT.md`):** T1 chỉ huy trưởng
+  lập «Đề xuất phát sinh» trên điện thoại (tab «Phát sinh» của công trình, `site-change-panel.tsx`): nguyên nhân bấm chọn, mô
+  tả, vị trí, ảnh (`construction-photos/<công trình>/phat-sinh/`), số đo, khối lượng (numeric + đơn vị), số ngày ảnh hưởng —
+  bảng `site_change_proposals` KHÔNG có cột tiền. Gửi xong báo người chịu trách nhiệm hợp đồng (không có thì người phê duyệt
+  HD); họ «Lập phát sinh» ở đầu tab Phát sinh của hợp đồng (`hd/site-change-inbox.tsx`, `convert_site_change_proposal`) → một
+  dòng `contract_amendments` (liên kết hai chiều `amendment_id` / `site_change_proposal_id`), luồng phát sinh + phụ lục 0229
+  giữ nguyên; hoặc «Không lập» kèm lý do. Thi công xem trạng thái + ai giữ qua `site_change_proposal_states` (SECURITY DEFINER,
+  không cột tiền, kiểm `rls_site_readable`); đề xuất vào `site_request_tracker` (nguồn thứ ba, «Thúc» được khi văn phòng giữ —
+  `nudge_request` chép 0154 thêm loại mới). Văn phòng xem ảnh qua chính sách kho riêng. Khẩn cấp: người cho phép phải
+  `user_is_site_superior` (vai trò không giới hạn công trường + phê duyệt TC, trừ Quản trị) và TỰ ghi nhận
+  (`authorize_site_change_emergency`) — trigger chặn chỉ huy trưởng tự cho phép / ghi tên sếp. SLA loại `site_change_proposal`
+  (trang Thời hạn xử lý; để trống = không đồng hồ). T2 `site_issues`: tồn tại một dòng (hạng mục, ảnh trước, tổ đội của
+  công trình HOẶC người Thi công, hạn — tham số `tc.issue_fix_days` TRỐNG), đóng bắt buộc ảnh sau sửa, máy ghi người + giờ,
+  đã đóng bất biến; ghi trong biểu mẫu nghiệm thu (thay ô chữ, ô `outstanding_issues` vẫn được chép để in) và tab «Tồn tại»;
+  `tc_site_board` (chép bản 0193) thêm `open_issues` / `overdue_issues` → «Cần chú ý». Tồn tại chưa đóng CHỈ NHẮC (nhãn «Nhắc»
+  trên thẻ Bước tiếp theo, `StepRequirement.reminder`), KHÔNG vào `stage_readiness`. Phép thử `tc-phat-sinh-ton-tai.test.ts` (8;
+  ba đột biến đo đỏ: nới `user_is_site_superior`, bỏ kiểm ảnh sau sửa, bỏ `rls_site_readable` ở hàm trạng thái). Dữ liệu thử
+  `NVC-HD-2026-PS01` / `NVC-CT-2026-PS01` (chỉ huy trưởng Đỗ Văn K, tổ «Tổ nề anh Lâm»); ảnh `backup/tc-phat-sinh/` (kịch bản
+  `backup/tc-phat-sinh.cjs`). Chưa chạy trọn tới phụ lục trên trình duyệt (phép thử CSDL đã đi trọn tới «đã thực hiện»).
 - Hàm chép-dài bản mới nhất: `decide_approval` ở 0179, `stage_readiness` ở 0183, `crm_followups_for` ở 0183, `my_pending_approvals` ở 0175, hàm canh
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
@@ -1287,7 +1312,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email.
 
-**Migration tiếp theo: 0240.** (Đã dùng tới 0239; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0242.** (Đã dùng tới 0241; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 

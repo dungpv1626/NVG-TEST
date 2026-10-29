@@ -411,6 +411,8 @@ export interface AmendmentRecord {
   approved_at: string | null;
   executed_at: string | null;
   decision_notes: string | null;
+  /** Đề xuất phát sinh của công trường đã chuyển thành phát sinh này (0241). */
+  site_change_proposal_id: string | null;
   requester: { full_name: string } | null;
   authorizer: { full_name: string } | null;
 }
@@ -425,7 +427,7 @@ export function useContractAmendments(contractId: string | undefined) {
           'id, code, title, stage, content, reason, value_change, schedule_impact_days, ' +
             'quote_sent_at, customer_confirmed_at, customer_confirmed_by, is_emergency, ' +
             'emergency_authorized_by, emergency_reason, requested_at, approved_at, executed_at, ' +
-            'decision_notes, ' +
+            'decision_notes, site_change_proposal_id, ' +
             'requester:users!contract_amendments_requested_by_users_id_fk(full_name), ' +
             'authorizer:users!contract_amendments_emergency_authorized_by_users_id_fk(full_name)',
         )

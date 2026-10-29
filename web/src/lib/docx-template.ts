@@ -99,13 +99,19 @@ function open(buffer: ArrayBuffer, modules: TagCollector[] = []): Docxtemplater 
   });
 }
 
-/** Đọc mẫu: cú pháp đúng chưa, dùng những chỗ trống nào, chỗ nào hệ thống không biết. */
-export function inspectTemplate(buffer: ArrayBuffer): InspectResult {
+/**
+ * Đọc mẫu: cú pháp đúng chưa, dùng những chỗ trống nào, chỗ nào hệ thống không biết. `unknownOf` = danh mục chỗ
+ * trống của LOẠI văn bản (mặc định hợp đồng; báo giá dùng `unknownQuoteTemplateTags` — 0240).
+ */
+export function inspectTemplate(
+  buffer: ArrayBuffer,
+  unknownOf: (tags: TemplateTags) => string[] = unknownTemplateTags,
+): InspectResult {
   try {
     const collector = new TagCollector();
     open(buffer, [collector]);
     const tags = collector.tags();
-    return { ok: true, tags, unknown: unknownTemplateTags(tags) };
+    return { ok: true, tags, unknown: unknownOf(tags) };
   } catch (e) {
     return { ok: false, errors: errorsOf(e) };
   }

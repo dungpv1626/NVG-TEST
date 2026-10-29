@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildQuoteDocumentData,
+  QUOTE_LOOP_COLUMNS,
+  QUOTE_TEMPLATE_FIELDS,
+  unknownQuoteTemplateTags,
   computeQuoteTotals,
   formatQuantity,
   lineAmount,
@@ -186,5 +189,42 @@ describe('lời nhắn', () => {
   it('kiểm email thô', () => {
     expect(isEmailAddress('a.b@nhavietgroup.vn')).toBe(true);
     expect(isEmailAddress('khong-phai-email')).toBe(false);
+  });
+});
+
+describe('chỗ trống mẫu Word báo giá', () => {
+  const sample = buildQuoteDocumentData({
+    quote: {
+      code: 'X',
+      version: 1,
+      status: 'draft',
+      created_at: '2026-10-29',
+      valid_until: null,
+      notes: null,
+      total_value: 1,
+      discount_amount: null,
+      vat_rate: null,
+      vat_included: null,
+      line_items_based: true,
+    },
+    items: [{ position: 1, description: 'a', unit: null, quantity: 1, unit_price: 1, amount: 1 }],
+    company: null,
+    customer: null,
+    opportunityName: null,
+    preparedBy: null,
+  });
+  it('danh mục chỗ trống khớp đúng bộ dữ liệu điền (hai chiều)', () => {
+    expect(new Set(QUOTE_TEMPLATE_FIELDS.map((f) => f.key))).toEqual(new Set(Object.keys(sample)));
+    expect(new Set(QUOTE_LOOP_COLUMNS.map(([k]) => k))).toEqual(
+      new Set(Object.keys(sample.hang_muc[0]!)),
+    );
+  });
+  it('báo chỗ trống lạ, cột lạ, bảng lặp sai chỗ', () => {
+    expect(
+      unknownQuoteTemplateTags({ so_bao_gia: {}, hang_muc: { stt: {}, thanh_tien: {} } }),
+    ).toEqual([]);
+    expect(
+      unknownQuoteTemplateTags({ ben_a_ten: {}, hang_muc: { gia: {} }, tong_cong: { x: {} } }),
+    ).toEqual(['ben_a_ten', 'hang_muc.gia', 'tong_cong.x']);
   });
 });

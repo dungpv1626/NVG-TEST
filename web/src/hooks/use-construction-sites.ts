@@ -948,6 +948,9 @@ export interface SiteBoardRow {
   /** Phiếu bảo hành đang mở / quá hạn (2F, 0193). */
   open_warranty_claims: number;
   overdue_warranty_claims: number;
+  /** Tồn tại chưa khắc phục / quá hạn (T2, 0241). Quá hạn chỉ tính khi tồn tại có hạn. */
+  open_issues: number;
+  overdue_issues: number;
 }
 
 /** Mỗi công trình đang chạy một dòng; phạm vi do RLS quyết (hàm SECURITY INVOKER). */
