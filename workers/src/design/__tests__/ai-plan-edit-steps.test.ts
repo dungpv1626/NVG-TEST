@@ -3,6 +3,8 @@
  * sửa trỏ bản gốc. Client mô hình và kho artifact đều GIẢ — không chạm mạng, không tốn tiền.
  */
 
+import { readFileSync } from 'node:fs';
+import { fileURLToPath, URL } from 'node:url';
 import type { AiFloorPlan, AiPlanEdit } from '@nvg/shared/design';
 import { describe, expect, it } from 'vitest';
 import type { TextModelClient } from '../llm/text-client';
@@ -167,7 +169,7 @@ describe('applyEditStep', () => {
     expect(writes.map((write) => write.kind)).toEqual(['ai_floor_plan']);
   });
 
-  it('cần xếp lại bố cục: trả ý định cả nhà để gọi `revise`, không ghi gì', async () => {
+  it('cần xếp lại bố cục: là lỗi của lượt sửa — không ghi gì, KHÔNG trả ý định cho vòng `revise` (T184)', async () => {
     const relayout: AiPlanEdit = {
       ops: [{ ...nulls, op: 'relayout', level: 1, request: 'Move the kitchen to the front.' }],
       unsupported: [],
@@ -176,8 +178,32 @@ describe('applyEditStep', () => {
     const { deps, writes } = depsWith(relayout);
     const result = await applyEditStep(deps, PARAMS, VARIANT, outcomeOf(relayout));
     expect(writes).toHaveLength(0);
-    expect('relayout' in result && result.relayout).toBe('Move the kitchen to the front.');
-    expect('relayout' in result && JSON.parse(result.previousJson)).toHaveProperty('sketches');
+    expect('relayout' in result).toBe(false);
+    // Câu lỗi nói tầng, yêu cầu, và phải làm gì; còn thao tác để lời gọi lại (rẻ) nhận phản hồi.
+    expect('rejected' in result && result.rejected.join(' ')).toMatch(
+      /tầng 1 cần xếp lại bố cục .*Move the kitchen to the front.*không xếp lại cả tầng.*«Xếp mặt bằng»/,
+    );
+    expect('rejected' in result && result.opsJson).not.toBeNull();
+  });
+
+  it('bản sửa không qua cổng: câu lỗi nêu ĐÚNG thao tác làm hỏng và luật nó phá (T184)', async () => {
+    const breaking: AiPlanEdit = {
+      ops: [
+        { ...nulls, op: 'window', level: 1, room: 'bedroom_1', on: true },
+        { ...nulls, op: 'move_wall', level: 1, a: 'bedroom_1', b: 'wc_2', delta_m: 3 },
+      ],
+      unsupported: [],
+      explanation: '',
+    };
+    const { deps, writes } = depsWith(breaking);
+    const result = await applyEditStep(deps, PARAMS, VARIANT, outcomeOf(breaking));
+    expect(writes).toHaveLength(0);
+    const message = 'rejected' in result ? result.rejected.join(' ') : '';
+    expect(message).toMatch(
+      /^Thao tác «tầng 1: dời vách giữa "bedroom_1" và "wc_2" 3 m về phía "wc_2"» làm bản vẽ không qua cổng: .+/,
+    );
+    expect(message).toContain('(1 thao tác trước nó vẫn áp được.)');
+    expect('rejected' in result && result.opsJson).not.toBeNull();
   });
 
   it('thao tác không áp được: không ghi, trả lý do và thao tác để gọi lại', async () => {
@@ -216,5 +242,30 @@ describe('lời dẫn lượt sửa — gọn', () => {
     for (const id of ['bedroom_5', 'study_1', 'altar_room_1', 'bedroom_2']) {
       expect(doorLines.join(' '), id).toContain(id);
     }
+  });
+});
+
+describe('lượt sửa không bao giờ rơi vào vòng xếp lại cả nhà (T184)', () => {
+  // Lượt thật 29/10/2026 (hồ sơ 9272): AI trả thao tác `relayout`, Workflow chuyển sang `runVariant` — năm lời gọi
+  // `plan_house_revise`, 0,589 USD, không lưu gì, trong khi màn hình hứa «một lượt gọi, thêm tối đa ba lượt». Phép thử Workflow
+  // không chạy được ngoài runtime Workers, nên canh bằng mã nguồn: thân `runEdit` không gọi vòng xếp lại.
+  const source = readFileSync(
+    fileURLToPath(new URL('../workflows/ai-design.ts', import.meta.url)),
+    'utf8',
+  );
+  const start = source.indexOf('private async runEdit(');
+  const end = source.indexOf('private async writeBest(', start);
+  const body = source.slice(start, end);
+
+  it('thân runEdit tìm được', () => {
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+  });
+
+  it('runEdit chỉ gọi mô hình sửa (`proposeEdit`), không gọi `runVariant` / vòng `revise`', () => {
+    expect(body).toContain('proposeEdit(');
+    expect(body).not.toMatch(/runVariant|plan_house_revise|previousJson/);
+    // Số lời gọi tối đa đọc từ thước chấm (`kb/plan_quality.yaml` `edit_calls_max`), không viết số trong mã.
+    expect(body).toContain('deps.quality.editCallsMax');
   });
 });

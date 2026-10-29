@@ -2138,6 +2138,22 @@ const MUTATIONS: Mutation[] = [
     find: '      if (!best && prefer.wet_swap_insert) {',
     replace: '      if (false && !best && prefer.wet_swap_insert) {',
   },
+  {
+    id: 'M260',
+    axis: 'tiền gọi mô hình',
+    file: 'workers/src/design/workflows/ai-design.ts',
+    bug: 'Lượt «Sửa lại» (T184) lại gọi vòng xếp lại cả nhà — một lượt sửa 0,025 USD thành năm lời gọi plan_house_revise (0,589 USD, hồ sơ 9272)',
+    find: '    const callsMax = deps.quality.editCallsMax;',
+    replace: '    const callsMax = deps.quality.editCallsMax; void this.runVariant;',
+  },
+  {
+    id: 'M261',
+    axis: 'tiền gọi mô hình',
+    file: 'workers/src/design/workflows/ai-design-steps.ts',
+    bug: 'Thao tác «xếp lại bố cục» của lượt sửa (T184) bị lờ đi — bản sửa ghi ra thiếu đúng phần kỹ sư yêu cầu, không báo',
+    find: '  if (relayouts.length) {',
+    replace: '  if (false && relayouts.length) {',
+  },
 ];
 
 /** Thư mục mã nguồn được băm trước và sau khi chạy. `db/` không đụng tới nên không băm. */

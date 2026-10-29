@@ -96,6 +96,13 @@ feasibility_max_percent: 85
 # y hệt) không bắt được vì lỗi phụ đổi mỗi lượt. Không phải luật nghề — là chỗ dừng tiêu tiền. Vắng = tắt.
 revision_stop_same_main_issue_rounds: 3
 
+# Lượt «Sửa lại» theo yêu cầu kỹ sư (T53, T184): số lời gọi mô hình TỐI ĐA — lời gọi đầu + lời gọi lại khi thao tác không
+# qua cổng (Haan 17/09/2026: «sửa đến lần thứ 4»). Mọi lời gọi là loại rẻ `plan_house_edit` (đọc yêu cầu thành thao tác);
+# lượt sửa KHÔNG BAO GIỜ rơi vào vòng xếp lại cả nhà (`plan_house_revise`) — lượt thật 29/10/2026 hồ sơ 9272: một lượt sửa
+# 0,025 USD rơi vào năm lời gọi xếp lại, tổng 0,589 USD, đắt hơn cả lượt xếp mới (0,429). Trần tiền của lượt sửa vì thế là
+# số này × tiền một lời gọi sửa. Vắng = 1 (không gọi lại).
+edit_calls_max: 4
+
 # ── Trọng số nhóm ──────────────────────────────────────────────────────────────
 #
 # Y NGUYÊN bộ đo, không tự chỉnh (mặc định số 4 của phương án). Hai chỗ đáng để ý,

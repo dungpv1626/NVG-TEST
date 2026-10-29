@@ -68,6 +68,8 @@ export interface AiModelCatalogue {
     runCostCapUsd?: number | null;
     /** Số token ra tối thiểu của một lời gọi khi bị hạ cho vừa mức (T176, `billing.call_cap`). Vắng ở máy chủ cũ. */
     callMinOutputTokens?: number | null;
+    /** Số lời gọi tối đa của một lượt «Sửa lại» (T184) — mọi lời gọi là loại sửa rẻ. Vắng ở máy chủ cũ. */
+    editCallsMax?: number;
   };
 }
 

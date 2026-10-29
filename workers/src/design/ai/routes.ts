@@ -163,6 +163,9 @@ aiApp.get('/models', async (c) => {
       ),
       // Số token ra tối thiểu của trần từng lời gọi (T176) — để hộp hỏi tính cùng hàm Worker chặn.
       callMinOutputTokens: modelRouter(c.env).callCap?.min_output_tokens ?? null,
+      // Số lời gọi TỐI ĐA của một lượt «Sửa lại» (T184, `kb/plan_quality.yaml` `edit_calls_max`) — mọi lời gọi là loại rẻ
+      // `plan_house_edit`, nên trần tiền = số này × tiền một lời gọi sửa.
+      editCallsMax: planQuality().editCallsMax,
     },
   });
 });

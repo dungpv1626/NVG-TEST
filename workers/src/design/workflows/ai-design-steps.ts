@@ -28,7 +28,7 @@ import type {
   AiPlanEdit,
   AiSpaceProgram,
 } from '@nvg/shared/design';
-import { applyPlanEdits } from '../ai/edit/apply';
+import { applyPlanEdits, explainEditFailure } from '../ai/edit/apply';
 import { stampRenamedRoomLabels } from '../ai/room-labels';
 import { callEditModel } from '../ai/edit/prompt';
 import { AI_DIGEST_DATA_CLASS } from '../brief/anonymise';
@@ -1029,10 +1029,7 @@ export async function proposeEdit(
 }
 
 export type EditApplyOutcome =
-  | { written: WriteOutcome }
-  /** Yêu cầu cần đổi bố cục: luồng gửi lại ý định cả nhà cho lượt `revise`. */
-  | { relayout: string; previousJson: string }
-  | { rejected: string[]; opsJson: string | null };
+  { written: WriteOutcome } | { rejected: string[]; opsJson: string | null };
 
 /**
  * Áp thao tác lên bản gốc, và ghi bản sửa khi qua cổng — MỘT bước: `repo.write` băm nội dung nên chạy
@@ -1055,19 +1052,17 @@ export async function applyEditStep(
   const edit = JSON.parse(proposal.editJson) as AiPlanEdit;
   const base = await loadEditBase(deps, params);
 
-  const relayout = edit.ops.find((op) => op.op === 'relayout');
-  if (relayout) {
-    if (!base.plan.house_intent) {
-      return {
-        rejected: [
-          'Yêu cầu này cần xếp lại bố cục, nhưng phương án được tạo trước khi lưu ý định cả nhà — chạy lại mặt bằng rồi sửa.',
-        ],
-        opsJson: null,
-      };
-    }
+  // Thao tác «xếp lại bố cục» (T184): lượt sửa KHÔNG xếp lại cả tầng — trước đây nó rơi vào vòng `plan_house_revise` của
+  // lượt xếp mới (lượt thật 29/10/2026 hồ sơ 9272: 0,025 USD lời gọi sửa + năm lời gọi xếp lại, 0,589 USD, không lưu gì).
+  // Nay là một lỗi của lượt sửa: luồng gọi lại MÔ HÌNH SỬA (rẻ) kèm câu này, hết lượt thì dừng và nói rõ phải làm gì.
+  const relayouts = edit.ops.filter((op) => op.op === 'relayout');
+  if (relayouts.length) {
     return {
-      relayout: relayout.request ?? params.edit!.instruction,
-      previousJson: JSON.stringify(base.plan.house_intent),
+      rejected: relayouts.map(
+        (op) =>
+          `Yêu cầu ở tầng ${op.level} cần xếp lại bố cục («${op.request ?? params.edit!.instruction}») — lượt sửa chỉ dời cửa, vách, cửa sổ, đổi chỗ hay nới phòng trên bản vẽ đã lưu, không xếp lại cả tầng. Diễn đạt bằng những thao tác ấy; phần nào chỉ làm được bằng xếp lại thì chạy lại «Xếp mặt bằng» kèm yêu cầu.`,
+      ),
+      opsJson: JSON.stringify(edit.ops),
     };
   }
   if (edit.ops.length === 0) {
@@ -1081,7 +1076,7 @@ export async function applyEditStep(
     };
   }
 
-  const result = applyPlanEdits({
+  const editInput = {
     base: base.plan,
     program: base.program,
     ops: edit.ops,
@@ -1090,8 +1085,12 @@ export async function applyEditStep(
     call: proposal.call,
     route: params.textRoute,
     promptVersion: deps.prompts.version,
-  });
-  if (!result.final) return { rejected: result.issues, opsJson: JSON.stringify(edit.ops) };
+  };
+  const result = applyPlanEdits(editInput);
+  // Không qua cổng: nói thao tác nào làm hỏng luật nào (T184) — câu này vừa cho kỹ sư, vừa là phản hồi của lời gọi lại.
+  if (!result.final) {
+    return { rejected: explainEditFailure(editInput, result), opsJson: JSON.stringify(edit.ops) };
+  }
 
   const scope = scopeOf(params);
   const programChanged = JSON.stringify(result.program) !== JSON.stringify(base.program);

@@ -213,6 +213,24 @@ export function planRunUnits(result: unknown): number | null {
   return plans + failed > 0 ? plans + failed : null;
 }
 
+/**
+ * Tiền TRUNG BÌNH một lời gọi đã trả thật (T184): cho lượt «Sửa lại», mỗi lời gọi là một `plan_house_edit` đứng riêng, nên không
+ * cần gom theo lượt chạy — lượt sửa hỏng (không ghi kết quả) vẫn có lời gọi đã trả tiền thật. Cùng tuyến mô hình; lời gọi lỗi
+ * không trả token thì bỏ (không tốn tiền); dòng chưa có giá niêm yết thì bỏ, không coi là 0. Chưa có dòng nào → `null`.
+ */
+export function estimateFromCalls(
+  calls: readonly CostCallRow[],
+  options: { route: string; purposes: readonly string[] },
+): CostEstimate | null {
+  const purposes = new Set(options.purposes);
+  const priced = billedCalls(
+    calls.filter((call) => call.route === options.route && purposes.has(call.purpose)),
+  ).filter((call) => call.costUsd !== null);
+  if (priced.length === 0) return null;
+  const avg = priced.reduce((sum, call) => sum + (call.costUsd ?? 0), 0) / priced.length;
+  return { perUnitUsd: avg, samples: priced.length, basis: 'history', perCallUsd: avg };
+}
+
 /** Lượt sửa theo yêu cầu kỹ sư (T53) — một bản sửa mỗi lượt. */
 export function editRunUnits(result: unknown): number | null {
   return result && typeof result === 'object' ? 1 : null;

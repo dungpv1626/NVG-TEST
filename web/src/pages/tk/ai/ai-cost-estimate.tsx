@@ -11,6 +11,7 @@ import { useMemo } from 'react';
 import { useAiCostHistory, type AiModelOption } from '@/hooks/use-ai-design';
 import {
   editRunUnits,
+  estimateFromCalls,
   estimateFromPricing,
   estimateRunCost,
   maxMeasuredInputTokens,
@@ -77,6 +78,11 @@ export function useCostEstimate(
       costUsd: call.cost_usd === null ? null : Number(call.cost_usd),
     }));
     return (
+      // Lượt sửa: trung bình tiền thật từng lời gọi sửa (T184) — lượt sửa hỏng không ghi kết quả nên gom theo lượt chạy hay
+      // ra «Chưa đủ dữ liệu» dù đã có lời gọi trả tiền thật.
+      (kind === 'plan_edit'
+        ? estimateFromCalls(calls, { route, purposes: PURPOSES[kind] })
+        : null) ??
       estimateRunCost(runs, calls, { route, purposes: PURPOSES[kind] }) ??
       estimateFromPricing(runs, calls, {
         purposes: PURPOSES[kind],

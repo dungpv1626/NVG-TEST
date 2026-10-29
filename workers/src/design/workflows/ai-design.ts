@@ -125,9 +125,6 @@ import {
 } from '../ai/cost-cap';
 import type { TextModelClient } from '../llm/text-client';
 
-/** Lượt sửa theo yêu cầu kỹ sư gọi mô hình tối đa bấy nhiêu lần: một lần, cộng một lần kèm lý do cổng. */
-const EDIT_CALLS_MAX = 4;
-
 /**
  * Chính sách thử lại của bước GỌI MÔ HÌNH — khai tường minh vì mặc định tốn tiền.
  *
@@ -935,7 +932,7 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
 
   /**
    * Sửa theo yêu cầu kỹ sư (T53): AI dịch yêu cầu thành thao tác → chương trình áp lên bản đã lưu và
-   * ghi. Thao tác không qua cổng thì gọi lại kèm lý do, tổng tối đa `EDIT_CALLS_MAX` lượt (Haan 17/09/2026: «sửa đến lần thứ 4»); yêu cầu cần xếp lại bố cục thì đi
+   * ghi. Thao tác không qua cổng thì gọi lại kèm lý do, tổng tối đa `edit_calls_max` lượt (`kb/plan_quality.yaml`, Haan 17/09/2026: «sửa đến lần thứ 4»); yêu cầu cần xếp lại bố cục là một lỗi của lượt sửa (T184), không đi
    * đường `revise` của lượt thường với ý định lưu trong artifact.
    */
   private async runEdit(
@@ -949,7 +946,10 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
     const db = deps.repo.db;
     const runId = params.runId;
     let retry: { opsJson: string; issues: string[] } | null = null;
-    for (let n = 1; n <= EDIT_CALLS_MAX; n += 1) {
+    // Mọi lời gọi của lượt sửa là `plan_house_edit` (T184) — không bao giờ rơi vào vòng xếp lại cả nhà; trần tiền vì thế là
+    // `editCallsMax` × tiền một lời gọi sửa (mỗi lời gọi còn bị trần token ra của tuyến, T176).
+    const callsMax = deps.quality.editCallsMax;
+    for (let n = 1; n <= callsMax; n += 1) {
       if (board.signal.aborted) throw new NonRetryableError(RUN_CANCELLED);
       const callId = editStepId('call', n);
       const callLabel = n === 1 ? 'AI đọc yêu cầu sửa' : 'AI sửa lại thao tác';
@@ -1005,17 +1005,10 @@ export class AiDesignPipeline extends WorkflowEntrypoint<DesignEnv, AiDesignPara
         });
         return outcome.written;
       }
-      if ('relayout' in outcome) {
-        await markStep(db, runId, applyId, 'done');
-        return this.runVariant(step, deps, params, variant, board, spend, {
-          hints: [`- The architect asks for this change: ${outcome.relayout}`],
-          previousJson: outcome.previousJson,
-        });
-      }
       await markStep(db, runId, applyId, 'failed');
-      // Thao tác đọc được mà không qua cổng: gọi lại kèm lý do tới hết `EDIT_CALLS_MAX`. Câu trả lời không đọc được thành
+      // Thao tác đọc được mà không qua cổng: gọi lại kèm lý do tới hết `edit_calls_max`. Câu trả lời không đọc được thành
       // thao tác nào thì gọi lại cũng chỉ mua lại đúng câu ấy — dừng.
-      if (n >= EDIT_CALLS_MAX || !outcome.opsJson) {
+      if (n >= callsMax || !outcome.opsJson) {
         throw new AiPlanRejected([{ level: 0, messages: outcome.rejected }]);
       }
       retry = { opsJson: outcome.opsJson, issues: outcome.rejected };

@@ -491,6 +491,7 @@ export function AiPlanStep({
             }
             onSubmit={(instruction) => onEdit(review.data!.artifactId, instruction)}
             route={ai.choice.route ?? null}
+            callsMax={models.data?.limits?.editCallsMax ?? null}
             option={ai.selected}
             prefill={prefill}
           />

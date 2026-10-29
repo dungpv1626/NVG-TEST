@@ -5025,3 +5025,42 @@ nếu mô hình đặt WC chung + giặt trên góc khu ướt tầng 1 (WC khé
 khung dải ban công mặt tiền T181 dựng tầng 2). Khả năng đạt ngưỡng nhận (≥ 60 %, D ≥ 60 %, nhóm khác ≥ 40 %): khoảng một phần ba — D và E
 cùng qua sàn mới đạt. Lượt có thể vẫn hỏng tầng 2 (phòng không lối vào) như ba lượt 28/10 — khi ấy khung hai hàng là đường cứu; chi phí 1–5
 lời gọi ≈ 0,1–0,5 USD.
+
+## T184 — Lượt «Sửa lại» có giới hạn: không bao giờ rơi vào vòng xếp lại cả nhà; câu lỗi nêu thao tác và luật (29/10/2026, anh Dũng đồng ý)
+
+**Sự cố.** Sau lượt thật T183 (phương án 2 của hồ sơ 9272, 68,6 %, 0,429 USD / 5 lời gọi), anh Dũng cho một lượt «Sửa lại» với năm câu
+(nới wc_1/2/3, dời wc_4 cạnh wc_3, cửa sổ phòng ngủ 1, giặt mở ra ban công, ban công 2 dọc phòng ngủ chính). `design_ai_call` 11:05–11:14
+UTC: một lời gọi `plan_house_edit` (0,025 USD) rồi năm lời gọi `plan_house_revise` (0,08–0,14), tổng **0,589 USD**, hỏng «Chưa xếp được
+tầng 2: … study_1 chỉ đủ khoảng 9.24 m²», không lưu gì — trong khi màn hình hứa «một lượt gọi mô hình tính tiền, thêm tối đa ba lượt».
+Câu trả lời đã lưu (`design-artifacts/<hồ sơ>/ai_calls/af17bfb7-….json`) cho thấy nguyên nhân: mô hình trả hai thao tác `relayout` (tầng
+1 và tầng 2) cùng một thao tác `window`; `applyEditStep` trả `relayout` và `runEdit` chuyển sang `runVariant` — trọn vòng xếp lại ý định cả
+nhà của lượt mới, với trần số lời gọi của lượt mới. **Lượt sửa từng tốn như (hơn) một lượt xếp mới.**
+
+**Làm.**
+- `workflows/ai-design-steps.ts` `applyEditStep`: thao tác `relayout` là LỖI của lượt sửa — câu «Yêu cầu ở tầng N cần xếp lại bố cục («…») —
+  lượt sửa chỉ dời cửa, vách, cửa sổ, đổi chỗ hay nới phòng trên bản vẽ đã lưu, không xếp lại cả tầng. Diễn đạt bằng những thao tác ấy;
+  phần nào chỉ làm được bằng xếp lại thì chạy lại «Xếp mặt bằng» kèm yêu cầu.», kèm thao tác để lời gọi lại nhận phản hồi. Kiểu
+  `EditApplyOutcome` bỏ nhánh `relayout`.
+- `workflows/ai-design.ts` `runEdit`: bỏ nhánh `runVariant`; số lời gọi tối đa đọc `kb/plan_quality.yaml` `edit_calls_max` (4 — Haan
+  17/09: «sửa đến lần thứ 4»; vắng = 1), thay hằng `EDIT_CALLS_MAX` trong mã. Mọi lời gọi của lượt sửa là `plan_house_edit`. **Trần tiền
+  lượt sửa = `edit_calls_max` × tiền một lời gọi sửa** (mỗi lời gọi còn chịu trần token ra của tuyến, T176, và mức chi phí lượt T164) —
+  với giá đo được 0,025 USD: ≈ 0,10 USD, thay vì 0,589.
+- `ai/edit/apply.ts` `explainEditFailure`: bản sửa không qua cổng thì áp dần từng tiền tố danh sách thao tác (cùng hàm, cùng cổng) — tiền tố
+  đầu tiên hỏng chỉ ra thao tác làm hỏng; câu «Thao tác «tầng 1: dời vách giữa "bedroom_1" và "wc_2" 3 m về phía "wc_2"» làm bản vẽ không qua
+  cổng: <lỗi cổng> (1 thao tác trước nó vẫn áp được.)». Câu ấy là lời báo cho kỹ sư VÀ phản hồi của lời gọi lại. Tất định, không gọi mô
+  hình. KHÔNG áp phần thao tác còn hợp lệ rồi lưu (việc 4 của yêu cầu): không lưu gì khi hỏng — bản sửa thiếu một phần yêu cầu mà vẫn thành
+  phương án mới dễ bị coi là đã làm hết; câu báo nói rõ các thao tác trước vẫn áp được.
+- Màn hình (`ai-plan-edit.tsx`): câu dưới nút «Mỗi lượt sửa gọi mô hình 1 lần để đọc yêu cầu thành thao tác, thêm tối đa 3 lần cùng loại nếu
+  thao tác không qua cổng (kèm lý do) — tối đa ≈ X USD. Lượt sửa không xếp lại cả bố cục: yêu cầu chỉ làm được bằng xếp lại thì báo lại để chạy
+  «Xếp mặt bằng». …» (số lần từ `limits.editCallsMax` của `/design/ai/models`). Ước tính lấy trung bình TIỀN THẬT từng lời gọi
+  `plan_house_edit` cùng tuyến (`estimateFromCalls`) — lượt sửa hỏng không ghi kết quả nên cách gom theo lượt chạy trước đây ra «Chưa đủ dữ
+  liệu» dù đã có lời gọi trả tiền.
+
+**Phép thử.** `ai-plan-edit-steps.test.ts`: thao tác `relayout` → không ghi, không trả ý định cho vòng revise, câu lỗi nói tầng / yêu cầu /
+phải làm gì; bản sửa không qua cổng → câu lỗi nêu đúng thao tác và luật; thân `runEdit` (đọc mã nguồn — Workflow không chạy được ngoài runtime
+Workers) chỉ gọi `proposeEdit`, không `runVariant` / `plan_house_revise`, đọc `deps.quality.editCallsMax`. Web `ai-plan-edit-cost.test.ts`:
+ước tính từ lời gọi sửa (khác tuyến / mục đích / lỗi không token không tính), trần = số lời gọi × tiền một lời gọi, câu dưới nút. Đột biến M260
+(gọi lại `runVariant` trong `runEdit`), M261 (lờ thao tác `relayout`): đo tay, cả hai ĐỎ.
+
+**Bài học chi phí.** Một nút «sửa nhỏ» phải có trần tiền riêng của nó, đo bằng chính loại lời gọi nó dùng — đừng để nó mượn vòng lặp của
+đường đắt. Lượt sửa 29/10 tốn 0,589 USD, gấp 1,4 lần lượt xếp mới 0,429 USD.

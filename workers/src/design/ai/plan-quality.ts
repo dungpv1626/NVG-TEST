@@ -109,6 +109,11 @@ export interface PlanQuality {
    * `ai/plan.ts`). `null` = không dừng theo lỗi chính (vẫn dừng khi CẢ tập lỗi lặp — `STUCK_AFTER`).
    */
   sameMainIssueRounds: number | null;
+  /**
+   * Số lời gọi mô hình TỐI ĐA của một lượt «Sửa lại» (T184, `edit_calls_max`): lời gọi đầu + lời gọi lại khi thao tác không
+   * qua cổng, đều là loại `plan_house_edit`. Vắng = 1.
+   */
+  editCallsMax: number;
 }
 
 /**
@@ -240,7 +245,20 @@ export function parsePlanQuality(yamlText: string): PlanQuality {
     ),
     feasibilityMaxPercent: acceptPercentOf(raw.feasibility_max_percent, 'feasibility_max_percent'),
     sameMainIssueRounds: roundsOf(raw.revision_stop_same_main_issue_rounds),
+    editCallsMax: editCallsOf(raw.edit_calls_max),
   };
+}
+
+/** Số lời gọi tối đa của lượt sửa (T184): vắng = 1; phải là số nguyên ≥ 1. */
+function editCallsOf(raw: unknown): number {
+  if (raw === undefined || raw === null) return 1;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1) {
+    throw new PlanQualityError(
+      `\`edit_calls_max\` của thước chấm phải là số nguyên ≥ 1, đang là "${String(raw)}".`,
+    );
+  }
+  return value;
 }
 
 /** Số lượt liền nhau (T174): vắng = tắt; phải là số nguyên ≥ 2 — một lượt thì chưa có gì để gọi là «lặp». */

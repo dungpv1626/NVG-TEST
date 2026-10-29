@@ -422,6 +422,29 @@ function materialiseDoors(tree: AiPlanTree, stored: AiFloorPlan['levels'][number
   }
 }
 
+/**
+ * Bản sửa không qua cổng (T184): thao tác NÀO làm hỏng. Áp dần từng tiền tố của danh sách thao tác (cùng hàm, cùng cổng) —
+ * tiền tố đầu tiên hỏng chỉ ra thao tác cuối của nó; câu báo nêu thao tác ấy (như kỹ sư đọc được) và lỗi cổng nó gây ra.
+ * Chỉ khi mọi thao tác đều đọc được (lỗi ở cổng, không ở chỗ thiếu phòng). Tất định; tốn thêm tối đa một lượt dựng mỗi
+ * thao tác, không gọi mô hình.
+ */
+export function explainEditFailure(input: EditApplyInput, failed: EditApplyResult): string[] {
+  const ops = input.ops.filter((op) => op.op !== 'relayout');
+  if (failed.final || ops.length === 0 || failed.applied.length < ops.length) return failed.issues;
+  for (let k = 1; k <= ops.length; k += 1) {
+    const prefix = k === ops.length ? failed : applyPlanEdits({ ...input, ops: ops.slice(0, k) });
+    if (prefix.final) continue;
+    const culprit = prefix.applied[prefix.applied.length - 1] ?? `thao tác thứ ${k}`;
+    const kept = prefix.applied.slice(0, -1);
+    return [
+      `Thao tác «${culprit.replace(/\.$/, '')}» làm bản vẽ không qua cổng: ${prefix.issues.join(' ')}${
+        kept.length ? ` (${kept.length} thao tác trước nó vẫn áp được.)` : ''
+      }`,
+    ];
+  }
+  return failed.issues;
+}
+
 function fail(program: AiSpaceProgram, message: string): EditApplyResult {
   return { final: null, program, issues: [message], applied: [] };
 }

@@ -6,7 +6,8 @@
  * đổi diện tích…), chương trình áp lên chính bản vẽ này và chấm lại. Ba điều màn hình phải nói ra:
  *
  *  · **Bản gốc không đổi.** Bản sửa là phương án MỚI trong danh sách — artifact bất biến.
- *  · **Mỗi lần sửa là lượt gọi tính tiền.** Không hứa con số, chỉ nói đúng số lượt tối đa.
+ *  · **Mỗi lần sửa là lượt gọi tính tiền.** Nói đúng số lời gọi tối đa và trần tiền (T184): mọi lời gọi là loại sửa rẻ
+ *    (`plan_house_edit`), lượt sửa không xếp lại cả bố cục — trước đây một lượt sửa rơi vào vòng xếp lại, tốn như lượt mới.
  *  · **Phần AI không làm được** hiện nguyên văn — im lặng thì kỹ sư tưởng yêu cầu đã được làm hết.
  *
  * T117 (07/10/2026) gỡ ô này khỏi màn hình; Đợt 5B (22/10/2026, `doc/KE_HOACH_LAM_HO.md` dòng 5B) đặt lại
@@ -21,6 +22,8 @@ import { Field } from '@/components/ui/field';
 import type { AiModelOption, AiPlanReview } from '@/hooks/use-ai-design';
 import { Panel } from '../tk-ui';
 import { CostEstimateLine, costOnButton, useCostEstimate } from './ai-cost-estimate';
+import { costCeiling } from './run-cost-estimate';
+import { formatUsd } from './ai-usage';
 
 /** Ghi chú lượt sửa trong kết quả lượt chạy — mã do Worker đặt (`applyEditStep`). */
 export interface PlanEditNote {
@@ -40,7 +43,10 @@ export function PlanEditPanel({
   route,
   option,
   prefill,
+  callsMax,
 }: {
+  /** Số lời gọi tối đa của một lượt sửa (`kb/plan_quality.yaml` `edit_calls_max`, T184); `null` = máy chủ cũ. */
+  callsMax?: number | null;
   /**
    * Câu điền sẵn từ «Nhờ AI sửa» của khối Đánh giá (25/10/2026) — `nonce` đổi mỗi lần bấm để cùng một câu bấm lại
    * vẫn điền lại. Chỉ điền chữ, không gửi.
@@ -156,8 +162,7 @@ ${prefill.text}`
               {pending ? 'Đang gửi…' : `Sửa lại${costOnButton(cost.estimate, 1)}`}
             </Button>
             <span className="text-fg-subtle">
-              Một lượt gọi mô hình tính tiền, thêm tối đa ba lượt nếu thao tác không áp được. Bản
-              sửa thành phương án mới; phương án đang xem giữ nguyên.
+              {editCallsSentence(callsMax ?? null, costCeiling(cost.estimate, callsMax, 1))}
             </span>
           </div>
           <CostEstimateLine
@@ -172,4 +177,18 @@ ${prefill.text}`
       )}
     </Panel>
   );
+}
+
+/**
+ * Câu dưới nút «Sửa lại» (T184): đúng cách lượt sửa chạy — một lời gọi đọc yêu cầu thành thao tác, gọi lại cùng loại ấy khi
+ * thao tác không qua cổng, KHÔNG xếp lại cả bố cục; trần tiền khi biết giá một lời gọi sửa.
+ */
+export function editCallsSentence(callsMax: number | null, ceilingUsd: number | null): string {
+  const retries = callsMax !== null && callsMax > 1 ? callsMax - 1 : 0;
+  const calls =
+    callsMax === null
+      ? 'Mỗi lượt sửa gọi mô hình đọc yêu cầu thành thao tác trên bản vẽ đã lưu'
+      : `Mỗi lượt sửa gọi mô hình 1 lần để đọc yêu cầu thành thao tác${retries ? `, thêm tối đa ${retries} lần cùng loại nếu thao tác không qua cổng (kèm lý do)` : ''}`;
+  const ceiling = ceilingUsd !== null ? ` — tối đa ≈ ${formatUsd(ceilingUsd)}` : '';
+  return `${calls}${ceiling}. Lượt sửa không xếp lại cả bố cục: yêu cầu chỉ làm được bằng xếp lại thì báo lại để chạy «Xếp mặt bằng». Bản sửa thành phương án mới; phương án đang xem giữ nguyên.`;
 }
