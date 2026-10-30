@@ -573,8 +573,9 @@ export function arrangeHouseStep(
   const layoutHints = proposal.layoutHints ?? [];
   if (evaluation?.ok) {
     const score = evaluation.ok.score;
-    // Qua cổng mà dưới ngưỡng (T53): lượt sửa kế tiếp nhận dòng tiêu chí mất điểm và ý định đã đánh mã.
-    const below = score.hints.length > 0;
+    // Qua cổng mà dưới ngưỡng (T53): lượt sửa kế tiếp nhận dòng tiêu chí mất điểm và ý định đã đánh mã — trừ khi
+    // `kb/plan_quality.yaml` `score_revision: false` (T186): lưu luôn, kỹ sư sửa bằng ô yêu cầu.
+    const below = score.hints.length > 0 && deps.quality.scoreRevision;
     return {
       arrangedJson: JSON.stringify(evaluation.ok),
       rejections: [],

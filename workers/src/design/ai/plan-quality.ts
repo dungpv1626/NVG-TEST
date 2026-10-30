@@ -114,6 +114,10 @@ export interface PlanQuality {
    * qua cổng, đều là loại `plan_house_edit`. Vắng = 1.
    */
   editCallsMax: number;
+  /**
+   * Gọi lại mô hình để nâng điểm khi phương án qua cổng mà dưới ngưỡng (T53; tắt ở T186, `score_revision`). Vắng = true.
+   */
+  scoreRevision: boolean;
 }
 
 /**
@@ -246,7 +250,19 @@ export function parsePlanQuality(yamlText: string): PlanQuality {
     feasibilityMaxPercent: acceptPercentOf(raw.feasibility_max_percent, 'feasibility_max_percent'),
     sameMainIssueRounds: roundsOf(raw.revision_stop_same_main_issue_rounds),
     editCallsMax: editCallsOf(raw.edit_calls_max),
+    scoreRevision: scoreRevisionOf(raw.score_revision),
   };
+}
+
+/** Gọi lại để nâng điểm (T186): vắng = true; phải là true / false. */
+function scoreRevisionOf(raw: unknown): boolean {
+  if (raw === undefined || raw === null) return true;
+  if (typeof raw !== 'boolean') {
+    throw new PlanQualityError(
+      `\`score_revision\` của thước chấm phải là true hoặc false, đang là "${String(raw)}".`,
+    );
+  }
+  return raw;
 }
 
 /** Số lời gọi tối đa của lượt sửa (T184): vắng = 1; phải là số nguyên ≥ 1. */

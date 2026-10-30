@@ -379,6 +379,8 @@ describe('bước kiểm và xếp cả nhà', () => {
             acceptPercent,
             acceptGroupFloorPercent,
             acceptGroupFloors: {},
+            // Đo cơ chế T53 — `kb/plan_quality.yaml` tắt nó từ T186.
+            scoreRevision: true,
           },
         },
         PARAMS,
@@ -411,6 +413,7 @@ describe('bước kiểm và xếp cả nhà', () => {
             acceptPercent: 1,
             acceptGroupFloorPercent,
             acceptGroupFloors: {},
+            scoreRevision: true,
           },
         },
         PARAMS,
@@ -424,6 +427,21 @@ describe('bước kiểm và xếp cả nhà', () => {
     expect(floored.retry).toBe('revise');
     expect(floored.hints.length).toBeGreaterThan(0);
     for (const hint of floored.hints) expect(hint).toMatch(/window|open side|wet|wc/i);
+  });
+
+  it('kb mặc định (T186, `score_revision: false`): qua cổng mà dưới ngưỡng thì LƯU luôn, không gọi lại mô hình', () => {
+    const { deps } = depsWith(answering(null));
+    expect(deps.quality.scoreRevision).toBe(false);
+    const below = arrangeHouseStep(
+      { ...deps, quality: { ...deps.quality, acceptPercent: 100 } },
+      PARAMS,
+      VARIANT,
+      { intentJson: JSON.stringify(VILLA_HOUSE), issues: [], call: CALL },
+      1,
+    );
+    expect(below.arrangedJson).not.toBeNull();
+    expect(below.retry).toBe('none');
+    expect(below.previousJson).toBeNull();
   });
 
   it('câu trả lời sai hợp đồng: lấy mẫu lại với ghi chú tiếng Anh, không kèm ý định cũ', () => {

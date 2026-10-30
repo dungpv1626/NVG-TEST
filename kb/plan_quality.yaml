@@ -103,6 +103,12 @@ revision_stop_same_main_issue_rounds: 3
 # số này × tiền một lời gọi sửa. Vắng = 1 (không gọi lại).
 edit_calls_max: 4
 
+# Gọi lại mô hình để NÂNG ĐIỂM khi phương án đã qua cổng mà dưới ngưỡng (T53). Tắt 30/10/2026 (T186): phát lại 18 lần như vậy
+# trên các lượt ghi — 8 lần mô hình vẽ hỏng hẳn, 10 lần qua thì 4 tăng (+0,2…+3,3 điểm), 2 giảm, 4 giữ; KHÔNG lần nào kéo
+# nhóm dưới sàn lên, nên không lần nào đưa phương án tới ngưỡng. Hai lượt thật a66f4aa0 (29/10) và THU5 (30/10): vòng ấy hỏng,
+# mỗi lần ≈ 0,1 USD và 1,5 phút. Phương án vẫn lưu với các việc nên sửa — kỹ sư sửa bằng ô yêu cầu (T53). Vắng = true (bật).
+score_revision: false
+
 # ── Trọng số nhóm ──────────────────────────────────────────────────────────────
 #
 # Y NGUYÊN bộ đo, không tự chỉnh (mặc định số 4 của phương án). Hai chỗ đáng để ý,
