@@ -35,6 +35,7 @@ import {
   useExecuteAmendment,
   useMarkAmendmentQuoteSent,
   useSubmitAmendmentApproval,
+  useUpdateAmendmentFigures,
   type AmendmentRecord,
 } from '@/hooks/use-contracts';
 import { toUserMessage } from '@/hooks/use-error-message';
@@ -295,7 +296,15 @@ function AmendmentCard({
   const submitApproval = useSubmitAmendmentApproval();
   const confirmByCustomer = useConfirmAmendmentByCustomer();
   const execute = useExecuteAmendment();
+  const updateFigures = useUpdateAmendmentFigures();
   const [error, setError] = useState<string | null>(null);
+  // Sửa giá trị / tiến độ khi còn Đề xuất và chưa gửi báo giá — phát sinh lập từ đề xuất công trường ra
+  // đời với 0 đồng và trước đây không có chỗ nào ghi giá (chạy thử NVC 30/10/2026).
+  const [editingFigures, setEditingFigures] = useState(false);
+  const [valueDraft, setValueDraft] = useState(String(amendment.value_change ?? '0'));
+  const [daysDraft, setDaysDraft] = useState(
+    amendment.schedule_impact_days != null ? String(amendment.schedule_impact_days) : '',
+  );
 
   const stage = amendment.stage as AmendmentStage;
   const meta = AMENDMENT_STAGE_META[stage];
@@ -428,6 +437,54 @@ function AmendmentCard({
           </dd>
         </div>
       </dl>
+
+      {!readOnly && stage === 'de_xuat' && !amendment.quote_sent_at && (
+        <div className="mt-2">
+          {editingFigures ? (
+            <form
+              className="grid gap-3 sm:grid-cols-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const days = daysDraft.trim() === '' ? null : Number(daysDraft);
+                void run(async () => {
+                  await updateFigures.mutateAsync({
+                    amendmentId: amendment.id,
+                    valueChange: valueDraft,
+                    scheduleImpactDays: Number.isFinite(days) ? days : null,
+                  });
+                  setEditingFigures(false);
+                });
+              }}
+            >
+              <Field
+                label="Thay đổi giá trị hợp đồng"
+                hint="Đơn vị đồng. Số âm nghĩa là giảm trừ khối lượng."
+              >
+                <MoneyInput value={valueDraft} allowNegative onChange={setValueDraft} />
+              </Field>
+              <Field label="Thay đổi tiến độ" hint="Số ngày. Số âm nghĩa là rút ngắn.">
+                <Input
+                  value={daysDraft}
+                  onChange={(e) => setDaysDraft(e.target.value.replace(/[^\d-]/g, ''))}
+                  inputMode="numeric"
+                />
+              </Field>
+              <div className="flex items-end gap-2">
+                <Button type="submit" variant="primary" disabled={updateFigures.isPending}>
+                  Lưu
+                </Button>
+                <Button type="button" variant="secondary" onClick={() => setEditingFigures(false)}>
+                  Hủy
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <Button variant="secondary" size="sm" onClick={() => setEditingFigures(true)}>
+              Sửa giá trị và tiến độ
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* HD-04 bắt "ghi nhận RÕ trường hợp khẩn cấp và người phê duyệt" — nên hiển thị nổi
           bật, không giấu trong ghi chú. */}

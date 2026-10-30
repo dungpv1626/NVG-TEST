@@ -1695,6 +1695,13 @@
       "when": 1791950000000,
       "tag": "0250_e2e_nvo_sua_loi",
       "breakpoints": true
+    },
+    {
+      "idx": 250,
+      "version": "7",
+      "when": 1791960000000,
+      "tag": "0251_e2e_nvc_sua_loi",
+      "breakpoints": true
     }
   ]
 }

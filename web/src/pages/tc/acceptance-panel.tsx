@@ -487,7 +487,8 @@ export function AcceptancePanel({
                   >
                     In biên bản
                   </Button>
-                  {!readOnly && (
+                  {/* Đã ký hai bên là chứng từ bất biến — CSDL chặn hủy (0251), nên không mời hủy. */}
+                  {!readOnly && !r.signed_at && (
                     <button
                       type="button"
                       className="text-brand underline"

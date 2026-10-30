@@ -208,6 +208,9 @@ export function useSubmitBid() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['bidding_projects'] });
       void queryClient.invalidateQueries({ queryKey: ['bid_documents'] });
+      // Nộp thầu đổi bước gói thầu và đẩy cơ hội sang Đàm phán — chuỗi hồ sơ phải đọc lại.
+      void queryClient.invalidateQueries({ queryKey: ['record-chain'] });
+      void queryClient.invalidateQueries({ queryKey: ['opportunities'] });
     },
   });
 }
@@ -227,6 +230,9 @@ export function useRecordBidResult() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['bidding_projects'] });
+      // Trúng / trượt đổi bước gói thầu (và cơ hội gốc khi trượt) — chuỗi hồ sơ không được hiện bước cũ.
+      void queryClient.invalidateQueries({ queryKey: ['record-chain'] });
+      void queryClient.invalidateQueries({ queryKey: ['opportunities'] });
     },
   });
 }

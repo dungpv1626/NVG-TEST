@@ -140,6 +140,30 @@ export function usePaymentRequest(id: string | undefined) {
   });
 }
 
+/**
+ * Người đang xem có phải người xử lý bước kiểm hiện tại của đề nghị chi không — CSDL quyết
+ * (`rls_payment_awaiting_me`, cùng hàm `advance_payment_step` dùng để chặn). Màn hình dùng để ẨN
+ * «Xác nhận / Trả lại» với người không xử lý được (CLAUDE.md 5.4) thay vì hiện rồi báo lỗi —
+ * chạy thử NVC 30/10/2026: Kế toán thấy nút ở bước «trưởng đơn vị» của khoản chi công trường.
+ */
+export function usePaymentAwaitingMe(
+  request: { id: string; stage: string; company_id: string; origin_module: string | null } | null,
+) {
+  return useQuery<boolean, Error>({
+    queryKey: ['payment-requests', 'awaiting-me', request?.id, request?.stage],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('rls_payment_awaiting_me', {
+        p_stage: request!.stage,
+        p_company_id: request!.company_id,
+        p_origin_module: request!.origin_module,
+      });
+      if (error) throw new Error(error.message);
+      return data === true;
+    },
+    enabled: Boolean(request),
+  });
+}
+
 export interface NewPaymentRequestInput {
   companyId: string;
   requestType: PaymentRequestType;
@@ -249,6 +273,8 @@ export function useSubmitPaymentRequest() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['payment-requests'] });
       void queryClient.invalidateQueries({ queryKey: ['approvals'] });
+      // Khối «Chuỗi hồ sơ» ghi bước của đề nghị — không đọc lại thì vẫn hiện «Nháp» cạnh «Chờ duyệt».
+      void queryClient.invalidateQueries({ queryKey: ['record-chain'] });
     },
   });
 }
@@ -273,6 +299,8 @@ export function useAdvancePaymentStep() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['payment-requests'] });
       void queryClient.invalidateQueries({ queryKey: ['approvals'] });
+      // Khối «Chuỗi hồ sơ» ghi bước của đề nghị — không đọc lại thì vẫn hiện «Nháp» cạnh «Chờ duyệt».
+      void queryClient.invalidateQueries({ queryKey: ['record-chain'] });
     },
   });
 }
@@ -291,6 +319,8 @@ export function useCancelPaymentRequest() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['payment-requests'] });
       void queryClient.invalidateQueries({ queryKey: ['approvals'] });
+      // Khối «Chuỗi hồ sơ» ghi bước của đề nghị — không đọc lại thì vẫn hiện «Nháp» cạnh «Chờ duyệt».
+      void queryClient.invalidateQueries({ queryKey: ['record-chain'] });
     },
   });
 }
@@ -315,6 +345,7 @@ export function useRecordPayment() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['payment-requests'] });
       void queryClient.invalidateQueries({ queryKey: ['advances'] });
+      void queryClient.invalidateQueries({ queryKey: ['record-chain'] });
       void queryClient.invalidateQueries({ queryKey: ['receivables'] });
       // Chi phí vừa vào ngân sách công trình — màn hình Thi công phải đọc lại.
       void queryClient.invalidateQueries({ queryKey: ['construction-sites'] });

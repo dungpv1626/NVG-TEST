@@ -23,6 +23,7 @@ import {
   formatCurrency,
   formatDate,
   formatDateTime,
+  isPayableContract,
   summarizeContractValue,
 } from '@nvg/shared';
 import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
@@ -380,6 +381,7 @@ export function ContractDetailPage() {
   // Đã duyệt mà chưa ký: nói rõ việc tiếp theo và ai làm — nút «Ghi nhận đã ký» chỉ Ban Giám đốc
   // thấy, nên Kinh doanh trước đây chỉ thấy dải tiến trình báo «Đã ký» mà không thấy nút đâu
   // (anh Dũng 22/10/2026).
+  const payable = isPayableContract(contract.type);
   const signNotice =
     contract.stage === 'da_duyet'
       ? canApprove || canDraft
@@ -390,9 +392,12 @@ export function ContractDetailPage() {
           ? pendingDesign
             ? `Hợp đồng đã ký. Công trình tự mở khi Thiết kế bàn giao hồ sơ thi công ${pendingDesign.code} — không cần bấm «Mở công trình».`
             : 'Hợp đồng đã ký. Việc tiếp theo: Ban Giám đốc hoặc Thi công bấm «Mở công trình».'
-          : isResponsible
-            ? 'Hợp đồng đã ký — phần soạn và ký của Kinh doanh đã xong. Việc còn lại: nhắc khách theo các đợt thanh toán, lập phát sinh khi khách đổi hạng mục.'
-            : 'Hợp đồng đã ký. Việc còn lại: theo dõi thu tiền theo các đợt; Ban Giám đốc quyết toán khi công trình đã bàn giao.'
+          : payable
+            ? // Hợp đồng NVG trả tiền (khoán, mua, thuê): không có «khách» để nhắc thu (chạy thử NVC 30/10/2026).
+              'Hợp đồng đã ký. Việc còn lại: trả tiền cho đối tác theo khối lượng / hàng đã nghiệm thu và các đợt đã ghi; phát sinh lập ở tab Phát sinh.'
+            : isResponsible
+              ? 'Hợp đồng đã ký — phần soạn và ký hợp đồng đã xong. Việc còn lại: nhắc khách theo các đợt thanh toán, lập phát sinh khi khách đổi hạng mục.'
+              : 'Hợp đồng đã ký. Việc còn lại: theo dõi thu tiền theo các đợt; Ban Giám đốc quyết toán khi công trình đã bàn giao.'
         : null;
   const activeTab = searchParams.get('tab') ?? stageTab;
 
@@ -469,7 +474,9 @@ export function ContractDetailPage() {
             label: 'Tổng quan',
             content: (
               <>
-                {contract.stage === 'da_ky' && (
+                {/* Khối «Sau khi ký» viết cho hợp đồng thu tiền của khách (nhắc khách, đã thu, khách đổi hạng
+                    mục) — hợp đồng NVG trả tiền không dùng (chạy thử NVC 30/10/2026, hợp đồng khoán tổ đội). */}
+                {contract.stage === 'da_ky' && !payable && (
                   <AfterSignCard
                     contractId={contract.id}
                     customer={contract.customer}
@@ -580,15 +587,28 @@ export function ContractDetailPage() {
                       <dt className="text-xs text-fg-subtle">Giá trị hiện hành</dt>
                       <dd className="mt-0.5 font-semibold">{formatCurrency(money.currentValue)}</dd>
                     </div>
-                    <div>
-                      <dt className="text-xs text-fg-subtle">Còn phải thu</dt>
-                      <dd className="mt-0.5 font-semibold">{formatCurrency(money.outstanding)}</dd>
-                    </div>
+                    {!payable && (
+                      <div>
+                        <dt className="text-xs text-fg-subtle">Còn phải thu</dt>
+                        <dd className="mt-0.5 font-semibold">
+                          {formatCurrency(money.outstanding)}
+                        </dd>
+                      </div>
+                    )}
                   </dl>
-                  <p className="mt-3 text-xs text-fg-subtle">
-                    Đã thu {formatCurrency(money.collected)}. Số liệu thu tiền do Module Kế toán cập
-                    nhật khi có chứng từ.
-                  </p>
+                  {payable ? (
+                    // Hợp đồng NVG trả tiền (khoán, mua, thuê): không có «thu» — số đã trả đi qua đề nghị chi
+                    // (sổ tổ đội ở Thi công, đơn hàng ở Mua hàng), không qua cột thu của hợp đồng.
+                    <p className="mt-3 text-xs text-fg-subtle">
+                      Hợp đồng NVG trả tiền cho đối tác — số đã trả theo đề nghị chi và sổ theo dõi
+                      tổ đội / đơn hàng, do Module Kế toán ghi khi chi.
+                    </p>
+                  ) : (
+                    <p className="mt-3 text-xs text-fg-subtle">
+                      Đã thu {formatCurrency(money.collected)}. Số liệu thu tiền do Module Kế toán
+                      cập nhật khi có chứng từ.
+                    </p>
+                  )}
                 </section>
 
                 <label className="mt-4 block">

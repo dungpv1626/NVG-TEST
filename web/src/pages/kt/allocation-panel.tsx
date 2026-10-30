@@ -50,6 +50,9 @@ export function AllocationPanel({
   const [isFormOpen, setFormOpen] = useState(false);
   const [siteId, setSiteId] = useState('');
   const [amount, setAmount] = useState('');
+  // Nhóm chi phí đi theo mã chi phí đã chọn — trước để mặc định «Chi phí chung» nên dòng ghi
+  // «NHAN_CONG · Chi phí chung» (chạy thử NVC 30/10/2026), báo cáo theo nhóm cộng sai chỗ.
+  const [costGroup, setCostGroup] = useState<CostGroup>('chi_phi_chung');
   const [panelError, setPanelError] = useState<string | null>(null);
 
   const { data: costCodes } = useSiteCostCodes(siteId || undefined);
@@ -73,7 +76,7 @@ export function AllocationPanel({
         values: {
           construction_site_id: siteId || null,
           cost_code: String(values.get('cost_code') ?? '').trim() || null,
-          cost_group: (values.get('cost_group') as CostGroup) ?? 'chi_phi_chung',
+          cost_group: costGroup,
           amount: amount || '0',
           basis: String(values.get('basis') ?? '').trim() || null,
         },
@@ -81,6 +84,7 @@ export function AllocationPanel({
       form.reset();
       setSiteId('');
       setAmount('');
+      setCostGroup('chi_phi_chung');
     } catch (e) {
       setPanelError(toUserMessage(e, 'create'));
     }
@@ -222,6 +226,10 @@ export function AllocationPanel({
                     name="cost_code"
                     required={Boolean(siteId)}
                     disabled={!siteId}
+                    onChange={(e) => {
+                      const line = (costCodes ?? []).find((l) => l.cost_code === e.target.value);
+                      if (line) setCostGroup(line.cost_group);
+                    }}
                     className={`${SELECT_CLASS} disabled:bg-surface-sunken disabled:opacity-60`}
                   >
                     <option value="">Chọn mã chi phí</option>
@@ -234,7 +242,12 @@ export function AllocationPanel({
                 </Field>
 
                 <Field label="Nhóm chi phí" required>
-                  <select name="cost_group" defaultValue="chi_phi_chung" className={SELECT_CLASS}>
+                  <select
+                    name="cost_group"
+                    value={costGroup}
+                    onChange={(e) => setCostGroup(e.target.value as CostGroup)}
+                    className={SELECT_CLASS}
+                  >
                     {COST_GROUPS.map((group) => (
                       <option key={group} value={group}>
                         {COST_GROUP_LABELS[group]}

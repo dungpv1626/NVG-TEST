@@ -86,6 +86,7 @@ import {
   unfilledTemplateTags,
 } from '@/lib/docx-template';
 import {
+  articleLabel,
   DocInputsSection,
   emptyFreeKeys,
   focusTemplateField,
@@ -863,6 +864,12 @@ function FillSection({
   // Lưu văn bản rồi gửi phê duyệt ngay — trước phải lưu ở cột phải, rồi kéo lên đầu trang bấm
   // «Gửi phê duyệt» (anh Dũng 21/10/2026). Điều kiện gửi vẫn do CSDL kiểm (`submit_contract_approval`).
   async function saveAndSubmit() {
+    // Thiếu điều khoản bắt buộc thì CSDL chắc chắn từ chối — đừng lưu thêm một phiên bản thừa rồi mới báo
+    // lỗi (chạy thử NVC 30/10/2026: «Đã lưu bản 1» kèm «Chưa gửi phê duyệt được»).
+    if (termsBlockReason) {
+      setError(termsBlockReason);
+      return;
+    }
     const version = await saveVersion(false);
     if (version === null) return;
     try {
@@ -959,6 +966,10 @@ function FillSection({
 
   async function submitLatest() {
     setError(null);
+    if (termsBlockReason) {
+      setError(termsBlockReason);
+      return;
+    }
     try {
       await submitApproval.mutateAsync({ contractId: contract.id });
       setSavedMessage(`Đã gửi phê duyệt bản ${wordLatest?.version ?? ''}.`);
@@ -970,6 +981,10 @@ function FillSection({
   const missingTerms = CONTRACT_REQUIRED_TERM_TYPES.filter(
     (type) => !(terms ?? []).some((t) => t.term_type === type),
   ).map((type) => CONTRACT_TERM_TYPE_LABELS[type]);
+  const termsBlockReason =
+    missingTerms.length > 0
+      ? `Chưa gửi phê duyệt được: còn thiếu điều khoản bắt buộc (${missingTerms.join(', ').toLowerCase()}) — ghi ở «2. Điều khoản».`
+      : null;
   const toolbar = (
     <div>
       {promptDialog.dialog}
@@ -1008,7 +1023,9 @@ function FillSection({
         {filled && canSave && contract.stage === 'nhap' && (
           <Button
             variant={wordLatest ? 'secondary' : 'primary'}
-            disabled={save.isPending || submitApproval.isPending || stale || busy}
+            disabled={
+              save.isPending || submitApproval.isPending || stale || busy || !!termsBlockReason
+            }
             onClick={() => void saveAndSubmit()}
           >
             <Send className="size-4" aria-hidden /> Lưu và gửi phê duyệt
@@ -1112,7 +1129,9 @@ function FillSection({
           <div className="mt-3 flex flex-wrap gap-2">
             <Button
               variant={wordLatest ? 'secondary' : 'primary'}
-              disabled={save.isPending || submitApproval.isPending || stale || busy}
+              disabled={
+                save.isPending || submitApproval.isPending || stale || busy || !!termsBlockReason
+              }
               onClick={() => void saveAndSubmit()}
             >
               <Send className="size-4" aria-hidden /> Lưu bản mới như màn hình và gửi
@@ -1120,13 +1139,14 @@ function FillSection({
             {wordLatest && (
               <Button
                 variant="primary"
-                disabled={submitApproval.isPending}
+                disabled={submitApproval.isPending || !!termsBlockReason}
                 onClick={() => void submitLatest()}
               >
                 <Send className="size-4" aria-hidden /> Gửi tệp Word bản {wordLatest.version}
               </Button>
             )}
           </div>
+          {termsBlockReason && <p className="mt-2 text-sm text-ink-subtle">{termsBlockReason}</p>}
         </section>
       )}
     </>
@@ -1490,7 +1510,7 @@ function MissingBox({
           <button
             type="button"
             className="rounded-sm bg-surface px-2 py-0.5 text-left hover:bg-surface-hover"
-            title={`${a.article} — còn ${a.missing} chỗ`}
+            title={`${articleLabel(a.article)} — còn ${a.missing} chỗ`}
             onClick={() => focusTemplateField(a.firstKey)}
           >
             {shortArticle(a.article)} <span className="text-ink-subtle">· {a.missing}</span>
@@ -1866,7 +1886,7 @@ function fitPreview(root: HTMLElement) {
 /** «Điều 7. Thanh toán» → «Điều 7»; «PHỤ LỤC 01 – …» → «Phụ lục 01» — nhãn gọn cho danh sách. */
 function shortArticle(article: string): string {
   const m = /^(Điều \d+|PHỤ LỤC \d+|BIÊN BẢN [^–(]{0,30})/i.exec(article);
-  if (!m) return article;
+  if (!m) return articleLabel(article);
   return m[1]!.replace(/^PHỤ LỤC/i, 'Phụ lục').trim();
 }
 

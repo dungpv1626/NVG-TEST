@@ -42,6 +42,7 @@ import {
   useAdvancePaymentStep,
   useCancelPaymentRequest,
   usePaymentAllocations,
+  usePaymentAwaitingMe,
   usePaymentRequest,
   usePaymentSteps,
   usePostPayment,
@@ -72,8 +73,13 @@ export function PaymentRequestDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { profile } = useAuth();
   const canWorkKt = useCan('KT', 'edit');
+  // Thi công lập đề nghị trả tổ đội nhưng không xem phân hệ Hợp đồng — liên kết sang đó phải ẩn
+  // (CLAUDE.md 5.4), không hiện rồi mở ra trang «Không mở được phân hệ».
+  const canViewContracts = useCan('HD', 'view');
+  const canViewPurchasing = useCan('MH', 'view');
 
   const { data, isLoading, error } = usePaymentRequest(id);
+  const { data: awaitingMe } = usePaymentAwaitingMe(data ?? null);
   const { data: allocations } = usePaymentAllocations(id);
   const { data: steps } = usePaymentSteps(id);
 
@@ -105,11 +111,11 @@ export function PaymentRequestDetailPage() {
   const isRequester = profile?.id === request.requested_by;
 
   /*
-   * Hồ sơ đang chờ CHÍNH người này xử lý hay không do CSDL quyết định, không do màn hình.
-   * Ở đây chỉ ẩn nút cho người rõ ràng không liên quan: người đề nghị không tự ký duyệt hồ
-   * sơ của mình. Nếu ẩn/hiện sai, hàm CSDL vẫn từ chối kèm câu nói rõ ai xử lý được.
+   * Hồ sơ đang chờ CHÍNH người này xử lý hay không do CSDL quyết định (`rls_payment_awaiting_me`,
+   * cùng điều kiện `advance_payment_step` dùng để chặn) — không xử lý được thì không thấy nút
+   * (CLAUDE.md 5.4). Người đề nghị không tự ký hồ sơ của mình.
    */
-  const canActOnStep = Boolean(currentStep) && !isRequester;
+  const canActOnStep = Boolean(currentStep) && !isRequester && awaitingMe === true;
 
   async function run(action: () => Promise<unknown>) {
     setActionError(null);
@@ -224,7 +230,7 @@ export function PaymentRequestDetailPage() {
       ],
     });
   }
-  if (request.purchase_order_id) {
+  if (request.purchase_order_id && canViewPurchasing) {
     related.push({
       title: 'Bộ chứng từ',
       records: [
@@ -236,7 +242,7 @@ export function PaymentRequestDetailPage() {
       ],
     });
   }
-  if (request.contract_id) {
+  if (request.contract_id && canViewContracts) {
     related.push({
       title: 'Hợp đồng',
       records: [

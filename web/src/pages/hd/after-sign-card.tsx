@@ -271,7 +271,7 @@ export function AfterSignCard({
     title: 'Quyết toán hợp đồng',
     body: canApprove
       ? 'Bấm «Quyết toán hợp đồng» ở đầu trang khi công trình đã sang Bảo hành hoặc Hoàn thành.'
-      : 'Ban Giám đốc quyết toán khi công trình đã sang Bảo hành hoặc Hoàn thành — Kinh doanh không phải làm gì ở bước này.',
+      : 'Ban Giám đốc quyết toán khi công trình đã sang Bảo hành hoặc Hoàn thành — người chịu trách nhiệm hợp đồng không phải làm gì ở bước này.',
   });
 
   return (
@@ -279,7 +279,7 @@ export function AfterSignCard({
       <p className="font-medium">Sau khi ký — việc còn lại</p>
       {isResponsible && (
         <p className="mt-1 text-sm text-fg-subtle">
-          Phần soạn và ký của Kinh doanh đã xong. Từ đây chỉ còn theo dõi thu tiền và phát sinh.
+          Phần soạn và ký hợp đồng đã xong. Từ đây chỉ còn theo dõi thu tiền và phát sinh.
         </p>
       )}
       <ol className="mt-3 space-y-3">

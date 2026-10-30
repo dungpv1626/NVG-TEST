@@ -74,6 +74,10 @@ export function SiteDetailPage() {
   const promptDialog = usePromptDialog();
   const { id } = useParams<{ id: string }>();
   const canEdit = useCan('TC', 'edit');
+  // Liên kết chéo sang phân hệ không xem được thì ẩn hẳn (CLAUDE.md 5.4) — Thi công không xem
+  // Dự án – Đấu thầu: bấm «Mở gói thầu nguồn» chỉ ra trang «Không mở được phân hệ».
+  const canViewBid = useCan('DA', 'view');
+  const canViewDesign = useCan('TK', 'view');
 
   const { data, isLoading, error } = useConstructionSite(id);
   const { data: logs } = useSiteLogs(id);
@@ -567,11 +571,12 @@ export function SiteDetailPage() {
                     [
                       {
                         label: 'Hợp đồng',
-                        value: 'Đã có hợp đồng — Kinh doanh và Ban Giám đốc quản lý nội dung',
+                        value:
+                          'Đã có hợp đồng — người chịu trách nhiệm hợp đồng và Ban Giám đốc quản lý nội dung',
                       },
                     ]
                   : []),
-              ...(site.bidding_project_id
+              ...(site.bidding_project_id && canViewBid
                 ? [
                     {
                       label: 'Gói thầu',
@@ -580,7 +585,7 @@ export function SiteDetailPage() {
                     },
                   ]
                 : []),
-              ...(site.design_project_id
+              ...(site.design_project_id && canViewDesign
                 ? [
                     {
                       label: 'Dự án thiết kế',

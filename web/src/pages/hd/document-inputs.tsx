@@ -174,6 +174,14 @@ interface ArticleBlock {
   fields: TemplateFreeField[];
 }
 
+/**
+ * Tên Điều để HIỆN — tên lấy từ câu văn của mẫu nên có thể còn chỗ trống của mẫu («PHỤ LỤC HỢP ĐỒNG SỐ
+ * {so_phu_luc} – …», chạy thử NVC 30/10/2026). Người dùng không được thấy cú pháp mẫu; khoá nhóm giữ nguyên.
+ */
+export function articleLabel(article: string): string {
+  return article.replace(/\{[^{}]*\}/g, '…');
+}
+
 function byArticle(template: ContractTemplateRecord): ArticleBlock[] {
   const blocks = new Map<string, ArticleBlock>();
   const get = (article: string) => {
@@ -254,7 +262,7 @@ export function DocInputsSection({
           return (
             <details key={b.article} className="rounded-md border border-border">
               <summary className="flex cursor-pointer items-center gap-2 px-3 py-2">
-                <span className="font-medium">{b.article}</span>
+                <span className="font-medium">{articleLabel(b.article)}</span>
                 <span
                   className={cn(
                     'ml-auto shrink-0 text-xs',

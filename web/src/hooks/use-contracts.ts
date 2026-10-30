@@ -474,6 +474,33 @@ export function useCreateAmendment() {
   });
 }
 
+/**
+ * Sửa giá trị / tiến độ của phát sinh còn ở bước Đề xuất (RLS `contract_amendments_update` chỉ cho bước
+ * này). Phát sinh lập từ đề xuất công trường (0241) ra đời với 0 đồng — công trường không ghi tiền.
+ */
+export function useUpdateAmendmentFigures() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    void,
+    Error,
+    { amendmentId: string; valueChange: string; scheduleImpactDays: number | null }
+  >({
+    mutationFn: async ({ amendmentId, valueChange, scheduleImpactDays }) => {
+      const { error } = await supabase
+        .from('contract_amendments')
+        .update({ value_change: valueChange || '0', schedule_impact_days: scheduleImpactDays })
+        .eq('id', amendmentId)
+        .select('id')
+        .single();
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['contract_amendments'] });
+    },
+  });
+}
+
 /** Gửi báo giá phát sinh cho khách — HD-04 đòi có báo giá trước khi thực hiện. */
 export function useMarkAmendmentQuoteSent() {
   const queryClient = useQueryClient();
