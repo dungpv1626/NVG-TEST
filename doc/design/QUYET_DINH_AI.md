@@ -5064,3 +5064,26 @@ Workers) chỉ gọi `proposeEdit`, không `runVariant` / `plan_house_revise`, �
 
 **Bài học chi phí.** Một nút «sửa nhỏ» phải có trần tiền riêng của nó, đo bằng chính loại lời gọi nó dùng — đừng để nó mượn vòng lặp của
 đường đắt. Lượt sửa 29/10 tốn 0,589 USD, gấp 1,4 lần lượt xếp mới 0,429 USD.
+
+## T185 — Lượt sửa thấy tầng dưới đã dựng; kiểm ánh sáng trước lượt; dải ban công mặt bên (GIỮ); sinh tầng không bản phác (ĐÃ THỬ, GỠ) (29–30/10/2026, anh Dũng đồng ý)
+
+**Bối cảnh.** Phát lại 62 lượt ghi (chỉ HAI ngôi nhà: biệt thự 15 × 20, nhà ống 5 × 18): biệt thự 25 / 226 vòng qua cổng, nhà ống 1 / 25.
+Lỗi chính trải dài (phòng không lối vào 105, thang không nối ~90, ban công sai mặt ~46, phòng hụt sàn ~56); bốn luật bắt buộc T71 chỉ
+làm hỏng 4 vòng.
+
+**Giữ.**
+- Kiểm ánh sáng trước lượt (`daylightPreflightAdvice`, `kb/construction_norms.yaml` `by_house_profile.bt|vuon.daylight_*`, số ĐỀ XUẤT):
+  phần sàn xa mọi mặt thoáng hơn 4,5 m quá 30 % mà đầu bài chưa BẮT giếng trời / sân trong → cảnh báo (9272: 45 %). Chỉ cảnh báo, T96 giữ.
+- Khung hai hàng dựng dải ban công dọc mặt BÊN đầu bài bắt buộc (`skeleton_rows.side_balcony_strip`): phát lại 26 → 27, điểm giữ nguyên.
+- Lời dẫn 9.14.0, câu nhắc `storey_below_built` (`builtBelowHints`): lượt sửa gửi lưới tầng đã giữ ngay dưới như chương trình dựng
+  (S thang, W khu ướt, K bếp, A thờ, B phòng ở, C hành lang) — trước đây `revisionView` bỏ hẳn tầng đã khoá. Hai lượt thật:
+  9272 qua ở lời gọi 3 (0,355 USD; a66f4aa0 hôm trước: lời gọi 4, 0,577 USD), 70,2 điểm; THU5 qua LẦN ĐẦU ở lời gọi 4 (0,513 USD),
+  69 điểm, 4 tầng. Mẫu nhỏ (2 lượt) — chưa đủ để kết luận; nhóm D, E vẫn dưới sàn cả hai.
+
+**Đã thử, gỡ (đo bằng phát lại).** Lõi thang bộ + thang máy trong khung hai hàng (26 → 26); bỏ phần làm tròn 5 cm khi kiểm sức chứa
+(26 → 26); bỏ bản phác, khung xương tự chia phòng, dò ô thang tầng 2 ở mọi chỗ lưới 1 m: 0 / 98–120 chỗ trên 9272 — kể cả vòng mà
+đường có bản phác đã qua. Bộ khung hiện có hẹp hơn bản phác của mô hình → hướng «chương trình sinh phương án, AI chọn» không làm được
+với khung này.
+
+**Còn mở.** Vòng sửa theo điểm (sau khi đã qua) hỏng ở cả a66f4aa0 lẫn THU5 hôm nay — đo bằng phát lại rồi cân nhắc bỏ. Lượt đầu chỉ vẽ
+tầng 1 (gọi lần lượt từng tầng) — làm khi cần thêm. Mặt bằng thật NVO là dữ liệu hạng 1, không gửi mô hình làm mẫu.
