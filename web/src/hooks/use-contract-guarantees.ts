@@ -202,6 +202,17 @@ export interface OpenRetentionGuarantees {
     settled_amount: MoneyValue;
     due_date: string | null;
   }[];
+  /**
+   * 0253: đợt thanh toán «giữ lại bảo hành» của hợp đồng chưa thu — tiền giữ lại chỉ ghi ở đây (hồ sơ
+   * thanh toán không trừ thêm). `due` = đã tới hạn thu. Bản CSDL cũ hơn 0253: không có.
+   */
+  retention_terms?: {
+    id: string;
+    description: string;
+    amount: MoneyValue | null;
+    due_date: string | null;
+    due: boolean;
+  }[];
   open_guarantees: {
     id: string;
     guarantee_type: GuaranteeType;

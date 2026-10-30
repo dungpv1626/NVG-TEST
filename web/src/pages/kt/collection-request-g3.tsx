@@ -3,8 +3,9 @@
  *
  *   · «Kiểm nội bộ trước khi gửi»: bốn bước công trường → Thi công → Dự án / QS → Kế toán, ai ký, lúc nào,
  *     lý do trả lại. Kế toán bấm «Gửi kiểm nội bộ»; từng bước ký ở trang «Kiểm hồ sơ thanh toán».
- *   · «Chủ đầu tư duyệt»: sau khi gửi, ghi số được duyệt + ngày + bản quét, tiền giữ lại (mặc định theo tỷ lệ ở
- *     điều khoản Bảo hành của hợp đồng).
+ *   · «Chủ đầu tư duyệt»: sau khi gửi, ghi số được duyệt + ngày + bản quét. 0253 (anh Dũng): tiền giữ lại bảo
+ *     hành KHÔNG trừ ở đây nữa — nó là một đợt thanh toán của hợp đồng (căn cứ «Khi hết hạn bảo hành»), trừ
+ *     thêm ở hồ sơ là đếm hai lần trên dòng tiền.
  *   · Bảng số: đề nghị → duyệt → giữ lại → công nợ → đã thu.
  */
 
@@ -14,13 +15,11 @@ import { formatCurrency, formatDate, formatDateTime, toMoney, type MoneyValue } 
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import { MoneyInput } from '@/components/ui/money-input';
 import {
   COLLECTION_CHECK_STEPS,
   collectionScanUrl,
   useCollectionChecks,
-  useContractRetentionRate,
   useRecordOwnerApproval,
   type CollectionRequestRecord,
 } from '@/hooks/use-collection-requests';
@@ -239,47 +238,34 @@ export function OwnerApprovalSection({
   onDone: (text: string) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const suggested = useContractRetentionRate(r.contract_id);
   const record = useRecordOwnerApproval();
   const [approved, setApproved] = useState(
     r.owner_approved_amount === null ? String(r.amount) : String(r.owner_approved_amount),
   );
   const [date, setDate] = useState(r.owner_approved_date ?? '');
-  const [rate, setRate] = useState<string | null>(null);
-  const [retentionAmount, setRetentionAmount] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   if (r.status !== 'da_gui' && !r.owner_approval_scan_path) return null;
   const editable = canEdit && r.status === 'da_gui';
-  const rateText =
-    rate ?? (suggested.data !== null && suggested.data !== undefined ? String(suggested.data) : '');
-  const rateNumber = rateText.trim() === '' ? null : Number(rateText.replace(',', '.'));
   const approvedMoney = approved ? toMoney(approved) : 0n;
-  const previewRetention = retentionAmount
-    ? toMoney(retentionAmount)
-    : rateNumber !== null && Number.isFinite(rateNumber)
-      ? (approvedMoney * BigInt(Math.round(rateNumber * 100))) / 10000n
-      : 0n;
 
   async function submit() {
     setError(null);
     if (approvedMoney <= 0n) return setError('Vui lòng nhập số chủ đầu tư duyệt lớn hơn 0.');
     if (!date) return setError('Vui lòng nhập ngày chủ đầu tư duyệt.');
     if (!file) return setError('Vui lòng chọn bản chủ đầu tư duyệt (ảnh hoặc PDF).');
-    if (rateNumber !== null && !(rateNumber >= 0 && rateNumber < 100))
-      return setError('Tỷ lệ giữ lại phải từ 0 đến dưới 100%.');
     try {
       await record.mutateAsync({
         id: r.id,
         file,
         approvedAmount: approved,
         approvedDate: date,
-        retentionRate: rateNumber,
-        retentionAmount: retentionAmount || null,
+        retentionRate: null,
+        retentionAmount: null,
       });
       setFile(null);
-      onDone('Đã ghi số chủ đầu tư duyệt và tiền giữ lại.');
+      onDone('Đã ghi số chủ đầu tư duyệt.');
     } catch (e) {
       setError(toUserMessage(e, 'edit'));
     }
@@ -292,8 +278,8 @@ export function OwnerApprovalSection({
       </h2>
       <p className="mt-1 text-sm text-fg-subtle">
         Khi hồ sơ duyệt của chủ đầu tư gửi về: ghi số được duyệt, quét bản duyệt. Công nợ ghi theo
-        số được duyệt trừ tiền giữ lại; tiền giữ lại thành một khoản phải thu riêng, thu hồi khi hết
-        bảo hành.
+        đúng số được duyệt. Tiền giữ lại bảo hành không trừ ở đây — nó là đợt «giữ lại bảo hành» của
+        hợp đồng, đến hạn khi hết bảo hành (xem «Bảo lãnh và giữ lại»).
       </p>
       {r.owner_approval_scan_path && (
         <Button
@@ -317,28 +303,7 @@ export function OwnerApprovalSection({
           <Field label="Ngày duyệt" required>
             <DateInput value={date} onChange={setDate} />
           </Field>
-          <Field
-            label="Tỷ lệ giữ lại (%)"
-            optional
-            hint={
-              suggested.data !== null && suggested.data !== undefined
-                ? 'Lấy theo điều khoản Bảo hành của hợp đồng — sửa nếu đợt này khác.'
-                : 'Hợp đồng chưa ghi tỷ lệ ở điều khoản Bảo hành. Để trống = không giữ lại.'
-            }
-          >
-            <Input inputMode="decimal" value={rateText} onChange={(e) => setRate(e.target.value)} />
-          </Field>
-          <Field
-            label="Hoặc số tiền giữ lại (đồng)"
-            optional
-            hint="Điền khi chủ đầu tư ghi số cụ thể — thay cho tỷ lệ."
-          >
-            <MoneyInput value={retentionAmount} onChange={setRetentionAmount} />
-          </Field>
-          <p className="text-sm sm:col-span-2">
-            Giữ lại {formatCurrency(previewRetention)} · công nợ sẽ ghi{' '}
-            {formatCurrency(approvedMoney - previewRetention)}.
-          </p>
+          <p className="text-sm sm:col-span-2">Công nợ sẽ ghi {formatCurrency(approvedMoney)}.</p>
           <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
             <input
               ref={fileRef}

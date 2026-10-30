@@ -322,6 +322,8 @@ export interface ContractTermRecord {
   acceptance_record_id?: string | null;
   /** Máy ghi lúc căn cứ đạt — đợt «đến hạn thu». */
   collection_due_at?: string | null;
+  /** 0253: căn cứ không gắn hồ sơ — `ky_hop_dong` (đến hạn khi ký) / `het_bao_hanh` (tiền giữ lại). */
+  collection_trigger?: 'ky_hop_dong' | 'het_bao_hanh' | null;
 }
 
 export function useContractTerms(contractId: string | undefined) {
@@ -332,7 +334,7 @@ export function useContractTerms(contractId: string | undefined) {
         .from('contract_terms')
         .select(
           'id, term_type, description, amount, percent_value, due_date, completed_at, position, notes, ' +
-            'site_milestone_id, acceptance_record_id, collection_due_at',
+            'site_milestone_id, acceptance_record_id, collection_due_at, collection_trigger',
         )
         .eq('contract_id', contractId!)
         .is('deleted_at', null)

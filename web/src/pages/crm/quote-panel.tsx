@@ -32,6 +32,8 @@ import { WaitingOn } from '@/components/entity/waiting-on';
 import { useApprovalHistory, type ApprovalHistoryEntry } from '@/hooks/use-approvals';
 import { toUserMessage } from '@/hooks/use-error-message';
 import {
+  QUOTE_SENT_CHANNEL_LABELS,
+  type QuoteSentChannel,
   useQuotes,
   useRecordQuoteResponse,
   useRequestQuoteApproval,
@@ -185,7 +187,9 @@ export function QuotePanel({
                       onRequestApproval={(riskNote) =>
                         void run(() => requestApproval.mutateAsync({ quoteId: quote.id, riskNote }))
                       }
-                      onSend={() => void run(() => sendQuote.mutateAsync(quote.id))}
+                      onSend={(channel) =>
+                        void run(() => sendQuote.mutateAsync({ quoteId: quote.id, channel }))
+                      }
                       onStartResponse={() => {
                         setRespondingTo(quote.id);
                         setResponseText(quote.customer_response ?? '');
@@ -259,7 +263,7 @@ interface QuoteVersionCardProps {
   responseText: string;
   onResponseTextChange: (v: string) => void;
   onRequestApproval: (riskNote: string | null) => void;
-  onSend: () => void;
+  onSend: (channel: QuoteSentChannel) => void;
   onStartResponse: () => void;
   onCancelResponse: () => void;
   onSaveResponse: () => void;
@@ -287,6 +291,8 @@ function QuoteVersionCard({
   // Gửi phê duyệt mở ô «Rủi ro» trước (0244) — người duyệt cần biết rủi ro cùng lúc với giá.
   const [submitting, setSubmitting] = useState(false);
   const [riskNote, setRiskNote] = useState(quote.risk_note ?? '');
+  // 0253: «Gửi cho khách hàng» hỏi kênh đã gửi.
+  const [choosingChannel, setChoosingChannel] = useState(false);
   const hasDiscount = quote.discount_amount !== null && BigInt(quote.discount_amount) > 0n;
 
   /**
@@ -300,7 +306,12 @@ function QuoteVersionCard({
       return { label: 'Gửi phê duyệt', onClick: () => setSubmitting(true) };
     }
     if (quote.status === 'completed' && !sent) {
-      return { label: 'Gửi cho khách hàng', onClick: onSend, primary: true };
+      if (choosingChannel) return null;
+      return {
+        label: 'Gửi cho khách hàng',
+        onClick: () => setChoosingChannel(true),
+        primary: true,
+      };
     }
     if (sent && !isResponding) {
       return {
@@ -363,6 +374,7 @@ function QuoteVersionCard({
             {sent && (
               <span className="text-xs text-fg-subtle">
                 Đã gửi khách {formatDateTime(quote.sent_to_customer_at)}
+                {quote.sent_channel && ` qua ${QUOTE_SENT_CHANNEL_LABELS[quote.sent_channel]}`}
               </span>
             )}
           </div>
@@ -412,6 +424,35 @@ function QuoteVersionCard({
               {busy ? 'Đang xử lý…' : 'Gửi phê duyệt'}
             </Button>
             <Button variant="subtle" size="sm" onClick={() => setSubmitting(false)}>
+              Hủy
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {choosingChannel && !sent && quote.status === 'completed' && (
+        <div className="mt-3 space-y-2 rounded-sm border border-border p-3">
+          <p className="font-medium">Đã gửi báo giá cho khách qua kênh nào?</p>
+          <p className="text-xs text-fg-subtle">
+            Gửi bằng nút «Gửi qua Zalo» hoặc «Gửi email» bên dưới thì hệ thống tự ghi — chọn ở đây
+            khi đã gửi theo cách khác. Ghi xong cơ hội tự sang bước Đàm phán.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(QUOTE_SENT_CHANNEL_LABELS) as QuoteSentChannel[]).map((ch) => (
+              <Button
+                key={ch}
+                variant="secondary"
+                size="sm"
+                disabled={busy}
+                onClick={() => {
+                  onSend(ch);
+                  setChoosingChannel(false);
+                }}
+              >
+                {QUOTE_SENT_CHANNEL_LABELS[ch]}
+              </Button>
+            ))}
+            <Button variant="subtle" size="sm" onClick={() => setChoosingChannel(false)}>
               Hủy
             </Button>
           </div>

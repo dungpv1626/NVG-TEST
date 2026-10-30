@@ -121,6 +121,8 @@ describeDb('Bàn giao, khởi công, ngân sách có duyệt (0249)', () => {
                  WHERE param_key = 'tc.over_budget_tolerance_percent' AND scope_type = 'company' AND scope_id = ${nvcId}`;
       await sql`DELETE FROM approvals WHERE entity_type = 'purchase_requests' AND entity_id = ANY(${prIds})`;
       await sql`DELETE FROM purchase_requests WHERE id = ANY(${prIds})`;
+      await sql`DELETE FROM approvals WHERE entity_type = 'site_budget_submissions'
+                  AND entity_id IN (SELECT id FROM site_budget_submissions WHERE construction_site_id IN ${sql([prepSite, otherSite, runSite])})`;
       await sql`DELETE FROM approvals WHERE entity_type IN ('budget_adjustments', 'subcontract_selections')
                   AND entity_id IN (SELECT id FROM budget_adjustments WHERE construction_site_id IN ${sql([prepSite, otherSite, runSite])}
                                     UNION SELECT id FROM subcontract_selections WHERE construction_site_id IN ${sql([prepSite, otherSite, runSite])})`;
@@ -293,6 +295,21 @@ describeDb('Bàn giao, khởi công, ngân sách có duyệt (0249)', () => {
           p_link_url: 'https://drive.example/an-toan.pdf',
         })
       ).error,
+    ).toBeNull();
+    // 0253: ngân sách thi công ban đầu phải được Tổng Giám đốc duyệt trước khởi công.
+    const noBudget = await cht.rpc('move_site_stage', {
+      p_site_id: prepSite,
+      p_stage: 'dang_thi_cong',
+    });
+    expect(noBudget.error?.message).toMatch(/Tổng Giám đốc duyệt ngân sách/);
+    const sub = await tp.rpc('submit_site_budget', { p_site_id: prepSite });
+    expect(sub.error).toBeNull();
+    const [appr] = await withSql(
+      (sql) => sql<{ id: string }[]>`
+        SELECT approval_id AS id FROM site_budget_submissions WHERE id = ${sub.data as string}`,
+    );
+    expect(
+      (await tgd.rpc('decide_approval', { p_approval_id: appr!.id, p_decision: 'approved' })).error,
     ).toBeNull();
     expect(
       (await cht.rpc('move_site_stage', { p_site_id: prepSite, p_stage: 'dang_thi_cong' })).error,

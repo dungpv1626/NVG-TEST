@@ -312,6 +312,21 @@ export function ContractGuaranteesCard({
           <p className="mt-2 text-sm text-fg-subtle">Chưa ghi bảo lãnh nào cho hợp đồng này.</p>
         )
       )}
+      {open.data && (open.data.retention_terms ?? []).length > 0 && (
+        <ul className="mt-3 space-y-1 text-sm">
+          {(open.data.retention_terms ?? []).map((t) => (
+            <li key={t.id}>
+              Đợt «{t.description}» —{' '}
+              {t.amount !== null ? formatCurrency(t.amount) : 'chưa ghi số tiền'}
+              {t.due
+                ? ', đã tới hạn thu — lập đề nghị thu tiền ở Đợt thu'
+                : t.due_date
+                  ? `, đến hạn khi hết bảo hành ${formatDate(t.due_date)}`
+                  : ', đến hạn khi hết bảo hành (chờ khai bảo hành công trình)'}
+            </li>
+          ))}
+        </ul>
+      )}
       {open.data && open.data.retention_items.length > 0 && (
         <ul className="mt-3 space-y-1 text-sm">
           {open.data.retention_items.map((it) => (

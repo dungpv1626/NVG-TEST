@@ -565,3 +565,13 @@ export function accountingPeriodLabel(code: string): string {
   if (!match) return code;
   return `Tháng ${match[2]}/${match[1]}`;
 }
+
+/**
+ * Đề nghị chi trông như trả tổ đội / thầu phụ (0255, anh Dũng 30/10/2026) — chữ thường gặp
+ * («tổ», «đội», «thầu phụ», «nhân công», «khoán») đứng riêng một từ trong tên bên nhận hoặc nội
+ * dung. Gương của điều kiện chữ trong `payment_request_crew_warning`; chỉ để CẢNH BÁO, không chặn.
+ */
+export function looksLikeCrewPayment(...texts: ReadonlyArray<string | null | undefined>): boolean {
+  const text = texts.filter(Boolean).join(' ');
+  return /(^|[^\p{L}])(tổ|đội|thầu phụ|nhân công|khoán)(?=[^\p{L}]|$)/iu.test(text);
+}

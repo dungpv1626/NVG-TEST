@@ -9,6 +9,9 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  formatCurrency,
+  formatDate,
+  formatQuantity,
   quotesForScope,
   type MoneyValue,
   type QuoteScopeKind,
@@ -28,6 +31,8 @@ export interface QuoteRecord {
   discount_reason: string | null;
   status: StatusGroup;
   sent_to_customer_at: string | null;
+  /** Kênh gửi khách (0253); báo giá gửi trước 0253 để trống. */
+  sent_channel: QuoteSentChannel | null;
   customer_response: string | null;
   responded_at: string | null;
   valid_until: string | null;
@@ -52,7 +57,7 @@ export interface QuoteRecord {
 
 const QUOTE_SELECT =
   'id, code, company_id, version, is_current_version, total_value, discount_amount, discount_reason, ' +
-  'status, sent_to_customer_at, customer_response, responded_at, valid_until, notes, created_at, ' +
+  'status, sent_to_customer_at, sent_channel, customer_response, responded_at, valid_until, notes, created_at, ' +
   'vat_rate, vat_included, subtotal_value, vat_amount, line_items_based, scope_kind, risk_note, created_by, ' +
   'created_by_user:users!quotes_created_by_users_id_fk(full_name)';
 
@@ -170,13 +175,26 @@ export function useRequestQuoteApproval() {
   });
 }
 
-/** Đánh dấu đã gửi khách hàng. Hàm CSDL chặn nếu chưa qua phê duyệt nội bộ. */
+/** Kênh gửi báo giá cho khách (0253). */
+export type QuoteSentChannel = 'zalo' | 'email' | 'tan_tay' | 'khac';
+
+export const QUOTE_SENT_CHANNEL_LABELS: Readonly<Record<QuoteSentChannel, string>> = {
+  zalo: 'Zalo',
+  email: 'Email',
+  tan_tay: 'Gửi tận tay',
+  khac: 'Khác',
+};
+
+/** Đánh dấu đã gửi khách hàng, kèm kênh gửi. Hàm CSDL chặn nếu chưa qua phê duyệt nội bộ. */
 export function useSendQuote() {
   const invalidate = useQuoteFlowInvalidation();
 
-  return useMutation<void, Error, string>({
-    mutationFn: async (quoteId) => {
-      const { error } = await supabase.rpc('send_quote_to_customer', { p_quote_id: quoteId });
+  return useMutation<void, Error, { quoteId: string; channel: QuoteSentChannel }>({
+    mutationFn: async ({ quoteId, channel }) => {
+      const { error } = await supabase.rpc('send_quote_to_customer', {
+        p_quote_id: quoteId,
+        p_channel: channel,
+      });
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -235,9 +253,65 @@ export function useContractTermSources(opportunityId: string | null, scopeKind?:
         list.find((q) => q.sent_to_customer_at !== null) ??
         list.find((q) => q.status === 'completed') ??
         null;
-      return { quote, survey: surveys.data?.[0] ?? null };
+      // 0256 (câu 14): cơ hội cho thuê (NVS) báo giá bằng báo giá THUÊ — không có báo giá chung thì lấy
+      // dòng hàng / giá từ báo giá thuê đã duyệt (ưu tiên bản đã gửi khách).
+      return {
+        quote: quote ?? (await rentalQuoteAsTermSource(opportunityId!)),
+        survey: surveys.data?.[0] ?? null,
+      };
     },
   });
+}
+
+/** Báo giá thuê đã duyệt của cơ hội, dựng thành nguồn gợi ý điều khoản (0256). */
+async function rentalQuoteAsTermSource(opportunityId: string) {
+  const { data, error } = await supabase
+    .from('rental_quotes')
+    .select(
+      'code, estimated_total, needed_date, expected_end_date, sent_to_customer_at, decided_at, ' +
+        'items:rental_quote_items(kind, quantity, unit_price, material:materials(code, name, unit))',
+    )
+    .eq('opportunity_id', opportunityId)
+    .eq('status', 'da_duyet')
+    .is('deleted_at', null)
+    .order('decided_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  const rows = (data ?? []) as unknown as {
+    code: string;
+    estimated_total: number | string | null;
+    needed_date: string | null;
+    expected_end_date: string | null;
+    sent_to_customer_at: string | null;
+    items: {
+      kind: 'thue' | 'mua';
+      quantity: number | string;
+      unit_price: number | string;
+      material: { code: string; name: string; unit: string | null } | null;
+    }[];
+  }[];
+  const r = rows.find((x) => x.sent_to_customer_at !== null) ?? rows[0];
+  if (!r) return null;
+  const lines = r.items.map(
+    (i) =>
+      `- ${i.kind === 'thue' ? 'Cho thuê' : 'Bán'} ${i.material?.code ?? ''} ${i.material?.name ?? ''}: ` +
+      `${formatQuantity(Number(i.quantity))} ${i.material?.unit ?? ''} × ${formatCurrency(Number(i.unit_price))}` +
+      `${i.kind === 'thue' ? ' / ngày' : ''}`,
+  );
+  const period =
+    r.needed_date && r.expected_end_date
+      ? `Thời gian thuê dự kiến từ ${formatDate(r.needed_date)} đến ${formatDate(r.expected_end_date)}.`
+      : null;
+  return {
+    code: r.code,
+    version: 1,
+    total_value: r.estimated_total,
+    discount_amount: null,
+    discount_reason: null,
+    notes: [`Hàng hoá theo báo giá thuê ${r.code}:`, ...lines, ...(period ? [period] : [])].join(
+      '\n',
+    ),
+    sent_to_customer_at: r.sent_to_customer_at,
+  };
 }
 
 export interface QuoteItemRecord {

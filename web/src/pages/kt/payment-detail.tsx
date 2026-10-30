@@ -53,6 +53,7 @@ import { toUserMessage } from '@/hooks/use-error-message';
 import { useAuth, useCan } from '@/lib/auth';
 import { PaymentFilesPanel } from './payment-files-panel';
 import { RecordChain } from '@/components/entity/record-chain';
+import { CrewPaymentWarning } from './crew-payment-warning';
 import { SubcontractBasisPanel } from './subcontract-basis-panel';
 import { AllocationPanel } from './allocation-panel';
 import { KtNav } from './kt-nav';
@@ -281,6 +282,11 @@ export function PaymentRequestDetailPage() {
           {request.advance_override_reason}
         </p>
       )}
+
+      {/* 0255: trông như trả tổ đội mà không gắn tổ đội — cảnh báo, không chặn. */}
+      <div className="mb-4 empty:hidden">
+        <CrewPaymentWarning requestId={request.id} />
+      </div>
 
       {/* Dải bước — trả lời "đang ở đâu, chờ ai" mà không phải mở tab nào (KT-02). */}
       <ol className="mb-4 flex flex-wrap gap-2" aria-label="Các bước xử lý">

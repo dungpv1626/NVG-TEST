@@ -1709,6 +1709,41 @@
       "when": 1791970000000,
       "tag": "0252_e2e_nvs_sua_loi",
       "breakpoints": true
+    },
+    {
+      "idx": 252,
+      "version": "7",
+      "when": 1791980000000,
+      "tag": "0253_goi_a_nghiep_vu",
+      "breakpoints": true
+    },
+    {
+      "idx": 253,
+      "version": "7",
+      "when": 1791990000000,
+      "tag": "0254_vai_tro_kinh_doanh_nvs",
+      "breakpoints": true
+    },
+    {
+      "idx": 254,
+      "version": "7",
+      "when": 1792000000000,
+      "tag": "0255_goi_b_nghiep_vu",
+      "breakpoints": true
+    },
+    {
+      "idx": 255,
+      "version": "7",
+      "when": 1792010000000,
+      "tag": "0256_goi_c_nghiep_vu",
+      "breakpoints": true
+    },
+    {
+      "idx": 256,
+      "version": "7",
+      "when": 1792020000000,
+      "tag": "0257_gop_goi_abc",
+      "breakpoints": true
     }
   ]
 }

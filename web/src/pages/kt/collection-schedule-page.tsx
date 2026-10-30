@@ -73,6 +73,17 @@ function stateLabel(row: CollectionScheduleRow) {
 
 function basisText(row: CollectionScheduleRow): string {
   if (!row.basis_kind) return 'Chưa gắn mốc / biên bản — đến hạn theo ngày ghi trong hợp đồng';
+  // 0253: hai căn cứ không gắn hồ sơ.
+  if (row.basis_kind === 'ky') {
+    return row.basis_reached_at
+      ? `Khi ký hợp đồng — đã ký ${formatDate(row.basis_reached_at)}`
+      : 'Khi ký hợp đồng';
+  }
+  if (row.basis_kind === 'bao_hanh') {
+    return row.due_date
+      ? `Tiền giữ lại — đến hạn khi hết bảo hành (${formatDate(row.due_date)})`
+      : 'Tiền giữ lại — đến hạn khi hết bảo hành (chưa khai bảo hành công trình)';
+  }
   const kind = row.basis_kind === 'moc' ? 'Mốc' : 'Biên bản';
   const where = row.site_code ? ` (công trình ${row.site_code})` : '';
   const reached = row.basis_reached_at

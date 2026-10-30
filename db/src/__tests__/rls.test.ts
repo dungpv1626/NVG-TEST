@@ -12,6 +12,7 @@
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
+import { markDesignHandoverReady } from './design-handover-ready';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   attachContractDocument,
@@ -1948,6 +1949,14 @@ describeDb('DA — gói thầu, dự toán và ngân sách', () => {
       p_decision: 'approved',
       p_note: 'Duyệt.',
     });
+    // 0255: nộp thầu bắt buộc có danh mục hồ sơ.
+    await dt.from('bid_documents').insert({
+      company_id: project.companyId,
+      bidding_project_id: project.id,
+      category: 'bang_gia',
+      name: 'Bảng giá dự thầu',
+      is_required: false,
+    });
     await dt.rpc('submit_bid', { p_bidding_project_id: project.id });
 
     const { error: noReason } = await dt.rpc('record_bid_result', {
@@ -2264,6 +2273,8 @@ describeDb('TK — dự án thiết kế, phiên bản bản vẽ và bàn giao'
       });
     }
     await createSignedBuildContract(project.companyId, project.id);
+    // 0256: đầu bài đã xác nhận + lý do không khảo sát.
+    await markDesignHandoverReady(project.id);
   }
 
   it('CSDL cấp số phiên bản theo TỪNG bộ môn, không đánh số chung cả dự án (TK-05)', async () => {

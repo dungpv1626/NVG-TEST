@@ -227,6 +227,20 @@ export const ROLE_SEED: RoleSeed[] = [
     permissions: { BC: VIEW, CRM: WORK, HD: DRAFT_CONTRACT, TK: VIEW },
   },
   {
+    /*
+     * Kinh doanh NVS (0254, 0255 — anh Dũng 30/10/2026): như `KD` cộng XEM phân hệ SX (tồn giàn
+     * giáo, đơn thuê, báo giá thuê) để kiểm tồn khi báo giá. Không sửa, không duyệt SX. Ma trận
+     * quyền không có chiều pháp nhân nên tách vai, KHÔNG mở SX cho `KD`.
+     */
+    code: 'KD_NVS',
+    label: 'Kinh doanh NVS',
+    description:
+      'Kinh doanh giàn giáo / kết cấu thép NVS: khách hàng, báo giá, hợp đồng; xem tồn và đơn thuê để kiểm tồn.',
+    seesAllCompanies: false,
+    defaultRoute: '/crm/co-hoi',
+    permissions: { BC: VIEW, CRM: WORK, HD: DRAFT_CONTRACT, TK: VIEW, SX: VIEW },
+  },
+  {
     code: 'DA_DT',
     label: 'Dự án – Đấu thầu',
     description: 'Khảo sát, bóc tách khối lượng, dự toán, hồ sơ thầu, ngân sách thi công.',
@@ -403,6 +417,8 @@ export const ROLE_CAPABILITY_SEED: Record<string, string[]> = {
     'design.settings.write',
   ],
   KD: ['design.project.all', 'design.read.kien_truc'],
+  // 0255: Kinh doanh NVS làm được việc của Kinh doanh — cùng quyền xem hồ sơ thiết kế.
+  KD_NVS: ['design.project.all', 'design.read.kien_truc'],
   TGD: [
     'design.project.all',
     'design.read.kien_truc',
@@ -517,6 +533,14 @@ export const USER_SEED: UserSeed[] = [
     department: 'NVO — Phòng Kinh doanh',
     fromDocs: false,
     assignments: [{ company: 'NVO', role: 'KD', isPrimary: true }],
+  },
+  {
+    email: 'kinhdoanh.nvs@nhavietgroup.test',
+    fullName: 'Phạm Thị Thép',
+    jobTitle: 'Nhân viên Kinh doanh',
+    department: 'NVS — Phòng Kinh doanh',
+    fromDocs: false,
+    assignments: [{ company: 'NVS', role: 'KD_NVS', isPrimary: true }],
   },
   {
     email: 'dauthau.nvc@nhavietgroup.test',

@@ -121,6 +121,14 @@ export interface PriceMarginBrief {
   risk_note: string | null;
   /** Câu «Điều kiện thanh toán» đã sửa trên văn bản báo giá; rỗng = câu mặc định. */
   payment_terms: string | null;
+  /**
+   * Dự toán (0253): lợi nhuận / tỷ lệ NGƯỜI LẬP GÕ — chỉ để đối chiếu. Căn cứ duyệt là số máy tính ở
+   * `profit` / `margin_percent`. Báo giá và vai trò không xem giá vốn: rỗng. Bản CSDL cũ hơn 0253: không có.
+   */
+  typed_profit?: MoneyValue | null;
+  typed_margin_percent?: number | string | null;
+  /** Số gõ tay lệch số máy tính. */
+  typed_mismatch?: boolean | null;
 }
 
 export function usePriceMarginBrief(

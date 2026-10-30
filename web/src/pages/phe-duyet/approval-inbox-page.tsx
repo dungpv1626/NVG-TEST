@@ -16,12 +16,17 @@ import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
 import { cn } from '@/lib/utils';
 import { BidReviewsList } from '@/pages/da/bid-reviews-panel';
 import { BidParticipationPreview } from './bid-participation-preview';
-import { BudgetAdjustmentPreview, OverBudgetPreview } from './budget-approval-preview';
+import {
+  BudgetAdjustmentPreview,
+  OverBudgetPreview,
+  SiteBudgetSubmissionPreview,
+} from './budget-approval-preview';
 import { ContractDocumentPreview } from './contract-document-preview';
 import { PurchaseQuotationPreview } from './purchase-quotation-preview';
 import { PriceMarginPreview } from './price-margin-preview';
 import { SurveyReportPreview } from './survey-report-preview';
 import { SubcontractSelectionPreview } from './subcontract-selection-preview';
+import { CrewPaymentWarning } from '@/pages/kt/crew-payment-warning';
 import { PageHeader } from '@/components/layout/app-shell';
 import { ApprovalInbox, type ApprovalItem } from '@/components/entity/approval-inbox';
 import { StatusLozenge, StatusWithLabel } from '@/components/ui/status-lozenge';
@@ -87,6 +92,9 @@ function fullRecordPath(item: PendingApproval): string {
       return `/tc/chon-thau-phu/${item.entity_id}`;
     case 'budget_adjustments':
       // G4 (0249): điều chỉnh ngân sách nằm ở tab Ngân sách của công trình — khối xem trước có liên kết.
+      return '/tc/cong-trinh';
+    case 'site_budget_submissions':
+      // 0253: ngân sách thi công ban đầu — khối xem trước có liên kết tới tab Ngân sách của công trình.
       return '/tc/cong-trinh';
     case 'internal_rental_requests':
       return '/sx/thue-noi-bo';
@@ -356,6 +364,12 @@ function ApprovalPreview({ row }: { row: PendingApproval }) {
         <BudgetAdjustmentPreview adjustmentId={row.entity_id} />
       )}
       {row.subject === 'over_budget' && <OverBudgetPreview approvalId={row.id} />}
+      {/* 0253: ngân sách thi công ban đầu — tổng và từng dòng lúc gửi. */}
+      {row.entity_type === 'site_budget_submissions' && (
+        <SiteBudgetSubmissionPreview submissionId={row.entity_id} />
+      )}
+      {/* 0255: đề nghị chi trông như trả tổ đội mà không gắn tổ đội — người duyệt phải thấy. */}
+      {row.entity_type === 'payment_requests' && <CrewPaymentWarning requestId={row.entity_id} />}
       {row.entity_type === 'site_surveys' ? (
         <SurveyReportPreview surveyId={row.entity_id} />
       ) : (

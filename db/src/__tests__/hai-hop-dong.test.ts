@@ -10,6 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { ACCOUNTS, hasCredentials, signInAs, TEST_PREFIX } from './helpers';
+import { markDesignHandoverReady } from './design-handover-ready';
 
 const describeDb = hasCredentials ? describe : describe.skip;
 
@@ -147,22 +148,35 @@ describeDb('hai hợp đồng một cơ hội — thiết kế rồi thi công (
     );
     expect(n!.c).toBe(1);
 
+    // 0253: ký hợp đồng thiết kế thì máy tạo hồ sơ thiết kế gắn cơ hội + hợp đồng.
+    const [dp] = await withSql(
+      (sql) => sql`SELECT count(*)::int AS c FROM design_projects
+                    WHERE opportunity_id = ${opp.id} AND contract_id = ${design} AND deleted_at IS NULL`,
+    );
+    expect(dp!.c).toBe(1);
+
     // Vẫn soạn được hợp đồng thi công sau đó (cơ hội vẫn ở Đàm phán).
     const build = await mustDraft(opp.id, 'thi_cong');
     await sign(build);
     expect(await oppStage(opp.id)).toBe('ky_hop_dong');
     expect(
       await sitesOf(build),
-      'hợp đồng thi công từ cơ hội ký xong tự mở công trình (0187)',
-    ).toBe(1);
+      'cơ hội còn hồ sơ thiết kế đang làm: công trình mở lúc bàn giao thiết kế (0243 / 0250), không mở khi ký',
+    ).toBe(0);
   });
 
-  it('ký hợp đồng trọn gói: cơ hội sang Ký hợp đồng và công trình tự mở', async () => {
+  it('ký hợp đồng trọn gói NVO: cơ hội sang Ký hợp đồng, có hồ sơ thiết kế, công trình chờ bàn giao thiết kế', async () => {
     const opp = await opportunity();
     const tronGoi = await mustDraft(opp.id, 'thi_cong', 'tron_goi');
     await sign(tronGoi);
     expect(await oppStage(opp.id)).toBe('ky_hop_dong');
-    expect(await sitesOf(tronGoi)).toBe(1);
+    // 0253: NVO tự làm thiết kế (`tk.design_in_house`) → hồ sơ thiết kế trước, công trình mở lúc bàn giao.
+    const [dp] = await withSql(
+      (sql) => sql`SELECT count(*)::int AS c FROM design_projects
+                    WHERE opportunity_id = ${opp.id} AND contract_id = ${tronGoi} AND deleted_at IS NULL`,
+    );
+    expect(dp!.c).toBe(1);
+    expect(await sitesOf(tronGoi)).toBe(0);
   });
 
   it('bàn giao thiết kế: hợp đồng thiết kế đã ký không đủ; có hợp đồng thi công đã ký thì gắn vào công trình', async () => {
@@ -256,6 +270,8 @@ describeDb('hai hợp đồng một cơ hội — thiết kế rồi thi công (
            WHERE id = ${v!.id}`;
       }
     });
+    // 0256: đầu bài đã xác nhận + lý do không khảo sát.
+    await markDesignHandoverReady(design!.id);
     const tk = await signInAs(ACCOUNTS.thietKeNvo);
     const { error: handError } = await tk.rpc('handover_design_to_construction', {
       p_design_project_id: design!.id,

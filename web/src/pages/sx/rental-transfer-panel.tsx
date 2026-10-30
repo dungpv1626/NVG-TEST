@@ -219,7 +219,11 @@ export function RentalTransferPanel({
             </p>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Ngày điều chuyển" required>
+            <Field
+              label="Ngày điều chuyển"
+              required
+              hint="Lập trước được; ký biên bản từ đúng ngày hàng được chuyển (không ký trước ngày này)."
+            >
               <DateInput value={date} onChange={setDate} min={agreement.start_date} />
             </Field>
             {agreement.is_internal ? (

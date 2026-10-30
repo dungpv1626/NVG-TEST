@@ -985,3 +985,115 @@ export function useSiteBoard() {
     enabled: scope.isReady,
   });
 }
+
+// ---------------------------------------------------------------------------
+// Duyệt ngân sách thi công ban đầu (0253, anh Dũng): Tổng Giám đốc duyệt trước khởi công. Ngân sách dựng
+// từ dự toán đã duyệt của gói thầu / hồ sơ thiết kế coi như đã duyệt (`theo_du_toan`).
+// ---------------------------------------------------------------------------
+
+export type SiteBudgetState =
+  'theo_du_toan' | 'da_duyet' | 'cho_duyet' | 'tra_ve' | 'nhap' | 'chua_co';
+
+export interface SiteBudgetApproval {
+  state: SiteBudgetState;
+  /** Nhãn do CSDL đặt — một nguồn cho mọi màn hình. */
+  state_label: string;
+  /** Người lập ngân sách, công trình chưa khởi công, trạng thái Nháp / Bị trả lại. */
+  can_submit: boolean;
+  submission_id: string | null;
+  round_no: number | null;
+  total_amount: MoneyValue | null;
+  submitted_at: string | null;
+  submitted_by: string | null;
+  decided_at: string | null;
+  decided_by: string | null;
+  decision_note: string | null;
+  /** Bản đã duyệt hết hiệu lực vì ngân sách sửa sau khi duyệt. */
+  superseded: boolean;
+  is_mine: boolean;
+}
+
+export function useSiteBudgetApproval(siteId: string | undefined) {
+  return useQuery<SiteBudgetApproval | null, Error>({
+    queryKey: ['construction-sites', siteId, 'budget-approval'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('site_budget_approval', { p_site_id: siteId! });
+      if (error) throw new Error(error.message);
+      return ((data ?? []) as SiteBudgetApproval[])[0] ?? null;
+    },
+    enabled: Boolean(siteId),
+  });
+}
+
+export function useSubmitSiteBudget() {
+  const invalidate = useInvalidateSiteBudget();
+  const queryClient = useQueryClient();
+  return useMutation<string, Error, { siteId: string; note: string | null }>({
+    mutationFn: async ({ siteId, note }) => {
+      const { data, error } = await supabase.rpc('submit_site_budget', {
+        p_site_id: siteId,
+        p_note: note,
+      });
+      if (error) throw error;
+      return data as string;
+    },
+    onSuccess: (_d, { siteId }) => {
+      invalidate(siteId);
+      void queryClient.invalidateQueries({ queryKey: ['approvals'] });
+    },
+  });
+}
+
+export function useCancelSiteBudgetSubmission() {
+  const invalidate = useInvalidateSiteBudget();
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, { siteId: string; reason: string }>({
+    mutationFn: async ({ siteId, reason }) => {
+      const { error } = await supabase.rpc('cancel_site_budget_submission', {
+        p_site_id: siteId,
+        p_reason: reason,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_d, { siteId }) => {
+      invalidate(siteId);
+      void queryClient.invalidateQueries({ queryKey: ['approvals'] });
+    },
+  });
+}
+
+/** Một lần gửi duyệt ngân sách — cho hộp Phê duyệt (RLS: người xem được giá vốn / Thi công trong phạm vi). */
+export interface SiteBudgetSubmission {
+  id: string;
+  construction_site_id: string;
+  round_no: number;
+  total_amount: MoneyValue;
+  lines: {
+    cost_code: string;
+    cost_group: string;
+    name: string;
+    budgeted_amount: number | string;
+  }[];
+  note: string | null;
+  status: string;
+  site: { code: string; name: string } | null;
+}
+
+export function useSiteBudgetSubmission(id: string | undefined) {
+  return useQuery<SiteBudgetSubmission | null, Error>({
+    queryKey: ['site-budget-submission', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('site_budget_submissions')
+        .select(
+          'id, construction_site_id, round_no, total_amount, lines, note, status, ' +
+            'site:construction_sites(code, name)',
+        )
+        .eq('id', id!)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return data as unknown as SiteBudgetSubmission | null;
+    },
+    enabled: Boolean(id),
+  });
+}

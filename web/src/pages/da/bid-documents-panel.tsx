@@ -46,6 +46,8 @@ export function BidDocumentsPanel({
   }>({ category: 'phap_ly', name: '', required: true });
 
   const missing = (documents ?? []).filter((d) => d.is_required && !d.submitted_at).length;
+  // Chờ tải xong mới khoá — không nháy «chưa có danh mục» khi danh sách đang tải.
+  const noDocuments = documents !== undefined && documents.length === 0;
 
   async function run(action: () => Promise<unknown>) {
     setError(null);
@@ -87,18 +89,28 @@ export function BidDocumentsPanel({
         <p className="text-fg-subtle">
           {submittedAt
             ? `Đã nộp thầu lúc ${formatDateTime(submittedAt)}. Hồ sơ chuyển sang chỉ xem.`
-            : missing > 0
-              ? `Còn ${missing} đầu mục bắt buộc chưa hoàn thành.`
-              : 'Các đầu mục bắt buộc đã hoàn thành.'}
+            : noDocuments
+              ? 'Chưa có danh mục hồ sơ dự thầu.'
+              : missing > 0
+                ? `Còn ${missing} đầu mục bắt buộc chưa hoàn thành.`
+                : 'Các đầu mục bắt buộc đã hoàn thành.'}
         </p>
         {!readOnly && !submittedAt && (
-          <Button
-            variant="primary"
-            disabled={submitBid.isPending}
-            onClick={() => void run(() => submitBid.mutateAsync({ projectId }))}
-          >
-            Nộp thầu
-          </Button>
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              variant="primary"
+              disabled={submitBid.isPending || noDocuments}
+              onClick={() => void run(() => submitBid.mutateAsync({ projectId }))}
+            >
+              Nộp thầu
+            </Button>
+            {/* 0255: CSDL chặn nộp thầu khi chưa có danh mục hồ sơ — nói lý do ngay dưới nút. */}
+            {noDocuments && (
+              <p className="max-w-xs text-right text-sm text-fg-subtle">
+                Chưa nộp được: gói thầu chưa có danh mục hồ sơ. Thêm đầu mục hồ sơ dự thầu bên dưới.
+              </p>
+            )}
+          </div>
         )}
       </div>
 

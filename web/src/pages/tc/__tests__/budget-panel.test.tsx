@@ -26,6 +26,10 @@ vi.mock('@/hooks/use-construction-sites', () => ({
   useBuildSiteBudget: () => ({ mutateAsync: build, isPending: false }),
   useSaveSiteBudgetLine: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteSiteBudgetLine: () => ({ mutate: vi.fn(), isPending: false }),
+  // 0253: trạng thái duyệt ngân sách ban đầu — không có dữ liệu thì khối duyệt không hiện.
+  useSiteBudgetApproval: () => ({ data: null, isLoading: false }),
+  useSubmitSiteBudget: () => ({ mutate: vi.fn(), isPending: false }),
+  useCancelSiteBudgetSubmission: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 const MANAGER = {

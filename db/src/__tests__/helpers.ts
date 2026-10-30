@@ -58,6 +58,8 @@ export const ACCOUNTS = {
   admin: 'admin@nhavietgroup.test',
   kinhDoanhNvc: 'kinhdoanh.nvc@nhavietgroup.test',
   kinhDoanhNvo: 'kinhdoanh.nvo@nhavietgroup.test',
+  /** Vai trò `KD_NVS` — Kinh doanh NVS, như KD cộng xem phân hệ SX (0254, 0255). */
+  kinhDoanhNvs: 'kinhdoanh.nvs@nhavietgroup.test',
   dauThauNvc: 'dauthau.nvc@nhavietgroup.test',
   congTruongNvc: 'congtruong.nvc@nhavietgroup.test',
   /** Vai trò `CHT` — chỉ huy trưởng, chỉ thấy công trình được phân công (mẫu RLS E, 0115). */

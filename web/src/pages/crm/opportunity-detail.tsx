@@ -45,6 +45,7 @@ import { useCan, useIsOrgManager, useIsResponsible } from '@/lib/auth';
 import { CLASSIFICATION_ANCHOR, ClassificationCard } from './classification-card';
 import { NegotiationNextSteps } from './negotiation-next-steps';
 import { QuotePanel } from './quote-panel';
+import { RentalQuotePanel } from './rental-quote-panel';
 import { EMPTY_SURVEY_DRAFT, SurveyPanel, type SurveyDraft } from './survey-panel';
 import { cn } from '@/lib/utils';
 
@@ -150,6 +151,9 @@ export function OpportunityDetailPage() {
   // NVS cho thuê / bán giàn giáo: hợp đồng mặc định là hợp đồng cho thuê, không phải thi công.
   const defaultContractType: ContractType = company?.code === 'NVS' ? 'cho_thue' : 'thi_cong';
   const isHandedOver = data.handed_over_at !== null;
+  const quoteMissing = readiness
+    .filter((r) => r.for_stage === 'bao_gia' && !r.met)
+    .map((r) => r.label);
   const designOnly = data.design_only_at !== null;
   const designContract = contractGroup?.find((c) => c.scope_kind === 'thiet_ke') ?? null;
   const hasBuildContract = Boolean(contractGroup?.some((c) => c.scope_kind !== 'thiet_ke'));
@@ -508,18 +512,48 @@ export function OpportunityDetailPage() {
           {
             id: 'bao-gia',
             label: 'Báo giá',
-            content: (
-              <QuotePanel
-                opportunityId={data.id}
-                canEdit={canEdit}
-                isHandedOver={isHandedOver}
-                stage={data.stage}
-                companyCode={company?.code ?? null}
-                missingForQuote={readiness
-                  .filter((r) => r.for_stage === 'bao_gia' && !r.met)
-                  .map((r) => r.label)}
-              />
-            ),
+            content:
+              // Gói C (0256, câu 14): pháp nhân cho thuê (NVS) lập báo giá THUÊ ngay trong cơ hội — nhập
+              // một lần. Báo giá theo mẫu chung giữ trong khối gấp (kết cấu thép, báo giá lập trước 0256).
+              company?.code === 'NVS' ? (
+                <div className="space-y-6">
+                  <RentalQuotePanel
+                    opportunityId={data.id}
+                    companyId={data.company_id}
+                    customerId={customer?.id ?? ''}
+                    customerName={customer?.name ?? null}
+                    customerPhone={customer?.phone ?? null}
+                    canEdit={canEdit}
+                    isHandedOver={isHandedOver}
+                    stage={data.stage}
+                    missingForQuote={quoteMissing}
+                  />
+                  <details className="rounded-card bg-surface p-3">
+                    <summary className="min-h-11 cursor-pointer py-2 font-medium">
+                      Báo giá khác theo mẫu chung (kết cấu thép, hàng ngoài danh mục giàn giáo)
+                    </summary>
+                    <div className="pt-3">
+                      <QuotePanel
+                        opportunityId={data.id}
+                        canEdit={canEdit}
+                        isHandedOver={isHandedOver}
+                        stage={data.stage}
+                        companyCode={company?.code ?? null}
+                        missingForQuote={quoteMissing}
+                      />
+                    </div>
+                  </details>
+                </div>
+              ) : (
+                <QuotePanel
+                  opportunityId={data.id}
+                  canEdit={canEdit}
+                  isHandedOver={isHandedOver}
+                  stage={data.stage}
+                  companyCode={company?.code ?? null}
+                  missingForQuote={quoteMissing}
+                />
+              ),
           },
           {
             id: 'cham-soc',

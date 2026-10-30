@@ -29,6 +29,8 @@ export const ROLE_CODES = [
   'SX',
   'CHT',
   'KSNB',
+  // Gói B (0254, 30/10/2026): Kinh doanh của NVS — như KD cộng XEM phân hệ SX để kiểm tồn khi báo giá.
+  'KD_NVS',
 ] as const;
 
 export type RoleCode = (typeof ROLE_CODES)[number];
@@ -179,6 +181,17 @@ export const ROLES: Readonly<Record<RoleCode, RoleMeta>> = {
     defaultRoute: '/tong-quan',
     seesAllCompanies: true,
   },
+  /*
+   * Kinh doanh NVS (0254, 0255 — anh Dũng 30/10/2026). Quyền như `KD` cộng XEM phân hệ SX (tồn
+   * giàn giáo, đơn thuê, báo giá thuê) để kiểm tồn khi báo giá; không sửa / duyệt SX. Tách vai vì
+   * ma trận quyền không có chiều pháp nhân — mở SX cho `KD` thì Kinh doanh NVC / NVO cũng thấy.
+   */
+  KD_NVS: {
+    code: 'KD_NVS',
+    label: 'Kinh doanh NVS',
+    defaultRoute: '/crm/co-hoi',
+    seesAllCompanies: false,
+  },
 } as const;
 
 /**
@@ -222,6 +235,8 @@ export const APPROVAL_SUBJECTS = [
   // G4 (0249): điều chỉnh ngân sách công trình sau khởi công; đề nghị mua / chọn thầu phụ vượt ngân sách.
   'budget_adjustment',
   'over_budget',
+  // 0253 (anh Dũng 30/10/2026): ngân sách thi công BAN ĐẦU của công trình — Tổng Giám đốc duyệt trước khởi công.
+  'site_budget',
 ] as const;
 
 export type ApprovalSubject = (typeof APPROVAL_SUBJECTS)[number];
@@ -247,6 +262,7 @@ export const APPROVAL_SUBJECT_LABELS: Readonly<Record<ApprovalSubject, string>> 
   subcontractor_selection: 'Chọn thầu phụ / tổ đội',
   budget_adjustment: 'Điều chỉnh ngân sách',
   over_budget: 'Vượt ngân sách',
+  site_budget: 'Ngân sách thi công',
 };
 
 export interface ApprovalLimitSeed {
@@ -373,4 +389,8 @@ export const DEFAULT_APPROVAL_LIMITS: readonly ApprovalLimitSeed[] = [
   { role: 'TC', subject: 'over_budget', maxAmount: 50n * TRIEU, step: 1 },
   { role: 'BGD', subject: 'over_budget', maxAmount: null, step: 2 },
   { role: 'TGD', subject: 'over_budget', maxAmount: null, step: 2 },
+
+  // 0253 (anh Dũng 30/10/2026): ngân sách thi công ban đầu của công trình (lập từ báo giá) — CHỈ Tổng
+  // Giám đốc duyệt, không giới hạn số tiền. Chưa duyệt thì không khởi công.
+  { role: 'TGD', subject: 'site_budget', maxAmount: null, step: 1 },
 ] as const;

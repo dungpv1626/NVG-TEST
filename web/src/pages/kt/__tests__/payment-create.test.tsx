@@ -14,12 +14,13 @@ import { renderWithApp } from '@/test/render';
 const state = vi.hoisted(() => ({
   created: [] as Record<string, unknown>[],
   order: null as Record<string, unknown> | null,
+  scope: { companyId: null as string | null, isAggregate: true, isReady: true },
 }));
 
 vi.mock('@/lib/auth', () => ({ useCan: () => true }));
 vi.mock('@/lib/company-scope', () => ({
   // Đang xem gộp: biểu mẫu thường bị chặn, biểu mẫu từ đơn hàng lấy pháp nhân của đơn.
-  useCompanyScope: () => ({ companyId: null, isAggregate: true, isReady: true }),
+  useCompanyScope: () => state.scope,
 }));
 vi.mock('@/hooks/use-active-users', () => ({ useActiveUsers: () => ({ data: [] }) }));
 vi.mock('@/hooks/use-purchasing', () => ({
@@ -40,6 +41,7 @@ const { PaymentRequestCreatePage } = await import('../payment-create');
 
 beforeEach(() => {
   state.created = [];
+  state.scope = { companyId: null, isAggregate: true, isReady: true };
   state.order = {
     id: 'don-1',
     code: 'NVC-DH-2026-0001',
@@ -79,5 +81,20 @@ describe('Lập đề nghị thanh toán từ đơn đặt hàng', () => {
   it('lập tay khi đang xem gộp thì phải chọn pháp nhân trước', () => {
     renderWithApp(<PaymentRequestCreatePage />, { route: '/kt/de-nghi-thanh-toan/tao-moi' });
     expect(screen.getByText('Chọn pháp nhân trước khi lập đề nghị')).toBeInTheDocument();
+  });
+
+  it('0255: bên nhận gõ tay trông như tổ đội thì cảnh báo (không chặn lưu)', async () => {
+    const user = userEvent.setup();
+    state.scope = { companyId: 'nvc', isAggregate: false, isReady: true };
+    const { container } = renderWithApp(<PaymentRequestCreatePage />, {
+      route: '/kt/de-nghi-thanh-toan/tao-moi',
+    });
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+    await user.type(
+      container.querySelector<HTMLInputElement>('input[name=payee_name]')!,
+      'Tổ nề anh Lâm',
+    );
+    expect(screen.getByRole('note')).toHaveTextContent(/không kiểm khối lượng đã nghiệm thu/);
+    expect(screen.getByRole('button', { name: 'Lưu và phân bổ chi phí' })).toBeEnabled();
   });
 });

@@ -345,8 +345,8 @@ describeDb('báo giá có giá vốn, lợi nhuận tối thiểu (0244)', () =>
     const mk = (code: string) =>
       withSql(async (sql) => {
         const [e] = await sql<{ id: string }[]>`
-          INSERT INTO estimates (company_id, bidding_project_id, code, bid_price, profit_margin_percent)
-          VALUES (${fx.nvcId}, ${fx.bidId}, ${code}, 300000000, 3)
+          INSERT INTO estimates (company_id, bidding_project_id, code, bid_price, direct_cost, profit_margin_percent)
+          VALUES (${fx.nvcId}, ${fx.bidId}, ${code}, 300000000, 291000000, 3)
           RETURNING id`;
         return e!.id;
       });
@@ -371,6 +371,7 @@ describeDb('báo giá có giá vốn, lợi nhuận tối thiểu (0244)', () =>
     });
     const b = (brief.data as Record<string, unknown>[])[0]!;
     expect(b.risk_note).toBe('Hạn nộp gấp, khối lượng BOQ chưa khớp bản vẽ');
+    // 0253: % là số MÁY TÍNH từ chi phí (300tr − 291tr = 9tr = 3 %), không phải số người lập gõ.
     expect(Number(b.margin_percent)).toBe(3);
     const ok = await tgd.rpc('decide_approval', { p_approval_id: a!.id, p_decision: 'approved' });
     expect(ok.error).toBeNull();

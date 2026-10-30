@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { formatCurrency, formatDateTime } from '@nvg/shared';
 import { Skeleton } from '@/components/ui/states';
 import { useApprovalBudgetBrief, useBudgetAdjustment } from '@/hooks/use-site-handover';
+import { useSiteBudgetSubmission } from '@/hooks/use-construction-sites';
 
 function Line({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
@@ -86,6 +87,42 @@ export function OverBudgetPreview({ approvalId }: { approvalId: string }) {
               {data.current_remaining != null &&
                 ` Còn lại hiện tại: ${formatCurrency(data.current_remaining)}.`}
             </p>
+          </>
+        )}
+      </dd>
+    </div>
+  );
+}
+
+/** 0253: ngân sách thi công ban đầu gửi Tổng Giám đốc duyệt — tổng + từng dòng lúc gửi. */
+export function SiteBudgetSubmissionPreview({ submissionId }: { submissionId: string }) {
+  const { data, isLoading } = useSiteBudgetSubmission(submissionId);
+  return (
+    <div className="space-y-2">
+      <dt className="text-xs text-fg-subtle">Ngân sách thi công</dt>
+      <dd className="space-y-1 text-sm">
+        {isLoading ? (
+          <Skeleton className="h-20 w-full" />
+        ) : !data ? (
+          <p className="text-fg-subtle">Không đọc được ngân sách của hồ sơ này.</p>
+        ) : (
+          <>
+            {data.site && (
+              <p>
+                <Link
+                  to={`/tc/cong-trinh/${data.construction_site_id}?tab=ngan-sach`}
+                  className="text-brand underline-offset-4 hover:underline"
+                >
+                  {data.site.code} — {data.site.name}
+                </Link>
+                {data.round_no > 1 && ` · lần gửi thứ ${data.round_no}`}
+              </p>
+            )}
+            {data.lines.map((l) => (
+              <Line key={l.cost_code} label={l.name} value={formatCurrency(l.budgeted_amount)} />
+            ))}
+            <Line label="Tổng ngân sách" value={formatCurrency(data.total_amount)} strong />
+            {data.note && <p>Ghi chú: {data.note}</p>}
           </>
         )}
       </dd>

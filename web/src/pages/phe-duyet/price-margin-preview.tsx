@@ -79,7 +79,7 @@ export function PriceMarginFigures({ brief }: { brief: PriceMarginBrief }) {
               }
             />
             <Figure
-              label="Lợi nhuận"
+              label={brief.entity_type === 'estimates' ? 'Lợi nhuận (máy tính)' : 'Lợi nhuận'}
               value={brief.profit !== null ? formatCurrency(brief.profit) : 'Chưa đủ dữ liệu'}
               strong
             />
@@ -101,6 +101,35 @@ export function PriceMarginFigures({ brief }: { brief: PriceMarginBrief }) {
           </div>
         )}
       </dl>
+      {/* 0253: dự toán — căn cứ là số máy tính; số người lập gõ chỉ hiện để đối chiếu, lệch thì cảnh báo. */}
+      {brief.sees_cost &&
+        brief.entity_type === 'estimates' &&
+        (brief.typed_profit != null || brief.typed_margin_percent != null) && (
+          <div
+            role={brief.typed_mismatch ? 'alert' : undefined}
+            className={
+              brief.typed_mismatch
+                ? 'rounded-sm border border-status-pending bg-status-pending-bg px-3 py-2'
+                : 'rounded-sm bg-surface-sunken px-3 py-2'
+            }
+          >
+            <div className="text-xs text-fg-subtle">Người lập ghi trên dự toán</div>
+            <p className="mt-0.5 tabular-nums">
+              Lợi nhuận{' '}
+              {brief.typed_profit != null ? formatCurrency(brief.typed_profit) : 'không ghi'} · Tỷ
+              lệ{' '}
+              {toNum(brief.typed_margin_percent) !== null
+                ? `${formatNumber(toNum(brief.typed_margin_percent)!, 2)}%`
+                : 'không ghi'}
+            </p>
+            {brief.typed_mismatch && (
+              <p className="mt-1 font-medium">
+                Lệch với số máy tính từ giá và chi phí ở trên. Hệ thống duyệt theo số máy tính —
+                kiểm lại chi phí hoặc nhờ người lập sửa số trên dự toán.
+              </p>
+            )}
+          </div>
+        )}
       {brief.sees_cost && !brief.cost_complete && (
         <p className="text-xs text-fg-subtle">
           {EMPTY_STATES.notEnoughData}

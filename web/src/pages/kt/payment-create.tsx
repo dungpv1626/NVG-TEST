@@ -11,7 +11,12 @@
 
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { PAYMENT_REQUEST_TYPE_LABELS, PAYMENT_REQUEST_TYPES, formatCurrency } from '@nvg/shared';
+import {
+  PAYMENT_REQUEST_TYPE_LABELS,
+  PAYMENT_REQUEST_TYPES,
+  formatCurrency,
+  looksLikeCrewPayment,
+} from '@nvg/shared';
 import type { PaymentRequestType } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
@@ -58,6 +63,9 @@ function PaymentRequestForm({ order }: { order: PurchaseOrderDetailRecord | null
   // `defaultValue` chỉ áp lúc dựng — nhà cung cấp của đơn hàng sẽ không được chọn.
   const [supplierId, setSupplierId] = useState(order?.supplier_id ?? '');
   const [formError, setFormError] = useState<string | null>(null);
+  // 0255: theo dõi chữ để cảnh báo khi trông như trả tổ đội mà không đi đường có kiểm khối lượng.
+  const [payeeText, setPayeeText] = useState('');
+  const [titleText, setTitleText] = useState('');
 
   const { data: suppliers } = useSuppliers();
   const { data: users } = useActiveUsers();
@@ -200,6 +208,7 @@ function PaymentRequestForm({ order }: { order: PurchaseOrderDetailRecord | null
               name="title"
               required
               maxLength={200}
+              onChange={(e) => setTitleText(e.target.value)}
               defaultValue={
                 order
                   ? `Thanh toán đơn hàng ${order.code ?? ''} — ${order.request?.title ?? ''}`
@@ -257,8 +266,24 @@ function PaymentRequestForm({ order }: { order: PurchaseOrderDetailRecord | null
                 </Field>
 
                 <Field label="Tên bên nhận" hint="Dùng khi bên nhận là tổ đội khoán hoặc cá nhân.">
-                  <Input name="payee_name" maxLength={200} />
+                  <Input
+                    name="payee_name"
+                    maxLength={200}
+                    onChange={(e) => setPayeeText(e.target.value)}
+                  />
                 </Field>
+
+                {!order && looksLikeCrewPayment(payeeText, titleText) && (
+                  <p
+                    role="note"
+                    className="rounded-sm bg-status-pending-bg px-3 py-2 text-status-pending sm:col-span-2"
+                  >
+                    Bên nhận trông như tổ đội / thầu phụ. Đề nghị lập ở đây không gắn tổ đội nên máy
+                    không kiểm khối lượng đã nghiệm thu, và người duyệt sẽ thấy cảnh báo này. Để máy
+                    kiểm: chọn tổ đội ở công trình (Thi công → Tổ đội) rồi lập đề nghị từ đợt xác
+                    nhận khối lượng của tổ.
+                  </p>
+                )}
               </>
             )}
 

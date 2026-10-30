@@ -31,6 +31,8 @@ const GLOBAL_NUMBERS: Record<string, number> = {
   'sx.rental_remind_days': 3,
   'kt.guarantee_remind_days': 30,
   'kt.retention_remind_days': 30,
+  // 0256: tiền thuê thực tế vượt giá trị ký hợp đồng cho thuê quá 20 % thì báo làm phụ lục.
+  'sx.rental_contract_overrun_percent': 20,
   defect_rate_threshold: 0.03,
   min_samples_for_metric: 5,
 };

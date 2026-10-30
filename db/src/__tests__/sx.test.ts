@@ -922,13 +922,25 @@ describeDb('Kho — sổ giàn giáo tại một ngày (0146)', () => {
 
   it('xuất cho thuê và thu hồi ghi vào sổ theo ngày nghiệp vụ của chứng từ', async () => {
     const material = fixture.materialGiao2;
+    // 0256: ngày trả thực tế không được sau hôm nay (giờ Việt Nam) — dùng các ngày đã qua, sau mốc mở sổ
+    // (trước đây năm 2090).
+    const vnDay = (offset: number): string => {
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(
+        new Date(),
+      );
+      const d = new Date(`${today}T00:00:00Z`);
+      d.setUTCDate(d.getUTCDate() + offset);
+      return d.toISOString().slice(0, 10);
+    };
+    const [D09, D10, D14, D15, D31] = [vnDay(-5), vnDay(-4), vnDay(-2), vnDay(-1), vnDay(20)];
+
     const { data: agreementId, error } = await kho.rpc('create_rental_agreement', {
       p_company_id: fixture.nvsCompanyId,
       p_customer_id: fixture.customerId,
       p_construction_site_id: null,
       p_site_address: null,
-      p_start_date: '2090-01-10',
-      p_expected_end_date: '2090-01-31',
+      p_start_date: D10,
+      p_expected_end_date: D31,
       p_deposit_amount: 0,
       p_notes: `${TEST_PREFIX} sổ theo ngày`,
       p_items: [{ material_id: material, quantity: 5, daily_rate: 1000 }],
@@ -941,10 +953,10 @@ describeDb('Kho — sổ giàn giáo tại một ngày (0146)', () => {
       .single();
     const code = agreement!.code as string;
 
-    // Ghi nhận hôm nay nhưng hàng về kho ngày 15/01/2090 — sổ ngày 14 phải còn thấy ở khách.
+    // Ghi nhận hôm nay nhưng hàng về kho ngày D15 — sổ ngày D14 phải còn thấy ở khách.
     const returned = await kho.rpc('return_rental_agreement', {
       p_rental_agreement_id: agreementId,
-      p_actual_return_date: '2090-01-15',
+      p_actual_return_date: D15,
       p_items: [
         {
           material_id: material,
@@ -965,10 +977,10 @@ describeDb('Kho — sổ giàn giáo tại một ngày (0146)', () => {
         (r) => r.material_id === material && r.location_type === 'kho' && r.condition === condition,
       );
 
-    const d09 = await asOf('2090-01-09');
-    const d10 = await asOf('2090-01-10');
-    const d14 = await asOf('2090-01-14');
-    const d15 = await asOf('2090-01-15');
+    const d09 = await asOf(D09);
+    const d10 = await asOf(D10);
+    const d14 = await asOf(D14);
+    const d15 = await asOf(D15);
 
     expect(atRenter(d09)).toBe(0);
     expect(atRenter(d10)).toBe(5);

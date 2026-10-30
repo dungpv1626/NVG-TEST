@@ -159,14 +159,23 @@ export interface RentalQuote {
   estimated_total: number | null;
   decision_note: string | null;
   created_at: string;
+  /** Cơ hội của báo giá (0256) — báo giá cũ lập ở Xưởng không có. */
+  opportunity_id: string | null;
+  sent_to_customer_at: string | null;
+  sent_channel: RentalQuoteSentChannel | null;
   customer: { code: string; name: string } | null;
+  opportunity: { code: string; name: string } | null;
   items: RentalQuoteItem[];
 }
+
+/** Kênh gửi báo giá thuê cho khách (0256) — cùng bộ với báo giá CRM (0253). */
+export type RentalQuoteSentChannel = 'zalo' | 'email' | 'tan_tay' | 'khac';
 
 const QUOTE_SELECT =
   'id, code, company_id, customer_id, needed_date, expected_end_date, delivery_note, deposit_amount, ' +
   'notes, status, special_price, credit_exceeded, credit_limit_applied, outstanding_at_submit, ' +
-  'estimated_total, decision_note, created_at, customer:customers(code, name), ' +
+  'estimated_total, decision_note, created_at, opportunity_id, sent_to_customer_at, sent_channel, ' +
+  'customer:customers(code, name), opportunity:opportunities(code, name), ' +
   'items:rental_quote_items(id, material_id, kind, quantity, unit_price, list_price, note, ' +
   'material:materials(code, name, unit))';
 
@@ -187,17 +196,18 @@ function toQuote(r: Record<string, unknown>): RentalQuote {
   };
 }
 
-export function useRentalQuotes(companyId: string | null) {
+/** Báo giá thuê của một pháp nhân; truyền `opportunityId` thì chỉ của cơ hội ấy (tab Báo giá, 0256). */
+export function useRentalQuotes(companyId: string | null, opportunityId?: string | null) {
   return useQuery<RentalQuote[], Error>({
-    queryKey: ['rental-quotes', companyId],
+    queryKey: ['rental-quotes', companyId, opportunityId ?? null],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('rental_quotes')
         .select(QUOTE_SELECT)
         .eq('company_id', companyId!)
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false })
-        .limit(50);
+        .is('deleted_at', null);
+      if (opportunityId) query = query.eq('opportunity_id', opportunityId);
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(50);
       if (error) throw new Error(error.message);
       return ((data ?? []) as unknown as Record<string, unknown>[]).map(toQuote);
     },
@@ -217,6 +227,8 @@ export interface SaveQuoteInput {
   id: string | null;
   companyId: string;
   customerId: string;
+  /** Cơ hội của báo giá (0256): khách do CSDL lấy từ cơ hội. */
+  opportunityId?: string | null;
   neededDate: string | null;
   expectedEndDate: string | null;
   deliveryNote: string | null;
@@ -233,6 +245,7 @@ export function useSaveRentalQuote() {
       const head = {
         company_id: input.companyId,
         customer_id: input.customerId,
+        opportunity_id: input.opportunityId ?? null,
         needed_date: input.neededDate,
         expected_end_date: input.expectedEndDate,
         delivery_note: input.deliveryNote,
@@ -284,6 +297,69 @@ export function useSubmitRentalQuote() {
       return data as 'da_duyet' | 'cho_duyet';
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['rental-quotes'] }),
+  });
+}
+
+/**
+ * Ghi báo giá thuê đã duyệt đã gửi khách, kèm kênh (0256). Cơ hội ở Báo giá tự sang Đàm phán — tải lại
+ * mọi truy vấn để dải tiến trình của cơ hội đổi theo.
+ */
+export function useSendRentalQuote() {
+  const qc = useQueryClient();
+  return useMutation<void, Error, { quoteId: string; channel: RentalQuoteSentChannel }>({
+    mutationFn: async ({ quoteId, channel }) => {
+      const { error } = await supabase.rpc('send_rental_quote_to_customer', {
+        p_quote_id: quoteId,
+        p_channel: channel,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => void qc.invalidateQueries(),
+  });
+}
+
+/* ------------------------------------------------------------------------ *
+ * Hợp đồng cho thuê: giá trị ký và tiền thuê thực tế (0256)
+ * ------------------------------------------------------------------------ */
+
+export interface ContractRentalActuals {
+  signedValue: number | null;
+  actualRent: number;
+  actualCompensation: number;
+  actualTotal: number;
+  depositOffset: number;
+  agreements: number;
+  openAgreements: number;
+  openCodes: string | null;
+  settledValue: number | null;
+  overrunPercentLimit: number | null;
+}
+
+export function useContractRentalActuals(contractId: string | undefined) {
+  return useQuery<ContractRentalActuals | null, Error>({
+    queryKey: ['contract-rental-actuals', contractId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('contract_rental_actuals', {
+        p_contract_id: contractId!,
+      });
+      if (error) throw new Error(error.message);
+      const r = ((data ?? []) as Record<string, unknown>[])[0];
+      if (!r) return null;
+      const opt = (v: unknown) => (v === null || v === undefined ? null : Number(v));
+      return {
+        signedValue: opt(r.signed_value),
+        actualRent: num(r.actual_rent),
+        actualCompensation: num(r.actual_compensation),
+        actualTotal: num(r.actual_total),
+        depositOffset: num(r.deposit_offset),
+        agreements: num(r.agreements),
+        openAgreements: num(r.open_agreements),
+        openCodes: (r.open_codes as string | null) ?? null,
+        settledValue: opt(r.settled_value),
+        overrunPercentLimit: opt(r.overrun_percent_limit),
+      };
+    },
+    enabled: Boolean(contractId),
   });
 }
 

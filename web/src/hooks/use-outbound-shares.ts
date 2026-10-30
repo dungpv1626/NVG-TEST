@@ -74,10 +74,16 @@ export function useRecordOutboundShare() {
       });
       if (error) throw error;
     },
-    onSuccess: (_d, input) =>
+    onSuccess: (_d, input) => {
       void queryClient.invalidateQueries({
         queryKey: ['outbound-shares', input.entityType, input.entityId],
-      }),
+      });
+      // 0253: mở Zalo gửi báo giá đã duyệt thì CSDL ghi «đã gửi khách qua Zalo» — cơ hội có thể sang Đàm phán.
+      if (input.entityType === 'quotes') {
+        void queryClient.invalidateQueries({ queryKey: ['quotes'] });
+        void queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+      }
+    },
   });
 }
 

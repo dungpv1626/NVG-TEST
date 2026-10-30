@@ -44,6 +44,7 @@ import {
 import { rankTemplates, useTemplatesForContract } from '@/hooks/use-contract-templates';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useContractTermSources } from '@/hooks/use-quotes';
+import { suggestCollectionTrigger } from '@/hooks/use-collections';
 import {
   scopeFreeField,
   templatePrintsAny,
@@ -262,6 +263,8 @@ export function TermsPanel({
             percent_value: m.ty_le,
             amount: m.ty_le ? amountFromPercent(m.ty_le, contractValue) : null,
             position: String(i + 1),
+            // 0253: đợt tạm ứng đến hạn khi ký; đợt «hết thời hạn bảo hành» là tiền giữ lại.
+            collection_trigger: suggestCollectionTrigger(m.noi_dung),
           },
         });
       }

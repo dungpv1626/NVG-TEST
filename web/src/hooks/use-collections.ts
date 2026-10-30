@@ -13,6 +13,25 @@ import { supabase } from '@/lib/supabase';
 
 export type CollectionState = 'den_han' | 'sap_den' | 'chua_den' | 'da_xong';
 
+/** Căn cứ thu không gắn hồ sơ (0253). */
+export type CollectionTrigger = 'ky_hop_dong' | 'het_bao_hanh';
+
+export const COLLECTION_TRIGGER_LABELS: Readonly<Record<CollectionTrigger, string>> = {
+  ky_hop_dong: 'Khi ký hợp đồng (tạm ứng / đợt đầu)',
+  het_bao_hanh: 'Khi hết hạn bảo hành (tiền giữ lại)',
+};
+
+/**
+ * Căn cứ gợi ý cho đợt lấy từ mẫu hợp đồng («Dùng các đợt này», 0253): đợt tạm ứng → khi ký; đợt «hết
+ * thời hạn bảo hành» / «giữ lại» → khi hết bảo hành. Không khớp thì để trống (theo ngày hạn).
+ */
+export function suggestCollectionTrigger(description: string): CollectionTrigger | null {
+  const d = description.toLocaleLowerCase('vi');
+  if (/bảo hành|giữ lại/.test(d)) return 'het_bao_hanh';
+  if (/tạm ứng|ký hợp đồng|sau khi ký/.test(d)) return 'ky_hop_dong';
+  return null;
+}
+
 export interface CollectionScheduleRow {
   term_id: string;
   company_id: string;
@@ -27,7 +46,8 @@ export interface CollectionScheduleRow {
   amount: MoneyValue | null;
   due_date: string | null;
   completed_at: string | null;
-  basis_kind: 'moc' | 'bien_ban' | null;
+  /** 0253: 'ky' = khi ký hợp đồng; 'bao_hanh' = đợt tiền giữ lại, đến hạn khi hết bảo hành. */
+  basis_kind: 'moc' | 'bien_ban' | 'ky' | 'bao_hanh' | null;
   basis_label: string | null;
   basis_reached_at: string | null;
   site_code: string | null;
@@ -80,13 +100,21 @@ export function useLinkCollectionTerm() {
   return useMutation<
     void,
     Error,
-    { termId: string; contractId: string; target: { kind: 'moc' | 'bien_ban'; id: string } | null }
+    {
+      termId: string;
+      contractId: string;
+      target:
+        | { kind: 'moc' | 'bien_ban'; id: string }
+        | { kind: 'trigger'; id: CollectionTrigger }
+        | null;
+    }
   >({
     mutationFn: async ({ termId, target }) => {
       const { error } = await supabase.rpc('link_collection_term', {
         p_term_id: termId,
         p_milestone_id: target?.kind === 'moc' ? target.id : null,
         p_acceptance_id: target?.kind === 'bien_ban' ? target.id : null,
+        p_trigger: target?.kind === 'trigger' ? target.id : null,
       });
       if (error) throw error;
     },

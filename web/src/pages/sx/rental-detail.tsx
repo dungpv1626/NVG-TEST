@@ -17,6 +17,7 @@ import {
   formatNumber,
   rentalAgreementDisplayStatus,
   rentalDaysSoFar,
+  toNvgDateInput,
 } from '@nvg/shared';
 import { DetailFields, EntityDetail, RecordNotFound } from '@/components/entity/entity-detail';
 import { Button } from '@/components/ui/button';
@@ -390,10 +391,16 @@ export function RentalAgreementDetailPage() {
                     </p>
                   )}
 
-                  <Field label="Ngày trả thực tế" required>
+                  <Field
+                    label="Ngày trả thực tế"
+                    required
+                    hint="Ngày khách đã trả hàng — không chọn ngày sau hôm nay. Ngày hẹn trả ghi ở «Ngày dự kiến trả»."
+                  >
+                    {/* 0256 (câu 17): CSDL cũng chặn ngày sau hôm nay (giờ Việt Nam). */}
                     <DateInput
                       value={actualReturnDate}
                       onChange={(v) => setActualReturnDate(v)}
+                      max={toNvgDateInput(new Date())}
                       required
                     />
                   </Field>

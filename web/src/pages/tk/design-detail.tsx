@@ -22,6 +22,7 @@ import {
   designDisplayStatus,
   formatDate,
   formatDateTime,
+  type DesignSyncFinding,
 } from '@nvg/shared';
 import { DraftContractButton } from '@/components/contract/draft-contract-button';
 import { BoqPanel } from '@/components/estimate/boq-panel';
@@ -43,6 +44,7 @@ import {
   useHandoverToConstruction,
   useMoveDesignStage,
   useUpdateDesignProject,
+  useWaiveDesignSurvey,
 } from '@/hooks/use-design-projects';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { companyCodeOf, useAuth, useCan } from '@/lib/auth';
@@ -75,6 +77,7 @@ export function DesignDetailPage() {
   const updateProject = useUpdateDesignProject();
   const moveStage = useMoveDesignStage();
   const handover = useHandoverToConstruction();
+  const waiveSurvey = useWaiveDesignSurvey();
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -99,6 +102,19 @@ export function DesignDetailPage() {
       ? 'Hồ sơ đã bàn giao thi công nên chỉ xem.'
       : undefined;
   const blockingCount = (findings ?? []).filter((f) => f.blocking).length;
+  // 0256 (câu 5): đầu bài đã xác nhận + khảo sát hoặc lý do bỏ qua — nói ra cạnh nút bàn giao.
+  const briefFindings = (findings ?? []).filter((f) => HANDOVER_BRIEF_CODES.includes(f.code));
+  const firstBlocking = (findings ?? []).find((f) => f.blocking)?.message;
+
+  async function askWaiveSurvey() {
+    const reason = await promptDialog.ask({
+      title: 'Không khảo sát thiết kế?',
+      label: 'Lý do không khảo sát (ghi vào hồ sơ, Ban công trường đọc được khi nhận bàn giao)',
+      confirmLabel: 'Ghi lý do',
+    });
+    if (reason === null) return;
+    void run(() => waiveSurvey.mutateAsync({ projectId: project.id, reason: reason.trim() }));
+  }
 
   async function run(action: () => Promise<unknown>, onDone?: (result: unknown) => void) {
     setActionError(null);
@@ -188,7 +204,7 @@ export function DesignDetailPage() {
             disabled={blockingCount > 0 || handover.isPending}
             title={
               blockingCount > 0
-                ? `Còn ${blockingCount} hạng mục chưa đồng bộ. Xem tab Hồ sơ kỹ thuật.`
+                ? `Còn ${blockingCount} hạng mục chặn bàn giao. ${firstBlocking ?? ''}`
                 : undefined
             }
             onClick={() =>
@@ -229,7 +245,10 @@ export function DesignDetailPage() {
       )}
 
       {canEdit && project.handed_over_at === null && project.stage !== 'dung_thiet_ke' && (
-        <HandoverGate contracts={handoverContracts} />
+        <>
+          <HandoverGate contracts={handoverContracts} />
+          <HandoverBriefGate findings={briefFindings} onWaiveSurvey={askWaiveSurvey} />
+        </>
       )}
 
       <DesignWorkspace
@@ -416,6 +435,39 @@ export function DesignDetailPage() {
         ]}
       />
     </>
+  );
+}
+
+const HANDOVER_BRIEF_CODES = ['dau_bai_chua_xac_nhan', 'chua_khao_sat', 'bo_qua_khao_sat'];
+
+/**
+ * Bàn giao thi công cần đầu bài đã xác nhận và khảo sát thiết kế — hoặc lý do không khảo sát (0256, câu 5).
+ * Cùng hàm CSDL với bước chặn (`check_design_sync`), nên câu ở đây trùng câu CSDL từ chối.
+ */
+function HandoverBriefGate({
+  findings,
+  onWaiveSurvey,
+}: {
+  findings: readonly DesignSyncFinding[];
+  onWaiveSurvey: () => void;
+}) {
+  if (findings.length === 0) return null;
+  return (
+    <ul className="mb-3 space-y-2 rounded-sm bg-surface px-3 py-2 text-sm text-ink">
+      {findings.map((f) => (
+        <li key={f.code} className="flex flex-wrap items-center justify-between gap-2">
+          <span className={f.blocking ? 'text-status-overdue' : 'text-fg-subtle'}>
+            {f.blocking ? 'Chưa bàn giao được: ' : ''}
+            {f.message}
+          </span>
+          {f.code === 'chua_khao_sat' && (
+            <Button variant="secondary" onClick={onWaiveSurvey}>
+              Ghi lý do không khảo sát
+            </Button>
+          )}
+        </li>
+      ))}
+    </ul>
   );
 }
 

@@ -53,6 +53,12 @@ async function seed(): Promise<Fixture> {
     await sql`
       INSERT INTO contract_terms (company_id, contract_id, term_type, description, percent_value, position)
       VALUES (${nvc!.id}, ${contract!.id}, 'bao_hanh', ${TAG + ' Giữ lại 5% bảo hành 12 tháng'}, '5', '1')`;
+    // 0253: tiền giữ lại bảo hành là MỘT ĐỢT THANH TOÁN (đến hạn khi hết bảo hành), không trừ ở hồ sơ thanh toán.
+    await sql`
+      INSERT INTO contract_terms (company_id, contract_id, term_type, description, percent_value, position,
+                                  collection_trigger)
+      VALUES (${nvc!.id}, ${contract!.id}, 'tien_do_thanh_toan', ${TAG + ' Hết thời hạn bảo hành'}, '5', '9',
+              'het_bao_hanh')`;
     const sites = await sql<{ id: string }[]>`
       INSERT INTO construction_sites (company_id, code, name, stage, contract_id, responsible_user_id,
                                       planned_start_date, planned_end_date)
@@ -251,7 +257,7 @@ describeDb('G3 — hồ sơ thanh toán chủ đầu tư, bảo lãnh, giữ l�
     expect((checks as { step_no: number }[]).map((c) => c.step_no)).toEqual([1, 2, 3, 4]);
   });
 
-  it('công nợ = số duyệt − giữ lại; tiền giữ lại là khoản phải thu riêng, hạn theo bảo hành', async () => {
+  it('công nợ = số duyệt (không trừ giữ lại); tiền giữ lại là đợt thanh toán của hợp đồng, hạn theo bảo hành (0253)', async () => {
     expect((await ketoan.rpc('send_collection_request', { p_id: requestId })).error).toBeNull();
     const early = await ketoan.rpc('record_collection_receivable', { p_id: requestId });
     expect(early.error!.message).toContain('chủ đầu tư duyệt');
@@ -264,6 +270,15 @@ describeDb('G3 — hồ sơ thanh toán chủ đầu tư, bảo lãnh, giữ l�
       });
     expect(up.error).toBeNull();
     const today = new Date().toISOString().slice(0, 10);
+    // 0253: hồ sơ thanh toán không trừ thêm tiền giữ lại — đợt «Hết thời hạn bảo hành» đã giữ.
+    const withRetention = await ketoan.rpc('record_collection_owner_approval', {
+      p_id: requestId,
+      p_approved_amount: 380_000_000,
+      p_approved_date: today,
+      p_scan_path: path,
+      p_retention_amount: 19_000_000,
+    });
+    expect(withRetention.error!.message).toContain('đợt thanh toán');
     const appr = await ketoan.rpc('record_collection_owner_approval', {
       p_id: requestId,
       p_approved_amount: 380_000_000,
@@ -271,7 +286,7 @@ describeDb('G3 — hồ sơ thanh toán chủ đầu tư, bảo lãnh, giữ l�
       p_scan_path: path,
     });
     expect(appr.error).toBeNull();
-    expect(Number(appr.data)).toBe(19_000_000); // 5% theo điều khoản Bảo hành
+    expect(Number(appr.data)).toBe(0); // không tự lấy 5% của điều khoản Bảo hành
 
     const rec = await ketoan.rpc('record_collection_receivable', {
       p_id: requestId,
@@ -286,22 +301,19 @@ describeDb('G3 — hồ sơ thanh toán chủ đầu tư, bảo lãnh, giữ l�
          WHERE contract_id = ${fx.contractId} AND deleted_at IS NULL ORDER BY receivable_kind`,
     );
     expect(rows.map((r) => [r.receivable_kind, Number(r.amount)])).toEqual([
-      ['giu_lai', 19_000_000],
-      ['thuong', 361_000_000],
+      ['thuong', 380_000_000],
     ]);
-    // Cả tập đoàn: hai khoản cộng lại đúng bằng số duyệt, không đếm giữ lại hai lần.
-    expect(rows.reduce((s, r) => s + Number(r.amount), 0)).toBe(380_000_000);
-    expect(rows[1]!.invoice_number).toBe('0001234');
+    expect(rows[0]!.invoice_number).toBe('0001234');
 
-    // Khai bảo hành → hạn thu hồi tiền giữ lại theo ngày hết bảo hành muộn nhất.
+    // Khai bảo hành → hạn của đợt giữ lại theo ngày hết bảo hành muộn nhất.
     const due = await withSql(async (sql) => {
       const [nvc] = await sql<{ id: string }[]>`SELECT id FROM companies WHERE code = 'NVC'`;
       await sql`
         INSERT INTO warranties (company_id, construction_site_id, item, start_date, warranty_until)
         VALUES (${nvc!.id}, ${fx.siteA}, ${TAG + ' Mái tôn'}, current_date, current_date + 365)`;
       return sql<{ due: string }[]>`
-        SELECT (due_date - current_date)::text AS due FROM receivables_payables
-         WHERE contract_id = ${fx.contractId} AND receivable_kind = 'giu_lai'`;
+        SELECT (due_date - current_date)::text AS due FROM contract_terms
+         WHERE contract_id = ${fx.contractId} AND collection_trigger = 'het_bao_hanh'`;
     });
     expect(Number(due[0]!.due)).toBe(365);
 
@@ -309,7 +321,7 @@ describeDb('G3 — hồ sơ thanh toán chủ đầu tư, bảo lãnh, giữ l�
       p_contract_id: fx.contractId,
     });
     expect(Number((open.data as { retention_outstanding: number }).retention_outstanding)).toBe(
-      19_000_000,
+      100_000_000, // 5% × 2.000.000.000 — đợt giữ lại chưa thu
     );
     const tcView = await tc.rpc('contract_open_retention_guarantees', {
       p_contract_id: fx.contractId,
@@ -429,6 +441,6 @@ describeDb('G3 — hồ sơ thanh toán chủ đầu tư, bảo lãnh, giữ l�
     );
     const n = await notificationsFor(ACCOUNTS.ketoan, 'retention_release', fx.contractId);
     expect(n.length).toBeGreaterThan(0);
-    expect(n[0]!.message).toContain('19.000.000');
+    expect(n[0]!.message).toContain('100.000.000');
   });
 });

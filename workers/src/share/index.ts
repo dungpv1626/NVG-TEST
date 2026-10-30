@@ -147,7 +147,11 @@ shareApp.post('/email', async (c) => {
   let markedSent = false;
   let markError: string | null = null;
   if (!quote.sent_to_customer_at) {
-    const mark = await db.rpc('send_quote_to_customer', { p_quote_id: quote.id });
+    // 0253: ghi kênh gửi cùng lúc đánh dấu đã gửi khách.
+    const mark = await db.rpc('send_quote_to_customer', {
+      p_quote_id: quote.id,
+      p_channel: 'email',
+    });
     if (mark.error) markError = mark.error.message;
     else markedSent = true;
   }

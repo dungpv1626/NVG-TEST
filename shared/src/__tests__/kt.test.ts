@@ -24,6 +24,7 @@ import {
   advanceOutstanding,
   agingBucketCode,
   checkStepOfStage,
+  looksLikeCrewPayment,
   overdueDays,
   PAYMENT_CHECK_STEPS,
   PAYMENT_REQUEST_STAGE_META,
@@ -281,5 +282,19 @@ describe('accountingPeriodCode và accountingPeriodLabel — KT-09', () => {
     expect(accountingPeriodLabel('2026-08')).toBe('Tháng 08/2026');
     // Chuỗi lạ giữ nguyên, không dựng ra một tháng không có thật.
     expect(accountingPeriodLabel('2026')).toBe('2026');
+  });
+});
+
+describe('looksLikeCrewPayment — 0255', () => {
+  it('nhận ra tên tổ đội / thầu phụ gõ tay', () => {
+    expect(looksLikeCrewPayment('Tổ nề anh Lâm')).toBe(true);
+    expect(looksLikeCrewPayment(null, 'Thanh toán nhân công đợt 2')).toBe(true);
+    expect(looksLikeCrewPayment('Đội cốp pha')).toBe(true);
+    expect(looksLikeCrewPayment('Thầu phụ điện')).toBe(true);
+  });
+  it('không bắt nhầm chữ chứa «tổ» / «đội» bên trong từ khác, hay nhà cung cấp thường', () => {
+    expect(looksLikeCrewPayment('Tổng công ty điện lực', 'Tiền điện tháng 10')).toBe(false);
+    expect(looksLikeCrewPayment('Công ty Thép Hòa Phát')).toBe(false);
+    expect(looksLikeCrewPayment('', undefined)).toBe(false);
   });
 });

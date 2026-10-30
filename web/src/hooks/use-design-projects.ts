@@ -834,6 +834,28 @@ export function useDesignSync(projectId: string | undefined) {
   });
 }
 
+/**
+ * Ghi lý do không khảo sát thiết kế (0256, câu 5) — chưa khảo sát mà không có lý do thì không bàn giao
+ * thi công được. Hàm CSDL kiểm quyền sửa hồ sơ thiết kế.
+ */
+export function useWaiveDesignSurvey() {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, { projectId: string; reason: string }>({
+    mutationFn: async ({ projectId, reason }) => {
+      const { error } = await supabase.rpc('waive_design_survey', {
+        p_design_project_id: projectId,
+        p_reason: reason,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['design_projects'] });
+      void queryClient.invalidateQueries({ queryKey: ['design_sync'] });
+    },
+  });
+}
+
 /** Bàn giao hồ sơ thi công (TK-08) — trả về số người đã được thông báo. */
 export function useHandoverToConstruction() {
   const queryClient = useQueryClient();

@@ -23,6 +23,7 @@ import {
   signAcceptanceWithPaper,
 } from './helpers';
 import { confirmStartConditions } from './start-conditions';
+import { markDesignHandoverReady } from './design-handover-ready';
 
 const describeDb = hasCredentials ? describe : describe.skip;
 
@@ -1060,6 +1061,8 @@ describeDb(
         );
       }
 
+      // 0256: bàn giao cần đầu bài đã xác nhận + khảo sát thiết kế hoặc lý do bỏ qua.
+      await markDesignHandoverReady(projectId);
       const { data: sync } = await thietKe.rpc('check_design_sync', {
         p_design_project_id: projectId,
       });

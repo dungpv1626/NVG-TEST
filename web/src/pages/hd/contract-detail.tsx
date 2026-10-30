@@ -56,6 +56,7 @@ import { useApprovalHistory } from '@/hooks/use-approvals';
 import { useStageReadiness } from '@/hooks/use-stage-readiness';
 import { AfterSignCard } from './after-sign-card';
 import { ContractRentalsCard } from './contract-rentals-card';
+import { ContractRentalActualsCard } from './contract-rental-actuals-card';
 import { AmendmentPanel } from './amendment-panel';
 import { DocumentPanel } from './document-panel';
 import { TermsPanel } from './terms-panel';
@@ -495,7 +496,11 @@ export function ContractDetailPage() {
                 )}
                 {contract.type === 'cho_thue' &&
                   (contract.stage === 'da_ky' || contract.stage === 'hoan_thanh') && (
-                    <ContractRentalsCard contractId={contract.id} />
+                    <>
+                      {/* 0256: giá trị ký, tiền thuê thực tế, đơn chưa tất toán. */}
+                      <ContractRentalActualsCard contractId={contract.id} />
+                      <ContractRentalsCard contractId={contract.id} />
+                    </>
                   )}
                 {(contract.stage === 'da_ky' || contract.stage === 'hoan_thanh') && (
                   <SignedScanPanel

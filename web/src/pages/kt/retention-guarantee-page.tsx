@@ -1,9 +1,11 @@
 /**
- * «Bảo lãnh và giữ lại» — `/kt/bao-lanh-giu-lai` (G3, 0248).
+ * «Bảo lãnh và giữ lại» — `/kt/bao-lanh-giu-lai` (G3, 0248; đổi ở 0253).
  *
- * Hai danh sách cho Kế toán / Giám đốc Tài chính:
- *   · Tiền giữ lại bảo hành — khoản phải thu riêng sinh lúc «Ghi công nợ» hồ sơ thanh toán; hạn thu hồi = ngày
- *     hết bảo hành muộn nhất của công trình. Thu bằng chứng từ thu ở màn hình Công nợ như mọi khoản phải thu.
+ * Danh sách cho Kế toán / Giám đốc Tài chính:
+ *   · Tiền giữ lại bảo hành (0253, anh Dũng): chỉ giữ ở ĐỢT THANH TOÁN «giữ lại bảo hành» của hợp đồng — hạn =
+ *     ngày hết bảo hành muộn nhất của công trình, tới hạn thì lập đề nghị thu tiền như mọi đợt. Hồ sơ thanh toán
+ *     chủ đầu tư không trừ thêm (trước đây trừ theo tỷ lệ điều khoản Bảo hành → dòng tiền đếm hai lần).
+ *   · Khoản giữ lại đã ghi công nợ trước 0253 — vẫn thu hồi ở màn hình Công nợ như cũ.
  *   · Bảo lãnh hợp đồng — tạm ứng / thực hiện / bảo hành, cả hai chiều, sắp hết hạn đứng trên.
  */
 
@@ -12,6 +14,7 @@ import { daysUntil, formatCurrency, formatDate, toMoney } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
 import { StatusWithLabel } from '@/components/ui/status-lozenge';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
+import { useCollectionSchedule } from '@/hooks/use-collections';
 import {
   GUARANTEE_DIRECTION_LABELS,
   GUARANTEE_TYPE_LABELS,
@@ -23,6 +26,71 @@ import { useCompanyScope } from '@/lib/company-scope';
 import { GuaranteeStatusLabel } from '@/pages/hd/contract-guarantees-card';
 import { KtNav } from './kt-nav';
 
+/** 0253: các đợt «giữ lại bảo hành» của hợp đồng đã ký — nguồn duy nhất của tiền giữ lại từ nay. */
+function RetentionTermList() {
+  const { data, isLoading, error, refetch } = useCollectionSchedule();
+  if (isLoading) return <TableSkeleton />;
+  if (error) return <ErrorState message={toUserMessage(error)} onRetry={() => void refetch()} />;
+  const rows = (data ?? []).filter((r) => r.basis_kind === 'bao_hanh');
+  if (rows.length === 0)
+    return (
+      <EmptyState message="Chưa có đợt giữ lại bảo hành nào. Ở khối «Sau khi ký» của hợp đồng, chọn căn cứ thu «Khi hết hạn bảo hành (tiền giữ lại)» cho đợt giữ lại." />
+    );
+  const open = rows.filter((r) => !r.completed_at);
+  const total = open.reduce((s, r) => s + (r.amount !== null ? toMoney(r.amount) : 0n), 0n);
+  return (
+    <>
+      <p className="mb-2 text-sm text-fg-subtle">
+        Còn phải thu hồi {formatCurrency(total)} ở {open.length} đợt.
+      </p>
+      <ul className="space-y-2">
+        {rows.map((r) => {
+          const status = r.completed_at
+            ? { group: 'completed' as const, label: 'Đã thu hồi' }
+            : r.state === 'den_han'
+              ? { group: 'in_progress' as const, label: 'Đến hạn thu' }
+              : { group: 'draft' as const, label: 'Chưa tới hạn' };
+          return (
+            <li key={r.term_id} className="rounded-card bg-surface p-4">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="min-w-0 flex-1">
+                  <Link
+                    to={`/hd/hop-dong/${r.contract_id}`}
+                    className="font-medium text-brand hover:underline"
+                  >
+                    {r.contract_number ?? r.contract_code}
+                  </Link>
+                  <span className="block text-sm text-fg-subtle">
+                    {r.description} · {r.customer_name}
+                  </span>
+                </span>
+                <span className="font-medium tabular-nums">
+                  {r.amount !== null ? formatCurrency(r.amount) : 'Chưa ghi số tiền'}
+                </span>
+                <StatusWithLabel status={status.group} label={status.label} />
+              </div>
+              <p className="mt-1 text-sm text-fg-subtle">
+                {r.due_date
+                  ? `Hạn thu hồi ${formatDate(r.due_date)} (ngày hết bảo hành muộn nhất)`
+                  : 'Chưa có hạn — hạn tự điền khi công trình khai thời hạn bảo hành.'}
+                {r.state === 'den_han' && !r.completed_at && (
+                  <>
+                    {' · '}
+                    <Link to="/kt/dot-thu" className="text-brand hover:underline">
+                      Lập đề nghị thu tiền ở Đợt thu
+                    </Link>
+                  </>
+                )}
+              </p>
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
+
+/** Khoản giữ lại đã ghi công nợ trước 0253 (hồ sơ thanh toán cũ) — chỉ hiện khi còn. */
 function RetentionList() {
   const scope = useCompanyScope();
   const { data, isLoading, error, refetch } = useRetentionReceivables();
@@ -31,12 +99,15 @@ function RetentionList() {
   const rows = data ?? [];
   const open = rows.filter((r) => toMoney(r.amount) > toMoney(r.settled_amount));
   const total = open.reduce((s, r) => s + toMoney(r.amount) - toMoney(r.settled_amount), 0n);
-  if (rows.length === 0)
-    return (
-      <EmptyState message="Chưa có khoản tiền giữ lại nào. Khoản giữ lại sinh ra khi «Ghi công nợ» một hồ sơ thanh toán có ghi tiền chủ đầu tư giữ lại." />
-    );
+  if (rows.length === 0) return null;
   return (
-    <>
+    <section aria-labelledby="giu-lai-cu" className="mt-4">
+      <h3 id="giu-lai-cu" className="mb-1 font-medium">
+        Khoản giữ lại đã ghi công nợ trước đây
+      </h3>
+      <p className="mb-2 text-sm text-fg-subtle">
+        Ghi từ hồ sơ thanh toán trước khi chuyển sang đợt giữ lại — thu hồi ở màn hình Công nợ.
+      </p>
       <p className="mb-2 text-sm text-fg-subtle">
         Còn phải thu hồi {formatCurrency(total)} ở {open.length} khoản.
       </p>
@@ -92,7 +163,7 @@ function RetentionList() {
           );
         })}
       </ul>
-    </>
+    </section>
   );
 }
 
@@ -150,13 +221,14 @@ export function RetentionGuaranteePage() {
       <PageHeader
         title="Bảo lãnh và giữ lại"
         breadcrumbs={[{ label: 'Kế toán – Tài chính' }, { label: 'Bảo lãnh và giữ lại' }]}
-        description="Tiền chủ đầu tư giữ lại bảo hành chờ thu hồi, và bảo lãnh hợp đồng còn hiệu lực. Thu tiền giữ lại bằng chứng từ thu ở màn hình Công nợ."
+        description="Đợt tiền giữ lại bảo hành của hợp đồng chờ thu hồi, và bảo lãnh hợp đồng còn hiệu lực. Tới hạn thì lập đề nghị thu tiền như mọi đợt thu."
       />
       <KtNav />
       <section aria-labelledby="giu-lai" className="mb-6">
         <h2 id="giu-lai" className="mb-2 font-semibold">
           Tiền giữ lại bảo hành
         </h2>
+        <RetentionTermList />
         <RetentionList />
       </section>
       <section aria-labelledby="bao-lanh-hd">

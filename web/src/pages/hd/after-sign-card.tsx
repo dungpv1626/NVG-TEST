@@ -24,6 +24,8 @@ import { Button } from '@/components/ui/button';
 import { StatusLozenge } from '@/components/ui/status-lozenge';
 import { useContractTerms, type ContractTermRecord } from '@/hooks/use-contracts';
 import {
+  COLLECTION_TRIGGER_LABELS,
+  type CollectionTrigger,
   useContractCollectionTargets,
   useLinkCollectionTerm,
   type CollectionTarget,
@@ -51,6 +53,8 @@ function roundStatus(term: ContractTermRecord): { group: StatusGroup | null; tex
  * Căn cứ thu của một đợt (3A, 0195): mốc thi công hoặc biên bản nghiệm thu với chủ đầu tư. Mốc
  * đạt / biên bản ký hai bên thì đợt đến hạn thu và Kế toán được báo. Người chịu trách nhiệm hợp
  * đồng và Kế toán chọn được; người khác chỉ đọc.
+ * 0253: thêm «Khi ký hợp đồng» (tạm ứng — đến hạn ngay khi ký) và «Khi hết hạn bảo hành» (đợt tiền
+ * giữ lại — hạn theo ngày hết bảo hành muộn nhất của công trình).
  */
 function CollectionBasis({
   term,
@@ -65,8 +69,18 @@ function CollectionBasis({
 }) {
   const link = useLinkCollectionTerm();
   const [error, setError] = useState<string | null>(null);
-  const currentId = term.site_milestone_id ?? term.acceptance_record_id ?? '';
+  const currentId =
+    term.site_milestone_id ??
+    term.acceptance_record_id ??
+    (term.collection_trigger ? `trigger:${term.collection_trigger}` : '');
   const current = targets.find((t) => t.id === currentId);
+  const triggerLabel = term.collection_trigger
+    ? COLLECTION_TRIGGER_LABELS[term.collection_trigger]
+    : null;
+  // «Khi ký» chỉ hợp với tạm ứng / đợt thanh toán; quyết toán không đến hạn lúc ký (CSDL cũng chặn).
+  const triggers = (Object.keys(COLLECTION_TRIGGER_LABELS) as CollectionTrigger[]).filter(
+    (t) => t !== 'ky_hop_dong' || term.term_type !== 'quyet_toan',
+  );
   const describe = (t: CollectionTarget) =>
     `${t.kind === 'moc' ? 'Mốc' : 'Biên bản'} «${t.label}» — ${
       t.reached
@@ -81,7 +95,7 @@ function CollectionBasis({
   if (!canLink || term.completed_at) {
     return (
       <span className="block text-xs text-fg-subtle">
-        Căn cứ thu: {current ? describe(current) : 'chưa gắn mốc / biên bản'}
+        Căn cứ thu: {current ? describe(current) : (triggerLabel ?? 'chưa gắn mốc / biên bản')}
       </span>
     );
   }
@@ -92,7 +106,13 @@ function CollectionBasis({
         value={currentId}
         disabled={link.isPending}
         onChange={(e) => {
-          const target = targets.find((t) => t.id === e.target.value) ?? null;
+          const value = e.target.value;
+          const found = targets.find((t) => t.id === value);
+          const target = value.startsWith('trigger:')
+            ? { kind: 'trigger' as const, id: value.slice('trigger:'.length) as CollectionTrigger }
+            : found
+              ? { kind: found.kind, id: found.id }
+              : null;
           setError(null);
           link.mutate(
             { termId: term.id, contractId, target },
@@ -102,6 +122,11 @@ function CollectionBasis({
         className="ms-1 h-8 max-w-full rounded-sm border border-border-strong bg-surface px-2 text-sm text-fg"
       >
         <option value="">Không gắn — theo ngày hạn</option>
+        {triggers.map((t) => (
+          <option key={t} value={`trigger:${t}`}>
+            {COLLECTION_TRIGGER_LABELS[t]}
+          </option>
+        ))}
         {targets.map((t) => (
           <option key={t.id} value={t.id}>
             {t.site_code} · {describe(t)}

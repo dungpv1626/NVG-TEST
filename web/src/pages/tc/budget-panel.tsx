@@ -21,10 +21,15 @@ import {
   summarizeBudget,
 } from '@nvg/shared';
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/ui/states';
-import { useSiteBudgetSource, useSiteBudgetStatus } from '@/hooks/use-construction-sites';
+import {
+  useSiteBudgetApproval,
+  useSiteBudgetSource,
+  useSiteBudgetStatus,
+} from '@/hooks/use-construction-sites';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { BudgetAdjustmentPanel } from './budget-adjustment-panel';
 import { SiteBudgetEditor, SiteBudgetSetup } from './site-budget-editor';
+import { budgetTotalLabel, SiteBudgetApprovalBar } from './site-budget-approval';
 
 /**
  * Mức độ an toàn của ngân sách.
@@ -53,6 +58,8 @@ export function BudgetPanel({ siteId, started = false }: { siteId: string; start
   const { data, isLoading, error } = useSiteBudgetStatus(siteId);
   // 0235: ai lập / sửa được ngân sách gắn thẳng công trình, và căn cứ báo giá.
   const { data: source, isLoading: sourceLoading } = useSiteBudgetSource(siteId);
+  // 0253: trạng thái duyệt THẬT của ngân sách ban đầu (Tổng Giám đốc duyệt trước khởi công).
+  const { data: approval } = useSiteBudgetApproval(siteId);
 
   if (isLoading || sourceLoading) return <TableSkeleton rows={4} />;
   if (error) return <ErrorState message={toUserMessage(error)} />;
@@ -89,6 +96,14 @@ export function BudgetPanel({ siteId, started = false }: { siteId: string; start
 
   return (
     <div className="space-y-4">
+      {approval && (
+        <SiteBudgetApprovalBar
+          siteId={siteId}
+          approval={approval}
+          started={started}
+          canManage={Boolean(source?.can_manage)}
+        />
+      )}
       <section className="rounded-card bg-surface-sunken p-4">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <p className="font-medium">Toàn công trình</p>
@@ -96,7 +111,7 @@ export function BudgetPanel({ siteId, started = false }: { siteId: string; start
         </div>
         <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-4">
           <div>
-            <dt className="text-xs text-fg-subtle">Ngân sách được duyệt</dt>
+            <dt className="text-xs text-fg-subtle">{budgetTotalLabel(approval)}</dt>
             <dd className="mt-0.5">{formatCurrency(total.budgeted)}</dd>
           </div>
           <div>
