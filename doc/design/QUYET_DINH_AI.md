@@ -5104,3 +5104,14 @@ phòng tầng 2 → lỗi danh mục cả nhà (tầng 0), không giữ được
 THU5. Anh Dũng chọn lùi: lời dẫn 9.15.1 = câu lượt đầu như 9.14.0 (phác mọi tầng); GIỮ `pendingUpper` + `sketch_pending` (chỉ chạy khi
 mô hình tự bỏ bản phác tầng trên — trước đây chương trình lặng lẽ xếp theo vùng mặc định). Làm lại sau, kèm: khi lượt «chỉ tầng 1»
 thiếu phòng tầng trên thì vẫn kiểm tầng 1 và nhắc khai bổ sung, không để lỗi danh mục chặn cả lượt.
+
+## T188 — Mọc lại bản phác từ điểm gieo (kiểu MANSION): ĐÃ THỬ, GỠ (30/10/2026, anh Dũng đồng ý thử)
+
+Tra cứu (sản phẩm Maket / Finch / Forma / TestFit / Hypar; nghiên cứu House-GAN++ / Graph2Plan / HouseDiffusion / MANSION 2026): không
+công cụ nào làm nhà ống / xếp thang chồng tầng; mô hình học sâu học từ RPLAN (phi thương mại), một tầng, không bảo đảm hợp lệ. Học từ
+MANSION: mô hình khai chương trình, chương trình đặt lõi trước rồi sinh nhiều ứng viên. Đã dựng `regrowSketches` (giữ thang / thang máy /
+giếng trời / ban công, phòng khác mọc chữ nhật quanh tâm ô bản phác, 40 bản, thử dựng 6 bản tốt nhất) chạy SAU dời vách T177 và khung
+xương. Phát lại 62 lượt: 27 → 28 vòng qua (được 75ba5793 v1, a66f4aa0 v5, f1a88ac1 v6; mất 75ba5793 v2, a66f4aa0 v4), cả bộ 2.206 →
+3.982 s, vòng lâu nhất 125 → 178 s (trần CPU Worker 300 s). Lợi ròng 1 vòng, gần gấp đôi thời gian — gỡ. Mã giữ ở
+`backup/ai-mansion/regrow.ts.keep` (không commit). Bài học: chữ nhật mọc tham lam quanh điểm gieo ít khi giữ được lối vào — cần một bộ
+sinh biết hành lang (MANSION cũng đặt lõi + hành lang trước), việc lớn hơn.
