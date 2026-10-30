@@ -1473,7 +1473,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email.
 
-**Migration tiếp theo: 0253.** (Đã dùng tới 0252 — 0250 / 0251 / 0252 là sửa lỗi chạy thử trọn luồng NVO / NVC / NVS 30/10/2026, ảnh ở `backup/e2e-*/`; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0258.** (Đã dùng tới 0257 — 0250 / 0251 / 0252 là sửa lỗi chạy thử trọn luồng NVO / NVC / NVS 30/10/2026, ảnh ở `backup/e2e-*/`; 0253–0257 trả lời 18 câu nghiệp vụ sau chạy thử (gói A / B / C, vai trò `KD_NVS`, tài khoản `kinhdoanh.nvs@`); `stage_readiness` bản mới nhất ở 0257, `decide_approval` ở 0253; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 
