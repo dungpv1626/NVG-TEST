@@ -88,6 +88,13 @@ export interface DesignEnv {
   AI_REPLAY?: string;
 
   /**
+   * GIẢ LẬP lời gọi mô hình — cùng biến với khối AI chung (`workers/src/ai/index.ts`). `'1'` = mọi chức năng;
+   * danh sách cách nhau bởi dấu phẩy = chỉ những chức năng đó. Ở module thiết kế hiện chỉ tuyến ảnh phòng
+   * (`room_image`, B3b) đọc nó. CHỈ đặt tay trong `.dev.vars`; KHÔNG khai trong `wrangler.jsonc`.
+   */
+  AI_FAKE?: string;
+
+  /**
    * Images binding của Cloudflare — thu nhỏ ảnh do mô hình vẽ thành bản xem trước WebP cho ảnh bìa
    * thẻ (`ai/image-preview.ts`, 08/10/2026). Vắng thì tuyến ảnh trả ảnh gốc.
    */

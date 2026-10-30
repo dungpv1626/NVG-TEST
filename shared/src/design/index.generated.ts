@@ -24,6 +24,7 @@ export * from './ai-plan-intent.generated';
 export * from './ai-plan-rooms.generated';
 export * from './ai-plan-sheet-image.generated';
 export * from './ai-plan-tree.generated';
+export * from './ai-room-image.generated';
 export * from './ai-space-program-proposal.generated';
 export * from './ai-space-program.generated';
 export * from './ai-survey-paper-read.generated';
@@ -42,4 +43,4 @@ export * from './kb.generated';
  * hai phiên bản hợp đồng dữ liệu khác nhau — nói thẳng điều đó còn hơn để người dùng đọc một
  * câu lỗi kiểm kiểu không dẫn tới đâu.
  */
-export const CONTRACTS_FINGERPRINT = '3615572e090c';
+export const CONTRACTS_FINGERPRINT = '145962dd707d';

@@ -58,10 +58,19 @@ export type AiFacadeConceptCodeOrNull = z.infer<typeof aiFacadeConceptCodeOrNull
 export const aiFacadeConceptSchema = z
   .object({
     schema_version: aiFacadeConceptSemverSchema,
-    /** Mặt bằng (`ai_floor_plan`) mà mặt đứng này dựng theo. Worker điền. */
-    plan_ref: aiFacadeConceptArtifactRefSchema.describe(
-      'Mặt bằng (`ai_floor_plan`) mà mặt đứng này dựng theo. Worker điền.',
-    ),
+    /** Mặt bằng (`ai_floor_plan`) mà mặt đứng này dựng theo. Worker điền. RỖNG khi mặt đứng dựng THẲNG TỪ ĐẦU BÀI (`source: brief`, B3 bộ ý tưởng cho khách, 30/10/2026) — khi ấy khung lấy từ đầu bài đã xác nhận, cạnh lineage đi vào là đầu bài. */
+    plan_ref: aiFacadeConceptArtifactRefSchema
+      .nullable()
+      .describe(
+        'Mặt bằng (`ai_floor_plan`) mà mặt đứng này dựng theo. Worker điền. RỖNG khi mặt đứng dựng THẲNG TỪ ĐẦU BÀI (`source: brief`, B3 bộ ý tưởng cho khách, 30/10/2026) — khi ấy khung lấy từ đầu bài đã xác nhận, cạnh lineage đi vào là đầu bài.',
+      ),
+    /** Khung KHOÁ (bề rộng, cao độ, lỗ mở, ban công) lấy từ đâu (B3, 30/10/2026). `plan` = suy từ phương án mặt bằng `plan_ref` (T59). `brief` = dựng từ đầu bài khi chưa có mặt bằng — lỗ mở xếp theo nếp từng tầng, là PHƯƠNG ÁN Ý TƯỞNG, không khớp một mặt bằng nào; màn hình ghi «Dựng từ đầu bài». Vắng ở mọi ý tưởng dựng trước B3 = `plan`. */
+    source: z
+      .enum(['plan', 'brief'])
+      .describe(
+        'Khung KHOÁ (bề rộng, cao độ, lỗ mở, ban công) lấy từ đâu (B3, 30/10/2026). `plan` = suy từ phương án mặt bằng `plan_ref` (T59). `brief` = dựng từ đầu bài khi chưa có mặt bằng — lỗ mở xếp theo nếp từng tầng, là PHƯƠNG ÁN Ý TƯỞNG, không khớp một mặt bằng nào; màn hình ghi «Dựng từ đầu bài». Vắng ở mọi ý tưởng dựng trước B3 = `plan`.',
+      )
+      .optional(),
     /** Phiếu yêu cầu mặt đứng của kỹ sư (`ai_facade_brief`) mà ý tưởng này theo. Rỗng khi kỹ sư chưa điền phiếu. Worker điền. */
     brief_ref: aiFacadeConceptArtifactRefSchema
       .nullable()

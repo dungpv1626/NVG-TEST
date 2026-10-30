@@ -108,6 +108,12 @@ export function perspectivePlan(
   concept: AiFacadeConcept,
   anchors: readonly AnchorKind[],
 ): PerspectivePlan {
+  // Mặt đứng dựng thẳng từ đầu bài (B3, `plan_ref` rỗng): không có mặt bằng nên không bao giờ có tờ mặt bằng
+  // mái. Cùng cách với mặt đứng kỹ sư tải lên (T114 Đợt 4b, Haan chấp nhận khối nhà theo đầu bài ~90 %): góc
+  // nghiêng và góc trên cao dựng từ tấm ban ngày cộng chiều sâu đầu bài trong lời dẫn.
+  if (!concept.plan_ref) {
+    return perspectivePlanFromUpload(closeUpView(concept) === 'balcony_close');
+  }
   const has = new Set(anchors);
   const steps: ViewStep[] = [];
   const skipped: SkippedView[] = [];

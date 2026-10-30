@@ -177,16 +177,18 @@ perspectiveApp.post('/runs', async (c) => {
     // Mặt bằng lấy từ CHÍNH ý tưởng mặt đứng, không đọc lại mốc hiệu lực: bộ ảnh phải nói về đúng
     // ngôi nhà mà tờ mặt đứng vẽ. Kỹ sư đổi phương án sau đó thì bước này đã bị chặn ở màn hình bằng
     // nhãn «dựng theo phương án cũ», và đọc mốc ở đây sẽ lặng lẽ trộn hai ngôi nhà.
-    const planRef = concept.plan_ref;
-    const planArtifact = await repo.get(planRef, body.projectId);
-    if (!planArtifact || planArtifact.kind !== 'ai_floor_plan') {
+    // Mặt đứng dựng thẳng từ đầu bài (B3) không có mặt bằng: chỉ nhận tờ mặt đứng, góc trên cao bỏ qua
+    // kèm lý do (cần tờ mặt bằng mái); chiều sâu nhà của lời dẫn lấy từ đầu bài.
+    const planRef = concept.plan_ref ?? null;
+    const planArtifact = planRef ? await repo.get(planRef, body.projectId) : null;
+    if (planRef && (!planArtifact || planArtifact.kind !== 'ai_floor_plan')) {
       return c.json({ error: 'Không tìm thấy phương án mặt bằng mà mặt đứng dựng theo.' }, 404);
     }
     const anchors = await storeAnchors(
       c,
       body.anchors ?? [],
       concept,
-      planArtifact.payload as AiFloorPlan,
+      planArtifact ? (planArtifact.payload as AiFloorPlan) : null,
       brief.payload as DesignBrief,
       body.projectId,
     );
@@ -264,7 +266,8 @@ async function storeAnchors(
   c: Ctx,
   anchors: ReadonlyArray<{ kind?: string; base64?: string }>,
   concept: AiFacadeConcept,
-  plan: AiFloorPlan,
+  /** `null` khi mặt đứng dựng từ đầu bài (B3) — khi ấy không có tờ mặt bằng mái để đối chiếu. */
+  plan: AiFloorPlan | null,
   brief: DesignBrief | null,
   projectId: string,
 ): Promise<Array<{ kind: AnchorKind; uri: string; sha256: string; bytes: number }> | Response> {
@@ -276,6 +279,15 @@ async function storeAnchors(
     const kind = anchor.kind;
     if (kind !== 'elevation' && kind !== 'roof_plan') {
       return c.json({ error: `Loại ảnh neo "${kind}" chưa dùng được.` }, 400);
+    }
+    if (kind === 'roof_plan' && !plan) {
+      return c.json(
+        {
+          error:
+            'Mặt đứng này dựng từ đầu bài, chưa có mặt bằng nên chưa có tờ mặt bằng mái. Tải lại trang rồi chạy lại.',
+        },
+        400,
+      );
     }
     const base64 = anchor.base64;
     if (!base64) return c.json({ error: 'Thiếu ảnh neo của tờ mặt đứng.' }, 400);
@@ -290,7 +302,7 @@ async function storeAnchors(
     // dùng chung một bộ vẽ.
     let built;
     try {
-      built = kind === 'elevation' ? facadeAnchor(concept) : roofPlanAnchor(plan, concept, brief);
+      built = kind === 'elevation' ? facadeAnchor(concept) : roofPlanAnchor(plan!, concept, brief);
     } catch (error) {
       if (error instanceof ElevationSheetError || error instanceof PlanSheetError) {
         return c.json({ error: error.message }, 404);
@@ -362,6 +374,13 @@ perspectiveApp.get('/:projectId/roof-anchor', async (c) => {
     return c.json({ error: 'Không tìm thấy ý tưởng mặt đứng này trong hồ sơ.' }, 404);
   }
   const concept = facade.payload as AiFacadeConcept;
+  if (!concept.plan_ref) {
+    // Mặt đứng dựng từ đầu bài (B3): không có mặt bằng thì không có tờ mặt bằng mái.
+    return c.json(
+      { error: 'Mặt đứng này dựng từ đầu bài, chưa có mặt bằng nên chưa có tờ mặt bằng mái.' },
+      404,
+    );
+  }
   const planArtifact = await repo.get(concept.plan_ref, projectId);
   if (!planArtifact || planArtifact.kind !== 'ai_floor_plan') {
     return c.json({ error: 'Không tìm thấy phương án mặt bằng mà mặt đứng dựng theo.' }, 404);

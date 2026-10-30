@@ -25,6 +25,7 @@ const state = vi.hoisted(() => ({
 
 vi.mock('@/hooks/use-ai-design', () => ({
   useAiPlanPreflight: () => ({ data: undefined }),
+  useConceptZoning: () => ({ data: undefined, isLoading: false, error: null }),
   useAiDesignState: () => ({
     data: state.design,
     isLoading: false,
@@ -120,8 +121,10 @@ describe('Dải bước của tab AI Design', () => {
     expect(await screen.findByRole('button', { name: /^Mặt bằng/ })).toBeInTheDocument();
     // Mặt bằng đọc đầu bài + khảo sát, không chờ chương trình không gian (T45, 15/09/2026).
     expect(screen.queryByText('Cần chương trình không gian trước.')).toBeNull();
-    // Chọn phương án làm nền nay ở NGAY bước Mặt đứng — chỉ chặn khi chưa xếp phương án nào.
-    expect(screen.getByText('Cần xếp mặt bằng trước.')).toBeInTheDocument();
+    // Mặt ngoài KHÔNG còn chờ mặt bằng (B3, 30/10/2026): chưa có phương án thì dựng thẳng từ đầu bài.
+    expect(screen.queryByText('Cần xếp mặt bằng trước.')).toBeNull();
+    // Bộ kết quả vẫn cần một phương án mặt bằng — bước ấy mờ kèm lý do.
+    expect(screen.getByText('Cần ít nhất một phương án mặt bằng.')).toBeInTheDocument();
   });
 
   it('chưa xác nhận đầu bài thì bước mặt bằng chờ đầu bài', async () => {
@@ -216,16 +219,19 @@ describe('Dải bước của tab AI Design', () => {
       createdAt: '',
       updatedAt: '',
     });
+    // Đọc trong ô của bước Mặt bằng: bước Mặt ngoài nay mở được từ đầu bài (B3) nên ghi «Chưa chạy» riêng.
+    const planStep = () => screen.getByRole('button', { name: /^Mặt bằng/ });
     state.design = designState({ runs: { plan: run('failed') } });
     const view = renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
     expect(await screen.findByText('Hỏng')).toBeInTheDocument();
-    expect(screen.queryByText('Chưa chạy')).toBeNull();
+    expect(planStep()).toHaveTextContent('Hỏng');
+    expect(planStep()).not.toHaveTextContent('Chưa chạy');
     view.unmount();
 
     state.design = designState({ runs: { plan: run('running') } });
     renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
     expect(await screen.findByText('Đang chạy')).toBeInTheDocument();
-    expect(screen.queryByText('Chưa chạy')).toBeNull();
+    expect(planStep()).not.toHaveTextContent('Chưa chạy');
   });
 
   it('đã có phương án thì lượt hỏng sau không xoá «Có n»', async () => {

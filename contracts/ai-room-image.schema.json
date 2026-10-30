@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nvg.vn/contracts/ai-room-image.schema.json",
+  "title": "AiRoomImage",
+  "description": "Ảnh NỘI THẤT MỘT PHÒNG do MÔ HÌNH ẢNH vẽ thẳng từ ĐẦU BÀI, không cần mặt bằng (B3b «bộ ý tưởng cho khách», anh Dũng yêu cầu 30/10/2026).\n\nKhác ảnh mặt bằng có nội thất (T57, `ai-plan-sheet-image`): không có ảnh neo, vì chưa có mặt bằng để làm neo. Kiến trúc sư chọn MỘT phòng trong danh sách phòng đầu bài khai; lời dẫn ghép từ loại phòng, tầng, diện tích đầu bài, phong cách (`kb/style_catalogue.yaml`) và vài câu nếp sinh hoạt đã lược danh tính (hạng 2). Ảnh là HÌNH DUNG không gian theo phong cách — không đo được, không phải bố trí thật của một mặt bằng.\n\nMỘT artifact = MỘT tấm. Cạnh lineage `ai_room_image_draw` đi từ đầu bài đã xác nhận (`brief_ref`). Không đặt head: vẽ nhiều phòng, vẽ lại một phòng là chuyện bình thường; bộ sưu tập chọn lúc đọc theo cạnh lineage.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "brief_ref",
+    "room",
+    "uri",
+    "mime",
+    "watermark_applied",
+    "generator"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "#/$defs/semver"
+    },
+    "brief_ref": {
+      "$ref": "#/$defs/artifact_ref",
+      "description": "Đầu bài đã xác nhận (`design_brief`) mà tấm này vẽ theo. Cũng là cạnh lineage `ai_room_image_draw`."
+    },
+    "room": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "type", "floor", "area_m2"],
+      "description": "Phòng kiến trúc sư chọn, chép từ `required_spaces` của đầu bài lúc vẽ.",
+      "properties": {
+        "key": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Khoá ổn định của phòng trong danh sách đầu bài (`<loại>:<tầng>:<thứ tự>`) — màn hình gom ảnh theo khoá này."
+        },
+        "type": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Mã loại phòng của `kb/room_vocabulary.yaml`."
+        },
+        "floor": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "area_m2": {
+          "type": ["number", "null"],
+          "minimum": 0
+        }
+      }
+    },
+    "style": {
+      "type": ["string", "null"],
+      "maxLength": 40,
+      "description": "Mã phong cách đầu bài lúc vẽ. Rỗng khi đầu bài chưa chọn."
+    },
+    "uri": {
+      "type": "string",
+      "pattern": "^(r2|supabase)://.+",
+      "description": "Vị trí tệp ảnh trong kho nhị phân."
+    },
+    "mime": {
+      "type": "string",
+      "enum": ["image/png", "image/jpeg", "image/webp"]
+    },
+    "width": {
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "height": {
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "watermark_applied": {
+      "type": "boolean",
+      "const": false,
+      "description": "Luôn `false`: ảnh do mô hình ảnh vẽ hiện NGUYÊN BẢN, không in dấu (T154). Đường dẫn gửi khách tự gắn nhãn của nó."
+    },
+    "prompt_excerpt": {
+      "type": ["string", "null"],
+      "maxLength": 1200,
+      "description": "Trích đoạn lời dẫn ĐÃ GHÉP đã gửi đi — để đọc lại vì sao tấm này ra như vậy."
+    },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "provider", "model", "route", "prompt_version"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["ai"]
+        },
+        "provider": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "model": {
+          "type": "string",
+          "maxLength": 96
+        },
+        "route": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "prompt_version": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "latency_ms": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "artifact_ref": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

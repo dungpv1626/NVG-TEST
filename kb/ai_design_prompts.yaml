@@ -39,7 +39,9 @@
 # 9.15.1 (30/10/2026, anh Dũng chọn): LÙI câu lượt đầu về như 9.14.0 (phác mọi tầng). Lượt thật 9.15.0 trên 9272 hỏng: mô hình
 # «chỉ phác tầng 1» bỏ luôn danh mục phòng tầng 2 → lỗi danh mục cả nhà, không giữ được tầng 1, 5 lời gọi 0,55 USD. Giữ câu nhắc
 # `sketch_pending` và cách xử lý tầng chưa phác (T187) — chỉ chạy khi mô hình tự bỏ bản phác tầng trên.
-version: '9.15.1'
+# 9.16.0 (30/10/2026, B3b «bộ ý tưởng cho khách» — anh Dũng): khối MỚI `room_image` — ảnh nội thất MỘT phòng vẽ thẳng từ
+# đầu bài, không cần mặt bằng. Không đổi khối nào khác.
+version: '9.16.0'
 
 program:
   system: |
@@ -1558,3 +1560,85 @@ perspective:
   # Câu trình duyệt in ĐÈ LÊN PIXEL. Bản dài hơn hiện bằng chữ trong trang là
   # `AI_DISCLAIMERS.aiImageSet`.
   watermark: 'Ảnh phối cảnh do AI dựng — không đo được, vật liệu và màu chỉ để hình dung'
+
+# ── Ảnh NỘI THẤT MỘT PHÒNG vẽ thẳng từ ĐẦU BÀI (B3b, 30/10/2026 — anh Dũng) ─────────────────────────
+#
+# Bộ ý tưởng gặp khách cần ảnh nội thất mà chưa có mặt bằng. Khác `sheet_image` (T57): KHÔNG có ảnh neo
+# — chưa có mặt bằng để làm neo — nên đây là HÌNH DUNG không gian theo phong cách, không phải bố trí của
+# một mặt bằng thật. Kiến trúc sư chọn MỘT phòng trong danh sách phòng đầu bài khai; Worker ghép lời dẫn
+# từ loại phòng, tầng, diện tích, phong cách (`prompt.interior` của `kb/style_catalogue.yaml`, qua
+# `sheet_image.styles`) và vài câu nếp sinh hoạt dưới đây. Dữ liệu gửi đi là hạng 2: đầu bài đã lược danh
+# tính, không mã hồ sơ, không tên người.
+#
+# Chỗ điền bắt buộc của `user`: {room} {floor} {area} {household} {style}.
+room_image:
+  system: |
+    You render ONE interior visualisation of a single room for a Vietnamese residential design-build
+    office, as an idea image to show the home owner before the floor plan is drawn.
+
+    Draw a photographic, eye-level view of the room described below, as an interior visualiser would:
+    natural daylight from windows, soft shadows, realistic materials, furniture sized to the floor area
+    given (a 12 m2 bedroom is not a hotel suite). The room belongs to a town house or villa in Vietnam:
+    tropical climate, ceiling fans or split air conditioners, tiled or timber floors, no fireplace.
+
+    Draw no people and no pets in the image. Write NO text, numbers, labels, logos, signatures or
+    watermarks anywhere in the image.
+  user: |
+    Room: {room}
+    Storey: {floor}
+    Floor area: {area}
+    Household: {household}
+    {style}
+  # Loại phòng (mã `kb/room_vocabulary.yaml`) → cụm tiếng Anh. CHỈ những loại có ở đây mới hiện trong ô chọn
+  # phòng — thang, lõi kỹ thuật, gara, giếng trời, hành lang không phải nội thất để trình khách.
+  rooms:
+    living: 'living room'
+    dining: 'dining room'
+    kitchen: 'kitchen'
+    bedroom: 'bedroom'
+    master_bedroom: 'master bedroom'
+    wc: 'bathroom'
+    altar_room: 'ancestral altar room (Vietnamese family worship room)'
+    study: 'home office / study'
+    study_area: 'study corner'
+    dressing_room: 'walk-in dressing room'
+    terrace: 'roof terrace with planting'
+    shop: 'small street-front shop'
+  # Thành phần gia đình (`family[].role`) → cụm tiếng Anh, ghép với số người.
+  roles:
+    ong_ba: 'grandparent(s)'
+    vo_chong: 'adult(s) of the main couple'
+    con: 'child(ren)'
+    khach: 'guest(s)'
+    nguoi_giup_viec: 'live-in helper(s)'
+  # Câu nếp sinh hoạt: `when` = `đường.dẫn=giá trị` trên đầu bài đã lược danh tính; `rooms` vắng = mọi phòng.
+  # Chỉ câu ĐÃ trả lời mới ra — không đoán nếp nhà khách.
+  notes:
+    - when: 'lifestyle.cooking=nau_nhieu_chien_xao'
+      rooms: [kitchen, dining]
+      en: 'The family cooks a lot of stir-fried food: show a strong range hood and easy-to-clean surfaces.'
+    - when: 'lifestyle.cooking=it_nau'
+      rooms: [kitchen, dining]
+      en: 'The family cooks little: a compact, tidy kitchen is enough.'
+    - when: 'lifestyle.dining_place=quay_bep'
+      rooms: [kitchen, dining]
+      en: 'Meals are taken at a kitchen counter or island.'
+    - when: 'lifestyle.living_dining_kitchen=lien_thong_ca_ba'
+      rooms: [living, dining, kitchen]
+      en: 'Living, dining and kitchen are one open space; show the other two in the background.'
+    - when: 'lifestyle.reduced_mobility=true'
+      en: 'Someone in the family has reduced mobility: keep wide clear paths and no steps inside the room.'
+    - when: 'lifestyle.pets=cho'
+      en: 'The family keeps a dog: durable, easy-to-clean floor and fabrics.'
+    - when: 'lifestyle.pets=meo'
+      en: 'The family keeps a cat: durable, scratch-resistant fabrics.'
+    - when: 'lifestyle.pets=cho_va_meo'
+      en: 'The family keeps a dog and a cat: durable, easy-to-clean floor and fabrics.'
+    - when: 'household.religion=phat_giao'
+      rooms: [altar_room]
+      en: 'A Buddhist family: a calm altar with a Buddha statue above the ancestral altar.'
+    - when: 'household.religion=cong_giao'
+      rooms: [altar_room, living]
+      en: 'A Catholic family: a small Christian altar instead of incense burners.'
+    - when: 'storage.level=nhieu'
+      en: 'The family needs a lot of storage: show generous built-in cabinets.'

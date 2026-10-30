@@ -175,7 +175,15 @@ export interface ConstructionNorms {
   no_window_types: string[];
   outdoor: { railing_h_m: number; railing_thickness_m: number };
   /** Cốt vỉa hè và tường chắn mái mặc định cho tờ mặt đứng (T59) — vắng thì bước mặt đứng không dựng được khung. */
-  facade?: { ground_floor_raise_m: number; parapet_height_m: number };
+  facade?: {
+    ground_floor_raise_m: number;
+    parapet_height_m: number;
+    /**
+     * Khung mặt đứng dựng từ ĐẦU BÀI khi chưa có mặt bằng (B3, `ai/facade/frame-brief.ts`): bề rộng một khoang mặt
+     * tiền và lề lỗ mở trong khoang, m. Vắng = bước mặt ngoài chưa dựng được khi chưa có mặt bằng.
+     */
+    from_brief?: { bay_width_m: number; edge_margin_m: number };
+  };
   /** Hành lang bộ giải ý định tự dựng (T43) — số tham khảo; vắng thì bộ giải dùng cửa đi + lề. */
   circulation?: {
     corridor_clear_m: number;
@@ -547,9 +555,28 @@ function parseFacade(raw: unknown): NonNullable<ConstructionNorms['facade']> {
       throw new ConstructionNormsError(`"facade.${key}" phải là số không âm`);
     }
   }
+  const fromBrief = value.from_brief as Record<string, unknown> | undefined;
+  if (fromBrief !== undefined) {
+    for (const key of ['bay_width_m', 'edge_margin_m']) {
+      if (typeof fromBrief?.[key] !== 'number' || !((fromBrief[key] as number) >= 0)) {
+        throw new ConstructionNormsError(`"facade.from_brief.${key}" phải là số không âm`);
+      }
+    }
+    if (!((fromBrief.bay_width_m as number) > 0)) {
+      throw new ConstructionNormsError('"facade.from_brief.bay_width_m" phải lớn hơn 0');
+    }
+  }
   return {
     ground_floor_raise_m: value.ground_floor_raise_m as number,
     parapet_height_m: value.parapet_height_m as number,
+    ...(fromBrief
+      ? {
+          from_brief: {
+            bay_width_m: fromBrief.bay_width_m as number,
+            edge_margin_m: fromBrief.edge_margin_m as number,
+          },
+        }
+      : {}),
   };
 }
 

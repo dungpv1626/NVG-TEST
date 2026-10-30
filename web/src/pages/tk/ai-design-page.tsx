@@ -22,6 +22,7 @@ import { useDesignProject } from '@/hooks/use-design-projects';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useCan } from '@/lib/auth';
 import { AiDesignTab } from './ai/ai-design-tab';
+import { ConceptZoningPanel } from './ai/concept-zoning-panel';
 import { BriefPanel } from './brief-panel';
 import { DesignWorkspace } from './design-workspace';
 import { SurveyPanel } from './survey-panel';
@@ -78,6 +79,8 @@ export function AiDesignPage() {
           readOnly
         />
       </section>
+      {/* Bộ ý tưởng cho khách B1 + B2: đầu bài có vừa lô không + sơ đồ công năng (tất định, không gọi AI). */}
+      <ConceptZoningPanel projectId={project.id} projectCode={project.code} />
       <section>
         <h2 className="mb-2 font-semibold">Khảo sát hiện trạng</h2>
         <SurveyPanel

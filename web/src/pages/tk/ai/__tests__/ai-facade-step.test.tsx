@@ -203,7 +203,7 @@ function designState(over: Record<string, unknown> = {}) {
 }
 
 describe('Bước mặt đứng', () => {
-  it('chưa xếp phương án mặt bằng nào thì nói phải làm gì, không có ô chọn hay nút chạy', () => {
+  it('chưa xếp phương án mặt bằng nào: dựng thẳng từ đầu bài (B3), nói rõ là phương án ý tưởng, không có ô chọn', () => {
     renderWithApp(
       <AiFacadeStep
         projectId="p1"
@@ -211,9 +211,9 @@ describe('Bước mặt đứng', () => {
         state={designState({ plans: [], planHeadArtifactId: null, facadeArtifactId: null })}
       />,
     );
-    expect(screen.getByText(/Chưa có phương án mặt bằng/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Dựng từ đầu bài \(chưa có mặt bằng\)/).length).toBeGreaterThan(0);
     expect(screen.queryByLabelText('Dựng trên mặt bằng')).toBeNull();
-    expect(screen.queryByRole('button', { name: /Dựng ý tưởng mặt đứng/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /Dựng ý tưởng mặt đứng/ })).toBeInTheDocument();
   });
 
   it('có phương án mà chưa chọn: ô chọn mời chọn, nút dựng chờ', () => {

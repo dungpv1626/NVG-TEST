@@ -32,7 +32,10 @@ type Point = [number, number];
 const half = (value: number) => Math.round(value * 2) / 2;
 
 export interface FacadeMeta {
-  planRef: string;
+  /** Mặt bằng khung suy ra từ — `null` khi khung dựng thẳng từ đầu bài (B3, `frame-brief.ts`). */
+  planRef: string | null;
+  /** Khung lấy từ mặt bằng hay từ đầu bài. Vắng = `plan` (mọi lượt trước B3). */
+  source?: 'plan' | 'brief';
   /** Phiếu yêu cầu của kỹ sư mà ý tưởng này theo — rỗng khi chưa có phiếu. */
   briefRef?: string | null;
   generator: AiFacadeConcept['generator'];
@@ -185,6 +188,9 @@ function mergeCore(
   return {
     schema_version: FACADE_SCHEMA_VERSION,
     plan_ref: meta.planRef,
+    // Chỉ ghi khi dựng từ đầu bài: ý tưởng dựng từ mặt bằng giữ nguyên nội dung như trước B3 — thêm khoá vào
+    // đó là đổi mã băm của một lượt chạy y hệt.
+    ...(meta.source === 'brief' ? { source: 'brief' as const } : {}),
     brief_ref: meta.briefRef ?? null,
     style: brief?.style ?? proposal.style,
     roof: {

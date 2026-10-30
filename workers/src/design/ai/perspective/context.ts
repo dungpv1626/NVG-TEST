@@ -16,6 +16,7 @@
  */
 
 import type { AiBriefDigest, AiFacadeConcept, AiFloorPlan } from '@nvg/shared/design';
+import { buildableFromDigest } from '../buildable';
 import { toPt } from '../draw/geometry';
 
 /** Lối vào nằm đâu trên mặt tiền, nhìn từ ngoài đường vào. */
@@ -85,10 +86,14 @@ const CM_PER_M = 100;
 /**
  * Rút ngữ cảnh. `plan` cho chiều sâu (tờ mặt đứng không có), `concept` cho lối vào và chiều cao,
  * `digest` cho hiện trạng thửa đất và số xe.
+ *
+ * `plan` rỗng khi mặt đứng dựng thẳng từ đầu bài (B3, `concept.source = 'brief'`): chiều sâu và sân lấy
+ * từ ô xây được của đầu bài — CÙNG hàm `buildableFromDigest` đã đặt bề ngang khung mặt đứng, nên tờ mặt
+ * đứng và lời dẫn phối cảnh nói cùng một khối nhà.
  */
 export function perspectiveContext(
   digest: AiBriefDigest,
-  plan: AiFloorPlan,
+  plan: AiFloorPlan | null,
   concept: AiFacadeConcept,
 ): PerspectiveContext {
   const elevation = concept.elevation;
@@ -109,7 +114,9 @@ export function perspectiveContext(
     buildingType: digest.building_type,
     storeys: levels.length,
     frontWidthM: round1(elevation.width / CM_PER_M),
-    depthM: round1(planDepthCm(plan) / CM_PER_M),
+    depthM: plan
+      ? round1(planDepthCm(plan) / CM_PER_M)
+      : round1(buildableFromDigest(digest).depthM),
     heightM: round1(heightCm / CM_PER_M),
     mainDoorSide: sideOf(door, elevation.width),
     garageSide: sideOf(garage, elevation.width),
@@ -125,7 +132,7 @@ export function perspectiveContext(
     // `ground_z` âm khi vỉa hè thấp hơn sàn tầng 1, nên đổi dấu là ra chiều cao bậc tam cấp.
     stepUpM: round1(Math.max(0, -elevation.ground_z) / CM_PER_M),
     lot,
-    yard: yardOf(plan, lot),
+    yard: plan ? yardOf(plan, lot) : briefYardOf(digest, lot),
     neighbours: {
       left: digest.site.adjacent?.left ?? null,
       right: digest.site.adjacent?.right ?? null,
@@ -188,6 +195,24 @@ function yardOf(
     leftM: round1(Math.max(0, box.x0) / CM_PER_M),
     backM: round1(Math.max(0, lot.depthM * CM_PER_M - box.y1) / CM_PER_M),
     rightM: round1(Math.max(0, lot.widthM * CM_PER_M - box.x1) / CM_PER_M),
+  };
+}
+
+/**
+ * Khoảng sân bốn mặt khi chưa có mặt bằng — đo từ ranh thửa tới ô xây được của đầu bài (B3). Cùng quy ước
+ * với `yardOf`: thửa không khai đủ thì `null` cả cụm.
+ */
+function briefYardOf(
+  digest: AiBriefDigest,
+  lot: { widthM: number; depthM: number } | null,
+): { frontM: number; backM: number; leftM: number; rightM: number } | null {
+  if (!lot) return null;
+  const box = buildableFromDigest(digest);
+  return {
+    frontM: round1(Math.max(0, box.y0)),
+    leftM: round1(Math.max(0, box.x0)),
+    backM: round1(Math.max(0, lot.depthM - box.y1)),
+    rightM: round1(Math.max(0, lot.widthM - box.x1)),
   };
 }
 

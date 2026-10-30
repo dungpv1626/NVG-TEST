@@ -5158,3 +5158,23 @@ Không có lợi đo được — gỡ theo luật đo (như T171). Biệt thự
 chồng) — AT01 đáng lẽ bị báo «đầu bài không vừa» trước 0,40 USD; mở rộng `ai/stair-fit.ts` (T178), cần anh Dũng duyệt vì nó chặn
 lượt chạy. (b) Giếng trời trong hàng phòng (cạnh WC / bếp) và WC dưới gầm thang — hai chỗ kiến trúc sư nhà ống hay dùng. (c) Chọn
 chỗ ô thang tầng 1 bằng nhu cầu chiều sâu của CẢ các tầng trên (không chỉ tầng 1).
+
+## T190 — «Bộ ý tưởng cho khách»: sơ đồ công năng + kiểm vừa lô, mặt ngoài và ảnh từng phòng dựng thẳng từ đầu bài (30/10/2026, anh Dũng duyệt)
+
+**Bối cảnh.** AI Design định vị là phác thảo ý tưởng gặp khách; 4 đầu bài thử 0/4 ra mặt bằng, T189 cho thấy chặn thật là chiều sâu
+lô. Mặt ngoài / phối cảnh / ảnh nội thất đã chạy được nhưng bị khoá sau mặt bằng. Kế hoạch: `doc/design/KE_HOACH_BO_Y_TUONG_KHACH.md`.
+
+**Đã làm (không gọi AI trả phí).**
+- B1 + B2: `ai/concept-zoning.ts` (dải theo chiều sâu từng tầng, vừa / khá chật / chưa vừa + thiếu bao nhiêu m, gợi ý nới đầu bài
+  tính lại từng cái), `ai/concept-zoning-svg.ts` (sơ đồ khối, không số), dữ liệu `kb/concept_zoning.yaml` (ĐỀ XUẤT — kiến trúc sư NVO
+  rà), tuyến `GET /design/ai/concept/:projectId/zoning`, khối ở bước «Đầu vào» và «Bộ kết quả». AT01 chưa vừa 1,31 m; AT04, THU5 khá
+  chật; AT02, AT03, 9272 vừa. Không khoá nút nào.
+- B3: `facade/frame-brief.ts#facadeFrameFromBrief` — cùng kiểu `FacadeFrame`, phần sau giữ nguyên; phối cảnh lấy chiều sâu / sân từ
+  đầu bài; bước «Mặt ngoài» mở khi đầu bài đã xác nhận. Hợp đồng `ai-facade-concept`: `plan_ref` nullable + `source` (bản từ mặt
+  bằng không mang `source` nên băm không đổi). `CONTRACTS_FINGERPRINT` 3615572e090c → 145962dd707d — phát hành API cùng giao diện.
+  `facade.from_brief` (bước cửa 4 m, mép 0,3 m) là số ĐỀ XUẤT.
+- B3b: ảnh nội thất TỪNG PHÒNG từ đầu bài (`ai/room-image.ts`, `room-image-routes.ts`, hợp đồng `ai-room-image`, lời dẫn 9.16.0,
+  artifact `ai_room_image` — migration 0258), kiến trúc sư chọn phòng; `AI_FAKE=room_image` chạy giả lập. Kiểm trên trình duyệt
+  (giả lập, 0 USD): AT02 vẽ được ảnh phòng khách, bước Mặt ngoài mở khi chưa có mặt bằng (`backup/y-tuong-khach/`).
+
+**Chưa làm.** B4 lượt thật (chờ anh Dũng), B5 đường dẫn xem cho khách có kiến trúc sư duyệt, đưa sơ đồ vào gói `.zip`.

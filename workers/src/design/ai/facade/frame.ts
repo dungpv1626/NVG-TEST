@@ -128,9 +128,32 @@ export function facadeFrame(
 
   const x0 = outlineX0;
   const x1 = outlineX1;
+  return {
+    x0,
+    x1,
+    width: half(x1 - x0),
+    groundZ: -(brief?.ground_raise_cm ?? cm(norms.facade.ground_floor_raise_m)),
+    levels: frameLevels,
+    roofZ: half(z),
+    parapetDefault: brief?.roof.parapet_cm ?? cm(norms.facade.parapet_height_m),
+    openings: withBriefDoorHeights(openings, frameLevels, brief),
+    balconies,
+    frontYard: minFrontY > 0,
+  };
+}
+
+/**
+ * Xếp lỗ mở theo tầng rồi trái → phải, và áp chiều cao cửa đi của phiếu yêu cầu (cửa chính / cửa phụ).
+ * Dùng chung cho khung suy từ mặt bằng và khung dựng từ đầu bài (`frame-brief.ts`).
+ */
+export function withBriefDoorHeights(
+  openings: FacadeOpening[],
+  frameLevels: readonly FacadeLevel[],
+  brief: AiFacadeBrief | null,
+): FacadeOpening[] {
   const sorted = openings.sort((a, b) => a.level - b.level || a.x - b.x);
   const main = mainDoorOf(sorted);
-  const heighted = sorted.map((o) => {
+  return sorted.map((o) => {
     if (o.kind !== 'door') return o;
     const h = o === main ? brief?.main_door.h_cm : brief?.side_door.h_cm;
     if (typeof h !== 'number') return o;
@@ -141,18 +164,6 @@ export function facadeFrame(
     const room = level ? half(level.h - o.sill) : h;
     return { ...o, h: half(Math.max(0, Math.min(h, room))) };
   });
-  return {
-    x0,
-    x1,
-    width: half(x1 - x0),
-    groundZ: -(brief?.ground_raise_cm ?? cm(norms.facade.ground_floor_raise_m)),
-    levels: frameLevels,
-    roofZ: half(z),
-    parapetDefault: brief?.roof.parapet_cm ?? cm(norms.facade.parapet_height_m),
-    openings: heighted,
-    balconies,
-    frontYard: minFrontY > 0,
-  };
 }
 
 /**

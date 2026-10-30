@@ -19,7 +19,8 @@ import type { RoutePricing } from '../llm/router';
 import type { TextModelClient } from '../llm/text-client';
 import { recordAiCall, type AiCallOutcome, type PromptSink } from '../ai/call-log';
 import { callFacadeModel } from '../ai/facade/propose';
-import { facadeFrame } from '../ai/facade/frame';
+import { facadeFrame, type FacadeFrame } from '../ai/facade/frame';
+import { facadeFrameFromBrief } from '../ai/facade/frame-brief';
 import { mergeFacade } from '../ai/facade/merge';
 import type { FacadeQuality } from '../ai/facade/quality';
 import { facadeFixable, scoreFacade, type FacadeScore } from '../ai/facade/score';
@@ -102,6 +103,21 @@ async function planOf(deps: FacadeStepDeps, params: AiDesignParams): Promise<AiF
   return artifact.payload as AiFloorPlan;
 }
 
+/**
+ * Khung KHOÁ của lượt chạy: suy từ mặt bằng khi lượt chạy chốt một phương án (`planRef`), không thì dựng
+ * thẳng từ đầu bài đã lược danh tính (B3, `frame-brief.ts`). Tuyến khởi động quyết nguồn — bước chỉ đọc lại.
+ */
+async function frameOf(
+  deps: FacadeStepDeps,
+  params: AiDesignParams,
+  brief: AiFacadeBrief | null,
+): Promise<FacadeFrame> {
+  if (params.planRef) {
+    return facadeFrame(await planOf(deps, params), deps.construction, deps.outdoor, brief);
+  }
+  return facadeFrameFromBrief(params.digest, deps.construction, brief);
+}
+
 /** Phiếu yêu cầu của kỹ sư mà lượt chạy theo — `null` khi lượt chạy không kèm phiếu. */
 async function briefOf(
   deps: FacadeStepDeps,
@@ -128,7 +144,7 @@ export async function proposeFacadeStep(
   retryKind: 'gate' | 'habits' = 'gate',
 ): Promise<FacadeProposeOutcome> {
   const brief = await briefOf(deps, params);
-  const frame = facadeFrame(await planOf(deps, params), deps.construction, deps.outdoor, brief);
+  const frame = await frameOf(deps, params, brief);
   const recorded = recordingClient(deps.client);
   const request = () => recorded.records[recorded.records.length - 1];
   const started = Date.now();
@@ -191,7 +207,12 @@ export async function proposeFacadeStep(
     frame,
     attempt.proposal,
     deps.vocab,
-    { planRef: params.planRef!, briefRef: params.facadeBriefRef ?? null, generator: PROBE },
+    {
+      planRef: params.planRef ?? null,
+      source: params.planRef ? 'plan' : 'brief',
+      briefRef: params.facadeBriefRef ?? null,
+      generator: PROBE,
+    },
     brief,
     deps.styles ?? null,
   );
@@ -243,15 +264,15 @@ export async function writeFacadeStep(
   call: PlanCallRecord,
   attempts: number,
 ): Promise<FacadeWriteOutcome> {
-  const plan = await planOf(deps, params);
   const brief = await briefOf(deps, params);
-  const frame = facadeFrame(plan, deps.construction, deps.outdoor, brief);
+  const frame = await frameOf(deps, params, brief);
   const concept = mergeFacade(
     frame,
     JSON.parse(proposalJson),
     deps.vocab,
     {
-      planRef: params.planRef!,
+      planRef: params.planRef ?? null,
+      source: params.planRef ? 'plan' : 'brief',
       briefRef: params.facadeBriefRef ?? null,
       generator: {
         kind: 'ai',
@@ -275,8 +296,16 @@ export async function writeFacadeStep(
     },
     kind: 'ai_facade_concept',
     payload: concept,
-    // Phiếu là đầu vào thứ hai của ý tưởng — lineage nói được ý tưởng theo phiếu nào.
-    inputs: [params.planRef!, ...(params.facadeBriefRef ? [params.facadeBriefRef] : [])],
+    // Phiếu là đầu vào thứ hai của ý tưởng — lineage nói được ý tưởng theo phiếu nào. Không có mặt bằng
+    // (B3) thì cha là ĐẦU BÀI: khung dựng từ chính nó.
+    inputs: [
+      ...new Set(
+        [
+          params.planRef ?? params.briefRef,
+          ...(params.facadeBriefRef ? [params.facadeBriefRef] : []),
+        ].filter((id): id is string => Boolean(id)),
+      ),
+    ],
     step: 'ai_facade_propose',
     params: { route: params.textRoute, prompt_version: deps.prompts.version },
   });

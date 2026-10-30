@@ -88,6 +88,9 @@ export const ARTIFACT_KINDS = [
   // Do người tạo, không có cạnh lineage đi vào; ảnh vẽ từ nó nối cạnh `ai_plan_sheet` /
   // `ai_facade_image_draw` như khi vẽ từ bản AI.
   'ai_uploaded_drawing',
+  // Ảnh NỘI THẤT MỘT PHÒNG vẽ thẳng từ đầu bài, không cần mặt bằng (B3b, 30/10/2026). Không ảnh neo — là
+  // hình dung không gian theo phong cách, không đo được. Một artifact một tấm, nối từ `design_brief`.
+  'ai_room_image',
   // Mặt bằng theo phương án CŨ (T14): mô hình tự viết chuỗi SVG. Không sinh mới nữa — giữ ở
   // đây để artifact đã đúc còn đọc được, vì artifact là bất biến.
   'ai_plan_proposal',
@@ -123,6 +126,8 @@ export const PIPELINE_STEPS = [
   // Kỹ sư chấm lại (T63). Bước DUY NHẤT do người làm, và cạnh lineage là cách duy nhất tìm được
   // «bản chấm của đúng bản vẽ này» mà không phải đọc payload của từng bản chấm trong hồ sơ.
   'ai_facade_review',
+  // Vẽ ảnh nội thất một phòng từ đầu bài (B3b). Nối từ `design_brief`.
+  'ai_room_image_draw',
 ] as const;
 
 export type PipelineStep = (typeof PIPELINE_STEPS)[number];
@@ -138,6 +143,7 @@ export const STEP_OUTPUT_KIND: Readonly<Record<PipelineStep, ArtifactKind>> = {
   ai_plan_sheet: 'ai_plan_sheet_image',
   ai_facade_image_draw: 'ai_facade_image',
   ai_facade_review: 'ai_facade_review',
+  ai_room_image_draw: 'ai_room_image',
 };
 
 // ---------------------------------------------------------------------------

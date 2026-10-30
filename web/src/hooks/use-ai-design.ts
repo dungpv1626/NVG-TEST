@@ -389,6 +389,8 @@ export interface AiDesignState {
    * sau khi dựng mặt đứng; mặt đứng cũ vẫn giữ, gắn nhãn «dựng theo phương án cũ».
    */
   facadePlanRef?: string | null;
+  /** `brief` = mặt đứng hiện hành dựng thẳng từ đầu bài, chưa có mặt bằng (B3). `null` = chưa có mặt đứng. */
+  facadeSource?: 'plan' | 'brief' | null;
   imageSetArtifactId: string | null;
   /** Các bộ ảnh phối cảnh còn hiện, mới nhất trước (T67 Đợt C). */
   imageSets?: Array<{
@@ -818,8 +820,10 @@ function useSheetBlob(path: string | null, fallbackError: string): AiPlanSheetSt
 export interface AiFacadeView {
   artifactId: string;
   createdAt: string;
-  /** Phương án mặt bằng mà mặt đứng này dựng theo. */
-  planRef: string;
+  /** Phương án mặt bằng mà mặt đứng này dựng theo — `null` khi dựng thẳng từ đầu bài (B3). */
+  planRef: string | null;
+  /** `brief` = khung dựng từ đầu bài khi chưa có mặt bằng (B3) — phương án ý tưởng. Vắng = `plan`. */
+  source?: 'plan' | 'brief';
   style: string;
   /**
    * Bảng vật liệu: mái, từng vùng, kiểu cửa, lan can — nhãn tiếng Việt từ danh mục. `fromBrief` = dòng
@@ -1647,7 +1651,17 @@ export function useStartPerspectiveRun() {
   return useMutation<
     { runId: string; views: string[]; skipped: Array<{ view: string; reason: string }> },
     Error,
-    | { projectId: string; artifactId: string; route: string; peopleAndVehicles: boolean }
+    | {
+        projectId: string;
+        artifactId: string;
+        route: string;
+        peopleAndVehicles: boolean;
+        /**
+         * Mặt đứng dựng thẳng từ đầu bài (B3): chưa có mặt bằng nên không có tờ mặt bằng mái — chỉ gửi tờ
+         * mặt đứng; góc nhìn từ trên cao máy chủ bỏ qua kèm lý do.
+         */
+        fromBrief?: boolean;
+      }
     | { projectId: string; uploadId: string; route: string; peopleAndVehicles: boolean }
   >({
     mutationFn: async (input) => {
@@ -1670,12 +1684,16 @@ export function useStartPerspectiveRun() {
             `/design/ai/facade/${projectId}/anchor?artifactId=${encodeURIComponent(artifactId)}`,
           ),
         },
-        {
-          kind: 'roof_plan',
-          base64: await rasteriseAnchor(
-            `/design/ai/perspective/${projectId}/roof-anchor?artifactId=${encodeURIComponent(artifactId)}`,
-          ),
-        },
+        ...(input.fromBrief
+          ? []
+          : [
+              {
+                kind: 'roof_plan',
+                base64: await rasteriseAnchor(
+                  `/design/ai/perspective/${projectId}/roof-anchor?artifactId=${encodeURIComponent(artifactId)}`,
+                ),
+              },
+            ]),
       ];
       return await designApi(`/design/ai/perspective/runs`, {
         projectId,
@@ -1848,4 +1866,172 @@ export function useDesignImage(path: string | null): AiPlanSheetImageState {
     };
   }, [path]);
   return state;
+}
+
+// ---------------------------------------------------------------------------
+// Ảnh nội thất từng phòng vẽ thẳng từ đầu bài (B3b «bộ ý tưởng cho khách», 30/10/2026) — Worker
+// `/design/ai/room-image/*`.
+// ---------------------------------------------------------------------------
+
+/** `purpose` của lượt vẽ ảnh phòng trong `design_ai_call` — nguồn số ước tính trên nút. */
+export const ROOM_IMAGE_PURPOSE = 'room_image';
+
+export interface AiBriefRoom {
+  key: string;
+  type: string;
+  /** Nhãn tiếng Việt của loại phòng (`kb/room_vocabulary.yaml`). */
+  label: string;
+  floor: number | null;
+  areaM2: number | null;
+}
+
+export interface AiRoomImageItem {
+  artifactId: string;
+  createdAt: string;
+  roomKey: string;
+  roomType: string;
+  route: string;
+  provider: string;
+}
+
+export interface AiRoomImageState {
+  briefArtifactId: string | null;
+  rooms: AiBriefRoom[];
+  images: AiRoomImageItem[];
+  /** Worker đang chạy GIẢ LẬP (`AI_FAKE`) — ảnh là tấm mẫu, không tốn tiền. */
+  simulated: boolean;
+}
+
+export function useAiRoomImages(projectId: string) {
+  return useQuery<AiRoomImageState, Error>({
+    queryKey: ['ai_room_images', projectId],
+    queryFn: () => designApi<AiRoomImageState>(`/design/ai/room-image/${projectId}`),
+    enabled: Boolean(projectId),
+  });
+}
+
+export interface DrawnRoomImage {
+  imageArtifactId: string;
+  roomKey: string;
+  mime: string;
+  simulated: boolean;
+  promptVersion: string;
+  usage: AiCallUsage | null;
+}
+
+/** Vẽ ảnh MỘT phòng. ⚠️ Lượt này TIÊU TIỀN THẬT khi Worker không giả lập. */
+export function useDrawAiRoomImage() {
+  const queryClient = useQueryClient();
+  return useMutation<DrawnRoomImage, Error, { projectId: string; roomKey: string; route: string }>({
+    mutationFn: ({ projectId, roomKey, route }) =>
+      designApi<DrawnRoomImage>(`/design/ai/room-image/${projectId}`, { roomKey, route }),
+    onSuccess: (_out, { projectId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['ai_room_images', projectId] });
+      void queryClient.invalidateQueries({ queryKey: ['design_ai_room_image_cost'] });
+    },
+  });
+}
+
+/**
+ * Tiền THẬT các lượt vẽ ảnh phòng trước (mọi hồ sơ trong phạm vi RLS) — nguồn số ước tính trên nút.
+ * Không gắn với `design_ai_run` như `useAiCostHistory`: ảnh phòng là lời gọi đồng bộ, không có lượt chạy nền.
+ */
+export function useAiRoomImageCostHistory() {
+  return useQuery<
+    Array<{
+      route: string;
+      purpose: string;
+      status: 'ok' | 'rejected' | 'failed';
+      cost_usd: number | null;
+    }>,
+    Error
+  >({
+    queryKey: ['design_ai_room_image_cost'],
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const calls = await supabase
+        .from('design_ai_call')
+        .select('route, purpose, status, cost_usd')
+        .eq('purpose', ROOM_IMAGE_PURPOSE)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (calls.error) throw new Error(calls.error.message);
+      return (calls.data ?? []) as Array<{
+        route: string;
+        purpose: string;
+        status: 'ok' | 'rejected' | 'failed';
+        cost_usd: number | null;
+      }>;
+    },
+  });
+}
+
+/** Byte của một tấm thành URL đối tượng — thu hồi khi đổi tấm / rời màn hình. */
+export function useAiRoomImageUrl(projectId: string, artifactId: string | null) {
+  const [state, setState] = useState<{
+    url: string | null;
+    loading: boolean;
+    error: string | null;
+  }>({ url: null, loading: false, error: null });
+  useEffect(() => {
+    if (!projectId || !artifactId) {
+      setState({ url: null, loading: false, error: null });
+      return;
+    }
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setState({ url: null, loading: true, error: null });
+    void designApiFile(`/design/ai/room-image/${projectId}/image/${encodeURIComponent(artifactId)}`)
+      .then(async (response) => {
+        const blob = await response.blob();
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setState({ url: objectUrl, loading: false, error: null });
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        const status = error instanceof DesignApiError ? error.status : undefined;
+        setState({
+          url: null,
+          loading: false,
+          error: status === 404 ? null : toUserMessage(error),
+        });
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [projectId, artifactId]);
+  return state;
+}
+
+/** «Sơ đồ công năng từng tầng» + «đầu bài có vừa lô không» (Bộ ý tưởng cho khách B1 + B2). Tất định, không gọi AI. */
+export type ZoningVerdict = 'fits' | 'tight' | 'over';
+
+interface ZoningFloorView {
+  level: number;
+  verdict: ZoningVerdict;
+  shortfallM: number;
+  suggestions: string[];
+}
+
+export interface ConceptZoningView {
+  briefArtifactId: string | null;
+  zoning: {
+    verdict: ZoningVerdict;
+    shortfallM: number;
+    messages: string[];
+    suggestions: string[];
+    floors: ZoningFloorView[];
+  } | null;
+  svg?: string;
+}
+
+export function useConceptZoning(projectId: string) {
+  return useQuery<ConceptZoningView, Error>({
+    queryKey: ['ai_concept_zoning', projectId],
+    queryFn: () => designApi<ConceptZoningView>(`/design/ai/concept/${projectId}/zoning`),
+    enabled: Boolean(projectId),
+    staleTime: 60_000,
+  });
 }

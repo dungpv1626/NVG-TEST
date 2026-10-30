@@ -94,20 +94,20 @@ async function lookAndContext(
     };
   }
   if (!params.facadeRef) throw new Error('Lượt chạy phối cảnh thiếu mã ý tưởng mặt đứng.');
-  if (!params.planRef) throw new Error('Lượt chạy phối cảnh thiếu mã phương án mặt bằng.');
+  // Mặt đứng dựng thẳng từ đầu bài (B3) không có mặt bằng: `planRef` rỗng, chiều sâu và sân lấy từ đầu bài.
   const [facade, plan] = await Promise.all([
     deps.repo.get(params.facadeRef, params.projectId),
-    deps.repo.get(params.planRef, params.projectId),
+    params.planRef ? deps.repo.get(params.planRef, params.projectId) : Promise.resolve(null),
   ]);
   if (!facade || facade.kind !== 'ai_facade_concept') {
     throw new Error('Không tìm thấy ý tưởng mặt đứng mà bộ ảnh dựng theo.');
   }
-  if (!plan || plan.kind !== 'ai_floor_plan') {
+  if (params.planRef && (!plan || plan.kind !== 'ai_floor_plan')) {
     throw new Error('Không tìm thấy phương án mặt bằng mà bộ ảnh dựng theo.');
   }
   const concept = facade.payload as AiFacadeConcept;
   return {
-    context: perspectiveContext(digest, plan.payload as AiFloorPlan, concept),
+    context: perspectiveContext(digest, plan ? (plan.payload as AiFloorPlan) : null, concept),
     look: facadeLook(concept, deps.vocab, deps.prompts),
   };
 }
@@ -266,7 +266,7 @@ export async function writeImageSetStep(
 ): Promise<{ artifactId: string; reused: boolean; views: AiImageSetView[] }> {
   const payload = assembleImageSet({
     facadeRef: params.facadeUploadRef ? null : params.facadeRef!,
-    planRef: params.facadeUploadRef ? null : params.planRef!,
+    planRef: params.facadeUploadRef ? null : (params.planRef ?? null),
     uploadRef: params.facadeUploadRef ?? null,
     anchors: [...anchors],
     drawn: [...drawn],
@@ -290,7 +290,9 @@ export async function writeImageSetStep(
     // Mặt bằng là đầu vào thứ hai: bộ ảnh nói về chiều sâu nhà, thứ chỉ mặt bằng biết.
     inputs: params.facadeUploadRef
       ? [params.facadeUploadRef]
-      : [params.facadeRef!, params.planRef!],
+      : params.planRef
+        ? [params.facadeRef!, params.planRef]
+        : [params.facadeRef!],
     step: 'ai_image_render',
     params: { route: params.imageRoute!, prompt_version: deps.prompts.version },
   });

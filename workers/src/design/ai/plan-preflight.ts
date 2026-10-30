@@ -32,14 +32,18 @@ export interface PlanPreflight {
   warnings: string[];
 }
 
-export function planPreflight(
+/**
+ * Ngữ cảnh lời dẫn dựng từ kb thật + đầu bài — dùng chung cho kiểm trước lượt và sơ đồ công năng
+ * (`concept-routes.ts`, «Bộ ý tưởng cho khách» B1), để hai nơi đọc cùng một cách hiểu về đầu bài.
+ */
+export function preflightContextInput(
   digest: AiBriefDigest,
   options: { geometry?: 'rect'; pipeline?: 'v6' } = {},
-): PlanPreflight {
+): PlanContextInput {
   const vocabulary = roomVocabulary().vocabulary;
   const groups = roomGroups(vocabulary);
   const strategy = aiPrompts().floorLevel.strategies[0];
-  const input: PlanContextInput = {
+  return {
     ...options,
     digest,
     variant: {
@@ -72,6 +76,13 @@ export function planPreflight(
     roomGroups: groups,
     mandatory: mandatoryRules(),
   };
+}
+
+export function planPreflight(
+  digest: AiBriefDigest,
+  options: { geometry?: 'rect'; pipeline?: 'v6' } = {},
+): PlanPreflight {
+  const input = preflightContextInput(digest, options);
   const context = planContext(input);
   const quality = planQuality();
   return {

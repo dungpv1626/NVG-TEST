@@ -1,0 +1,99 @@
+# Sơ đồ công năng từng tầng + báo «đầu bài có vừa lô không» — «Bộ ý tưởng cho khách» B1 + B2
+# (doc/design/KE_HOACH_BO_Y_TUONG_KHACH.md, anh Dũng đồng ý hướng 30/10/2026; số liệu gốc ở QUYET_DINH_AI.md T189).
+#
+# Chương trình xếp phòng đầu bài GHIM ở mỗi tầng thành ba dải theo chiều sâu: trước (mặt đường) → giữa → sau. Trong
+# một dải, phòng đứng cạnh nhau theo bề ngang nếu vừa, không vừa thì chồng thêm một hàng theo chiều sâu. Cộng chiều
+# sâu mọi hàng rồi so với chiều sâu khối xây được. Không gọi mô hình, không tốn tiền.
+#
+# Đây là NẾP CHUNG của nhà ở NVO, không phải phương án được kiểm: thứ tự dải chỉ để vẽ sơ đồ và đo chiều sâu tối thiểu.
+# Cạnh tối thiểu lấy `usable.min_side_m` (kb/construction_norms.yaml, đã theo loại nhà); diện tích chỉ lấy số ĐẦU BÀI
+# khai (và chỗ để xe suy từ số xe) — phòng không khai diện tích chỉ tính cạnh tối thiểu. Cố ý ĐẾM THIẾU như phép kiểm
+# ô thang T178: «không vừa» ở đây là chắc chắn thiếu, «vừa» chưa có nghĩa là xếp được.
+# ⚑ Bảng dải là ĐỀ XUẤT của Claude Code, chờ kiến trúc sư NVO rà.
+
+# Thứ tự từ mặt đường vào trong. Loại phòng không có trong bảng nào thì vào `default_band`.
+bands:
+  - id: front
+    vi: Phía trước
+    types: [garage, porch, shop, living, master_bedroom, balcony]
+  - id: middle
+    vi: Giữa nhà
+    types:
+      [
+        stair,
+        core,
+        elevator,
+        circulation,
+        light_well,
+        wc,
+        vanity,
+        shaft,
+        technical,
+        storage,
+        closet,
+        dressing_room,
+        study_area,
+      ]
+    # Dải giữa chừa một lối đi dọc cạnh ô thang để đi ra dải sau (bề rộng `circulation.corridor_clear_m` theo loại
+    # nhà) — chỉ khi dải sau có phòng. T189: lô 4 m, ô thang chữ U chiếm 2,5 m, phần còn lại chỉ vừa lối đi.
+    passage_beside: true
+  - id: back
+    vi: Phía sau
+    types: [kitchen, dining, bedroom, study, altar_room, laundry, terrace, courtyard]
+default_band: back
+
+# Loại chỉ có cạnh tối thiểu, không đẩy chiều sâu theo diện tích (giếng trời, giao thông).
+side_only: [stair, core, circulation, light_well]
+
+# Phòng gộp thành một khối theo câu trả lời của gia chủ (chỉ suy từ câu ĐÃ trả lời — chưa trả lời thì để riêng).
+# Khối gộp đứng ở dải của loại đầu tiên trong nhóm; diện tích cộng, cạnh tối thiểu lấy số lớn nhất.
+merge_by_answer:
+  living_dining_kitchen:
+    lien_thong_ca_ba: [[living, dining, kitchen]]
+    an_bep_lien_khach_rieng: [[dining, kitchen]]
+    khach_an_lien_bep_rieng: [[living, dining]]
+    tach_rieng: []
+
+# Phòng phải quay ra mặt ngoài: không chung hàng với phòng của dải khác, và đứng đầu (front) / cuối (back) các hàng
+# của dải mình — ban công giữa nhà hay sân thượng kẹp giữa hai phòng thì sơ đồ đọc sai.
+facing:
+  front: [balcony, porch, garage, shop]
+  back: [terrace, courtyard]
+
+# Gợi ý «gộp bếp và phòng ăn» khi chúng còn riêng mà tầng không vừa.
+suggest_merge: [dining, kitchen]
+
+# Phòng không đề xuất dời sang tầng khác (gắn mặt đất / lối vào, gắn ô thang, hoặc mỗi tầng vốn cần một WC).
+keep_on_floor:
+  [garage, porch, shop, living, kitchen, dining, wc, stair, core, elevator, circulation]
+
+# Phần chiều sâu đã dùng từ mức này trở lên thì báo «khá chật». ⚑ SỐ ĐỀ XUẤT (n = 0), chưa đo trên hồ sơ NVO —
+# hành lang ngang, bậc tam cấp và tường dày hơn thường ăn khoảng một phần mười chiều sâu. Để trống = không báo «chật».
+tight_share: 0.9
+
+# Màu khối trên sơ đồ theo nhóm (nền nhạt, chữ đậm). Loại không có nhóm dùng `other`.
+colours:
+  groups:
+    - id: vehicle
+      types: [garage, porch]
+      fill: '#E5E7EB'
+    - id: day
+      types: [living, dining, kitchen, shop, study, study_area, altar_room]
+      fill: '#FDE7C8'
+    - id: night
+      types: [bedroom, master_bedroom, dressing_room, closet]
+      fill: '#DCEBDD'
+    - id: service
+      types: [wc, vanity, laundry, storage, technical, shaft]
+      fill: '#DDE7F3'
+    - id: circulation
+      types: [stair, core, elevator, circulation]
+      fill: '#EDE4F3'
+    - id: outdoor
+      types: [balcony, terrace, courtyard, light_well]
+      fill: '#E3F1EC'
+  other: '#F1F1EF'
+  stroke: '#5B6470'
+  text: '#1F2933'
+  passage: '#F7F7F5'
+  over: '#B42318'

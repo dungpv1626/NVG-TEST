@@ -57,7 +57,8 @@ import {
   FACADE_BRIEF_SCHEMA_VERSION,
 } from './facade/brief';
 import { briefKeys, facadeLegend } from './facade/describe';
-import { facadeFrame, mainDoorOf } from './facade/frame';
+import { facadeFrame, FacadeFrameError, mainDoorOf } from './facade/frame';
+import { facadeFrameFromBrief } from './facade/frame-brief';
 import { facadeAnchor, facadeDxf, facadeSheet, railingCmOf } from './facade';
 import { usageSummary, withAiCall } from './call-log';
 import { assembleFacadeImage, facadeImageCallOptions, facadeImagePrompt } from './facade/image';
@@ -415,6 +416,8 @@ facadeApp.get('/:projectId', async (c) => {
     artifactId: read.artifactId,
     createdAt: read.createdAt,
     planRef: concept.plan_ref,
+    // `brief` = khung dựng từ đầu bài khi chưa có mặt bằng (B3) — màn hình ghi «Dựng từ đầu bài».
+    source: concept.source ?? 'plan',
     style: concept.style,
     // Bảng vật liệu đã dịch nhãn — màn hình không phải tự nạp danh mục.
     legend: facadeLegend(concept, vocab).map((row) => ({
@@ -714,8 +717,9 @@ facadeApp.post('/hide', async (c) => {
 /**
  * Khởi động lượt «ý tưởng mặt đứng» — một ý tưởng, chạy nền qua Workflow.
  *
- * Mọi điều kiện tốn-tiền-được kiểm TRƯỚC khi mở instance: có khoá, tuyến bấm được, có đầu bài, ĐÃ CHỌN
- * một phương án mặt bằng, không có lượt mặt đứng nào đang chạy.
+ * Mọi điều kiện tốn-tiền-được kiểm TRƯỚC khi mở instance: có khoá, tuyến bấm được, có đầu bài, không có
+ * lượt mặt đứng nào đang chạy. Có phương án mặt bằng đã chọn thì dựng theo nó (T59); chưa có thì dựng
+ * thẳng từ đầu bài (B3) — khung phải dựng được ngay tại đây.
  */
 facadeApp.post('/runs', async (c) => {
   const token = bearer(c.req.header('Authorization'));
@@ -772,11 +776,18 @@ facadeApp.post('/runs', async (c) => {
     return c.json({ error: 'Chưa có đầu bài đã xác nhận. Xác nhận đầu bài trước.' }, 409);
   }
   // Mặt đứng dựng theo phương án ĐÃ CHỌN — đọc dưới phiên người bấm, bỏ mốc trỏ vào phương án đã ẩn.
+  // Chưa chọn phương án nào thì dựng THẲNG TỪ ĐẦU BÀI (B3, bộ ý tưởng cho khách): khung theo nếp từng tầng.
   const planRef = await planHeadOf(db, body.projectId);
-  if (!planRef) {
-    return c.json({ error: 'Cần chọn một phương án mặt bằng trước khi dựng mặt đứng.' }, 409);
+  if (!planRef && body.planArtifactId) {
+    return c.json(
+      {
+        error:
+          'Phương án mặt bằng dùng cho mặt đứng vừa bị bỏ chọn ở nơi khác. Tải lại trang rồi bấm dựng lại.',
+      },
+      409,
+    );
   }
-  if (body.planArtifactId && body.planArtifactId !== planRef) {
+  if (planRef && body.planArtifactId && body.planArtifactId !== planRef) {
     return c.json(
       {
         error:
@@ -820,6 +831,16 @@ facadeApp.post('/runs', async (c) => {
   const digest = anonymiseForAi(
     await aiDigestInputs(db, body.projectId, brief.payload as DesignBrief),
   );
+  if (!planRef) {
+    // Dựng thử khung ở ĐÂY, trước khi mở lượt chạy: đầu bài không dựng nổi khung (thửa hết đất sau khoảng
+    // lùi, kb thiếu mục) thì nói ngay, không mở một lượt chạy rồi mới hỏng.
+    try {
+      facadeFrameFromBrief(digest, constructionNorms());
+    } catch (error) {
+      if (error instanceof FacadeFrameError) return c.json({ error: error.message }, 409);
+      throw error;
+    }
+  }
   const runScope = {
     tenantId: scope.tenantId,
     companyId: scope.companyId,

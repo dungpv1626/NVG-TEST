@@ -167,7 +167,12 @@ export function AiPerspectiveStep({
     const input =
       activeSource === 'upload'
         ? pickedUpload && { ...base, uploadId: pickedUpload.uploadId }
-        : state.facadeArtifactId && { ...base, artifactId: state.facadeArtifactId };
+        : state.facadeArtifactId && {
+            ...base,
+            artifactId: state.facadeArtifactId,
+            // Mặt đứng dựng từ đầu bài (B3): chưa có mặt bằng nên không gửi tờ mặt bằng mái.
+            fromBrief: state.facadeSource === 'brief',
+          };
     if (!input) return;
     void start
       .mutateAsync(input)
@@ -208,7 +213,7 @@ export function AiPerspectiveStep({
                     disabled={running}
                   />
                 </div>
-                {activeSource === 'ai' && facades.length > 0 && (
+                {activeSource === 'ai' && facades.length > 0 && plans.length > 0 && (
                   <>
                     <label className="block min-w-0">
                       <span className="mb-1 block text-xs font-medium text-fg-subtle">

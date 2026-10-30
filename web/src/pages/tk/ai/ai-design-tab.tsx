@@ -28,11 +28,19 @@ import { AiFacadeStep, facadeIsStale, STALE_FACADE } from './ai-facade-step';
 import { AiPerspectiveStep } from './ai-perspective-step';
 import { AiPlanStep } from './ai-plan-step';
 import { AiResultBundle } from './ai-result-bundle';
+import { AiRoomImageStep } from './ai-room-image-step';
+import { ConceptZoningPanel } from './concept-zoning-panel';
 import { AiUploadPanel } from './ai-upload-panel';
 
 type StepId = 'dau-vao' | 'mat-bang' | 'mat-ngoai' | 'ket-qua';
 /** Hai phần của bước «Mặt ngoài». */
-type OuterPart = 'mat-dung' | 'phoi-canh';
+type OuterPart = 'mat-dung' | 'phoi-canh' | 'noi-that';
+
+const OUTER_PART_LABELS: Record<OuterPart, string> = {
+  'mat-dung': 'Mặt đứng',
+  'phoi-canh': 'Phối cảnh',
+  'noi-that': 'Nội thất từng phòng',
+};
 
 interface StepMeta {
   id: StepId;
@@ -60,7 +68,7 @@ const STEPS: StepMeta[] = [
   {
     id: 'mat-ngoai',
     label: 'Mặt ngoài',
-    hint: 'Mặt đứng mặt tiền và ảnh phối cảnh dựng trên phương án đã chọn.',
+    hint: 'Mặt đứng mặt tiền, ảnh phối cảnh và ảnh nội thất từng phòng — dựng trên phương án đã chọn, chưa có mặt bằng thì dựng từ đầu bài.',
   },
   {
     id: 'ket-qua',
@@ -111,8 +119,9 @@ function statusOf(
           (Boolean(state.facadeArtifactId) &&
             !state.imageSetArtifactId &&
             isFailed(state, 'images')),
-        // Chỉ chặn khi chưa có phương án nào. Chọn phương án làm nền là việc NGAY TRONG bước này.
-        blocked: state.plans.length > 0 ? null : 'Cần xếp mặt bằng trước.',
+        // Đầu bài đã xác nhận là đủ: chưa có mặt bằng thì mặt ngoài dựng thẳng từ đầu bài (B3 — bộ ý tưởng
+        // cho khách). Chọn phương án làm nền (khi có) là việc NGAY TRONG bước này.
+        blocked: state.briefArtifactId ? null : 'Cần xác nhận đầu bài trước.',
         count: 0,
       };
     case 'ket-qua':
@@ -179,7 +188,7 @@ export function AiDesignTab({
       : null,
   );
   const [part, setPart] = useState<OuterPart>(() =>
-    initialPart === 'phoi-canh' ? 'phoi-canh' : 'mat-dung',
+    initialPart === 'phoi-canh' || initialPart === 'noi-that' ? initialPart : 'mat-dung',
   );
   // Chưa có đầu bài đã xác nhận thì mở ngay bước đầu vào — mọi bước sau đều đang chờ nó.
   const open: StepId =
@@ -310,13 +319,14 @@ export function AiDesignTab({
         )}
         {open === 'mat-ngoai' && (
           <div className="space-y-4">
-            {/* Hai phần của mặt ngoài: phối cảnh dựng từ tờ mặt đứng, nên mặt đứng đứng trước. */}
+            {/* Ba phần của mặt ngoài: phối cảnh dựng từ tờ mặt đứng, nên mặt đứng đứng trước; ảnh nội thất
+                từng phòng (B3b) vẽ thẳng từ đầu bài, không cần mặt bằng hay mặt đứng. */}
             <div className="flex flex-wrap items-center gap-3">
               <SegmentedControl
-                options={['mat-dung', 'phoi-canh'] as const}
+                options={['mat-dung', 'phoi-canh', 'noi-that'] as const}
                 value={part}
                 onChange={setPart}
-                getLabel={(value) => (value === 'mat-dung' ? 'Mặt đứng' : 'Phối cảnh')}
+                getLabel={(value) => OUTER_PART_LABELS[value]}
               />
               {part === 'phoi-canh' && perspectiveBlocked(data, facadeUploads) && (
                 <span className="text-fg-subtle">{perspectiveBlocked(data, facadeUploads)}</span>
@@ -332,9 +342,17 @@ export function AiDesignTab({
                 />
                 <AiUploadPanel projectId={projectId} drawing="facade" readOnly={readOnly} />
               </div>
-            ) : (
+            ) : part === 'phoi-canh' ? (
               <AiPerspectiveStep projectId={projectId} readOnly={readOnly} state={data} />
+            ) : (
+              <AiRoomImageStep projectId={projectId} readOnly={readOnly} />
             )}
+          </div>
+        )}
+        {/* Sơ đồ công năng (Bộ ý tưởng cho khách B2) có ngay từ đầu bài, không cần mặt bằng. */}
+        {open === 'ket-qua' && (
+          <div className="mb-6">
+            <ConceptZoningPanel projectId={projectId} projectCode={projectCode} />
           </div>
         )}
         {open === 'ket-qua' && (

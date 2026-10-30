@@ -61,6 +61,9 @@ export function facadeIsStale(state: AiDesignState): boolean {
 
 export const STALE_FACADE = 'Mặt đứng đang dựng theo phương án mặt bằng cũ.';
 
+/** Câu nói rõ mặt đứng dựng thẳng từ đầu bài (B3) — hiện ở ngăn dựng và trên tờ. */
+export const FROM_BRIEF = 'Dựng từ đầu bài (chưa có mặt bằng) — phương án ý tưởng';
+
 export function AiFacadeStep({
   projectId,
   readOnly,
@@ -105,10 +108,13 @@ export function AiFacadeStep({
     choosePlan.mutate({ projectId, artifactId: onlyPlan }, { onError: () => undefined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readOnly, onlyPlan, state.planHeadArtifactId, projectId]);
-  /** Chưa xếp phương án mặt bằng nào — bước này chưa có gì để dựng trên. */
+  /**
+   * Chưa xếp phương án mặt bằng nào — mặt đứng dựng thẳng từ ĐẦU BÀI (B3, bộ ý tưởng cho khách): khung theo
+   * nếp từng tầng, là phương án ý tưởng. Có mặt bằng rồi thì dựng lại từ mặt bằng.
+   */
   const noPlans = plans.length === 0;
   /** Có phương án nhưng chưa chọn cái nào — nút dựng chờ ô chọn. */
-  const blocked = !state.planHeadArtifactId;
+  const blocked = !noPlans && !state.planHeadArtifactId;
   const stale = facadeIsStale(state);
   const versions = state.facades ?? [];
   const versionNames = numberedNames(versions, 'Mặt đứng');
@@ -156,9 +162,12 @@ export function AiFacadeStep({
         }
       >
         {noPlans ? (
-          <p className="text-fg-subtle">
-            Chưa có phương án mặt bằng. Mở bước «Mặt bằng từng tầng» và xếp mặt bằng trước — mặt
-            đứng dựng trên một phương án đã xếp.
+          <p className="flex items-start gap-2 rounded-md border border-tk-am-line bg-tk-am-bg p-3 text-tk-am-fg">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span>
+              <b>{FROM_BRIEF}.</b> Khung nhà, số tầng, cửa và ban công xếp theo nếp từ đầu bài,
+              không khớp một mặt bằng nào. Có mặt bằng rồi thì dựng lại mặt đứng từ mặt bằng.
+            </span>
           </p>
         ) : (
           <div className="space-y-4">
@@ -178,7 +187,7 @@ export function AiFacadeStep({
             )}
           </div>
         )}
-        {!noPlans && !readOnly && (
+        {!readOnly && (
           <div className="mt-4 space-y-4">
             {/* Model và mức suy nghĩ gấp trong «Tùy chọn nâng cao» (25/10/2026) — mặc định là cấu hình công ty. */}
             <details className="rounded-field border border-tk-line p-3">
@@ -219,9 +228,10 @@ export function AiFacadeStep({
               </summary>
               <p className="mt-2">
                 Khung nhà, cao độ các tầng, cửa, cửa sổ và ban công lấy nguyên từ phương án mặt bằng
-                đang chọn — AI không được dời hay thêm bớt. AI chọn mái, vật liệu, màu, cổng, tường
-                rào và các mảng trang trí; chương trình kiểm và dựng tờ mặt đứng. Ý tưởng không dùng
-                được thì AI được gọi lại một lần kèm lý do — lượt ấy cũng tính tiền.
+                đang chọn (chưa có mặt bằng thì xếp theo nếp từ đầu bài) — AI không được dời hay
+                thêm bớt. AI chọn mái, vật liệu, màu, cổng, tường rào và các mảng trang trí; chương
+                trình kiểm và dựng tờ mặt đứng. Ý tưởng không dùng được thì AI được gọi lại một lần
+                kèm lý do — lượt ấy cũng tính tiền.
               </p>
             </details>
             <Button
@@ -278,7 +288,7 @@ export function AiFacadeStep({
               {running
                 ? 'Tờ mặt đứng hiện ở đây ngay khi dựng xong.'
                 : noPlans
-                  ? 'Xếp mặt bằng ở bước trước, rồi quay lại đây.'
+                  ? 'Bấm «Dựng ý tưởng mặt đứng» ở ngăn «Dựng mặt đứng». Chưa có mặt bằng nên AI dựng từ đầu bài — phương án ý tưởng.'
                   : blocked
                     ? 'Chọn phương án mặt bằng ở ô «Dựng trên mặt bằng» (ngăn «Dựng mặt đứng»), rồi bấm «Dựng ý tưởng mặt đứng».'
                     : 'Bấm «Dựng ý tưởng mặt đứng» ở ngăn «Dựng mặt đứng». AI dựng trên phương án đã chọn và phần Mặt đứng của đầu bài.'}
@@ -463,6 +473,7 @@ function FacadeDetail({
         title="Tờ mặt đứng"
         aside={
           <span className="flex flex-wrap justify-end gap-1.5">
+            {facade.data?.source === 'brief' && <Chip tone="am">{FROM_BRIEF}</Chip>}
             {facade.data?.planRef && (
               <Chip tone="mute">
                 Dựng trên{' '}

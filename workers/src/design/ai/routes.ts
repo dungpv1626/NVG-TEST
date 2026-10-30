@@ -42,6 +42,8 @@ import { planAnchor, planSheet } from './draw';
 import { facadeApp } from './facade-routes';
 import { uploadApp } from './upload-routes';
 import { perspectiveApp } from './perspective-routes';
+import { conceptApp } from './concept-routes';
+import { roomImageApp } from './room-image-routes';
 import { planDxf } from './dxf';
 import {
   formatPromptText,
@@ -104,6 +106,10 @@ export const aiApp = new Hono<{ Bindings: DesignEnv }>();
 aiApp.route('/facade', facadeApp);
 aiApp.route('/perspective', perspectiveApp);
 aiApp.route('/uploads', uploadApp);
+// Sơ đồ công năng + «đầu bài có vừa lô không» — tất định, không gọi mô hình (B1 + B2).
+aiApp.route('/concept', conceptApp);
+// Ảnh nội thất từng phòng vẽ thẳng từ đầu bài, không cần mặt bằng (B3b).
+aiApp.route('/room-image', roomImageApp);
 
 /** Bộ môn duy nhất nhánh AI sinh ra ở giai đoạn 1 — kiến trúc. */
 const DISCIPLINE = 'kien_truc' as const;
@@ -325,6 +331,10 @@ aiApp.get('/state/:projectId', async (c) => {
     // Mặt bằng mà mặt đứng hiện hành dựng theo (T59). Khác `planHeadArtifactId` nghĩa là kỹ sư đã đổi
     // phương án sau khi dựng mặt đứng — màn hình gắn nhãn «dựng theo phương án cũ».
     facadePlanRef: (facade?.payload as { plan_ref?: string } | undefined)?.plan_ref ?? null,
+    // `brief` = mặt đứng hiện hành dựng thẳng từ đầu bài, chưa có mặt bằng (B3).
+    facadeSource: facade
+      ? ((facade.payload as { source?: 'plan' | 'brief' }).source ?? 'plan')
+      : null,
     imageSetArtifactId: images?.id ?? null,
     // Các bộ ảnh còn hiện, mới nhất trước — để kỹ sư mở lại bộ cũ mà so.
     imageSets: visibleImageSets.map((s) => ({

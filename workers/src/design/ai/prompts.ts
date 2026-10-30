@@ -111,6 +111,18 @@ export interface AiPrompts {
     watermark: string;
   };
   /**
+   * Ảnh nội thất MỘT phòng vẽ thẳng từ đầu bài, không ảnh neo (B3b). `user` có năm chỗ điền
+   * `ROOM_IMAGE_SLOTS`; `rooms` = mã loại phòng → cụm tiếng Anh (chỉ loại có ở đây mới chọn được);
+   * `roles` = vai trong gia đình → cụm tiếng Anh; `notes` = câu nếp sinh hoạt theo câu trả lời đầu bài.
+   */
+  roomImage: {
+    system: string;
+    user: string;
+    rooms: Record<string, string>;
+    roles: Record<string, string>;
+    notes: RoomImageNote[];
+  };
+  /**
    * Ảnh vẽ từ bản vẽ KỸ SƯ tải lên (T114 Đợt 4). `plan.user` có `{level_name}`, `{style}`;
    * `facade.user` có `{style}`, `{requirements}`. Câu nhãn cảnh báo dùng chung với hai khối ảnh trên.
    */
@@ -189,6 +201,17 @@ const SHEET_IMAGE_SLOTS = [
  * Bảy chỗ điền bắt buộc của `facade_image.user` — kiểm lúc NẠP, vì thiếu một chỗ chỉ lộ ra sau khi đã
  * trả tiền một tấm ảnh (vẽ thiếu vật liệu hay thiếu cổng mà vẫn ra ảnh).
  */
+/** Một câu nếp sinh hoạt của khối `room_image` — `when` là `đường.dẫn=giá trị` trên đầu bài đã lược danh tính. */
+export interface RoomImageNote {
+  when: { path: string; value: string };
+  /** Loại phòng câu này áp vào; rỗng = mọi phòng. */
+  rooms: string[];
+  en: string;
+}
+
+/** Chỗ điền bắt buộc của `room_image.user` — kiểm lúc NẠP, cùng lý do với hai khối ảnh kia. */
+const ROOM_IMAGE_SLOTS = ['{room}', '{floor}', '{area}', '{household}', '{style}'] as const;
+
 const FACADE_IMAGE_SLOTS = [
   '{style}',
   '{roof}',
@@ -364,6 +387,7 @@ export function parseAiPrompts(raw: unknown): AiPrompts {
     },
     facadeImage: parseFacadeImage((doc as { facade_image?: unknown }).facade_image),
     uploadImage: parseUploadImage((doc as { upload_image?: unknown }).upload_image),
+    roomImage: parseRoomImage((doc as { room_image?: unknown }).room_image),
     perspective: parsePerspective((doc as { perspective?: unknown }).perspective),
   };
 }
@@ -695,6 +719,47 @@ function parseUploadImage(raw: unknown): AiPrompts['uploadImage'] {
     return { system: sub.system, user: sub.user };
   };
   return { plan: part('plan'), facade: part('facade') };
+}
+
+function parseRoomImage(raw: unknown): AiPrompts['roomImage'] {
+  const block = raw as Record<string, unknown> | undefined;
+  if (!block || typeof block.system !== 'string' || typeof block.user !== 'string') {
+    throw new AiPromptsError(
+      'kb/ai_design_prompts.yaml thiếu `room_image.system` hoặc `room_image.user`.',
+    );
+  }
+  const missing = ROOM_IMAGE_SLOTS.filter((slot) => !(block.user as string).includes(slot));
+  if (missing.length) {
+    throw new AiPromptsError(`\`room_image.user\` thiếu chỗ điền ${missing.join(', ')}.`);
+  }
+  const rooms = stringMap(block.rooms ?? {}, 'room_image.rooms');
+  if (Object.keys(rooms).length === 0) {
+    throw new AiPromptsError('`room_image.rooms` rỗng — không phòng nào chọn được để vẽ.');
+  }
+  const notes = (Array.isArray(block.notes) ? block.notes : []).map((item, index) => {
+    const entry = item as { when?: unknown; rooms?: unknown; en?: unknown };
+    const match = typeof entry.when === 'string' ? /^([a-z_.]+)=(.+)$/.exec(entry.when) : null;
+    if (!match || typeof entry.en !== 'string') {
+      throw new AiPromptsError(
+        `\`room_image.notes[${index}]\` phải có \`when: đường.dẫn=giá trị\` và \`en\`.`,
+      );
+    }
+    if (entry.rooms !== undefined && !Array.isArray(entry.rooms)) {
+      throw new AiPromptsError(`\`room_image.notes[${index}].rooms\` phải là danh sách mã phòng.`);
+    }
+    return {
+      when: { path: match[1]!, value: match[2]! },
+      rooms: ((entry.rooms as unknown[] | undefined) ?? []).map(String),
+      en: entry.en,
+    };
+  });
+  return {
+    system: block.system,
+    user: block.user,
+    rooms,
+    roles: stringMap(block.roles ?? {}, 'room_image.roles'),
+    notes,
+  };
 }
 
 function parseFacadeImage(raw: unknown): AiPrompts['facadeImage'] {

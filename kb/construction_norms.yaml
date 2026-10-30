@@ -80,6 +80,16 @@ levels:
 facade:
   ground_floor_raise_m: 0.45
   parapet_height_m: 0.9
+  # Khung mặt đứng dựng THẲNG TỪ ĐẦU BÀI khi chưa có mặt bằng (B3 «bộ ý tưởng cho khách», 30/10/2026,
+  # `ai/facade/frame-brief.ts`). Mặt tiền chia thành các KHOANG đều nhau, mỗi khoang một lỗ mở theo nếp:
+  # tầng 1 cửa để xe / cửa chính / cửa sổ, tầng trên cửa ra ban công (nếu đầu bài đòi ban công mặt tiền)
+  # hoặc cửa sổ. Cỡ từng lỗ mở vẫn lấy ở mục `openings` bên dưới (cửa chính, cửa sổ).
+  # ⚑ SỐ THAM KHẢO, SUY LUẬN, CHƯA ĐO: khoang ~4 m là bước cột thường gặp của nhà ở thấp tầng; mép lỗ
+  # mở cách mép khoang 0,3 m cho tường / cột. Chỉ quyết định tờ ý tưởng TRÔNG thế nào — có mặt bằng thì
+  # mặt đứng dựng lại từ mặt bằng, không đọc hai số này. Kiến trúc sư sửa được.
+  from_brief:
+    bay_width_m: 4.0
+    edge_margin_m: 0.3
 
 # ── Thang (T37, 13/09/2026) ────────────────────────────────────────────────────────────
 # Nhánh AI không hỏi mô hình số bậc: chương trình tính `treads = round(chiều cao tầng / cao bậc)`.
