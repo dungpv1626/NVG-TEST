@@ -41,6 +41,7 @@ import {
 import { useTemplatesForContract } from '@/hooks/use-contract-templates';
 import {
   useContractHasSite,
+  useContractPendingDesign,
   useOpenSiteFromContract,
   useSitesOfContract,
 } from '@/hooks/use-construction-sites';
@@ -85,6 +86,8 @@ export function ContractDetailPage() {
   const { data: amendments } = useContractAmendments(id);
   const { data: sites } = useSitesOfContract(id);
   const { data: hasSite } = useContractHasSite(id);
+  // Cơ hội còn hồ sơ thiết kế đang làm: công trình mở lúc bàn giao thiết kế, không mở từ đây (0250).
+  const { data: pendingDesign = null } = useContractPendingDesign(id);
   const openSite = useOpenSiteFromContract();
   const updateContract = useUpdateContract();
   const submitApproval = useSubmitContractApproval();
@@ -163,7 +166,8 @@ export function ContractDetailPage() {
     (canApprove || canApproveSite) &&
     contract.stage === 'da_ky' &&
     contractOpensSite(contract.type) &&
-    hasSite === false;
+    hasSite === false &&
+    !pendingDesign;
 
   // Chỉ cộng phát sinh ĐÃ PHÊ DUYỆT vào giá trị hiện hành: phát sinh đang đề xuất chưa phải
   // là cam kết, cộng sớm thì báo cáo doanh thu chạy trước thực tế (HD-03).
@@ -214,7 +218,9 @@ export function ContractDetailPage() {
             for_stage: 'hoan_thanh',
             requirement: 'site_opened',
             met: false,
-            label: 'Đã mở công trình (Ban Giám đốc / Thi công bấm «Mở công trình»)',
+            label: pendingDesign
+              ? `Đã mở công trình — tự mở khi Thiết kế bàn giao hồ sơ thi công ${pendingDesign.code}`
+              : 'Đã mở công trình (Ban Giám đốc / Thi công bấm «Mở công trình»)',
             waivable: false,
           },
         ]
@@ -381,7 +387,9 @@ export function ContractDetailPage() {
         : 'Hợp đồng đã được phê duyệt — chờ người chịu trách nhiệm hoặc Ban Giám đốc ghi nhận đã ký.'
       : contract.stage === 'da_ky'
         ? !hasSite && contractOpensSite(contract.type)
-          ? 'Hợp đồng đã ký. Việc tiếp theo: Ban Giám đốc hoặc Thi công bấm «Mở công trình».'
+          ? pendingDesign
+            ? `Hợp đồng đã ký. Công trình tự mở khi Thiết kế bàn giao hồ sơ thi công ${pendingDesign.code} — không cần bấm «Mở công trình».`
+            : 'Hợp đồng đã ký. Việc tiếp theo: Ban Giám đốc hoặc Thi công bấm «Mở công trình».'
           : isResponsible
             ? 'Hợp đồng đã ký — phần soạn và ký của Kinh doanh đã xong. Việc còn lại: nhắc khách theo các đợt thanh toán, lập phát sinh khi khách đổi hạng mục.'
             : 'Hợp đồng đã ký. Việc còn lại: theo dõi thu tiền theo các đợt; Ban Giám đốc quyết toán khi công trình đã bàn giao.'
@@ -397,8 +405,10 @@ export function ContractDetailPage() {
           isApprover={canApprove}
           opensSite={
             contract.type === 'thi_cong' &&
-            (contract.source_type ?? 'opportunities') === 'opportunities'
+            (contract.source_type ?? 'opportunities') === 'opportunities' &&
+            !pendingDesign
           }
+          pendingDesignCode={pendingDesign?.code ?? null}
           onClose={() => setSigning(false)}
         />
       )}
@@ -467,6 +477,7 @@ export function ContractDetailPage() {
                     currentValue={money.currentValue}
                     hasSite={hasSite}
                     opensSite={contractOpensSite(contract.type)}
+                    pendingDesignCode={pendingDesign?.code ?? null}
                     isResponsible={isResponsible}
                     canApprove={canApprove}
                     onOpenAmendments={() => openTab('phat-sinh')}

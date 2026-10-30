@@ -54,9 +54,15 @@ export function isPayableContract(type: ContractType): boolean {
   return PAYABLE_TYPES.has(type);
 }
 
-/** Loại hợp đồng mở ra công trình mới (`open_site_from_contract` + trigger 0185). */
+/**
+ * Loại hợp đồng mở ra công trình mới (`open_site_from_contract` + trigger 0185).
+ *
+ * Hợp đồng THIẾT KẾ không mở công trình (0243): ký xong cơ hội ở lại chờ hợp đồng thi công, công
+ * trình mở từ hợp đồng thi công / trọn gói. Trước đây hàm này tính cả `thiet_ke` nên hợp đồng
+ * thiết kế đã ký báo «Việc tiếp theo: bấm Mở công trình» (chạy thử NVO 30/10/2026).
+ */
 export function contractOpensSite(type: ContractType): boolean {
-  return type === 'thiet_ke' || type === 'thi_cong' || type === 'mua_ban';
+  return type === 'thi_cong' || type === 'mua_ban';
 }
 
 /**

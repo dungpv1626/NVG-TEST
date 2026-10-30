@@ -151,6 +151,25 @@ export function useContractHasSite(contractId: string | undefined) {
 }
 
 /**
+ * Hồ sơ thiết kế đang chờ bàn giao của một hợp đồng thi công (0250). Có thì công trình mở lúc
+ * Thiết kế bàn giao hồ sơ thi công — không mời «Mở công trình» trên hợp đồng.
+ */
+export function useContractPendingDesign(contractId: string | undefined) {
+  return useQuery<{ id: string; code: string } | null, Error>({
+    queryKey: ['construction-sites', 'pending-design', contractId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('contract_pending_design', {
+        p_contract_id: contractId!,
+      });
+      if (error) throw new Error(error.message);
+      const rows = (data ?? []) as { id: string; code: string }[];
+      return rows[0] ?? null;
+    },
+    enabled: Boolean(contractId),
+  });
+}
+
+/**
  * Mở công trình từ hợp đồng đã ký (TC-01).
  *
  * KHÔNG có hook tạo công trình trắng: công trình phải gắn với hồ sơ sinh ra ngân sách của

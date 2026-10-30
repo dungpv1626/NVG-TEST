@@ -451,7 +451,7 @@ export function AiDesignSupportPanel({ projectId }: { projectId: string }): Reac
 
   return (
     <section aria-label="Công cụ hỗ trợ" className={cn('rounded-lg border p-4', FAMILY.pu.card)}>
-      <h3 className="text-xs font-medium tracking-[0.04em] text-tk-t3 uppercase">Công cụ hỗ trợ</h3>
+      <h3 className="text-xs font-medium tracking-[0.04em] text-tk-t3">Công cụ hỗ trợ</h3>
       <div className="mt-3 flex items-start gap-3">
         <span
           className={cn('grid size-9 shrink-0 place-items-center rounded-md', FAMILY.pu.tile)}

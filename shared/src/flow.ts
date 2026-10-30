@@ -91,11 +91,11 @@ export const CONTRACT_FLOW: Flow<ContractStage> = {
       label: CONTRACT_STAGE_META.cho_duyet.label,
       owner: 'Người có hạn mức phê duyệt hợp đồng xem xét',
       next: [],
-      auto: 'Tự chuyển khi được phê duyệt trong Hộp thư Phê duyệt',
     },
     da_duyet: {
       label: CONTRACT_STAGE_META.da_duyet.label,
-      owner: 'Ban Giám đốc ký với khách và ghi nhận đã ký',
+      // Từ 0187 người chịu trách nhiệm ghi nhận ký kèm bản đã ký — Ban Giám đốc không phải vào hệ thống.
+      owner: 'Người chịu trách nhiệm trình hai bên ký, tải bản đã ký lên và ghi nhận đã ký',
       next: ['da_ky'],
       auto: 'Tự chuyển khi được phê duyệt trong Hộp thư Phê duyệt',
     },

@@ -56,6 +56,19 @@ function uiSources(): { path: string; text: string }[] {
     .map((f) => ({ path: f.replace(/\\/g, '/'), text: readFileSync(resolve(root, f), 'utf8') }));
 }
 
+describe('Không IN HOA để nhấn mạnh (CLAUDE.md 4.4)', () => {
+  /**
+   * Chạy thử NVO 30/10/2026: trang hồ sơ thiết kế in «BƯỚC HIỆN TẠI», «KHÁCH HÀNG» bằng lớp
+   * `uppercase` — chữ in hoa do CSS tự sinh, grep câu chữ không thấy. Phân hệ khác đã viết thường.
+   */
+  it('không lớp `uppercase` nào trong giao diện', () => {
+    const offenders = uiSources()
+      .filter(({ text }) => /\buppercase\b/.test(text))
+      .map(({ path }) => path);
+    expect(offenders).toEqual([]);
+  });
+});
+
 describe('Chỉ một bảng màu — chế độ tối đã gỡ', () => {
   /**
    * Chủ dự án bỏ hẳn chế độ tối (doc/MOC_CAI_TIEN_UX.md, vấn đề 2). Hàng rào này ngăn nó quay lại

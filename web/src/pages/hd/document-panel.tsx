@@ -140,7 +140,7 @@ export function DocumentPanel({
   // Mẫu đang chọn và giá trị đã điền dùng chung hai cột: cột trái điền nội dung riêng của văn
   // bản, cột phải điền và xem trước.
   const templates = useTemplatesForContract(contract.company_id, contract.type);
-  const candidates = rankTemplates(templates.data ?? [], contract.price_form);
+  const candidates = rankTemplates(templates.data ?? [], contract.price_form, contract.scope_kind);
   const [templateId, setTemplateId] = useState<string>('');
   const chosen = candidates.find((t) => t.id === templateId) ?? candidates[0] ?? null;
   const inputs = useDocumentInputsState(contract, editable);

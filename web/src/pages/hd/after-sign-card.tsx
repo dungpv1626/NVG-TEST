@@ -127,6 +127,7 @@ export function AfterSignCard({
   currentValue,
   hasSite,
   opensSite,
+  pendingDesignCode = null,
   isResponsible,
   canApprove,
   onOpenAmendments,
@@ -138,6 +139,8 @@ export function AfterSignCard({
   currentValue: bigint;
   hasSite: boolean | null | undefined;
   opensSite: boolean;
+  /** Cơ hội còn hồ sơ thiết kế đang làm — công trình mở lúc bàn giao thiết kế (0250). */
+  pendingDesignCode?: string | null;
   isResponsible: boolean;
   canApprove: boolean;
   onOpenAmendments: () => void;
@@ -177,7 +180,9 @@ export function AfterSignCard({
       done: Boolean(hasSite),
       body: hasSite
         ? 'Công trình đã mở ở bước Chuẩn bị, Trưởng phòng Thi công đã được báo để phân công chỉ huy trưởng. Không cần làm gì thêm.'
-        : 'Ban Giám đốc hoặc Thi công bấm «Mở công trình» ở đầu trang.',
+        : pendingDesignCode
+          ? `Công trình tự mở khi Thiết kế bàn giao hồ sơ thi công ${pendingDesignCode} — không cần bấm gì ở đây.`
+          : 'Ban Giám đốc hoặc Thi công bấm «Mở công trình» ở đầu trang.',
     });
   }
   steps.push({

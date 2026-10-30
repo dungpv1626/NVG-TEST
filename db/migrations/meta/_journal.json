@@ -1688,6 +1688,13 @@
       "when": 1791940000000,
       "tag": "0249_ban_giao_khoi_cong_ngan_sach",
       "breakpoints": true
+    },
+    {
+      "idx": 249,
+      "version": "7",
+      "when": 1791950000000,
+      "tag": "0250_e2e_nvo_sua_loi",
+      "breakpoints": true
     }
   ]
 }

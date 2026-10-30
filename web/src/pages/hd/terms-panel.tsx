@@ -162,8 +162,12 @@ export function TermsPanel({
   const scopeTarget = scopeFreeField(chosenTemplate?.free_fields);
   const templates = useTemplatesForContract(readOnly ? undefined : companyId, contractType);
   // Mẫu Word có bảng các đợt → gợi ý «Tiến độ thanh toán» theo đúng mốc mẫu đề xuất (0185).
+  // Mẫu đang chọn ở tab Soạn hợp đồng có các đợt thì dùng đúng mẫu ấy; không thì mẫu xếp đầu theo phạm vi.
   const milestoneTemplate =
-    rankTemplates(templates.data ?? [], priceForm).find((t) => t.payment_milestones?.length) ??
+    (chosenTemplate?.payment_milestones?.length ? chosenTemplate : null) ??
+    rankTemplates(templates.data ?? [], priceForm, scopeKind).find(
+      (t) => t.payment_milestones?.length,
+    ) ??
     null;
   const [applying, setApplying] = useState(false);
 

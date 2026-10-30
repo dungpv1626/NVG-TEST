@@ -36,6 +36,8 @@ export interface ContractTemplateRecord {
   contract_type: ContractType | null;
   document_kind: TemplateDocumentKind;
   price_form: ContractPriceForm | null;
+  /** Mẫu cho hợp đồng thiết kế / thi công / trọn gói (0243) — soạn văn bản từ mẫu đặt phạm vi hợp đồng. */
+  scope_kind: string | null;
   storage_path: string;
   file_name: string;
   tags: TemplateTags;
@@ -53,7 +55,7 @@ export interface ContractTemplateRecord {
 }
 
 const TEMPLATE_SELECT =
-  'id, company_id, title, contract_type, document_kind, price_form, storage_path, file_name, tags, ' +
+  'id, company_id, title, contract_type, document_kind, price_form, scope_kind, storage_path, file_name, tags, ' +
   'payment_milestones, free_fields, options, is_active, ' +
   'notes, created_at, company:companies(code, short_name), ' +
   'creator:users!contract_templates_created_by_fkey(full_name)';
@@ -100,14 +102,28 @@ export function useTemplatesForContract(
   });
 }
 
-/** Mẫu khớp hình thức giá đứng trước, mẫu dùng chung (không ghi hình thức giá) sau. */
+/**
+ * Thứ tự mẫu gợi ý cho một hợp đồng: mẫu đúng phạm vi hợp đồng (0243) đứng trước, mẫu không ghi
+ * phạm vi sau, mẫu khác phạm vi cuối; trong cùng nhóm, mẫu khớp hình thức giá trước.
+ *
+ * Chạy thử NVO 30/10/2026: hợp đồng THI CÔNG (cơ hội đã ký hợp đồng thiết kế) mặc định chọn mẫu
+ * trọn gói NVO-HĐ-02 chỉ vì tên đứng trước — lưu văn bản từ mẫu ấy đổi phạm vi sang trọn gói và bị
+ * CSDL từ chối (một cơ hội không vừa thiết kế vừa trọn gói); các đợt thanh toán gợi ý cũng lấy của mẫu trọn gói.
+ */
 export function rankTemplates(
   list: ContractTemplateRecord[],
   priceForm: ContractPriceForm | null,
+  scopeKind: string | null = null,
 ): ContractTemplateRecord[] {
+  const scopeRank = (t: ContractTemplateRecord) =>
+    !scopeKind || t.scope_kind === scopeKind ? 0 : t.scope_kind === null ? 1 : 2;
   return list
     .filter((t) => t.price_form === null || t.price_form === priceForm)
-    .sort((a, b) => Number(b.price_form === priceForm) - Number(a.price_form === priceForm));
+    .sort(
+      (a, b) =>
+        scopeRank(a) - scopeRank(b) ||
+        Number(b.price_form === priceForm) - Number(a.price_form === priceForm),
+    );
 }
 
 export function useUploadContractTemplate() {

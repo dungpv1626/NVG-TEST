@@ -26,6 +26,7 @@ export function SignContractDialog({
   contractId,
   isApprover,
   opensSite,
+  pendingDesignCode = null,
   onClose,
 }: {
   contractId: string;
@@ -33,6 +34,8 @@ export function SignContractDialog({
   isApprover: boolean;
   /** Hợp đồng thi công: ký xong hệ thống tự mở công trình (0187). */
   opensSite: boolean;
+  /** Cơ hội còn hồ sơ thiết kế đang làm — công trình mở lúc bàn giao thiết kế (0250). */
+  pendingDesignCode?: string | null;
   onClose: (signed: boolean) => void;
 }) {
   const sign = useSignContract();
@@ -91,7 +94,9 @@ export function SignContractDialog({
         Ghi theo văn bản hai bên đã ký.
         {opensSite
           ? ' Ghi nhận xong, hệ thống tự mở công trình ở bước Chuẩn bị và báo Thi công.'
-          : ''}
+          : pendingDesignCode
+            ? ` Công trình tự mở khi Thiết kế bàn giao hồ sơ thi công ${pendingDesignCode}.`
+            : ''}
         {!isApprover ? ' Ban Giám đốc được báo kèm bản đã ký.' : ''}
       </p>
       <div className="space-y-3">

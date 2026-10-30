@@ -132,11 +132,26 @@ export function useUpdateSitePlanItem() {
     Error,
     {
       id: string;
-      changes: Partial<Pick<SitePlanItem, 'status' | 'name' | 'note'>> & { deleted_at?: string };
+      changes: Partial<Pick<SitePlanItem, 'status' | 'name' | 'note'>>;
     }
   >({
     mutationFn: async ({ id, changes }) => {
       const { error } = await supabase.from('site_plan_items').update(changes).eq('id', id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/**
+ * Bỏ một đầu việc nhập nhầm — qua hàm `remove_site_plan_item` (0250). UPDATE thẳng `deleted_at`
+ * từ trình duyệt luôn bị RLS chặn (chính sách đọc kiểm dòng MỚI có `deleted_at IS NULL`).
+ */
+export function useRemoveSitePlanItem() {
+  const invalidate = useInvalidatePlan();
+  return useMutation<void, Error, string>({
+    mutationFn: async (id) => {
+      const { error } = await supabase.rpc('remove_site_plan_item', { p_item_id: id });
       if (error) throw new Error(error.message);
     },
     onSuccess: invalidate,

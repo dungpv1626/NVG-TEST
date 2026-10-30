@@ -30,6 +30,7 @@ import {
   useCreateSitePlanItem,
   useSitePlanItems,
   useSitePlanNameSuggestions,
+  useRemoveSitePlanItem,
   useUpdateSitePlanItem,
   type SitePlanItem,
 } from '@/hooks/use-site-plan';
@@ -78,6 +79,7 @@ export function SiteWeekPlanPanel({
   const { data: milestones } = useSiteMilestones(siteId);
   const create = useCreateSitePlanItem();
   const update = useUpdateSitePlanItem();
+  const remove = useRemoveSitePlanItem();
   const copy = useCopyUnfinishedPlanItems();
 
   const [draft, setDraft] = useState<Draft>(EMPTY);
@@ -263,15 +265,8 @@ export function SiteWeekPlanPanel({
                     {item.progress.length === 0 && (
                       <Button
                         variant="subtle"
-                        disabled={update.isPending}
-                        onClick={() =>
-                          void run(() =>
-                            update.mutateAsync({
-                              id: item.id,
-                              changes: { deleted_at: new Date().toISOString() },
-                            }),
-                          )
-                        }
+                        disabled={remove.isPending}
+                        onClick={() => void run(() => remove.mutateAsync(item.id))}
                       >
                         Bỏ đầu việc
                       </Button>

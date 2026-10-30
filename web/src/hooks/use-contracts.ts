@@ -381,17 +381,15 @@ export function useSaveContractTerm() {
 }
 
 /**
- * Xoá mềm một dòng điều khoản ghi nhầm. Không `select` lại sau khi ghi: chính sách đọc bỏ dòng
- * đã xoá, nên đọc lại sẽ báo «không thấy» dù xoá đã thành công.
+ * Xoá mềm một dòng điều khoản ghi nhầm — qua hàm `delete_contract_term` (0250). UPDATE thẳng
+ * `deleted_at` từ trình duyệt luôn bị RLS chặn: PostgreSQL kiểm dòng MỚI theo chính sách đọc
+ * (`deleted_at IS NULL`) khi câu UPDATE có WHERE.
  */
 export function useDeleteContractTerm() {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
     mutationFn: async (id) => {
-      const { error } = await supabase
-        .from('contract_terms')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id);
+      const { error } = await supabase.rpc('delete_contract_term', { p_term_id: id });
       if (error) throw error;
     },
     onSuccess: () => {

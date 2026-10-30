@@ -81,7 +81,7 @@ export function Panel({
 
 /** Nhãn nhóm nhỏ in hoa của cột phải (bản mẫu §5.5d). */
 export function GroupLabel({ children }: { children: React.ReactNode }): React.ReactElement {
-  return <h3 className="text-xs font-medium tracking-[0.04em] text-tk-t3 uppercase">{children}</h3>;
+  return <h3 className="text-xs font-medium tracking-[0.04em] text-tk-t3">{children}</h3>;
 }
 
 export function Chip({

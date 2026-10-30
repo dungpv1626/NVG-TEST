@@ -10,6 +10,7 @@ import {
   canExecuteAmendment,
   contractKindLabel,
   remainingContractKinds,
+  contractOpensSite,
   summarizeContractValue,
 } from '../hd';
 
@@ -126,5 +127,14 @@ describe('HD — một hợp đồng thiết kế + một hợp đồng thi côn
     expect(contractKindLabel('thi_cong', 'tron_goi')).toBe('Hợp đồng thiết kế – thi công trọn gói');
     expect(contractKindLabel('thi_cong', 'thi_cong')).toBe('Hợp đồng thi công');
     expect(contractKindLabel('thiet_ke', null)).toBe('Hợp đồng thiết kế');
+  });
+});
+
+describe('contractOpensSite', () => {
+  // Chạy thử NVO 30/10/2026: hợp đồng thiết kế đã ký báo «bấm Mở công trình» — sai với 0243.
+  it('hợp đồng thiết kế không mở công trình; thi công thì mở', () => {
+    expect(contractOpensSite('thiet_ke')).toBe(false);
+    expect(contractOpensSite('thi_cong')).toBe(true);
+    expect(contractOpensSite('cho_thue')).toBe(false);
   });
 });

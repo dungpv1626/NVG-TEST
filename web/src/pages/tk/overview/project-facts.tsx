@@ -49,12 +49,12 @@ export function ProjectFacts({
       <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
         {facts.map((fact) => (
           <div key={fact.label}>
-            <dt className="text-xs tracking-[0.03em] text-tk-t3 uppercase">{fact.label}</dt>
+            <dt className="text-xs tracking-[0.03em] text-tk-t3">{fact.label}</dt>
             <dd className={fact.accent ? 'mt-1.5 text-tk-acc' : 'mt-1.5'}>{fact.value}</dd>
           </div>
         ))}
         <div>
-          <dt className="text-xs tracking-[0.03em] text-tk-t3 uppercase">Ghi chú</dt>
+          <dt className="text-xs tracking-[0.03em] text-tk-t3">Ghi chú</dt>
           <dd className="mt-1.5">
             {readOnly ? (
               <p className="whitespace-pre-wrap">{project.notes ?? EM_DASH}</p>

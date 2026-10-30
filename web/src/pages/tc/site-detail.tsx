@@ -268,7 +268,9 @@ export function SiteDetailPage() {
               flow={SITE_FLOW}
               current={site.stage}
               nextRequirements={[...nextRequirements, ...issueReminder]}
-              holder={site.responsible?.full_name ?? null}
+              // Bước Chuẩn bị là việc của Trưởng phòng Thi công — ghi tên chỉ huy trưởng trước câu ấy
+              // đọc như chỉ huy trưởng tự phân công (chạy thử NVO 30/10/2026).
+              holder={site.stage === 'chuan_bi' ? null : (site.responsible?.full_name ?? null)}
             />
           </>
         }

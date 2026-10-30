@@ -210,6 +210,70 @@ describeDb('hai hợp đồng một cơ hội — thiết kế rồi thi công (
     expect(await sitesOf(build), 'tránh hai công trình cho một nhà').toBe(0);
   });
 
+  it('0250: còn hồ sơ thiết kế đang làm thì không mở công trình thẳng từ hợp đồng thi công; bàn giao mở công trình không lấy kiến trúc sư làm chỉ huy', async () => {
+    // Chạy thử NVO 30/10/2026: trang hợp đồng mời «Mở công trình» — bấm thì lúc bàn giao thiết kế
+    // không còn hợp đồng nào để gắn; bàn giao lại lấy kiến trúc sư chủ trì làm chỉ huy công trình.
+    const opp = await opportunity();
+    const [designer] = await withSql(
+      (sql) => sql`SELECT id FROM users WHERE email = ${ACCOUNTS.thietKeNvo}`,
+    );
+    const stamp = `${Date.now()}`;
+    const [design] = await withSql(
+      (sql) => sql`
+        INSERT INTO design_projects (company_id, code, name, stage, opportunity_id, responsible_user_id)
+        VALUES (${opp.companyId}, ${'HHD-TK3-' + stamp}, ${TEST_PREFIX + ' Thiết kế chờ bàn giao'},
+                'du_toan', ${opp.id}, ${designer!.id})
+        RETURNING id, code`,
+    );
+    const build = await mustDraft(opp.id, 'thi_cong');
+    await withSql(
+      (sql) =>
+        sql`UPDATE contracts SET start_date = '2026-12-01', end_date = '2027-06-30' WHERE id = ${build}`,
+    );
+    await sign(build);
+
+    const kd = await signInAs(ACCOUNTS.kinhDoanhNvo);
+    const { data: pending } = await kd.rpc('contract_pending_design', { p_contract_id: build });
+    expect((pending as { code: string }[]).map((p) => p.code)).toEqual([design!.code]);
+
+    const tgd = await signInAs(ACCOUNTS.tgd);
+    const { error: openError } = await tgd.rpc('open_site_from_contract', { p_contract_id: build });
+    expect(openError?.message).toContain('công trình tự mở khi Thiết kế bàn giao');
+    expect(await sitesOf(build)).toBe(0);
+
+    // Đủ điều kiện bàn giao: phương án khách đã duyệt + ba bộ môn đã phát hành. Thêm bản nháp rồi
+    // phát hành bằng SQL — trigger chèn luôn xoá dấu phát hành (chỉ phát hành qua hàm).
+    await withSql(async (sql) => {
+      for (const d of ['phuong_an', 'kien_truc', 'ket_cau', 'dien_nuoc']) {
+        const [v] = await sql`
+          INSERT INTO design_versions (company_id, design_project_id, discipline, title)
+          VALUES (${opp.companyId}, ${design!.id}, ${d}::design_discipline, ${TEST_PREFIX + ' ' + d})
+          RETURNING id`;
+        await sql`
+          UPDATE design_versions
+             SET published_at = now(), is_current_version = true,
+                 customer_approved_at = CASE WHEN discipline = 'phuong_an' THEN now() END
+           WHERE id = ${v!.id}`;
+      }
+    });
+    const tk = await signInAs(ACCOUNTS.thietKeNvo);
+    const { error: handError } = await tk.rpc('handover_design_to_construction', {
+      p_design_project_id: design!.id,
+    });
+    expect(handError?.message ?? null).toBeNull();
+    const [site] = await withSql(
+      (sql) => sql`
+        SELECT contract_id, responsible_user_id, planned_start_date::text AS s, name
+          FROM construction_sites WHERE design_project_id = ${design!.id}`,
+    );
+    expect(site!.contract_id).toBe(build);
+    expect(site!.responsible_user_id, 'kiến trúc sư không làm chỉ huy công trình').toBeNull();
+    expect(site!.s).toBe('2026-12-01');
+    expect(site!.name).toContain('Hợp đồng thi_cong');
+    const { data: after } = await kd.rpc('contract_pending_design', { p_contract_id: build });
+    expect(after).toEqual([]);
+  });
+
   it('«Chỉ thiết kế»: ghi lịch sử, chặn hợp đồng thi công, hợp đồng thiết kế ký thì cơ hội thắng', async () => {
     const opp = await opportunity();
     const kd = await signInAs(ACCOUNTS.kinhDoanhNvo);
