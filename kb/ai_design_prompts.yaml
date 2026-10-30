@@ -33,7 +33,10 @@
 # 9.14.0 (30/10/2026, anh Dũng chọn «AI vẽ từng tầng, máy kiểm ngay, AI sửa đúng tầng»): câu nhắc storey_below_built — lượt sửa
 # gửi kèm lưới tầng đã giữ ngay dưới NHƯ CHƯƠNG TRÌNH DỰNG (ô thang, khu ướt, bếp, thờ, phòng ở), trước đây tầng đã khoá bị bỏ hẳn
 # khỏi lời gửi nên mô hình vẽ lại tầng trên mà không thấy tầng dưới. Không đổi khối `floor_level.system`.
-version: '9.14.0'
+# 9.15.0 (30/10/2026, T187 — anh Dũng «ok làm đi», phần 2 của «AI vẽ từng tầng»): lượt đầu chỉ phác TẦNG 1 (vẫn khai phòng
+# mọi tầng); tầng 1 qua thì lượt kế vẽ các tầng trên, kèm lưới tầng 1 như chương trình dựng (`storey_below_built`, 9.14.0) —
+# câu nhắc `sketch_pending`.
+version: '9.15.0'
 
 program:
   system: |
@@ -214,7 +217,7 @@ floor_level:
     10. A `balcony`[[terrace| or terrace]] has a LONG side on `knowledge.open_faces`. The main front
         one is largest, off a corridor or the living space; others are small.
 
-    Sketch — one `sketches` entry per storey. `rows` has `knowledge.sketch_grid.rows` strings of
+    Sketch — first answer: storey 1 only (list all rooms); upper storeys come later. `rows` has `knowledge.sketch_grid.rows` strings of
     `knowledge.sketch_grid.columns` cells each, one cell ≈ `knowledge.sketch_grid.cell_m` m of the
     `knowledge.block_m` block. The first row is the street side; cells run left to right as seen from
     the street. Each cell holds the id of the room on it, cells separated by one space; `.` is an
@@ -375,6 +378,8 @@ floor_level:
     revision_kept: '- Storey {levels} passed every check and is kept exactly as it is; do not return it.'
     # 30/10/2026: lưới tầng đã giữ ngay dưới, như chương trình dựng (`builtBelowHints`) — trước đây mô hình vẽ lại tầng trên
     # mà không thấy ô thang / khu ướt thật bên dưới.
+    # T187: lượt đầu chỉ phác tầng 1; tầng 1 qua thì nhắc vẽ tiếp từng tầng trên (tiền tố «Storey N: »).
+    sketch_pending: '- not drawn yet: draw its sketch now (its rooms are already listed), on the same grid, over storey 1 as built below.'
     storey_below_built: |-
       - Storey {level} as the program built it, on your sketch grid (read-only, row 0 = street): S stair — storey {above} draws its stair on exactly these cells; E lift; L light well; W wc or laundry — put the wc and laundry of storey {above} over these; K kitchen and A altar room — never a wc over them; B living, dining or bedroom — no wc or laundry over them; C corridor; G other; . unbuilt.
       {grid}

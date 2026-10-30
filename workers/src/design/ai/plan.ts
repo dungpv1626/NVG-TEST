@@ -3560,7 +3560,10 @@ export function builtBelowHints(
   if (!kept.length || !prompts.floorLevel.hints.storey_below_built) return [];
   const level = Math.max(...kept);
   const done = arranged.find((item) => item.level.level === level);
-  const above = intent.sketches?.find((sketch) => sketch.level === level + 1);
+  // Lưới cùng cỡ bản phác: của tầng trên nếu đã vẽ, không thì của chính tầng đã giữ (T187 — tầng trên chưa vẽ).
+  const above =
+    intent.sketches?.find((sketch) => sketch.level === level + 1) ??
+    intent.sketches?.find((sketch) => sketch.level === level);
   if (!done || !above) return [];
   const tokens = above.rows.map((row) => row.trim().split(/\s+/).filter(Boolean));
   const cols = Math.max(...tokens.map((row) => row.length));
@@ -4341,6 +4344,11 @@ export function evaluateHouse(
     context.levels,
   );
   const minimums = briefMinimums(input.digest, program);
+  // Lượt đầu chỉ phác tầng 1 (T187): tầng trên chưa có bản phác thì CHƯA xếp — tầng 1 qua là mô hình vẽ tiếp các tầng
+  // ấy, kèm lưới tầng 1 như chương trình dựng (`builtBelowHints`). Kiểm ban công đầu bài cũng chờ tới lúc ấy.
+  const pendingUpper = sketches.get(context.levels[0]!)?.length
+    ? context.levels.slice(1).filter((level) => !sketches.get(level)?.length)
+    : [];
   if (programIssues.length) {
     // Danh mục sai đầu bài: chưa xếp tầng nào — nhưng BẢN PHÁC mọi tầng soát được ngay (lối vào, sàn đầu bài, ban
     // công), như T92 soát tầng trên khi tầng 1 hỏng. Tổng hợp 37 lượt thật và lượt bea4c6fa (T107): mỗi vòng chỉ lộ
@@ -4412,7 +4420,7 @@ export function evaluateHouse(
   checkSketchBalconyDemand(
     context.demands.balcony,
     renamed.rooms,
-    sketches,
+    pendingUpper.length ? new Map() : sketches,
     (level, code, message, ref, params) =>
       balconyIssues.push({
         code,
@@ -4428,7 +4436,7 @@ export function evaluateHouse(
   const cornerAdvice = sketchBalconyCornerAdvice(
     context.demands.balcony,
     renamed.rooms,
-    sketches,
+    pendingUpper.length ? new Map() : sketches,
     context.mandatory?.rules.balconyOnOpenFace?.longRatio ?? null,
   ).map((item): PlanIssue => ({ ...item, level: 'finding' }));
   const rejected = () => {
@@ -4686,6 +4694,28 @@ export function evaluateHouse(
     }
   }
   const groundDone = arrangedLevel(groundResult);
+  if (groundDone && pendingUpper.length) {
+    arranged.push(groundDone);
+    arrangedWith.set(ground!, { program: current, anchors: null, intent: groundIntentUsed });
+    for (const level of pendingUpper) {
+      fail(level, {
+        layout: null,
+        intent: byLevel.get(level)!,
+        summary: null,
+        issues: [
+          {
+            code: 'sketch_pending',
+            level: 'blocking',
+            message: `Tầng ${level} chưa có bản phác — tầng 1 đã dựng, mô hình vẽ tiếp tầng này.`,
+            params: { levels: pendingUpper.join(', ') },
+          },
+        ],
+        notes: [],
+        revisable: true,
+      } as unknown as ArrangeResult);
+    }
+    return rejected();
+  }
   if (!groundDone) {
     fail(ground!, groundResult, groundIntent.entry_room ?? undefined);
     // Tầng trên chưa xếp được (chưa có mốc thang, khu ướt), nhưng BẢN PHÁC của chúng soát được ngay —

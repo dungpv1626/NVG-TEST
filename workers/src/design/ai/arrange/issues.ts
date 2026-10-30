@@ -100,6 +100,8 @@ export function arrangeIssue(
  * Mặc định là HÌNH HỌC: một mã mới quên xếp loại thì không tốn tiền, chỉ mất một lượt sửa có thể có ích.
  */
 export const REVISABLE_CODES: ReadonlySet<string> = new Set([
+  // Lượt đầu chỉ phác tầng 1 (T187): tầng trên chưa vẽ — mô hình vẽ tiếp sau khi thấy tầng 1 đã dựng.
+  'sketch_pending',
   // Ban công đua không gắn được vào cạnh phòng chủ (chế độ hình chữ nhật, T115) — mô hình chọn phòng / mặt khác.
   'cantilever_dropped',
   // Vùng: dồn quá nhiều phòng vào một vùng.
