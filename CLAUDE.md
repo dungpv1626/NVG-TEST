@@ -1394,6 +1394,14 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    truyền, Mái Nhật vào `kb/style_catalogue.yaml`) → (4) chế độ Kinh doanh (đầu bài rút gọn 12–15 câu, trần tháng, chỉ cơ hội đã
    khảo sát, mở quyền) → (5) 1–2 kiến trúc sư + 1 Kinh doanh NVO dùng thử trên khách thật vài tuần. Bộ dựng «hành lang trước» chỉ làm
    nếu (1) cho thấy máy hỏng nhiều ở kiểu nhà phổ biến. Anh Dũng đồng ý thì chạy (1) trước.
+   **(1) ĐÃ CHẠY 30/10/2026 (anh Dũng duyệt): 0/4 ra phương án, 1,601 USD / 17 lời gọi** — hồ sơ `NVO-TK-2026-AT01`→`AT04`,
+   đầu vào / kỳ vọng / kết quả ở `backup/ai-4-dau-bai/ky-vong.md`. Cả 4 hỏng cùng họ lỗi LỐI ĐI (phòng / đầu thang không chạm
+   hành lang; nhà ống 4 m mô hình xếp khách + ăn theo bề ngang). AT04 (hình thang) qua tầng 1, hỏng tầng 2. → Theo quy ước đọc
+   kết quả: làm bộ dựng «hành lang trước» trước khi đưa khách. **Phần 1 nhà ống ĐÃ THỬ 30/10 (T189): dựng, đo, GỠ — 27 → 27
+   vòng / 278.** Chặn thật không ở bộ xếp: AT01 cần ≥ 15,35 m chiều sâu tầng 1 theo cạnh tối thiểu `kb/` trên khối 14 m; THU5
+   thiếu 5 cm để đặt giếng trời cạnh hành lang. Bước sau chờ anh Dũng: (a) kiểm trước lượt «đầu bài không vừa» cho nhà ống
+   (chặn lượt — cần duyệt); (b) WC dưới gầm thang + giếng trời trong hàng phòng; (c) kiến trúc sư NVO rà cạnh tối thiểu ô thang /
+   phòng khách nhà ống trong `kb/`.
    (D) Việc của phiên 29/10 bên dưới vẫn còn hiệu lực (gói đợt 2, T6–T8, câu hỏi NVG, email thật, phát hành).
 0. **Việc tiếp theo (sau phiên 29/10/2026) — chờ anh Dũng chọn:**
    (1) **Kiểm đợt 1 khớp khảo sát anh Thi (G1–G6, 0244–0249) trên trình duyệt bằng đúng vai** — chưa gói nào chạy thử trên trình

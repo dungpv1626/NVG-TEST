@@ -120,7 +120,9 @@ describe('nối vào cổng trước lời gọi mô hình (briefInfeasible)', (
         houseProfile: true,
       });
       const context = planContext(input);
-      expect(stairFitOf(context.knowledge, input.construction, 0), id).not.toBeNull();
+      // Nhà một tầng (lượt 620f46a5, nhà vườn) không có ô thang để đo.
+      if (run.digest.floors > 1)
+        expect(stairFitOf(context.knowledge, input.construction, 0), id).not.toBeNull();
       expect(briefInfeasible(input, context), id).toBeNull();
       expect(briefAdvice(input, context), id).toEqual([]);
     }

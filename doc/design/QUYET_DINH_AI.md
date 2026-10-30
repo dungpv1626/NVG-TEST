@@ -5115,3 +5115,46 @@ xương. Phát lại 62 lượt: 27 → 28 vòng qua (được 75ba5793 v1, a66f
 3.982 s, vòng lâu nhất 125 → 178 s (trần CPU Worker 300 s). Lợi ròng 1 vòng, gần gấp đôi thời gian — gỡ. Mã giữ ở
 `backup/ai-mansion/regrow.ts.keep` (không commit). Bài học: chữ nhật mọc tham lam quanh điểm gieo ít khi giữ được lối vào — cần một bộ
 sinh biết hành lang (MANSION cũng đặt lõi + hành lang trước), việc lớn hơn.
+
+## T189 — Khung nhà ống «dựng hành lang trước» cho lô hẹp: ĐÃ DỰNG, ĐO, GỠ — 27 → 27 vòng (30/10/2026, anh Dũng duyệt «phần 1»)
+
+**Bối cảnh.** Bốn lượt thật 30/10 (AT01 nhà ống 4 × 15 m 3 tầng, AT02, AT03, AT04 6/8 × 18 m) hỏng vì lối đi; AT01 hỏng tầng 1 cả
+5 vòng (gara + khách / khách + ăn đặt cạnh nhau trên 4 m, WC chỉ vào qua ô thang). Ý: lô hẹp thì chương trình dựng ô thang + hành
+lang trước, phòng xếp CHỒNG theo chiều sâu, bản phác chỉ là gợi ý dải trước / sau.
+
+**Đã dựng (không vào mã; bản vá `t189-wip.patch` + `skeleton-tube.ts.keep` ở scratchpad phiên 30/10).** `arrange/skeleton-tube.ts`:
+hệ chuẩn đầu thang ở `y0` (tầng trên = đầu bước ra; tầng 1 = hai đầu theo chiều sâu), ô thang áp tường bên (tầng 1 dựng đúng cỡ
+tối thiểu + 2 mô-đun như T169), dải A / B mỗi hàng trọn bề ngang (hay nhường hành lang dọc áp tường), hành lang T trước đầu thang,
+HB sau lõi, cột phụ trợ áp tường cạnh V (WC, giặt, kho — và giếng trời lô 5–6 m), giếng trời tầng 1 sau thang cùng cột hoặc trong
+cột phụ trợ; tầng 1 thử 4 chỗ ô thang theo chiều sâu; hàng bản phác vẽ cạnh nhau mà không vừa bề ngang thì tách mỗi phòng một hàng;
+tỉ lệ dùng được đo lọt lòng. Lô hẹp suy từ dữ liệu: bề ngang cạnh ô thang < cạnh kỹ thuật lớn nhất của phòng ở + một hành lang
+(biệt thự không vào). Nối sau cùng ở `arrangeLevelCore` (sau khung hai hàng, lỗi không vào câu nhắc) và một bước quay lui mới của
+`evaluateHouse` (`tubeGround`, thử 4 bản tầng 1 cho các tầng trên). Cấu hình `sketch.skeleton_tube` (24 / 4 / 4).
+
+**Đo** (phát lại 66 lượt / 278 vòng, ngữ cảnh Workflow `REPLAY_PROD`, một tiến trình; đối chứng = mã hiện tại):
+
+| | Đối chứng | Khung nhà ống |
+| --- | --- | --- |
+| Vòng qua cổng | 27 | 27 — không vòng nào được, không vòng nào mất |
+| AT01 (5 vòng) / AT04 (5) / THU5 (6 lượt, 27 vòng) | 0 / 0 / 1 | 0 / 0 / 1 |
+| Cả bộ / vòng lâu nhất | 1.770 s / 57 s | 1.803 s / 54 s |
+
+Không có lợi đo được — gỡ theo luật đo (như T171). Biệt thự không đổi gì (khung không bao giờ áp).
+
+**Học được — vì sao nhà ống không ra (số của chính chương trình, đo bằng vết của khung).**
+1. **AT01 không dựng nổi với cạnh tối thiểu hiện tại.** Tầng 1 xếp chồng cần gara 270 + khách 340 (12 m² trên 4 m) + ô thang chữ U
+   395 + giếng trời 150 + ăn – bếp 240 + WC 140 = **1.535 cm** trên khối sâu 1.400 cm. Giếng trời không đặt cạnh thang được (bề ngang
+   còn 150 cm = vừa đúng một hành lang 105 cm). Bỏ giếng trời khỏi chuỗi thì còn ~5 cm dư và các tầng trên lại hết chỗ. Không bộ
+   xếp nào gỡ được: chỗ phải đổi là đầu bài (bỏ / dời giếng trời, gara nông hơn, hoặc WC dưới gầm thang — bộ xếp chưa có).
+2. **THU5 (5 × 18 m):** khung dựng được tầng 1 qua cổng (81 điểm, gara → khách → ô thang + giếng trời → ăn → WC) ở vòng 1 của
+   4eade9b1, nhưng các tầng trên chỉ còn ~420 cm sau lõi cho phòng ngủ / phòng làm việc — hỏng. Giếng trời xếp sau thang ăn 150 cm
+   chiều sâu của mọi tầng; đặt cạnh hành lang dọc (chỗ mô hình hay vẽ) thì thiếu đúng **5 cm** (500 − ô thang 250 − hành lang 105 =
+   145 < giếng trời 150).
+3. **AT04:** tầng 2 có mốc giếng trời ngoài cột thang / cột phụ trợ — khung không dựng; tầng 1 thiếu chiều sâu tương tự (gara 310 +
+   khách 335–405 + lõi 395–545 + ăn 240 + ngủ 345).
+4. e5ec68a6 (THU5) hỏng `door_outside_on_boundary` ở MỌI cách xếp, cả bản phác — lỗi khác, chưa tra.
+
+**Bước sau (nếu làm).** (a) Kiểm trước lượt cho nhà ống: cộng chiều sâu tối thiểu các phòng ghim tầng theo trục sâu (khung xếp
+chồng) — AT01 đáng lẽ bị báo «đầu bài không vừa» trước 0,40 USD; mở rộng `ai/stair-fit.ts` (T178), cần anh Dũng duyệt vì nó chặn
+lượt chạy. (b) Giếng trời trong hàng phòng (cạnh WC / bếp) và WC dưới gầm thang — hai chỗ kiến trúc sư nhà ống hay dùng. (c) Chọn
+chỗ ô thang tầng 1 bằng nhu cầu chiều sâu của CẢ các tầng trên (không chỉ tầng 1).

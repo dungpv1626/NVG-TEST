@@ -146,3 +146,11 @@ một hàng chạm T, một cột chạm V, hoặc HAI hàng kẹp hành lang H2
 về, nên mọi hướng thang dùng một cách dựng. Phòng giữ hàng theo bản phác, hàng thiếu chỗ thì dời / đổi phòng giữa các hàng. Phát lại
 256 vòng: 16 → 25 vòng qua cổng, `1dd74b99` (hồ sơ 9272) v2–v4 qua; khu ướt chưa theo trục ống nước (E5 thấp hơn vòng cũ). Chi tiết:
 `QUYET_DINH_AI.md` T179.
+
+## 9. Khung nhà ống «dựng hành lang trước» — đã thử, đã gỡ (T189, 30/10/2026)
+
+Lô hẹp (suy từ `kb/`): ô thang áp tường bên, hành lang dọc cạnh thang, hành lang T trước đầu thang, phòng xếp CHỒNG theo chiều sâu
+trước / sau lõi, giếng trời sau thang cùng cột hoặc trong cột phụ trợ; tầng 1 thử 4 chỗ ô thang và một bước quay lui chọn bản tầng 1
+cho các tầng trên. Phát lại 278 vòng: 27 → 27 (không được, không mất) — gỡ. Chặn thật là CHIỀU SÂU: AT01 4 × 14 m cần 1.535 cm cho
+gara, khách, ô thang chữ U, giếng trời, ăn, WC xếp chồng; THU5 tầng 1 dựng được (81 điểm) nhưng tầng trên còn ~420 cm sau lõi, giếng
+trời cạnh hành lang thiếu 5 cm. Chi tiết, số đo và bước sau: `QUYET_DINH_AI.md` T189.
