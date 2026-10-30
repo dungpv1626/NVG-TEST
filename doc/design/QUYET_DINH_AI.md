@@ -5087,3 +5087,20 @@ với khung này.
 
 **Còn mở.** Vòng sửa theo điểm (sau khi đã qua) hỏng ở cả a66f4aa0 lẫn THU5 hôm nay — đo bằng phát lại rồi cân nhắc bỏ. Lượt đầu chỉ vẽ
 tầng 1 (gọi lần lượt từng tầng) — làm khi cần thêm. Mặt bằng thật NVO là dữ liệu hạng 1, không gửi mô hình làm mẫu.
+
+## T186 — Tắt vòng gọi lại để nâng điểm khi phương án đã qua cổng (GIỮ) (30/10/2026, anh Dũng đồng ý)
+
+Phát lại 18 lần «vòng sau một vòng đã qua» trên các lượt ghi: 8 lần mô hình vẽ hỏng hẳn; 10 lần qua thì 4 tăng (+0,2…+3,3 điểm),
+2 giảm, 4 giữ — KHÔNG lần nào kéo nhóm dưới sàn lên, nên không lần nào đưa phương án tới ngưỡng. Hai lượt thật (a66f4aa0 29/10, THU5
+30/10): vòng ấy hỏng, mỗi lần ≈ 0,1 USD, 1,5 phút. `kb/plan_quality.yaml` `score_revision: false` (vắng = bật); Workflow lưu luôn
+phương án, kỹ sư sửa bằng ô yêu cầu (T53). Phép thử `ai-design-steps.test.ts` (cơ chế T53 đo với `scoreRevision: true`).
+
+## T187 — Lượt đầu chỉ phác tầng 1: ĐÃ THỬ, LÙI câu lời dẫn; giữ cách xử lý tầng chưa phác (30/10/2026)
+
+Lời dẫn 9.15.0 dặn lượt đầu chỉ phác tầng 1 (vẫn khai phòng mọi tầng), tầng 1 qua thì lượt kế vẽ tầng trên kèm lưới tầng 1 đã dựng
+(`pendingUpper` trong `evaluateHouse`, câu nhắc `sketch_pending`, phép thử `ai-staged-sketch.test.ts`). Phát lại: không vòng nào đổi.
+Lượt thật trên 9272 (anh Dũng cho phép 2 lượt): HỎNG — câu dặn bị rút gọn cho vừa trần T46 («list all rooms»), mô hình bỏ luôn danh mục
+phòng tầng 2 → lỗi danh mục cả nhà (tầng 0), không giữ được tầng 1, không gửi được lưới; 5 lời gọi 0,55 USD. Dừng, không chạy lượt
+THU5. Anh Dũng chọn lùi: lời dẫn 9.15.1 = câu lượt đầu như 9.14.0 (phác mọi tầng); GIỮ `pendingUpper` + `sketch_pending` (chỉ chạy khi
+mô hình tự bỏ bản phác tầng trên — trước đây chương trình lặng lẽ xếp theo vùng mặc định). Làm lại sau, kèm: khi lượt «chỉ tầng 1»
+thiếu phòng tầng trên thì vẫn kiểm tầng 1 và nhắc khai bổ sung, không để lỗi danh mục chặn cả lượt.

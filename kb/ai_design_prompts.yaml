@@ -36,7 +36,10 @@
 # 9.15.0 (30/10/2026, T187 — anh Dũng «ok làm đi», phần 2 của «AI vẽ từng tầng»): lượt đầu chỉ phác TẦNG 1 (vẫn khai phòng
 # mọi tầng); tầng 1 qua thì lượt kế vẽ các tầng trên, kèm lưới tầng 1 như chương trình dựng (`storey_below_built`, 9.14.0) —
 # câu nhắc `sketch_pending`.
-version: '9.15.0'
+# 9.15.1 (30/10/2026, anh Dũng chọn): LÙI câu lượt đầu về như 9.14.0 (phác mọi tầng). Lượt thật 9.15.0 trên 9272 hỏng: mô hình
+# «chỉ phác tầng 1» bỏ luôn danh mục phòng tầng 2 → lỗi danh mục cả nhà, không giữ được tầng 1, 5 lời gọi 0,55 USD. Giữ câu nhắc
+# `sketch_pending` và cách xử lý tầng chưa phác (T187) — chỉ chạy khi mô hình tự bỏ bản phác tầng trên.
+version: '9.15.1'
 
 program:
   system: |
@@ -217,7 +220,7 @@ floor_level:
     10. A `balcony`[[terrace| or terrace]] has a LONG side on `knowledge.open_faces`. The main front
         one is largest, off a corridor or the living space; others are small.
 
-    Sketch — first answer: storey 1 only (list all rooms); upper storeys come later. `rows` has `knowledge.sketch_grid.rows` strings of
+    Sketch — one `sketches` entry per storey. `rows` has `knowledge.sketch_grid.rows` strings of
     `knowledge.sketch_grid.columns` cells each, one cell ≈ `knowledge.sketch_grid.cell_m` m of the
     `knowledge.block_m` block. The first row is the street side; cells run left to right as seen from
     the street. Each cell holds the id of the room on it, cells separated by one space; `.` is an
