@@ -1302,6 +1302,43 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
   `site_surveys_report_guard` ở 0181. Hạn mức loại phê duyệt mới nằm ở seed (`DEFAULT_APPROVAL_LIMITS`) — `db:seed` sau migrate.
 - Ảnh chạy thử từng phần: `backup/dot1-1a/` → `backup/dot1-1h/`, `backup/dot1-dinh-kem/`, `backup/dot1-phieu-rieng/`,
   `backup/dot1-micro/` (không commit).
+- **Phiên 30/10/2026 (anh Dũng; commit 23a3513 → 0b0e3a5 + 73a4372, đã đẩy NVG-TEST):**
+  - **Chạy thử trọn ba luồng trên trình duyệt bằng đúng vai** (Playwright, agent chạy trong lúc anh Dũng vắng): NVO đi trọn cơ
+    hội → hợp đồng thiết kế → hợp đồng thi công → công trình, sửa 9 lỗi (0250); NVC 8/8 bước (đấu thầu → dự toán → hồ sơ thầu →
+    hợp đồng → công trình → thầu phụ → hồ sơ thanh toán chủ đầu tư → phát sinh), sửa lộ dòng «Lợi nhuận mục tiêu» cho Thi công ở
+    `site_cost_lines`, hủy được biên bản đã ký, thông báo ký hợp đồng lộ giá trị cho Thi công (trigger
+    `notifications_hide_module_for_outsiders`, `_user_can_view_module`), nút «Xác nhận» của Kế toán hiện sai lượt (0251); NVS
+    8/8 bước, sửa 12 lỗi — số in kiểu Anh (`vn_number`), Xưởng / Kế toán không được báo, công nợ đơn thuê không gắn hợp đồng,
+    Zalo báo giá thuê, ô chọn tệp gốc «Choose File» (`ui/file-pick.tsx` + phép thử canh), bồi thường điền sẵn từ bảng giá, ngày
+    thuê theo giờ Việt Nam (0252). Ảnh + kịch bản `backup/e2e-nvo/`, `e2e-nvc/`, `e2e-nvs/` (đọc `ghi-chu.txt`). Dữ liệu thử NVC hậu
+    tố E2E30C.
+  - **Anh Dũng trả lời 18 câu nghiệp vụ sau chạy thử → 0253–0257 (ba agent gói A / B / C, gộp + phép thử chung 282/282):**
+    gói A (0253) hợp đồng thiết kế quyết toán khi khách duyệt hồ sơ kỹ thuật (`contracts_design_settlement_gate`); ký hợp đồng
+    thiết kế tự tạo hồ sơ thiết kế (`contracts_auto_design_project`, cột `design_projects.contract_id`, trọn gói chỉ khi
+    `tk.design_in_house`); ngân sách thi công lập theo GIÁ VỐN báo giá + Tổng Giám đốc duyệt trước khởi công (`site_budget_submissions`,
+    loại duyệt `site_budget`, `stage_readiness('site')` thêm `budget_approved`, khối `tc/site-budget-approval.tsx`); đợt thu
+    `contract_terms.collection_trigger` = `ky_hop_dong` / `het_bao_hanh`; kênh gửi báo giá `quotes.sent_channel`; lợi nhuận dự toán lấy số
+    máy tính (`_estimate_margin_state`, số gõ tay chỉ cảnh báo lệch); giữ lại bảo hành CHỈ ở đợt thanh toán
+    (`record_collection_owner_approval` không tự trừ nữa). Gói B (0254 enum, 0255) đề nghị chi gõ tay tên tổ đội → cảnh báo
+    (`payment_request_crew_warning`, `kt/crew-payment-warning.tsx`); nộp thầu cần danh mục hồ sơ (`bidding_projects_bid_documents_gate`);
+    vai trò mới `KD_NVS` «Kinh doanh NVS» = KD + xem SX, tài khoản `kinhdoanh.nvs@`; thuê nội bộ quá hạn báo chỉ huy trưởng. Gói C
+    (0256) báo giá thuê lập TRONG cơ hội NVS (`crm/rental-quote-panel.tsx`, `send_rental_quote_to_customer`, `/sx/bao-gia-thue` chỉ
+    xem); hợp đồng cho thuê: thẻ «Tiền thuê thực tế đến nay» (`contract_rental_actuals`), quyết toán khi mọi đơn thuê tất toán, cột
+    `contracts.settled_value`, báo vượt `sx.rental_contract_overrun_percent` (TRỐNG, demo 20); chặn ngày trả / điều chuyển thực tế ở
+    tương lai; bàn giao thiết kế cần đầu bài đã xác nhận + khảo sát hoặc lý do (`waive_design_survey`). 0257 `stage_readiness` chép
+    0253 + báo giá thuê ở bước Đàm phán + điều kiện quyết toán hợp đồng cho thuê.
+  - **Tài liệu cho anh Dũng:** ba bản dữ liệu demo nhập tay (Claude Docs) NVO https://claude.ai/artifact/3B3BkZNYQS3s2BhFo3LxWH ·
+    NVC https://claude.ai/artifact/8GAS9gY5ix5HYJ98jG7qSB · NVS https://claude.ai/artifact/Uvj75wavHmRX41LEt2CVoo (theo hệ thống
+    SAU 0253–0257); ba phiếu khảo sát trống PDF `backup/phieu-khao-sat-trong/` (xuất từ đúng `printBlankSurveyForm`, kịch bản
+    `blank-survey-pdf.cjs` ở scratchpad phiên).
+  - **AI Design T185–T188** (`doc/design/QUYET_DINH_AI.md`): kiểm ánh sáng trước lượt (`daylightPreflightAdvice`) và dải ban công mặt
+    bên của khung hai hàng GIỮ; tắt vòng gọi lại nâng điểm (`score_revision: false`); lượt đầu chỉ phác tầng 1 (lời dẫn 9.15.0) hỏng
+    lượt thật 0,55 USD → lùi về 9.15.1; mọc lại bản phác kiểu MANSION thử rồi gỡ (27 → 28 vòng, chậm gần gấp đôi). Lượt thật 30/10:
+    9272 qua ở lời gọi 3 (70,2 điểm), THU5 ra phương án LẦN ĐẦU (69 điểm, 4 tầng) — cả hai vẫn dưới sàn nhóm D, E. Kết luận: muốn tiến
+    thêm phải làm bộ dựng «hành lang trước» (việc lớn).
+  - **AI Design — định vị (anh Dũng chốt 30/10):** dùng để PHÁC THẢO Ý TƯỞNG gặp khách, không ra hồ sơ thiết kế; số phương án tùy
+    chỉnh; Kinh doanh và kiến trúc sư cùng dùng. Lời khuyên của Claude Code (CHỜ anh Dũng duyệt) ở «Bước tiếp theo» 0.
+  - Máy tự khởi động lại 19:19 — đã bật lại Docker → CSDL → Worker → Vite, CSDL giữ nguyên tới 0257.
 
 #### Trạng thái từng phần
 
@@ -1332,9 +1369,32 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Bản demo cũ `nvg.tests99.workers.dev` | Vẫn chạy bản trước GĐ1, CSDL `awaiwegmuykhctnysvou` — ở tài khoản khác, máy này KHÔNG vào được                                                                                                                                                                                                                                                                                  |
 | Bản demo mới                          | Supabase `fvfmtbdcvcniakigfpdm` đã migrate 0001→0181 + seed + 5/6 kịch bản demo (thiếu NVO). Cloudflare tài khoản wewear (`automkt.workers.dev`) — **chưa deploy**; lần thử đầu bị từ chối vì gói Free không cho `limits.cpu_ms`                                                                                                                                                |
 | Repo                                  | Chỉ đẩy lên `dungpv1626/NVG-TEST` (remote `dungpv`); remote `origin` (anhoangha) đã khoá đẩy                                                                                                                                                                                                                                                                                    |
+| Chạy thử trọn ba luồng (0250–0252)    | Xong 30/10 bằng đúng vai trên trình duyệt: NVO, NVC 8/8, NVS 8/8 đạt sau khi sửa. Lỗi còn để lại (không sửa vì nhỏ / cần quyết): dải tiến trình thiết kế sau bàn giao, vài thao tác không hỏi lại, 19 ô `type="number"`, danh mục nghiệm thu NVC lẫn mục NVO, chọn thầu phụ báo nhầm Ban Giám đốc NVS, đơn từ điều chuyển vẫn đòi ký phiếu giao, công nợ nội bộ chưa có khoản phải trả bên NVC |
+| 18 câu nghiệp vụ (0253–0257)          | Xong trên máy, phép thử CSDL chung 282/282, web 296/300 (4 đỏ = AbortSignal Node 24 có sẵn). CHƯA kiểm trên trình duyệt — chạy theo ba tài liệu dữ liệu demo là cách kiểm |
+| AI Design (định vị 30/10)             | Phác thảo ý tưởng. Đầu bài, ảnh nội thất / mặt đứng / phối cảnh chạy được; mặt bằng chưa ổn định (≈ 70 điểm, dưới sàn nhóm D / E, mới thử 2 kiểu nhà); CHƯA có bản trình bày gửi khách, chế độ Kinh doanh, người thật dùng thử. Tổng tiền lượt thật tới nay ≈ 9–10 USD |
 
 #### Bước tiếp theo
 
+00. **Việc tiếp theo (sau phiên 30/10/2026):**
+   (A) **Anh Dũng chạy thử theo ba tài liệu dữ liệu demo** (NVO / NVC / NVS, link ở mục phiên 30/10) — đồng thời là lượt kiểm
+   trên trình duyệt cho 0253–0257. Lỗi gặp → sửa ngay. Bước 3.4 NVS (thuê nội bộ quá hạn) cần chạy tay hàm quét đêm
+   `scan_rental_expiry_reminders` mới thấy nhắc.
+   (B) **Câu còn chờ anh Dũng:** ngân sách đi từ gói thầu / dự toán thiết kế đang coi là ĐÃ DUYỆT (`theo_du_toan`) — hạn mức duyệt
+   dự toán có thể chỉ tới Ban Giám đốc; có bắt buộc Tổng Giám đốc duyệt cả loại này không.
+   (C) **AI Design — lời khuyên của Claude Code, CHỜ anh Dũng duyệt** (anh Dũng dặn lưu lại):
+   1. Chạy thử 4 đầu bài sát khách NVO (≈ 2 USD, trần 2,5 USD, mỗi đầu bài một lượt, ghi đầu vào + kỳ vọng trước, hỏng thì dừng
+      không chạy lại): nhà ống 4 × 15 m 3 tầng · lô góc 6 × 16 m 4 tầng · nhà vườn 1 tầng 10 × 20 m · đất méo hình thang. Kết quả
+      quyết có làm bộ dựng «hành lang trước» không.
+   2. Trần tiền AI Design 30 USD / tháng chung cả công ty, báo Ban Giám đốc khi chạm 80 % (≈ 30–50 khách / tháng, NVO cần ~6).
+   3. Kinh doanh tạo, kiến trúc sư bấm «Duyệt gửi khách» trước khi tới khách (≈ 5 phút); 2–3 tháng sau thấy hầu như duyệt hết thì bỏ.
+   4. Chỉ cơ hội ĐÃ KHẢO SÁT mới tạo / gửi được bản ý tưởng (không đòi đặt cọc).
+   5. Gửi bằng ĐƯỜNG DẪN XEM có hạn 14 ngày, thu hồi được, đếm lượt xem (như thư viện mẫu); ảnh có dấu NVG + «Phương án ý tưởng —
+      chưa phải thiết kế», không kích thước chi tiết, không DXF, không tải về.
+   Thứ tự làm: (1) thử 4 đầu bài → (2) đường dẫn xem cho khách có duyệt kiến trúc sư → (3) nối phong cách vào mặt ngoài (thêm Nhà cổ
+   truyền, Mái Nhật vào `kb/style_catalogue.yaml`) → (4) chế độ Kinh doanh (đầu bài rút gọn 12–15 câu, trần tháng, chỉ cơ hội đã
+   khảo sát, mở quyền) → (5) 1–2 kiến trúc sư + 1 Kinh doanh NVO dùng thử trên khách thật vài tuần. Bộ dựng «hành lang trước» chỉ làm
+   nếu (1) cho thấy máy hỏng nhiều ở kiểu nhà phổ biến. Anh Dũng đồng ý thì chạy (1) trước.
+   (D) Việc của phiên 29/10 bên dưới vẫn còn hiệu lực (gói đợt 2, T6–T8, câu hỏi NVG, email thật, phát hành).
 0. **Việc tiếp theo (sau phiên 29/10/2026) — chờ anh Dũng chọn:**
    (1) **Kiểm đợt 1 khớp khảo sát anh Thi (G1–G6, 0244–0249) trên trình duyệt bằng đúng vai** — chưa gói nào chạy thử trên trình
    duyệt (máy thiếu RAM khi các agent làm). Dùng kịch bản thử NVO https://claude.ai/artifact/9UfVoTHcxJyi99xTDu3V6h và NVS
@@ -1622,6 +1682,17 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 | Lượt «Sửa lại» AI Design chỉ dùng lời gọi sửa rẻ, không bao giờ rơi vào vòng xếp lại cả nhà (T184) | Lượt sửa 29/10 tốn 0,589 USD (1,4 lần một lượt xếp mới) mà không lưu gì; ước báo trước 0,1 USD là sai |
 | Chạy thử trên máy: địa chỉ CSDL / Worker theo tên máy trình duyệt đang mở, không ghi cứng IP | Wifi đổi IP ba lần trong hai ngày làm hỏng đăng nhập |
 | Làm song song bằng agent: tối đa hai gói, số migration chia trước, agent không sửa nhật ký migration, người gộp đăng ký + chạy lại phép thử chung | Máy 8 GB; hai gói cùng sửa `decide_approval` / chặn nhau (G4 chặn G5) chỉ lộ khi chạy phép thử chung sau khi gộp |
+| Chạy thử trọn luồng bằng agent khi anh Dũng vắng: mỗi luồng một agent nối tiếp (không song song — 8 GB RAM), sửa lỗi tìm thấy, người gộp duyệt migration + commit; lỗi cần quyết nghiệp vụ thì ghi câu hỏi, không tự chọn | Anh Dũng 30/10: «chạy hết 3 luồng rồi báo cáo». Cách này lộ lỗi mà phép thử đơn vị không thấy (lộ lợi nhuận, thông báo lộ giá trị, nút hiện sai lượt) |
+| Hợp đồng thiết kế quyết toán khi khách duyệt hồ sơ kỹ thuật; ký hợp đồng thiết kế tự tạo hồ sơ thiết kế; trọn gói NVO ký xong KHÔNG mở công trình ngay mà mở lúc bàn giao thiết kế (0253) | Anh Dũng trả lời 30/10; không thi công trước khi có thiết kế |
+| Ngân sách thi công lập theo GIÁ VỐN báo giá (không lấy giá bán), Tổng Giám đốc duyệt trước khởi công; ngân sách từ gói thầu / dự toán thiết kế coi như đã duyệt (chờ anh Dũng xác nhận) (0253) | Anh Dũng 30/10: «cần TGĐ duyệt ngân sách thi công»; dự toán nguồn đã qua hộp duyệt |
+| Lợi nhuận dự toán lấy số MÁY TÍNH, số gõ tay chỉ cảnh báo lệch (0253) | Lượt thử NVC: gõ 900 tr (7 %) trong khi máy tính 1,184 tỷ (16 %) — gõ tay lách được `min_margin_percent` |
+| Giữ lại bảo hành CHỈ ở đợt thanh toán, hồ sơ thanh toán chủ đầu tư không tự trừ theo điều khoản Bảo hành (0253) | Anh Dũng chọn; hai nơi cùng giữ làm dòng tiền tính trùng |
+| Đề nghị chi gõ tay tên tổ đội: CẢNH BÁO, không chặn (0255) | Anh Dũng chọn; chặn cứng làm kẹt khoản chi lẻ không qua tổ đội |
+| Vai trò riêng `KD_NVS` = Kinh doanh + xem SX, không đổi quyền `KD` (0254, 0255) | Ma trận quyền không có chiều pháp nhân — thêm xem SX cho KD sẽ mở cho cả Kinh doanh NVC / NVO |
+| Báo giá thuê NVS lập trong cơ hội, nhập một lần; trang Xưởng chỉ xem (0256) | Anh Dũng: «báo giá ở Kinh doanh»; trước phải lập hai báo giá |
+| Hợp đồng cho thuê: giá trị ký giữ nguyên, thêm «tiền thuê thực tế» + «giá trị quyết toán» riêng, quyết toán khi mọi đơn thuê tất toán, vượt ngưỡng thì nhắc làm phụ lục (0256) | Giá trị ký là số trên văn bản đã ký, không ghi đè (4.2 bảng lịch sử, BSD 3.5); Claude Code đề xuất, anh Dũng đồng ý |
+| Chặn ngày trả / điều chuyển THỰC TẾ ở tương lai, ngày hẹn vẫn tự do; bàn giao thiết kế bắt buộc đầu bài đã xác nhận, khảo sát bỏ qua phải ghi lý do (0256) | Claude Code đề xuất, anh Dũng đồng ý 30/10 |
+| AI Design là công cụ PHÁC THẢO Ý TƯỞNG gặp khách, không ra hồ sơ thiết kế; số phương án tùy chỉnh; Kinh doanh + kiến trúc sư cùng dùng | Anh Dũng chốt 30/10. Mặt bằng ≈ 70 điểm đủ để khách hình dung; không cần chạy theo điểm số trước khi đưa vào dùng |
 | Sửa câu chữ / đường dẫn của hàm dài bằng bản chép nguyên văn hoặc trigger nhỏ, không viết lại logic                                                                                    | `decide_approval` ~300 dòng: đổi đường dẫn thông báo bằng trigger trên `notifications` thay vì chép cả hàm (bài học 0086)                                                                              |
 
 ### 9.5 Câu hỏi chờ Haan (đang chạy theo mặc định trong ngoặc)
