@@ -3540,6 +3540,63 @@ export function hintsFor(issues: readonly PlanIssue[], prompts: AiPrompts, prefi
   return [...lines];
 }
 
+/**
+ * Lưới tầng ĐÃ GIỮ ngay dưới tầng hỏng thấp nhất, như chương trình đã dựng (30/10/2026). Trước đây lượt sửa bỏ hẳn tầng
+ * đã khoá khỏi lời gửi (`revisionView`), nên mô hình vẽ lại tầng trên mà không thấy ô thang, khu ướt, bếp, phòng thờ
+ * thật của tầng dưới — chỉ biết qua câu lỗi SAU khi đã vẽ sai (đè ô thang, WC trên phòng ngủ). Gửi một lưới chữ cùng
+ * cỡ lưới bản phác, mỗi ô một ký hiệu nhóm phòng; nhóm đọc từ `kb/room_vocabulary.yaml` (`wet`, `dry_below`). Câu
+ * mẫu `storey_below_built` ở `kb/ai_design_prompts.yaml`; vắng câu mẫu = không gửi.
+ */
+export function builtBelowHints(
+  input: Pick<PlanContextInput, 'stairTypes' | 'groups'> & {
+    roomGroups?: Record<string, string[]>;
+  },
+  context: Pick<PlanContext, 'buildableCm'>,
+  intent: HouseIntent,
+  arranged: readonly ArrangedLevel[],
+  kept: readonly number[],
+  prompts: AiPrompts,
+): string[] {
+  if (!kept.length || !prompts.floorLevel.hints.storey_below_built) return [];
+  const level = Math.max(...kept);
+  const done = arranged.find((item) => item.level.level === level);
+  const above = intent.sketches?.find((sketch) => sketch.level === level + 1);
+  if (!done || !above) return [];
+  const tokens = above.rows.map((row) => row.trim().split(/\s+/).filter(Boolean));
+  const cols = Math.max(...tokens.map((row) => row.length));
+  if (!tokens.length || !(cols > 0)) return [];
+  const wet = new Set(input.roomGroups?.wet ?? []);
+  const dry = new Set(input.roomGroups?.dry_below ?? []);
+  const typeOf = new Map(done.level.rooms.map((room) => [room.id, room.type]));
+  const mark = (id: string): string => {
+    const type = typeOf.get(id);
+    if (!type) return '.';
+    if (input.stairTypes.includes(type)) return 'S';
+    if (type === 'elevator') return 'E';
+    if (type === 'light_well') return 'L';
+    if (type === 'kitchen') return 'K';
+    if (type === 'altar_room') return 'A';
+    if (wet.has(type)) return 'W';
+    if (dry.has(type)) return 'B';
+    if (input.groups.vertical.has(type)) return 'C';
+    return 'G';
+  };
+  const grid = partitionRows(done.level.rooms, context.buildableCm, cols, tokens.length)
+    .map((row) => row.split(' ').map(mark).join(' '))
+    .join('\n');
+  return hintsFor(
+    [
+      {
+        code: 'storey_below_built',
+        level: 'blocking',
+        message: 'storey_below_built',
+        params: { level, above: level + 1, grid },
+      },
+    ],
+    prompts,
+  );
+}
+
 /** Câu trả lời trước không qua được hợp đồng — ghi chú cho lượt lấy mẫu lại. */
 export function schemaHints(issues: readonly string[]): string[] {
   return issues
@@ -4402,6 +4459,7 @@ export function evaluateHouse(
               prompts,
             )
           : []),
+        ...builtBelowHints(input, context, renamed, arranged, kept, prompts),
       ],
       renamed: kept.length
         ? replaceKeptSketches(

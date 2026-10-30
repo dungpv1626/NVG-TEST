@@ -30,7 +30,10 @@
 # 9.10.0 (14/10/2026, T161 — Haan hỏi lỗi d084a46e ở mô hình hay dựng hình): luật 6 — hành lang / khu chung dọc trọn `arrival` của ô thang (tri thức `stair_min_m.arrival` mới, ngay lượt đầu); hành lang đúng `corridor_min_cells` ô, sàn rộng hơn là phòng; luật 10 + `B_balcony` + `R_balcony` — ban công chính mặt tiền lớn nhất, mở từ hành lang / khu chung, ban công khác nhỏ (thay «bedroom first» cho mọi ban công); câu nhắc `balcony_main_access`, `balcony_main_depth` (hai câu đầu bài mới). Rút câu trùng ý để vừa trần T46: câu mở đầu kể lại lược đồ, «Relationships…» (đã có trong lược đồ), «habitable rooms on open_faces» (trùng `knowledge.faces`), «the stair where it is on storey 1» (trùng luật 6).
 # 9.11.0 (23/10/2026, T165 — lượt thật THU5 nhà phố 5 × 18 m có ô tô): `floor_level` luật 7 có câu `[[entry_garage|…]]` — gara được làm entry_room khi hàng đường không đủ cho gara và phòng khách cạnh nhau (luật T115 trước chỉ có ở `house_layout` / `house_bands`); câu nhắc mới sketch_row_too_narrow, entrance_wrong_side_garage, door_outside_on_boundary_garage.
 # 9.13.0 (29/10/2026, T183 — anh Dũng chọn «dặn mô hình» cho hồ sơ 9272): `floor_level` (bản phác lưới cả nhà) — mọi WC / giặt / khu ướt tầng trên vẽ NGAY TRÊN khu ướt tầng dưới (một trục ướt); không được thì trên thang, hành lang, kho, gara — không bao giờ trên phòng ngủ, khách, ăn, bếp, thờ; phòng ngủ có ban công riêng tránh các ô trên khu ướt tầng dưới để trục ấy dành cho khu ướt. Lý do: phát lại T179–T182 — khung hai hàng không gỡ được 9272 vì phòng ngủ chính (mang ban công hông bắt buộc) chiếm đúng góc trên khu ướt tầng 1.
-version: '9.13.0'
+# 9.14.0 (30/10/2026, anh Dũng chọn «AI vẽ từng tầng, máy kiểm ngay, AI sửa đúng tầng»): câu nhắc storey_below_built — lượt sửa
+# gửi kèm lưới tầng đã giữ ngay dưới NHƯ CHƯƠNG TRÌNH DỰNG (ô thang, khu ướt, bếp, thờ, phòng ở), trước đây tầng đã khoá bị bỏ hẳn
+# khỏi lời gửi nên mô hình vẽ lại tầng trên mà không thấy tầng dưới. Không đổi khối `floor_level.system`.
+version: '9.14.0'
 
 program:
   system: |
@@ -370,6 +373,11 @@ floor_level:
     altar_beside_wc: '- The altar room "{room}" on storey {level} shares a wall with the wc "{wc}"; put another room or the corridor between them.'
     altar_facing_wc: '- The door of the altar room "{room}" faces the door of the wc "{wc}" across "{via}"; the altar room must not face a wc — move one of them along the corridor or to another side.'
     revision_kept: '- Storey {levels} passed every check and is kept exactly as it is; do not return it.'
+    # 30/10/2026: lưới tầng đã giữ ngay dưới, như chương trình dựng (`builtBelowHints`) — trước đây mô hình vẽ lại tầng trên
+    # mà không thấy ô thang / khu ướt thật bên dưới.
+    storey_below_built: |-
+      - Storey {level} as the program built it, on your sketch grid (read-only, row 0 = street): S stair — storey {above} draws its stair on exactly these cells; E lift; L light well; W wc or laundry — put the wc and laundry of storey {above} over these; K kitchen and A altar room — never a wc over them; B living, dining or bedroom — no wc or laundry over them; C corridor; G other; . unbuilt.
+      {grid}
     band_level_missing: '- Storey {level} has no bands in your answer; give its full list of bands.'
     stair_end_blocked: '- Storey {level}: the {end} end of THANG (where the flight from below arrives or the next flight starts) touches no corridor, landing or living space; put one across that end — every storey uses the same stair position and direction.'
     light_well_not_stacked: '- The light well "{rooms}" of storey {level} is covered on storey {above}; repeat it at the same place and size on every storey above, open to the sky.'
