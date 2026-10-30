@@ -9,7 +9,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
 export type OutboundEntityType =
-  'quotes' | 'contracts' | 'contract_signed_scan' | 'showcase_shares';
+  | 'quotes'
+  | 'contracts'
+  | 'contract_signed_scan'
+  | 'showcase_shares'
+  /** Báo giá thuê giàn giáo đã duyệt (0252). */
+  | 'rental_quotes';
 
 export interface OutboundShare {
   id: string;

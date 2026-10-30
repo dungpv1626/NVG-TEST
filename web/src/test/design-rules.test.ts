@@ -407,6 +407,20 @@ describe('Không để trình duyệt tự sinh chữ tiếng Anh', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('ô chọn tệp gốc luôn ẩn — nút tiếng Việt thay cho «Choose File / No file chosen»', () => {
+    // Lọt thật 30/10/2026: ba khung ký của phân hệ Cho thuê và ô tải mẫu hợp đồng để lộ ô gốc.
+    // Dùng `FilePick` hoặc ẩn ô (`hidden` / `sr-only`) rồi tự vẽ nút.
+    const offenders = allPageSources()
+      .flatMap(({ file, code }) =>
+        // Thân thẻ có `=>` trong onChange — không dừng ở `>` mà ở `/>`.
+        [...code.matchAll(/<input\b(?:(?!\/>)[\s\S])*?type="file"(?:(?!\/>)[\s\S])*?\/>/g)]
+          .filter((m) => !/className="(?:hidden|sr-only)"|\shidden\s/.test(m[0]))
+          .map(() => file),
+      )
+      .filter((f, i, all) => all.indexOf(f) === i);
+    expect(offenders).toEqual([]);
+  });
+
   it('«hôm nay» lấy theo giờ Việt Nam, không cắt chuỗi giờ UTC', () => {
     // `toISOString().slice(0, 10)` là ngày UTC: từ 0 tới 7 giờ sáng nó vẫn là hôm qua. Lỗi thật
     // 01/10/2026 lúc 00:40 — ô «Ngày lập» biên bản giàn giáo, ngày nhật ký công trường, ngày

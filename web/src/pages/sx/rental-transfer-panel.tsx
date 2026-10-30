@@ -15,6 +15,7 @@ import { formatDate, formatNumber } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
+import { FilePick } from '@/components/ui/file-pick';
 import { Input } from '@/components/ui/input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { SignaturePad, type SignaturePadHandle } from '@/components/ui/signature-pad';
@@ -115,12 +116,11 @@ function SignTransfer({ transfer, onDone }: { transfer: RentalTransfer; onDone: 
         </div>
       ) : (
         <Field label="Ảnh biên bản giấy" required>
-          <input
-            type="file"
+          <FilePick
             accept={RENTAL_RETURN_SCAN_ACCEPT}
             capture="environment"
-            onChange={(e) => setScan(e.target.files?.[0] ?? null)}
-            className="block w-full text-sm"
+            file={scan}
+            onChange={setScan}
           />
         </Field>
       )}

@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   CONTRACT_FLOW,
+  CONTRACT_RENTAL_FLOW,
   CONTRACT_SOURCE_LABELS,
   CONTRACT_SOURCE_ROUTES,
   CONTRACT_STAGE_META,
@@ -454,7 +455,7 @@ export function ContractDetailPage() {
           <>
             <RecordChain kind="contract" id={contract.id} />
             <StepTrack
-              flow={CONTRACT_FLOW}
+              flow={contract.type === 'cho_thue' ? CONTRACT_RENTAL_FLOW : CONTRACT_FLOW}
               current={contract.stage}
               nextRequirements={nextRequirements}
               holder={contract.stage === 'nhap' ? (contract.responsible?.full_name ?? null) : null}
@@ -484,6 +485,7 @@ export function ContractDetailPage() {
                     currentValue={money.currentValue}
                     hasSite={hasSite}
                     opensSite={contractOpensSite(contract.type)}
+                    isRental={contract.type === 'cho_thue'}
                     pendingDesignCode={pendingDesign?.code ?? null}
                     isResponsible={isResponsible}
                     canApprove={canApprove}

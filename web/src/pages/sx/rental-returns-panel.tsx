@@ -11,6 +11,7 @@ import { useRef, useState } from 'react';
 import { formatCurrency, formatDate, formatDateTime, formatNumber } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { FilePick } from '@/components/ui/file-pick';
 import { Input } from '@/components/ui/input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { SignaturePad, type SignaturePadHandle } from '@/components/ui/signature-pad';
@@ -133,12 +134,11 @@ function SignForm({
           required
           hint="Chụp rõ cả trang, thấy đủ chữ ký hai bên. Nhận ảnh hoặc tệp PDF, tối đa 20 MB."
         >
-          <input
-            type="file"
+          <FilePick
             accept={RENTAL_RETURN_SCAN_ACCEPT}
             capture="environment"
-            onChange={(e) => setScan(e.target.files?.[0] ?? null)}
-            className="block w-full text-sm"
+            file={scan}
+            onChange={setScan}
           />
         </Field>
       )}

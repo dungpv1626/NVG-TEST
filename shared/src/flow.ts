@@ -117,6 +117,23 @@ export const CONTRACT_FLOW: Flow<ContractStage> = {
   },
 };
 
+/**
+ * Hợp đồng cho thuê giàn giáo (NVS) không mở công trình: ký xong là việc của Xưởng (đơn thuê, giao –
+ * thu hồi) và Kế toán (tất toán). Trước đây dải bước ghi «Thi công mở công trình» cho cả hợp đồng
+ * cho thuê (chạy thử NVS 30/10/2026).
+ */
+export const CONTRACT_RENTAL_FLOW: Flow<ContractStage> = {
+  ...CONTRACT_FLOW,
+  steps: {
+    ...CONTRACT_FLOW.steps,
+    da_ky: {
+      ...CONTRACT_FLOW.steps.da_ky,
+      owner:
+        'Xưởng lập đơn thuê, giao và thu hồi giàn giáo; Kế toán tất toán; Ban Giám đốc quyết toán khi các đơn thuê đã tất toán',
+    },
+  },
+};
+
 const siteNext = (stage: SiteStage): readonly SiteStage[] =>
   SITE_STAGE_TRANSITIONS[stage].filter((s) => s !== 'tam_dung');
 

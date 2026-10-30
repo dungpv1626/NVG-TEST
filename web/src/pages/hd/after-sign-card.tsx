@@ -132,6 +132,7 @@ export function AfterSignCard({
   canApprove,
   onOpenAmendments,
   hasScan,
+  isRental = false,
 }: {
   contractId: string;
   customer: { id: string; name: string } | null;
@@ -146,6 +147,8 @@ export function AfterSignCard({
   onOpenAmendments: () => void;
   /** Đã có bản hợp đồng đã ký trên hệ thống (0187 / 0189). */
   hasScan: boolean;
+  /** Hợp đồng cho thuê giàn giáo (NVS): không có công trình — Xưởng lập đơn thuê, Kế toán tất toán. */
+  isRental?: boolean;
 }) {
   const { data: terms = [] } = useContractTerms(contractId);
   const rounds = terms
@@ -185,6 +188,12 @@ export function AfterSignCard({
           : 'Ban Giám đốc hoặc Thi công bấm «Mở công trình» ở đầu trang.',
     });
   }
+  if (isRental) {
+    steps.push({
+      title: 'Bàn giao cho Xưởng lập đơn thuê',
+      body: 'Xưởng sản xuất – Cho thuê đã được báo: lập đơn thuê ở «Cho thuê giàn giáo» → «Lập hợp đồng thuê» → «Lập từ hợp đồng cho thuê đã ký», giao hàng có phiếu giao khách ký. Các đơn thuê của hợp đồng hiện ở khối «Đơn thuê giàn giáo theo hợp đồng» bên dưới.',
+    });
+  }
   steps.push({
     title: 'Theo dõi các đợt thanh toán',
     body: (
@@ -215,12 +224,16 @@ export function AfterSignCard({
                       {CONTRACT_TERM_TYPE_LABELS[t.term_type]}
                     </span>
                     <span className="block">{t.description}</span>
-                    <CollectionBasis
-                      term={t}
-                      contractId={contractId}
-                      targets={targets}
-                      canLink={canLink}
-                    />
+                    {/* Hợp đồng cho thuê không có mốc / biên bản nghiệm thu: tiền thuê chốt theo biên bản
+                      thu hồi, Kế toán tất toán. */}
+                    {!isRental && (
+                      <CollectionBasis
+                        term={t}
+                        contractId={contractId}
+                        targets={targets}
+                        canLink={canLink}
+                      />
+                    )}
                   </span>
                   {t.amount !== null && (
                     <span className="font-medium tabular-nums">{formatCurrency(t.amount)}</span>
@@ -269,9 +282,13 @@ export function AfterSignCard({
   }
   steps.push({
     title: 'Quyết toán hợp đồng',
-    body: canApprove
-      ? 'Bấm «Quyết toán hợp đồng» ở đầu trang khi công trình đã sang Bảo hành hoặc Hoàn thành.'
-      : 'Ban Giám đốc quyết toán khi công trình đã sang Bảo hành hoặc Hoàn thành — người chịu trách nhiệm hợp đồng không phải làm gì ở bước này.',
+    body: isRental
+      ? canApprove
+        ? 'Bấm «Quyết toán hợp đồng» ở đầu trang khi mọi đơn thuê của hợp đồng đã thu hồi hết và Kế toán đã tất toán.'
+        : 'Ban Giám đốc quyết toán khi mọi đơn thuê đã thu hồi hết và Kế toán đã tất toán — người chịu trách nhiệm hợp đồng không phải làm gì ở bước này.'
+      : canApprove
+        ? 'Bấm «Quyết toán hợp đồng» ở đầu trang khi công trình đã sang Bảo hành hoặc Hoàn thành.'
+        : 'Ban Giám đốc quyết toán khi công trình đã sang Bảo hành hoặc Hoàn thành — người chịu trách nhiệm hợp đồng không phải làm gì ở bước này.',
   });
 
   return (

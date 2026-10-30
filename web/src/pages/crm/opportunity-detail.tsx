@@ -18,6 +18,7 @@ import {
   formatDate,
   formatDateTime,
   formatPhone,
+  type ContractType,
   type OpportunityStage,
 } from '@nvg/shared';
 import { DraftContractButton } from '@/components/contract/draft-contract-button';
@@ -146,6 +147,8 @@ export function OpportunityDetailPage() {
   const customer = (data as unknown as { customer_full: CustomerFull | null }).customer_full;
   // Pháp nhân của cơ hội — chọn phiếu khảo sát riêng (NVC / NVO / NVS) và in tên lên phiếu.
   const company = companies?.find((c) => c.id === data.company_id) ?? null;
+  // NVS cho thuê / bán giàn giáo: hợp đồng mặc định là hợp đồng cho thuê, không phải thi công.
+  const defaultContractType: ContractType = company?.code === 'NVS' ? 'cho_thue' : 'thi_cong';
   const isHandedOver = data.handed_over_at !== null;
   const designOnly = data.design_only_at !== null;
   const designContract = contractGroup?.find((c) => c.scope_kind === 'thiet_ke') ?? null;
@@ -323,6 +326,7 @@ export function OpportunityDetailPage() {
                     group={contractGroup}
                     designOnly={designOnly}
                     canEdit={canEdit && !isHandedOver}
+                    defaultContractType={defaultContractType}
                   />
                 ) : undefined
               }
@@ -391,7 +395,7 @@ export function OpportunityDetailPage() {
                     <DraftContractButton
                       sourceType="opportunities"
                       sourceId={data.id}
-                      defaultType="thi_cong"
+                      defaultType={defaultContractType}
                       existingContractId={contractId}
                       group={contractGroup}
                       designOnly={designOnly}

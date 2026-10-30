@@ -10,6 +10,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
+  compensationFromTable,
   formatCurrency,
   formatDate,
   formatDateTime,
@@ -33,6 +34,7 @@ import {
   type RentalReturnItemInput,
 } from '@/hooks/use-sx';
 import { useRentalReturns } from '@/hooks/use-rental-returns';
+import { useCompensationPriceTable } from '@/hooks/use-sx-rental';
 import { useCan } from '@/lib/auth';
 import { RentalDeliveryPanel } from './rental-delivery-panel';
 import { RentalReturnsPanel } from './rental-returns-panel';
@@ -42,6 +44,8 @@ const EM_DASH = '—';
 
 interface ReturnDraft {
   materialId: string;
+  /** Mã vật tư — khoá của bảng giá bồi thường. */
+  code: string;
   label: string;
   unit: string;
   remaining: number;
@@ -49,6 +53,8 @@ interface ReturnDraft {
   quantityDamaged: string;
   quantityLost: string;
   compensationAmount: string;
+  /** Người thu hồi đã tự sửa mức bồi thường — thôi điền theo bảng giá. */
+  compensationTouched: boolean;
   note: string;
 }
 
@@ -61,6 +67,7 @@ export function RentalAgreementDetailPage() {
   const updateAgreement = useUpdateRentalAgreement();
   const returnAgreement = useReturnRentalAgreement();
   const { data: rentalReturns, refetch: refetchReturns } = useRentalReturns(id);
+  const { data: compensationTable } = useCompensationPriceTable();
   const [searchParams, setSearchParams] = useSearchParams();
   const [signingId, setSigningId] = useState<string | null>(null);
 
@@ -89,6 +96,7 @@ export function RentalAgreementDetailPage() {
     setReturnDrafts(
       outstandingItems.map((it) => ({
         materialId: it.material_id,
+        code: it.material?.code ?? '',
         label: `${it.material?.code ?? ''} — ${it.material?.name ?? ''}`,
         unit: it.material?.unit ?? '',
         remaining: it.remaining,
@@ -96,6 +104,7 @@ export function RentalAgreementDetailPage() {
         quantityDamaged: '0',
         quantityLost: '0',
         compensationAmount: '0',
+        compensationTouched: false,
         note: '',
       })),
     );
@@ -121,6 +130,17 @@ export function RentalAgreementDetailPage() {
   // một hàm khai báo sau đó trong cùng scope).
   const current = agreement;
 
+  /** Điền mức bồi thường theo bảng giá khi số hỏng / mất đổi — trừ khi người thu hồi đã tự sửa. */
+  function withTableCompensation(d: ReturnDraft): ReturnDraft {
+    if (d.compensationTouched) return d;
+    const amount = compensationFromTable(
+      compensationTable?.[d.code],
+      Number(d.quantityDamaged),
+      Number(d.quantityLost),
+    );
+    return amount === null ? d : { ...d, compensationAmount: String(amount) };
+  }
+
   async function submitReturn(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setReturnError(null);
@@ -130,7 +150,21 @@ export function RentalAgreementDetailPage() {
       return;
     }
 
-    const preparedItems: RentalReturnItemInput[] = returnDrafts.map((d) => ({
+    // Đợt trả từng phần: loại chưa trả lần này (cả ba số bằng 0) thì bỏ khỏi biên bản — trước đây cả
+    // đợt bị từ chối «Mỗi dòng trả phải có ít nhất một số lượng lớn hơn 0» (chạy thử NVS 30/10/2026).
+    const returning = returnDrafts.filter(
+      (d) =>
+        (Number(d.quantityOk) || 0) +
+          (Number(d.quantityDamaged) || 0) +
+          (Number(d.quantityLost) || 0) >
+        0,
+    );
+    if (returning.length === 0) {
+      setReturnError('Nhập số lượng trả cho ít nhất một loại giàn giáo.');
+      return;
+    }
+
+    const preparedItems: RentalReturnItemInput[] = returning.map((d) => ({
       material_id: d.materialId,
       quantity_ok: Number(d.quantityOk) || 0,
       quantity_damaged: Number(d.quantityDamaged) || 0,
@@ -258,7 +292,10 @@ export function RentalAgreementDetailPage() {
                       ? formatDate(agreement.actual_return_date)
                       : EM_DASH,
                   },
-                  { label: 'Số ngày đã thuê', value: `${daysSoFar} ngày` },
+                  {
+                    label: 'Số ngày đã thuê',
+                    value: daysSoFar > 0 ? `${daysSoFar} ngày` : 'Chưa tới ngày bắt đầu thuê',
+                  },
                   { label: 'Tiền đặt cọc', value: formatCurrency(agreement.deposit_amount) },
                   {
                     // Tiền thuê chỉ chốt ở từng đợt trả (theo số ngày thuê thật của đợt đó).
@@ -394,7 +431,12 @@ export function RentalAgreementDetailPage() {
                             onChange={(e) =>
                               setReturnDrafts((prev) =>
                                 prev.map((d, i) =>
-                                  i === index ? { ...d, quantityDamaged: e.target.value } : d,
+                                  i === index
+                                    ? withTableCompensation({
+                                        ...d,
+                                        quantityDamaged: e.target.value,
+                                      })
+                                    : d,
                                 ),
                               )
                             }
@@ -409,7 +451,9 @@ export function RentalAgreementDetailPage() {
                             onChange={(e) =>
                               setReturnDrafts((prev) =>
                                 prev.map((d, i) =>
-                                  i === index ? { ...d, quantityLost: e.target.value } : d,
+                                  i === index
+                                    ? withTableCompensation({ ...d, quantityLost: e.target.value })
+                                    : d,
                                 ),
                               )
                             }
@@ -421,11 +465,25 @@ export function RentalAgreementDetailPage() {
                             onChange={(v) =>
                               setReturnDrafts((prev) =>
                                 prev.map((d, i) =>
-                                  i === index ? { ...d, compensationAmount: v } : d,
+                                  i === index
+                                    ? { ...d, compensationAmount: v, compensationTouched: true }
+                                    : d,
                                 ),
                               )
                             }
                           />
+                          {compensationTable?.[draft.code] ? (
+                            <span className="mt-1 block text-sm text-fg-subtle">
+                              Theo bảng giá: hỏng{' '}
+                              {formatCurrency(compensationTable[draft.code]!.hong)}, mất{' '}
+                              {formatCurrency(compensationTable[draft.code]!.mat)} / {draft.unit}
+                              {draft.compensationTouched ? ' — đã sửa tay' : ''}
+                            </span>
+                          ) : (
+                            <span className="mt-1 block text-sm text-fg-subtle">
+                              Mã này chưa có trong bảng giá bồi thường — nhập tay.
+                            </span>
+                          )}
                         </Field>
                       </div>
                       <Field label="Ghi chú hư hỏng/mất">
@@ -465,7 +523,9 @@ export function RentalAgreementDetailPage() {
         {
           id: 'phieu-giao',
           label: 'Phiếu giao',
-          content: <RentalDeliveryPanel agreement={agreement} canSign={canEdit} />,
+          content: (
+            <RentalDeliveryPanel agreement={agreement} items={items ?? []} canSign={canEdit} />
+          ),
         },
         {
           id: 'dieu-chuyen',

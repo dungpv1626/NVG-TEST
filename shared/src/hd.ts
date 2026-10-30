@@ -123,6 +123,20 @@ export function remainingContractKinds(
 }
 
 /**
+ * Loại hợp đồng KHÔNG theo phạm vi thiết kế / thi công mà cơ hội còn soạn được: bán giàn giáo, cho thuê
+ * giàn giáo (NVS). Các loại này đứng một mình (trigger `contracts_one_per_kind`, 0243) nên chỉ mời khi
+ * cơ hội chưa có hợp đồng nào còn hiệu lực; loại NVG chi tiền không bao giờ soạn từ cơ hội (0185).
+ * Trước đây nút soạn chỉ có thiết kế / thi công / trọn gói — cơ hội NVS không soạn được hợp đồng cho
+ * thuê (chạy thử NVS 30/10/2026).
+ */
+export function standaloneContractTypes(existing: readonly GroupContract[]): ContractType[] {
+  if (existing.some((c) => c.stage !== 'huy')) return [];
+  return CONTRACT_TYPES.filter(
+    (t) => !isPayableContract(t) && t !== 'thiet_ke' && t !== 'thi_cong',
+  );
+}
+
+/**
  * Hồ sơ nguồn sinh ra hợp đồng (Backend Schema 4.5: `source_type/id`).
  *
  * Ba loại vì ba con đường vào Giai đoạn 1 — cơ hội của Kinh doanh, gói thầu của Dự án –

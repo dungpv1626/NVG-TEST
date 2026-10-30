@@ -13,6 +13,7 @@
  * KHO (KHO-06 vòng đời giàn giáo) và Module CRM (CRM-11 khách thuê).
  */
 
+import { toNvgDateInput } from './format';
 import type { StatusGroup } from './status';
 
 /* ========================================================================== *
@@ -64,9 +65,11 @@ export function rentalAgreementDisplayStatus(
   expectedEndDate: string | null,
   today: Date = new Date(),
 ): StatusGroup {
+  // So theo NGÀY giờ Việt Nam (như `contractDisplayStatus`): `new Date('yyyy-mm-dd')` là 07:00 sáng nên
+  // trước đây chính ngày hẹn trả đã «Quá hạn» từ 7 giờ sáng (chạy thử NVS 30/10/2026).
   if (status === 'dang_thue' && expectedEndDate) {
-    const due = new Date(expectedEndDate);
-    if (!Number.isNaN(due.getTime()) && due.getTime() < today.getTime()) return 'overdue';
+    const due = expectedEndDate.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(due) && due < toNvgDateInput(today)) return 'overdue';
   }
   return RENTAL_AGREEMENT_STATUS_META[status].statusGroup;
 }
@@ -81,13 +84,54 @@ export function rentalDaysSoFar(
   actualReturnDate: string | null,
   today: Date = new Date(),
 ): number {
-  const start = new Date(startDate);
-  if (Number.isNaN(start.getTime())) return 0;
+  // Đếm theo NGÀY lịch (giờ Việt Nam). Chưa tới ngày bắt đầu thì 0 — trước đây đơn hẹn giao
+  // tuần sau đã hiện «1 ngày» (chạy thử NVS 30/10/2026).
+  const start = startDate.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return 0;
+  const end = actualReturnDate ? actualReturnDate.slice(0, 10) : toNvgDateInput(today);
+  if (end < start) return 0;
+  return Math.round((Date.parse(end) - Date.parse(start)) / 86_400_000) + 1;
+}
 
-  const end = actualReturnDate ? new Date(actualReturnDate) : today;
-  const startOfDay = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
-  const days = Math.round((startOfDay(end) - startOfDay(start)) / 86_400_000) + 1;
-  return Math.max(days, 1);
+/** Một dòng của bảng giá bồi thường (`compensation_price_table`): đồng / đơn vị. */
+export interface CompensationPrice {
+  /** Mất hẳn. */
+  mat: number;
+  /** Hư hỏng. */
+  hong: number;
+}
+
+/**
+ * Đọc bảng giá bồi thường (tham số `compensation_price_table`, JSON theo MÃ vật tư) — bỏ dòng sai
+ * dạng thay vì đoán số. Bảng rỗng / chưa cấu hình thì `{}`: người thu hồi tự nhập mức bồi thường.
+ */
+export function parseCompensationTable(value: unknown): Record<string, CompensationPrice> {
+  const out: Record<string, CompensationPrice> = {};
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return out;
+  for (const [code, raw] of Object.entries(value as Record<string, unknown>)) {
+    if (!raw || typeof raw !== 'object') continue;
+    const mat = Number((raw as Record<string, unknown>).mat);
+    const hong = Number((raw as Record<string, unknown>).hong);
+    if (Number.isFinite(mat) && Number.isFinite(hong) && mat >= 0 && hong >= 0) {
+      out[code] = { mat, hong };
+    }
+  }
+  return out;
+}
+
+/**
+ * Mức bồi thường gợi ý theo bảng giá: hỏng × giá hỏng + mất × giá mất (đồng, làm tròn). Mã chưa
+ * có trong bảng thì `null` — không tự dựng giá (CLAUDE.md 5.2). Người thu hồi vẫn sửa được.
+ */
+export function compensationFromTable(
+  price: CompensationPrice | undefined,
+  damaged: number,
+  lost: number,
+): number | null {
+  if (!price) return null;
+  const d = Number.isFinite(damaged) && damaged > 0 ? damaged : 0;
+  const l = Number.isFinite(lost) && lost > 0 ? lost : 0;
+  return Math.round(d * price.hong + l * price.mat);
 }
 
 /* ========================================================================== *

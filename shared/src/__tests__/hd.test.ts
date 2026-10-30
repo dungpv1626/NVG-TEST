@@ -10,6 +10,7 @@ import {
   canExecuteAmendment,
   contractKindLabel,
   remainingContractKinds,
+  standaloneContractTypes,
   contractOpensSite,
   summarizeContractValue,
 } from '../hd';
@@ -127,6 +128,18 @@ describe('HD — một hợp đồng thiết kế + một hợp đồng thi côn
     expect(contractKindLabel('thi_cong', 'tron_goi')).toBe('Hợp đồng thiết kế – thi công trọn gói');
     expect(contractKindLabel('thi_cong', 'thi_cong')).toBe('Hợp đồng thi công');
     expect(contractKindLabel('thiet_ke', null)).toBe('Hợp đồng thiết kế');
+  });
+});
+
+describe('HD — cơ hội NVS soạn được hợp đồng cho thuê / bán giàn giáo (chạy thử NVS 30/10/2026)', () => {
+  const c = (scope_kind: string | null, stage = 'nhap') => ({ scope_kind, stage });
+  it('chưa có hợp đồng: mời bán và cho thuê, không mời loại NVG chi tiền', () => {
+    expect(standaloneContractTypes([])).toEqual(['mua_ban', 'cho_thue']);
+  });
+  it('đã có hợp đồng còn hiệu lực thì hết chỗ; đã hủy thì không tính', () => {
+    expect(standaloneContractTypes([c(null, 'da_ky')])).toEqual([]);
+    expect(standaloneContractTypes([c('thiet_ke')])).toEqual([]);
+    expect(standaloneContractTypes([c(null, 'huy')])).toEqual(['mua_ban', 'cho_thue']);
   });
 });
 

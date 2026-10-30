@@ -6,15 +6,18 @@
 
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { formatDate, formatDateTime } from '@nvg/shared';
+import { formatDate, formatDateTime, formatNumber } from '@nvg/shared';
+import { Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { FilePick } from '@/components/ui/file-pick';
 import { Input } from '@/components/ui/input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { SignaturePad, type SignaturePadHandle } from '@/components/ui/signature-pad';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { RENTAL_RETURN_SCAN_ACCEPT } from '@/hooks/use-rental-returns';
-import type { RentalAgreementRecord } from '@/hooks/use-sx';
+import type { RentalAgreementItemRecord, RentalAgreementRecord } from '@/hooks/use-sx';
+import { escapeHtml, openPrintReport } from '@/lib/print-report';
 import { supabase } from '@/lib/supabase';
 
 const BUCKET = 'rental-delivery-docs';
@@ -50,11 +53,83 @@ function useSignedUrls(paths: string[]) {
   });
 }
 
+/**
+ * Phiếu giao in ra giấy: danh sách hàng giao + hai dòng ký. Dùng khi khách ký bản giấy (rồi chụp lên
+ * «Ảnh phiếu giấy đã ký»), hoặc để lưu bản đã ký trên màn hình.
+ */
+function printDelivery(agreement: RentalAgreementRecord, items: RentalAgreementItemRecord[]) {
+  const rows = items
+    .map(
+      (it) =>
+        `<tr><td>${escapeHtml(it.material?.code ?? '')}</td><td>${escapeHtml(
+          it.material?.name ?? '',
+        )}</td><td class="num">${escapeHtml(formatNumber(Number(it.quantity_out)))} ${escapeHtml(
+          it.material?.unit ?? '',
+        )}</td></tr>`,
+    )
+    .join('');
+  const place = agreement.site
+    ? `${agreement.site.code} — ${agreement.site.name}`
+    : (agreement.site_address ?? '—');
+  openPrintReport(
+    `Phiếu giao giàn giáo — đơn thuê ${agreement.code}`,
+    `<dl>
+      <div><dt>Bên thuê</dt><dd>${escapeHtml(agreement.customer?.name ?? '—')}</dd></div>
+      <div><dt>Nơi nhận</dt><dd>${escapeHtml(place)}</dd></div>
+      <div><dt>Ngày giao</dt><dd>${escapeHtml(formatDate(agreement.start_date))}</dd></div>
+    </dl>
+    <table><thead><tr><th>Mã</th><th>Tên</th><th class="num">Số lượng giao</th></tr></thead><tbody>${rows}</tbody></table>
+    <table style="margin-top:32px"><tr><th>Đại diện bên thuê</th><th>Người giao của bên cho thuê</th></tr>
+    <tr><td style="height:80px">${escapeHtml(
+      agreement.delivery_customer_representative ?? '(Ký, ghi rõ họ tên)',
+    )}</td><td>(Ký, ghi rõ họ tên)</td></tr></table>
+    ${
+      agreement.delivery_signed_at
+        ? `<p class="muted">Đã ký trên hệ thống lúc ${escapeHtml(formatDateTime(agreement.delivery_signed_at))}.</p>`
+        : ''
+    }`,
+  );
+}
+
+/** Hàng giao theo đơn — khách phải thấy đúng số lượng mình ký nhận (chạy thử NVS 30/10/2026). */
+function DeliveryItems({
+  agreement,
+  items,
+}: {
+  agreement: RentalAgreementRecord;
+  items: RentalAgreementItemRecord[];
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-medium">Hàng giao</p>
+        <Button variant="secondary" size="sm" onClick={() => printDelivery(agreement, items)}>
+          <Printer className="size-4" aria-hidden /> In phiếu giao
+        </Button>
+      </div>
+      <ul className="divide-y divide-border rounded-sm border border-border">
+        {items.map((it) => (
+          <li key={it.id} className="flex flex-wrap justify-between gap-2 px-3 py-2">
+            <span>
+              {it.material?.code} — {it.material?.name}
+            </span>
+            <span className="font-medium tabular-nums">
+              {formatNumber(Number(it.quantity_out))} {it.material?.unit ?? ''}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function RentalDeliveryPanel({
   agreement,
+  items,
   canSign,
 }: {
   agreement: RentalAgreementRecord;
+  items: RentalAgreementItemRecord[];
   canSign: boolean;
 }) {
   const queryClient = useQueryClient();
@@ -75,6 +150,7 @@ export function RentalDeliveryPanel({
   if (agreement.delivery_signed_at) {
     return (
       <div className="space-y-3">
+        <DeliveryItems agreement={agreement} items={items} />
         <p className="text-status-completed">
           Khách đã ký nhận hàng: {agreement.delivery_customer_representative} —{' '}
           {formatDateTime(agreement.delivery_signed_at)}
@@ -103,9 +179,12 @@ export function RentalDeliveryPanel({
 
   if (!canSign || agreement.status !== 'dang_thue') {
     return (
-      <p className="text-fg-subtle">
-        Phiếu giao chưa có chữ ký khách. Xưởng sản xuất – Cho thuê lấy chữ ký khi giao hàng.
-      </p>
+      <div className="space-y-3">
+        <DeliveryItems agreement={agreement} items={items} />
+        <p className="text-fg-subtle">
+          Phiếu giao chưa có chữ ký khách. Xưởng sản xuất – Cho thuê lấy chữ ký khi giao hàng.
+        </p>
+      </div>
     );
   }
 
@@ -155,6 +234,7 @@ export function RentalDeliveryPanel({
 
   return (
     <form onSubmit={(e) => void submit(e)} className="space-y-4" aria-label="Ký phiếu giao hàng">
+      <DeliveryItems agreement={agreement} items={items} />
       <p className="text-fg-subtle">
         Giao hàng ngày {formatDate(agreement.start_date)}. Khách ký nhận ngay khi nhận đủ hàng — ký
         xong phiếu bị khoá.
@@ -184,12 +264,11 @@ export function RentalDeliveryPanel({
         </div>
       ) : (
         <Field label="Ảnh phiếu giao giấy" required>
-          <input
-            type="file"
+          <FilePick
             accept={RENTAL_RETURN_SCAN_ACCEPT}
             capture="environment"
-            onChange={(e) => setScan(e.target.files?.[0] ?? null)}
-            className="block w-full text-sm"
+            file={scan}
+            onChange={setScan}
           />
         </Field>
       )}

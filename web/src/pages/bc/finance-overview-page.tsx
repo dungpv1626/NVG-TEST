@@ -186,7 +186,7 @@ export function FinanceOverviewPage() {
       ) : (
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-xs font-bold tracking-wide text-fg-subtle">KỲ BÁO CÁO</span>
+            <span className="text-xs font-bold tracking-wide text-fg-subtle">Kỳ báo cáo</span>
             <SegmentedControl
               options={DASHBOARD_PERIODS}
               value={period}

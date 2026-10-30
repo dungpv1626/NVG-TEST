@@ -24,6 +24,7 @@ import {
   isPayableContract,
   CONTRACT_TYPE_LABELS,
   remainingContractKinds,
+  standaloneContractTypes,
   type ContractScopeKind,
   type ContractSourceType,
   type ContractType,
@@ -61,12 +62,22 @@ export function DraftContractButton({
   const [choosing, setChoosing] = useState(false);
   const [type, setType] = useState<ContractType>(defaultType);
   const kinds = group ? remainingContractKinds(group, designOnly) : null;
-  const [kindChoice, setKindChoice] = useState<ContractScopeKind | null>(null);
-  const kind: ContractScopeKind | null = kinds
-    ? kindChoice && kinds.includes(kindChoice)
+  // Bán / cho thuê giàn giáo (NVS) — đứng một mình, chỉ khi cơ hội chưa có hợp đồng nào.
+  const otherTypes: ContractType[] = group ? standaloneContractTypes(group) : [];
+  const [kindChoice, setKindChoice] = useState<ContractScopeKind | ContractType | null>(null);
+  const preferOther = otherTypes.includes(defaultType) ? defaultType : null;
+  const choice: ContractScopeKind | ContractType | null = kinds
+    ? kindChoice &&
+      ((kinds as string[]).includes(kindChoice) || otherTypes.includes(kindChoice as ContractType))
       ? kindChoice
-      : (kinds.find((k) => k === defaultType) ?? kinds[0] ?? null)
+      : (preferOther ?? kinds.find((k) => k === defaultType) ?? kinds[0] ?? otherTypes[0] ?? null)
     : null;
+  const kind: ContractScopeKind | null =
+    choice && (kinds as string[] | null)?.includes(choice) ? (choice as ContractScopeKind) : null;
+  const groupOtherType: ContractType | null =
+    choice && !kind && otherTypes.includes(choice as ContractType)
+      ? (choice as ContractType)
+      : null;
   const [error, setError] = useState<string | null>(null);
 
   async function draft() {
@@ -75,7 +86,7 @@ export function DraftContractButton({
       const contractId = await createContract.mutateAsync(
         kind
           ? { sourceType, sourceId, type: CONTRACT_SCOPE_KIND_TYPE[kind], scopeKind: kind }
-          : { sourceType, sourceId, type },
+          : { sourceType, sourceId, type: groupOtherType ?? type },
       );
       void navigate(`/hd/hop-dong/${contractId}`);
     } catch (e) {
@@ -84,7 +95,7 @@ export function DraftContractButton({
   }
 
   // Theo phạm vi (0243): hết chỗ thì dẫn sang hợp đồng đã có của chính hồ sơ này (nếu có).
-  if (kinds && kinds.length === 0) {
+  if (kinds && kinds.length === 0 && otherTypes.length === 0) {
     if (!existingContractId) return null;
     return (
       <Button variant="secondary" asChild>
@@ -111,7 +122,7 @@ export function DraftContractButton({
   if (!canCreate) return null;
 
   // Còn đúng một phạm vi: nút nói thẳng soạn hợp đồng gì, không bắt chọn.
-  const onlyKind = kinds && kinds.length === 1 ? kinds[0]! : null;
+  const onlyKind = kinds && kinds.length === 1 && otherTypes.length === 0 ? kinds[0]! : null;
   const draftLabel = onlyKind
     ? `Soạn ${CONTRACT_SCOPE_KIND_LABELS[onlyKind].toLowerCase()}`
     : 'Soạn hợp đồng';
@@ -131,13 +142,18 @@ export function DraftContractButton({
         !onlyKind && (
           <Field label="Loại hợp đồng">
             <select
-              value={kind ?? ''}
-              onChange={(e) => setKindChoice(e.target.value as ContractScopeKind)}
+              value={choice ?? ''}
+              onChange={(e) => setKindChoice(e.target.value as ContractScopeKind | ContractType)}
               className="h-10 rounded-sm border border-border bg-surface px-3 sm:h-9"
             >
               {kinds.map((k) => (
                 <option key={k} value={k}>
                   {CONTRACT_SCOPE_KIND_LABELS[k]}
+                </option>
+              ))}
+              {otherTypes.map((t) => (
+                <option key={t} value={t}>
+                  {CONTRACT_TYPE_LABELS[t]}
                 </option>
               ))}
             </select>

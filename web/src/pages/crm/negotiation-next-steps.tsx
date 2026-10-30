@@ -13,7 +13,7 @@
 
 import { Link } from 'react-router-dom';
 import { CheckCircle2, Circle, CircleDot } from 'lucide-react';
-import { CONTRACT_SCOPE_KIND_LABELS, type ContractStage } from '@nvg/shared';
+import { CONTRACT_SCOPE_KIND_LABELS, type ContractStage, type ContractType } from '@nvg/shared';
 import { DraftContractButton } from '@/components/contract/draft-contract-button';
 import type { GroupContractRow } from '@/hooks/use-contract-group';
 import { cn } from '@/lib/utils';
@@ -54,6 +54,7 @@ export function NegotiationNextSteps({
   group,
   designOnly,
   canEdit,
+  defaultContractType = 'thi_cong',
 }: {
   opportunityId: string;
   /** Hợp đồng soạn thẳng từ cơ hội (mới nhất) — nút «Mở hợp đồng» khi hết chỗ soạn. */
@@ -62,6 +63,8 @@ export function NegotiationNextSteps({
   group: readonly GroupContractRow[];
   designOnly: boolean;
   canEdit: boolean;
+  /** Loại hợp đồng mời soạn trước — NVS là hợp đồng cho thuê. */
+  defaultContractType?: ContractType;
 }) {
   const { target, designSigned } = negotiationTarget(group, designOnly);
   const targetLabel = target?.scope_kind
@@ -147,7 +150,7 @@ export function NegotiationNextSteps({
                     <DraftContractButton
                       sourceType="opportunities"
                       sourceId={opportunityId}
-                      defaultType="thi_cong"
+                      defaultType={defaultContractType}
                       existingContractId={contractId}
                       group={group}
                       designOnly={designOnly}

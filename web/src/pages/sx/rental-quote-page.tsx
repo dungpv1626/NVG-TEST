@@ -12,10 +12,12 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Printer } from 'lucide-react';
 import { formatCurrency, formatDate, formatNumber } from '@nvg/shared';
 import { PageHeader } from '@/components/layout/app-shell';
+import { ZaloSend } from '@/components/share/zalo-send';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
 import { Field } from '@/components/ui/field';
@@ -37,12 +39,41 @@ import {
 import { useCan } from '@/lib/auth';
 import { useCompanyScope } from '@/lib/company-scope';
 import { escapeHtml, openPrintReport } from '@/lib/print-report';
+import { supabase } from '@/lib/supabase';
+import { composeZaloMessage } from '@/lib/zalo-share';
 import { SxNav } from './sx-nav';
 
 interface CustomerOption {
   id: string;
   code: string;
   name: string;
+  phone: string | null;
+}
+
+/** Thông tin pháp nhân in ở đầu báo giá gửi khách. */
+interface CompanyHead {
+  legal_name: string | null;
+  short_name: string | null;
+  address: string | null;
+  phone: string | null;
+  tax_code: string | null;
+}
+
+function useCompanyHead(companyId: string | null) {
+  return useQuery<CompanyHead | null, Error>({
+    queryKey: ['company-head', companyId],
+    enabled: Boolean(companyId),
+    staleTime: 30 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('legal_name, short_name, address, phone, tax_code')
+        .eq('id', companyId!)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return (data as CompanyHead | null) ?? null;
+    },
+  });
 }
 
 interface LineDraft {
@@ -58,7 +89,7 @@ function rentalDays(from: string, to: string): number {
   return Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000) + 1;
 }
 
-function printQuote(q: RentalQuote) {
+function printQuote(q: RentalQuote, company: CompanyHead | null | undefined) {
   const days =
     q.needed_date && q.expected_end_date ? rentalDays(q.needed_date, q.expected_end_date) : 0;
   const rows = q.items
@@ -76,6 +107,19 @@ function printQuote(q: RentalQuote) {
       )}</td></tr>`;
     })
     .join('');
+  // Báo giá GỬI KHÁCH: tiêu đề pháp nhân cho thuê, không phải «Nhà Việt Group»; bản chưa duyệt in rõ
+  // «Bản nháp» thay vì ghi trạng thái nội bộ (chạy thử NVS 30/10/2026).
+  const approved = q.status === 'da_duyet';
+  const letterhead = company
+    ? `<div class="letterhead"><div><strong>${escapeHtml(
+        company.legal_name ?? company.short_name ?? '',
+      )}</strong>${escapeHtml(company.address ?? '')}${
+        company.phone ? `<br/>Điện thoại: ${escapeHtml(company.phone)}` : ''
+      }${company.tax_code ? `<br/>Mã số thuế: ${escapeHtml(company.tax_code)}` : ''}</div>
+      <div style="text-align:right">Số: ${escapeHtml(q.code)}${
+        approved ? '' : '<br/><strong>Bản nháp — chưa duyệt, không gửi khách</strong>'
+      }</div></div>`
+    : '';
   openPrintReport(
     `Báo giá giàn giáo ${q.code}`,
     `<dl>
@@ -84,13 +128,13 @@ function printQuote(q: RentalQuote) {
       <div><dt>Ngày dự kiến trả</dt><dd>${q.expected_end_date ? formatDate(q.expected_end_date) : '—'}</dd></div>
       <div><dt>Số ngày thuê</dt><dd>${days || '—'}</dd></div>
       <div><dt>Tiền đặt cọc</dt><dd>${escapeHtml(formatCurrency(q.deposit_amount))}</dd></div>
-      <div><dt>Trạng thái</dt><dd>${escapeHtml(RENTAL_QUOTE_STATUS_LABELS[q.status])}</dd></div>
     </dl>
     <table><thead><tr><th>Mã</th><th>Tên</th><th>Hình thức</th><th class="num">Số lượng</th><th class="num">Đơn giá</th><th class="num">Thành tiền</th></tr></thead>
     <tbody>${rows}</tbody></table>
     ${q.estimated_total !== null ? `<p><strong>Tổng giá trị: ${escapeHtml(formatCurrency(q.estimated_total))}</strong></p>` : ''}
     ${q.delivery_note ? `<p>Vận chuyển, bốc xếp: ${escapeHtml(q.delivery_note)}</p>` : ''}
     <p class="muted">Chưa gồm bồi thường thiếu – hỏng khi thu hồi; tính theo bảng giá bồi thường tại thời điểm thu hồi.</p>`,
+    letterhead,
   );
 }
 
@@ -116,10 +160,11 @@ export function RentalQuotePage() {
   const { data: quotes } = useRentalQuotes(companyId);
   const { data: customers } = useEntityList<CustomerOption>({
     table: 'customers',
-    select: 'id, code, name',
+    select: 'id, code, name, phone',
     scopedByCompany: false,
     orderBy: { column: 'name', ascending: true },
   });
+  const { data: companyHead } = useCompanyHead(companyId);
   const save = useSaveRentalQuote();
   const submit = useSubmitRentalQuote();
 
@@ -445,10 +490,32 @@ export function RentalQuotePage() {
                   </Button>
                 )}
                 {editing && (
-                  <Button variant="secondary" onClick={() => printQuote(editing)}>
+                  <Button variant="secondary" onClick={() => printQuote(editing, companyHead)}>
                     <Printer className="size-4" aria-hidden />
-                    In báo giá
+                    {editing.status === 'da_duyet' ? 'In báo giá' : 'In bản nháp'}
                   </Button>
+                )}
+                {editing?.status === 'da_duyet' && (
+                  <ZaloSend
+                    canSend={canEdit}
+                    showHistory={false}
+                    entityType="rental_quotes"
+                    entityId={editing.id}
+                    phone={customers?.find((c) => c.id === editing.customer_id)?.phone ?? null}
+                    message={composeZaloMessage({
+                      recipientName: editing.customer?.name ?? null,
+                      companyName: companyHead?.short_name ?? null,
+                      subject: `báo giá thuê giàn giáo ${editing.code}`,
+                      details:
+                        editing.estimated_total !== null
+                          ? `Tổng giá trị: ${formatCurrency(editing.estimated_total)}${
+                              editing.needed_date && editing.expected_end_date
+                                ? ` (thuê từ ${formatDate(editing.needed_date)} đến ${formatDate(editing.expected_end_date)})`
+                                : ''
+                            }.`
+                          : null,
+                    })}
+                  />
                 )}
                 {!locked && (
                   <>
@@ -500,7 +567,7 @@ export function RentalQuotePage() {
                       <Button variant="secondary" onClick={() => loadQuote(q)}>
                         Mở
                       </Button>
-                      <Button variant="subtle" onClick={() => printQuote(q)}>
+                      <Button variant="subtle" onClick={() => printQuote(q, companyHead)}>
                         In
                       </Button>
                     </div>

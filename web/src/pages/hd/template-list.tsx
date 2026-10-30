@@ -34,6 +34,7 @@ import {
 import { PageHeader } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { FilePick } from '@/components/ui/file-pick';
 import { FIELD_BOX } from '@/components/ui/field-box';
 import { Input } from '@/components/ui/input';
 import { showToast } from '@/components/ui/toast';
@@ -314,11 +315,11 @@ function UploadForm({ onDone }: { onDone: () => void }) {
       <h2 className="font-medium">Tải mẫu lên</h2>
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Field label="Tệp Word (.docx)" required className="sm:col-span-2 lg:col-span-3">
-          <input
-            type="file"
+          <FilePick
             accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            onChange={(e) => void chooseFile(e.target.files?.[0] ?? null)}
-            className="block w-full text-sm"
+            file={file}
+            onChange={(f) => void chooseFile(f)}
+            label="Chọn tệp Word"
           />
         </Field>
         <Field label="Pháp nhân" required>

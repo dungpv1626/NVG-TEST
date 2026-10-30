@@ -7,6 +7,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { parseCompensationTable, type CompensationPrice } from '@nvg/shared';
 import { supabase } from '@/lib/supabase';
 import type { RentalItemInput } from './use-sx';
 
@@ -91,6 +92,27 @@ export function useProductPrices(paramKey: 'sx.rental_daily_rate' | 'internal_re
         if (r.scope_id && r.value !== null && Number.isFinite(n) && n > 0) out[r.scope_id] = n;
       }
       return out;
+    },
+  });
+}
+
+/**
+ * Bảng giá bồi thường thiếu – hỏng khi thu hồi (`compensation_price_table`, theo MÃ vật tư). Chỉ để
+ * điền SẴN mức bồi thường trên biểu mẫu thu hồi — số chốt là số lưu trong biên bản (không hồi tố).
+ */
+export function useCompensationPriceTable() {
+  return useQuery<Record<string, CompensationPrice>, Error>({
+    queryKey: ['compensation-price-table'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('system_parameters')
+        .select('value')
+        .eq('param_key', 'compensation_price_table')
+        .eq('scope_type', 'global')
+        .eq('is_active', true)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return parseCompensationTable((data as { value: unknown } | null)?.value ?? null);
     },
   });
 }
