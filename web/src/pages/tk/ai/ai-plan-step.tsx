@@ -114,6 +114,10 @@ interface PlanRunResult {
 
 const COUNTS = ['1', '2', '3'] as const;
 
+/** Ảnh ở tab này là tờ MẶT BẰNG có đồ đạc (T57); ảnh nội thất từng phòng ở bước Mặt ngoài (B3b). */
+const ROOM_RENDER_POINTER =
+  'Ảnh nội thất từng phòng (góc nhìn trong phòng) vẽ ở bước Mặt ngoài, phần «Nội thất từng phòng».';
+
 export function AiPlanStep({
   projectId,
   readOnly,
@@ -592,18 +596,22 @@ export function AiPlanStep({
           },
           {
             id: 'noi-that',
-            label: 'Ảnh nội thất',
+            label: 'Ảnh mặt bằng có đồ đạc',
             side: 'left',
             content: review.data ? (
-              <PlanImagePanel
-                projectId={projectId}
-                review={review.data}
-                level={currentLevel}
-                readOnly={readOnly}
-                disabled={running}
-              />
+              <div className="space-y-2">
+                <p className="text-fg-subtle">{ROOM_RENDER_POINTER}</p>
+                <PlanImagePanel
+                  projectId={projectId}
+                  review={review.data}
+                  level={currentLevel}
+                  readOnly={readOnly}
+                  disabled={running}
+                />
+              </div>
             ) : (
               <div className="space-y-2">
+                <p className="text-fg-subtle">{ROOM_RENDER_POINTER}</p>
                 <p className="text-fg-subtle">
                   Đã có bản vẽ mặt bằng của kỹ sư? Vẽ ảnh mặt bằng có nội thất từ bản tải lên.
                 </p>

@@ -12,6 +12,7 @@
 import { Hono } from 'hono';
 import { createClient } from '@supabase/supabase-js';
 import type { DesignEnv } from './design/env';
+import { conceptPublicApp } from './design/ai/concept-public';
 
 interface PublicMedia {
   id: string;
@@ -103,3 +104,6 @@ publicApp.get('/signed/:token', async (c) => {
   c.header('Cache-Control', 'no-store');
   return c.json({ ...body, url: signed?.signedUrl ?? null });
 });
+
+/** Bộ ý tưởng AI Design gửi khách (B5, 0259) — `GET /public/concept/:token`, xem `design/ai/concept-public.ts`. */
+publicApp.route('/concept', conceptPublicApp);

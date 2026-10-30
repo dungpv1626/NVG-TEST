@@ -3,6 +3,10 @@
  * tên theo mã hồ sơ thiết kế — tờ mặt bằng SVG từng tầng + tờ mái, DXF cả nhà, ảnh mặt bằng có nội thất
  * (nếu đã vẽ), mặt đứng SVG + DXF + ảnh vật liệu (nếu có), ảnh phối cảnh (nếu có), và tờ «Đọc trước».
  *
+ * Chưa có mặt bằng mà đầu bài đã xác nhận (B3 «bộ ý tưởng cho khách», anh Dũng 30/10/2026): gói chỉ chứa bộ ý
+ * tưởng dựng từ đầu bài — sơ đồ công năng, mặt đứng dựng từ đầu bài, phối cảnh của nó, ảnh nội thất từng phòng.
+ * Sơ đồ công năng và ảnh từng phòng đi kèm cả gói có mặt bằng.
+ *
  * Chỉ ĐỌC artifact đã có qua đúng các tuyến màn hình vẫn dùng (có kiểm quyền) — không dựng gì mới,
  * không gọi mô hình nào. Gói tạo ngay trên trình duyệt (`pizzip`, đã có trong kho cho mẫu hợp đồng,
  * nạp khi bấm). Dùng được cả trên hồ sơ đã bàn giao / chỉ xem — tải về không đổi gì.
@@ -14,15 +18,22 @@ import { useEffect, useMemo, useState } from 'react';
 import { Check, Download, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/states';
-import { useAiImageSet, useAiPlanReview, type AiDesignState } from '@/hooks/use-ai-design';
+import {
+  useAiImageSet,
+  useAiPlanReview,
+  useAiRoomImages,
+  type AiDesignState,
+} from '@/hooks/use-ai-design';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { DesignApiError, designApiFile } from '@/lib/design-api';
 import { Chip, Panel } from '../tk-ui';
 import { scoreSummary } from './ai-plan-compare';
 import { roomName, topDeductions } from './plan-deductions';
+import { roomTitle } from './room-image-batch';
 import {
   bundleFiles,
   bundleReadme,
+  CONCEPT_BUNDLE_NAME,
   bundleZipName,
   withExtension,
   type BundleFile,
@@ -63,19 +74,34 @@ export function AiResultBundle({
     setPlanId(state.planHeadArtifactId ?? ordered[ordered.length - 1]?.artifactId ?? null);
   }, [planId, state.plans, state.planHeadArtifactId, ordered]);
 
-  // Mặt đứng dựng TRÊN phương án đang chọn (mới nhất trước); bộ ảnh dựng trên mặt đứng ấy.
+  const hasPlan = state.plans.length > 0;
+  // Mặt đứng dựng TRÊN phương án đang chọn (mới nhất trước); bộ ảnh dựng trên mặt đứng ấy. Chưa có mặt bằng thì
+  // mặt đứng dựng thẳng từ đầu bài (`planRef` rỗng, B3).
   const facade = useMemo(() => {
-    if (!planId) return null;
     const list = state.facades ?? [];
-    const hit =
-      list.find((f) => f.planRef === planId) ??
-      (state.facadeArtifactId && state.facadePlanRef === planId
-        ? { artifactId: state.facadeArtifactId }
-        : null);
+    const hit = planId
+      ? (list.find((f) => f.planRef === planId) ??
+        (state.facadeArtifactId && state.facadePlanRef === planId
+          ? { artifactId: state.facadeArtifactId }
+          : null))
+      : hasPlan
+        ? null
+        : (list.find((f) => !f.planRef) ??
+          (state.facadeArtifactId && state.facadeSource === 'brief'
+            ? { artifactId: state.facadeArtifactId }
+            : null));
     return hit
       ? { artifactId: hit.artifactId, name: facadeNames.get(hit.artifactId) ?? 'Mặt đứng' }
       : null;
-  }, [planId, state.facades, state.facadeArtifactId, state.facadePlanRef, facadeNames]);
+  }, [
+    planId,
+    hasPlan,
+    state.facades,
+    state.facadeArtifactId,
+    state.facadePlanRef,
+    state.facadeSource,
+    facadeNames,
+  ]);
   const imageSetId =
     facade && state.imageSetArtifactId && state.imageSetFacadeRef === facade.artifactId
       ? state.imageSetArtifactId
@@ -83,18 +109,39 @@ export function AiResultBundle({
 
   const review = useAiPlanReview(projectId, planId, NO_PACKS);
   const imageSet = useAiImageSet(projectId, imageSetId);
-  const planName = planId ? (planNames.get(planId) ?? 'Phương án') : '';
+  const roomData = useAiRoomImages(projectId);
+  const planName = planId ? (planNames.get(planId) ?? 'Phương án') : null;
+  const zipPart = planName ?? CONCEPT_BUNDLE_NAME;
+  const hasZoning = Boolean(state.briefArtifactId);
+  const roomImages = useMemo(() => {
+    const rooms = roomData.data?.rooms ?? [];
+    return (roomData.data?.images ?? []).map((image) => {
+      const room = rooms.find((r) => r.key === image.roomKey);
+      return { artifactId: image.artifactId, name: room ? roomTitle(room) : image.roomType };
+    });
+  }, [roomData.data]);
+  /** Gói có mặt bằng chờ bảng đánh giá (tên tầng) mới liệt kê được tệp. */
+  const planReady = !planId || Boolean(review.data);
 
   const files = useMemo<BundleFile[]>(() => {
-    if (!planId || !review.data) return [];
+    if (planId && !review.data) return [];
     return bundleFiles({
       projectId,
       code: projectCode,
-      plan: {
-        artifactId: planId,
-        name: planName,
-        levels: review.data.levels.map((l) => ({ level: l.level, name: l.name, roof: l.roof })),
-      },
+      plan:
+        planId && review.data && planName
+          ? {
+              artifactId: planId,
+              name: planName,
+              levels: review.data.levels.map((l) => ({
+                level: l.level,
+                name: l.name,
+                roof: l.roof,
+              })),
+            }
+          : null,
+      zoning: hasZoning,
+      roomImages,
       facade,
       imageSet:
         imageSetId && imageSet.data
@@ -115,17 +162,20 @@ export function AiResultBundle({
     imageSetId,
     imageSet.data,
     setNames,
+    hasZoning,
+    roomImages,
   ]);
 
   const [busy, setBusy] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [last, setLast] = useState<{ name: string; count: number; skipped: number } | null>(null);
 
-  if (state.plans.length === 0) {
+  if (!hasPlan && !state.briefArtifactId) {
     return (
       <Panel title="Bộ kết quả">
         <p className="text-fg-subtle">
-          Chưa có phương án mặt bằng nào nên chưa có gì để tải. Xếp mặt bằng ở bước 2 trước.
+          Chưa có đầu bài đã xác nhận nên chưa có gì để tải. Xác nhận đầu bài ở hồ sơ thiết kế
+          trước.
         </p>
         <Button className="mt-3" variant="secondary" onClick={() => onGoTo('mat-bang')}>
           Sang bước Mặt bằng
@@ -135,7 +185,7 @@ export function AiResultBundle({
   }
 
   const download = async () => {
-    if (!review.data) return;
+    if (!planReady) return;
     setError(null);
     setLast(null);
     setBusy({ done: 0, total: files.length });
@@ -164,21 +214,27 @@ export function AiResultBundle({
         done += 1;
         setBusy({ done, total: files.length });
       }
-      const { percent, threshold, passed } = scoreSummary(review.data);
+      const planReview = planId ? (review.data ?? null) : null;
+      const { percent, threshold, passed } = planReview
+        ? scoreSummary(planReview)
+        : { percent: null, threshold: null, passed: false };
       const readme = bundleReadme({
         code: projectCode,
         projectName,
         planName,
         facadeName: facade?.name ?? null,
         imageSetName: imageSetId ? (setNames.get(imageSetId) ?? 'Bộ ảnh') : null,
+        roomImageCount: added.filter((path) => path.startsWith('noi-that/')).length,
         scoreLine:
           percent === null
             ? null
             : `${formatNumber(percent, 1)}%${threshold !== null ? (passed ? ` — đạt ngưỡng ${formatNumber(threshold)}` : ` — dưới ngưỡng ${formatNumber(threshold)}`) : ''}`,
-        deductions: topDeductions(review.data.score, 3).map(
-          (d) =>
-            `${d.label}: −${formatNumber(d.lost, 1)} điểm${d.refs.length ? ` (${d.refs.map((r) => roomName(r, review.data!.roomLabels)).join(', ')})` : ''}`,
-        ),
+        deductions: planReview
+          ? topDeductions(planReview.score, 3).map(
+              (d) =>
+                `${d.label}: −${formatNumber(d.lost, 1)} điểm${d.refs.length ? ` (${d.refs.map((r) => roomName(r, planReview.roomLabels)).join(', ')})` : ''}`,
+            )
+          : [],
         files: added,
         skipped: skipped.map((s) => s.replace(/^.*\//, '')),
         createdAt: formatDateTime(new Date().toISOString()),
@@ -186,7 +242,7 @@ export function AiResultBundle({
       });
       zip.file('DOC-TRUOC.txt', String.fromCharCode(0xfeff) + readme);
       const blob = zip.generate({ type: 'blob', compression: 'DEFLATE' }) as Blob;
-      const name = bundleZipName(projectCode, planName);
+      const name = bundleZipName(projectCode, zipPart);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -204,16 +260,26 @@ export function AiResultBundle({
   };
 
   const groups: Array<{ id: BundleFile['group']; label: string; missing: string | null }> = [
-    { id: 'mat-bang', label: 'Mặt bằng', missing: null },
+    ...(hasZoning ? [{ id: 'y-tuong' as const, label: 'Sơ đồ công năng', missing: null }] : []),
+    ...(hasPlan ? [{ id: 'mat-bang' as const, label: 'Mặt bằng', missing: null }] : []),
     {
       id: 'mat-dung',
       label: 'Mặt đứng',
-      missing: facade ? null : 'Chưa có mặt đứng dựng trên phương án này.',
+      missing: facade
+        ? null
+        : hasPlan
+          ? 'Chưa có mặt đứng dựng trên phương án này.'
+          : 'Chưa có mặt đứng dựng từ đầu bài.',
     },
     {
       id: 'phoi-canh',
       label: 'Phối cảnh',
       missing: imageSetId ? null : 'Chưa có bộ ảnh phối cảnh dựng trên mặt đứng này.',
+    },
+    {
+      id: 'noi-that',
+      label: 'Nội thất từng phòng',
+      missing: roomImages.length > 0 ? null : 'Chưa vẽ ảnh phòng nào theo đầu bài hiện hành.',
     },
   ];
 
@@ -221,42 +287,46 @@ export function AiResultBundle({
     <div className="space-y-4">
       <Panel title="Bộ kết quả">
         <p className="text-fg-subtle">
-          Gói mọi thứ đã có của một phương án thành một tệp nén, tên theo mã hồ sơ{' '}
+          {hasPlan
+            ? 'Gói mọi thứ đã có của một phương án thành một tệp nén, tên theo mã hồ sơ '
+            : 'Chưa có mặt bằng — gói bộ ý tưởng dựng từ đầu bài (sơ đồ công năng, mặt đứng, phối cảnh, ảnh từng phòng) thành một tệp nén, tên theo mã hồ sơ '}
           <b className="text-fg">{projectCode ?? '(chưa có mã)'}</b>. Bản phác tham khảo — không đi
           vào hồ sơ phát hành.
         </p>
 
-        <div className="mt-4">
-          <p className="mb-1.5 font-medium">Phương án</p>
-          <div role="group" aria-label="Chọn phương án để tải" className="flex flex-wrap gap-2">
-            {ordered.map((plan) => {
-              const active = plan.artifactId === planId;
-              return (
-                <button
-                  key={plan.artifactId}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => setPlanId(plan.artifactId)}
-                  className={
-                    active
-                      ? 'min-h-10 rounded-md border border-tk-bl-line bg-tk-bl-bg px-3 font-medium'
-                      : 'min-h-10 rounded-md border border-tk-line px-3 hover:bg-tk-hover'
-                  }
-                >
-                  {planNames.get(plan.artifactId)}
-                  {plan.artifactId === state.planHeadArtifactId && ' · dùng cho mặt đứng'}
-                </button>
-              );
-            })}
+        {hasPlan && (
+          <div className="mt-4">
+            <p className="mb-1.5 font-medium">Phương án</p>
+            <div role="group" aria-label="Chọn phương án để tải" className="flex flex-wrap gap-2">
+              {ordered.map((plan) => {
+                const active = plan.artifactId === planId;
+                return (
+                  <button
+                    key={plan.artifactId}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setPlanId(plan.artifactId)}
+                    className={
+                      active
+                        ? 'min-h-10 rounded-md border border-tk-bl-line bg-tk-bl-bg px-3 font-medium'
+                        : 'min-h-10 rounded-md border border-tk-line px-3 hover:bg-tk-hover'
+                    }
+                  >
+                    {planNames.get(plan.artifactId)}
+                    {plan.artifactId === state.planHeadArtifactId && ' · dùng cho mặt đứng'}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
-        {review.isLoading && <Skeleton className="mt-4 h-40 w-full" />}
-        {review.isError && (
+        {planId && review.isLoading && <Skeleton className="mt-4 h-40 w-full" />}
+        {planId && review.isError && (
           <p className="mt-4 text-status-overdue">{toUserMessage(review.error)}</p>
         )}
 
-        {review.data && (
+        {planReady && (
           <ul className="mt-4 space-y-3" aria-label="Nội dung gói">
             {groups.map((group) => {
               const items = files.filter((f) => f.group === group.id);
@@ -313,13 +383,13 @@ export function AiResultBundle({
           <Button
             variant="primary"
             onClick={() => void download()}
-            disabled={!review.data || busy !== null || files.length === 0}
+            disabled={!planReady || busy !== null || files.length === 0}
           >
             <Download className="size-4" aria-hidden />
             {busy ? `Đang gói ${busy.done}/${busy.total} tệp…` : 'Tải cả gói (.zip)'}
           </Button>
           <span className="break-all text-fg-subtle">
-            Tên tệp: {bundleZipName(projectCode, planName)}
+            Tên tệp: {bundleZipName(projectCode, zipPart)}
           </span>
         </div>
         {last && (

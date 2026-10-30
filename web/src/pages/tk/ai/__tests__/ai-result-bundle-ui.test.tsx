@@ -15,6 +15,7 @@ const FAC = `sha256:${'f'.repeat(64)}`;
 
 const state = vi.hoisted(() => ({
   fail500: false,
+  roomImages: [] as Array<{ artifactId: string; roomKey: string; roomType: string }>,
   saved: [] as Array<{ name: string; blob: Blob }>,
 }));
 
@@ -57,7 +58,17 @@ vi.mock('@/hooks/use-ai-design', () => ({
     isLoading: false,
     isError: false,
   }),
-  useAiImageSet: () => ({ data: undefined }),
+  useAiImageSet: (_p: string, id: string | null) => ({
+    data: id ? { images: [{ view: 'front', label: 'Chính diện' }] } : undefined,
+  }),
+  useAiRoomImages: () => ({
+    data: {
+      briefArtifactId: REF,
+      rooms: [{ key: 'bedroom:2:3', type: 'bedroom', label: 'Phòng ngủ', floor: 2, areaM2: 14 }],
+      images: state.roomImages,
+      simulated: false,
+    },
+  }),
 }));
 
 const { AiResultBundle } = await import('../ai-result-bundle');
@@ -117,6 +128,7 @@ describe('Bộ kết quả — tải cả gói', () => {
       'mat-bang/NVO-TK-2026-0007_phuong-an-2_tang-1.svg',
       'mat-dung/NVO-TK-2026-0007_mat-dung-1.dxf',
       'mat-dung/NVO-TK-2026-0007_mat-dung-1.svg',
+      'y-tuong/NVO-TK-2026-0007_so-do-cong-nang.svg',
     ]);
     const readme = zip.file('DOC-TRUOC.txt')!.asText();
     expect(readme).toContain('NVO-TK-2026-0007_phuong-an-2_tang-1_noi-that');
@@ -138,5 +150,46 @@ describe('Bộ kết quả — tải cả gói', () => {
     await userEvent.click(screen.getByRole('button', { name: /Tải cả gói/ }));
     expect(await screen.findByText(/Không tạo được gói tải về/)).toBeInTheDocument();
     expect(state.saved).toHaveLength(0);
+  });
+
+  it('chưa có mặt bằng: gói bộ ý tưởng từ đầu bài — sơ đồ công năng, mặt đứng, phối cảnh, ảnh phòng', async () => {
+    stubDownload();
+    state.fail500 = false;
+    state.roomImages = [{ artifactId: 'img-1', roomKey: 'bedroom:2:3', roomType: 'bedroom' }];
+    const IMG = `sha256:${'e'.repeat(64)}`;
+    renderWithApp(
+      <AiResultBundle
+        projectId="p1"
+        projectCode="NVO-TK-2026-0007"
+        state={
+          {
+            ...designState,
+            plans: [],
+            planHeadArtifactId: null,
+            facades: [{ artifactId: FAC, createdAt: '2026-10-02T00:00:00Z', planRef: null }],
+            facadePlanRef: null,
+            facadeSource: 'brief',
+            imageSetArtifactId: IMG,
+            imageSetFacadeRef: FAC,
+          } as never
+        }
+        onGoTo={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText('Phương án')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: /Tải cả gói/ }));
+    await waitFor(() => expect(state.saved).toHaveLength(1));
+    expect(state.saved[0]!.name).toBe('NVO-TK-2026-0007_AI-Design_y-tuong.zip');
+    const zip = new PizZip(await state.saved[0]!.blob.arrayBuffer());
+    const names = Object.keys(zip.files).sort();
+    expect(names.some((n) => n.startsWith('mat-bang/'))).toBe(false);
+    expect(names).toContain('y-tuong/NVO-TK-2026-0007_so-do-cong-nang.svg');
+    expect(names).toContain('mat-dung/NVO-TK-2026-0007_mat-dung-1.svg');
+    expect(names.some((n) => n.startsWith('phoi-canh/'))).toBe(true);
+    expect(names.some((n) => n.startsWith('noi-that/NVO-TK-2026-0007_phong-ngu-tang-2'))).toBe(
+      true,
+    );
+    expect(zip.file('DOC-TRUOC.txt')!.asText()).toContain('Mặt bằng: chưa có');
+    state.roomImages = [];
   });
 });

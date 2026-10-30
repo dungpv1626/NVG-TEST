@@ -5178,3 +5178,12 @@ lô. Mặt ngoài / phối cảnh / ảnh nội thất đã chạy được như
   (giả lập, 0 USD): AT02 vẽ được ảnh phòng khách, bước Mặt ngoài mở khi chưa có mặt bằng (`backup/y-tuong-khach/`).
 
 **Chưa làm.** B4 lượt thật (chờ anh Dũng), B5 đường dẫn xem cho khách có kiến trúc sư duyệt, đưa sơ đồ vào gói `.zip`.
+
+**T190 — bổ sung (31/10/2026).** B4 lượt THẬT AT02 trọn bộ: mặt đứng 1 lời gọi 0,021 USD (92,5 / 115), phối cảnh 5 ảnh 0,15 USD,
+3 ảnh phòng 0,09 USD — tổng 0,261 USD, không phần nào hỏng. Sửa sau góp ý anh Dũng: nhãn «Lấy từ đầu bài», «Bộ kết quả» mở khi chưa có mặt
+bằng (gói `<mã>_AI-Design_y-tuong.zip` gồm sơ đồ + ảnh phòng), bước Mặt bằng chưa có phương án ghi «Không bắt buộc», thẻ cũ đổi tên «Ảnh
+mặt bằng có đồ đạc», mở trang khi chưa có mặt bằng vào thẳng Mặt ngoài, «Vẽ tất cả phòng chính» (hỏi lại kèm tổng tiền; phòng ngủ mỗi
+phòng một ảnh, loại khác một ảnh), ban công / giặt phơi vẽ được (lời dẫn 9.17.0). B5 (0259): link xem cho khách — kiến trúc sư (quyền
+ghi bộ môn kiến trúc) duyệt, cơ hội phải có báo cáo khảo sát đã duyệt hoặc hồ sơ có khảo sát thiết kế, 14 ngày tính từ lúc duyệt
+(`tk.concept_link_days`), thu hồi được, đếm lượt xem; nội dung chụp lúc duyệt; không tờ mặt đứng có kích thước, không DXF, không giá,
+không danh tính; sơ đồ chỉ hiện khi vừa lô.

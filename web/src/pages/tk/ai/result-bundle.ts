@@ -14,7 +14,7 @@ export interface BundleFile {
   /** Tuyến Worker trả byte của tệp. */
   url: string;
   /** Nhóm hiển thị. */
-  group: 'mat-bang' | 'mat-dung' | 'phoi-canh';
+  group: 'y-tuong' | 'mat-bang' | 'mat-dung' | 'phoi-canh' | 'noi-that';
   /** `true` = tệp có thể chưa có (ảnh do mô hình ảnh vẽ) — 404 thì bỏ qua, không phải lỗi. */
   optional: boolean;
   /** Đuôi mặc định khi máy chủ không nói loại tệp. */
@@ -33,6 +33,9 @@ export function codePrefix(code: string | null | undefined): string {
   return slug || 'ho-so';
 }
 
+/** Tên phần thay tên phương án khi chưa có mặt bằng — gói chỉ có bộ ý tưởng dựng từ đầu bài. */
+export const CONCEPT_BUNDLE_NAME = 'Ý tưởng';
+
 export function bundleZipName(code: string | null | undefined, planName: string): string {
   return `${codePrefix(code)}_AI-Design_${fileSlug(planName)}.zip`;
 }
@@ -40,12 +43,17 @@ export function bundleZipName(code: string | null | undefined, planName: string)
 export interface BundleInput {
   projectId: string;
   code: string | null | undefined;
+  /** `null` = chưa có mặt bằng — gói chỉ chứa bộ ý tưởng dựng từ đầu bài (B3). */
   plan: {
     artifactId: string;
     name: string;
     /** Tầng có tờ vẽ, kể cả tờ mái. */
     levels: Array<{ level: number; name: string; roof?: boolean }>;
-  };
+  } | null;
+  /** Kèm sơ đồ công năng (B2) — có ngay khi đầu bài đã xác nhận. */
+  zoning?: boolean;
+  /** Ảnh nội thất từng phòng (B3b) của đầu bài hiện hành; `name` là tên phòng hiển thị. */
+  roomImages?: Array<{ artifactId: string; name: string }>;
   facade: { artifactId: string; name: string } | null;
   imageSet: {
     artifactId: string;
@@ -57,7 +65,36 @@ export interface BundleInput {
 export function bundleFiles(input: BundleInput): BundleFile[] {
   const pre = codePrefix(input.code);
   const pid = encodeURIComponent(input.projectId);
-  const plan = input.plan;
+  const files: BundleFile[] = [];
+  if (input.zoning) {
+    files.push({
+      path: `y-tuong/${pre}_so-do-cong-nang.svg`,
+      url: `/design/ai/concept/${pid}/zoning?format=svg`,
+      group: 'y-tuong',
+      optional: true,
+      ext: 'svg',
+    });
+  }
+  if (input.plan) files.push(...planFiles(input.plan, pre, pid));
+  files.push(...outerFiles(input, pre, pid));
+  const used = new Set<string>();
+  for (const room of input.roomImages ?? []) {
+    const base = `noi-that/${pre}_${fileSlug(room.name) || 'phong'}`;
+    let path = base;
+    for (let n = 2; used.has(path); n += 1) path = `${base}-${n}`;
+    used.add(path);
+    files.push({
+      path,
+      url: `/design/ai/room-image/${pid}/image/${encodeURIComponent(room.artifactId)}`,
+      group: 'noi-that',
+      optional: true,
+      ext: 'png',
+    });
+  }
+  return files;
+}
+
+function planFiles(plan: NonNullable<BundleInput['plan']>, pre: string, pid: string): BundleFile[] {
   const pa = fileSlug(plan.name);
   const planQs = `artifactId=${encodeURIComponent(plan.artifactId)}`;
   const files: BundleFile[] = [];
@@ -89,6 +126,11 @@ export function bundleFiles(input: BundleInput): BundleFile[] {
       ext: 'png',
     });
   }
+  return files;
+}
+
+function outerFiles(input: BundleInput, pre: string, pid: string): BundleFile[] {
+  const files: BundleFile[] = [];
   if (input.facade) {
     const md = fileSlug(input.facade.name);
     const qs = `artifactId=${encodeURIComponent(input.facade.artifactId)}`;
@@ -152,9 +194,12 @@ export function withExtension(path: string, contentType: string | null, fallback
 export function bundleReadme(input: {
   code: string | null | undefined;
   projectName: string | null | undefined;
-  planName: string;
+  /** `null` = chưa có mặt bằng (gói ý tưởng dựng từ đầu bài). */
+  planName: string | null;
   facadeName: string | null;
   imageSetName: string | null;
+  /** Số ảnh nội thất từng phòng trong gói. */
+  roomImageCount?: number;
   scoreLine: string | null;
   deductions: string[];
   files: string[];
@@ -171,13 +216,16 @@ export function bundleReadme(input: {
     'trên tờ vector đo được; ảnh do mô hình ảnh vẽ chỉ để trình bày, không đo được.',
     input.noCodeCheck,
     '',
-    `Mặt bằng: ${input.planName}`,
+    input.planName === null
+      ? 'Mặt bằng: chưa có — gói này là bộ ý tưởng dựng thẳng từ đầu bài (sơ đồ công năng, mặt đứng, ảnh).'
+      : `Mặt bằng: ${input.planName}`,
     input.scoreLine ? `Điểm: ${input.scoreLine}` : null,
     ...(input.deductions.length
       ? ['Ba lý do trừ điểm lớn nhất:', ...input.deductions.map((d, i) => `  ${i + 1}. ${d}`)]
       : []),
     `Mặt đứng: ${input.facadeName ?? 'chưa có'}`,
     `Phối cảnh: ${input.imageSetName ?? 'chưa có'}`,
+    `Ảnh nội thất từng phòng: ${input.roomImageCount ? `${input.roomImageCount} ảnh` : 'chưa có'}`,
     '',
     'Các tệp trong gói:',
     ...input.files.map((f) => `  - ${f}`),

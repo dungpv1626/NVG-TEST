@@ -123,8 +123,22 @@ describe('Dải bước của tab AI Design', () => {
     expect(screen.queryByText('Cần chương trình không gian trước.')).toBeNull();
     // Mặt ngoài KHÔNG còn chờ mặt bằng (B3, 30/10/2026): chưa có phương án thì dựng thẳng từ đầu bài.
     expect(screen.queryByText('Cần xếp mặt bằng trước.')).toBeNull();
-    // Bộ kết quả vẫn cần một phương án mặt bằng — bước ấy mờ kèm lý do.
-    expect(screen.getByText('Cần ít nhất một phương án mặt bằng.')).toBeInTheDocument();
+    // Bộ kết quả không còn chờ mặt bằng (30/10/2026): đầu bài đã xác nhận là có bộ ý tưởng để tải.
+    expect(screen.queryByText('Cần ít nhất một phương án mặt bằng.')).toBeNull();
+    expect(screen.getByText('Sẵn sàng tải')).toBeInTheDocument();
+    // Chưa có mặt bằng: bước Mặt bằng không bắt buộc.
+    expect(screen.getByRole('button', { name: /^Mặt bằng/ })).toHaveTextContent('Không bắt buộc');
+  });
+
+  it('đầu bài đã xác nhận, chưa có mặt bằng: vào thẳng bước Mặt ngoài; ?buoc= vẫn được tôn trọng', async () => {
+    state.design = designState();
+    const view = renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
+    expect(await screen.findByText('Phần mặt đứng')).toBeInTheDocument();
+    expect(screen.queryByText('Bước mặt bằng')).toBeNull();
+    view.unmount();
+
+    renderWithApp(<AiDesignTab projectId="p1" readOnly={false} initialStep="mat-bang" />);
+    expect(await screen.findByText('Bước mặt bằng')).toBeInTheDocument();
   });
 
   it('chưa xác nhận đầu bài thì bước mặt bằng chờ đầu bài', async () => {
@@ -151,8 +165,8 @@ describe('Dải bước của tab AI Design', () => {
       (b) => b.textContent?.match(/^\d?(Đầu vào|Mặt bằng|Mặt ngoài|Bộ kết quả)/)?.[1],
     );
     expect(labels).toEqual(['Đầu vào', 'Mặt bằng', 'Mặt ngoài', 'Bộ kết quả']);
-    // Chưa có phương án: bộ kết quả chưa đủ điều kiện, kèm lý do.
-    expect(screen.getByText('Cần ít nhất một phương án mặt bằng.')).toBeInTheDocument();
+    // Chưa có phương án nhưng đầu bài đã xác nhận: bộ kết quả (bộ ý tưởng) vẫn tải được.
+    expect(screen.queryByText('Cần ít nhất một phương án mặt bằng.')).toBeNull();
   });
 
   it('bước mở lúc vào là ket-qua (từ ?buoc=) thì mở thẳng bộ kết quả, gói mang mã hồ sơ', async () => {
@@ -208,7 +222,7 @@ describe('Dải bước của tab AI Design', () => {
     expect(screen.getByText('Đang chạy')).toBeInTheDocument();
   });
 
-  it('lượt xếp gần nhất hỏng, chưa có phương án: bước ghi «Hỏng», không «Chưa chạy» (23/10/2026)', async () => {
+  it('lượt xếp gần nhất hỏng, chưa có phương án: bước ghi «Không bắt buộc», không tô «Hỏng» (30/10/2026)', async () => {
     const run = (status: string) => ({
       id: 'r1',
       stage: 'plan',
@@ -223,8 +237,9 @@ describe('Dải bước của tab AI Design', () => {
     const planStep = () => screen.getByRole('button', { name: /^Mặt bằng/ });
     state.design = designState({ runs: { plan: run('failed') } });
     const view = renderWithApp(<AiDesignTab projectId="p1" readOnly={false} />);
-    expect(await screen.findByText('Hỏng')).toBeInTheDocument();
-    expect(planStep()).toHaveTextContent('Hỏng');
+    // Chưa có mặt bằng thì mặt bằng không bắt buộc (bộ ý tưởng từ đầu bài) — lượt hỏng cũ chỉ xem trong bước.
+    expect(await screen.findByText('Không bắt buộc')).toBeInTheDocument();
+    expect(planStep()).not.toHaveTextContent('Hỏng');
     expect(planStep()).not.toHaveTextContent('Chưa chạy');
     view.unmount();
 

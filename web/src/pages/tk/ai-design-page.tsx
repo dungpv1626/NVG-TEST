@@ -24,6 +24,7 @@ import { useCan } from '@/lib/auth';
 import { AiDesignTab } from './ai/ai-design-tab';
 import { ConceptZoningPanel } from './ai/concept-zoning-panel';
 import { BriefPanel } from './brief-panel';
+import { ConceptSharePanel } from './concept-share-panel';
 import { DesignWorkspace } from './design-workspace';
 import { SurveyPanel } from './survey-panel';
 
@@ -123,6 +124,7 @@ export function AiDesignPage() {
               initialStep={params.get('buoc')}
               initialPart={params.get('phan')}
               inputs={inputs}
+              customerShare={<ConceptSharePanel projectId={project.id} />}
               briefLink={
                 <Link className="underline" to={`${editPath}?tab=dau-bai`}>
                   Sửa ở đầu bài của hồ sơ

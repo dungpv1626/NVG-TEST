@@ -73,7 +73,7 @@ const STEPS: StepMeta[] = [
   {
     id: 'ket-qua',
     label: 'Bộ kết quả',
-    hint: 'Tải cả gói một phương án: tờ vẽ SVG, DXF và ảnh, tên theo mã hồ sơ.',
+    hint: 'Tải cả gói một phương án (tờ vẽ SVG, DXF, ảnh) — chưa có mặt bằng thì gói bộ ý tưởng từ đầu bài.',
   },
 ];
 
@@ -104,7 +104,9 @@ function statusOf(
       return {
         done: state.plans.length > 0,
         running: isRunning(state, 'plan'),
-        failed: state.plans.length === 0 && isFailed(state, 'plan'),
+        // Chưa có mặt bằng thì bước này KHÔNG bắt buộc (bộ ý tưởng dựng từ đầu bài, B3): lượt hỏng cũ không được
+        // tô đỏ cả dải như thể ngôi nhà hỏng — chi tiết lượt hỏng vẫn xem trong bước.
+        failed: false,
         // Mặt bằng đọc đầu bài + khảo sát, không đọc chương trình không gian (T45, 15/09/2026).
         blocked: state.briefArtifactId ? null : 'Cần xác nhận đầu bài trước.',
         count: state.plans.length,
@@ -129,7 +131,9 @@ function statusOf(
         done: false,
         running: false,
         failed: false,
-        blocked: state.plans.length > 0 ? null : 'Cần ít nhất một phương án mặt bằng.',
+        // Bộ ý tưởng từ đầu bài (sơ đồ công năng, mặt đứng, phối cảnh, ảnh phòng) tải được khi chưa có mặt bằng.
+        blocked:
+          state.plans.length > 0 || state.briefArtifactId ? null : 'Cần xác nhận đầu bài trước.',
         count: 0,
       };
   }
@@ -161,6 +165,7 @@ export function AiDesignTab({
   projectName,
   initialStep,
   initialPart,
+  customerShare,
 }: {
   /** Bước mở lúc vào (từ `?buoc=` của địa chỉ); giá trị lạ thì bỏ qua. */
   initialStep?: string | null;
@@ -175,6 +180,8 @@ export function AiDesignTab({
   inputs?: React.ReactNode;
   /** Lối sang đầu bài của hồ sơ (để sửa) — chèn cạnh phiếu mặt đứng chỉ xem. */
   briefLink?: React.ReactNode;
+  /** Khối «Gửi khách xem» (B5, 0259) ở bước Bộ kết quả — do trang dựng tab đưa vào (phần AI không nhập hook gửi khách). */
+  customerShare?: React.ReactNode;
 }): React.ReactElement {
   const state = useAiDesignState(projectId);
   const facadeUploads = useUploadedDrawings(projectId, 'facade').data?.items.length ?? 0;
@@ -190,9 +197,15 @@ export function AiDesignTab({
   const [part, setPart] = useState<OuterPart>(() =>
     initialPart === 'phoi-canh' || initialPart === 'noi-that' ? initialPart : 'mat-dung',
   );
-  // Chưa có đầu bài đã xác nhận thì mở ngay bước đầu vào — mọi bước sau đều đang chờ nó.
+  // Chưa có đầu bài đã xác nhận thì mở ngay bước đầu vào — mọi bước sau đều đang chờ nó. Đầu bài đã xác nhận mà
+  // chưa có mặt bằng thì mở «Mặt ngoài» — bộ ý tưởng cho khách dựng thẳng từ đầu bài (B3).
   const open: StepId =
-    chosen ?? (inputs && state.data && !state.data.briefArtifactId ? 'dau-vao' : 'mat-bang');
+    chosen ??
+    (inputs && state.data && !state.data.briefArtifactId
+      ? 'dau-vao'
+      : state.data?.briefArtifactId && state.data.plans.length === 0
+        ? 'mat-ngoai'
+        : 'mat-bang');
 
   if (state.isLoading) {
     return (
@@ -277,6 +290,8 @@ export function AiDesignTab({
                         <Chip tone="bl">Đang chạy</Chip>
                       ) : s.failed ? (
                         <Chip tone="rd">Hỏng</Chip>
+                      ) : step.id === 'mat-bang' && !s.done && !s.blocked ? (
+                        <Chip tone="mute">Không bắt buộc</Chip>
                       ) : step.id === 'mat-ngoai' && facadeIsStale(data) ? (
                         <Chip tone="am">Theo phương án cũ</Chip>
                       ) : step.id === 'ket-qua' ? (
@@ -364,6 +379,8 @@ export function AiDesignTab({
             onGoTo={(step) => setOpen(step)}
           />
         )}
+        {/* Gửi khách xem bộ ý tưởng bằng link có hạn, kiến trúc sư duyệt trước (B5, 0259). */}
+        {open === 'ket-qua' && customerShare && <div className="mt-6">{customerShare}</div>}
         {open !== 'dau-vao' && nextStep && (
           <div className="mt-5 flex justify-end">
             <Button variant="secondary" onClick={() => setOpen(nextStep.id)}>

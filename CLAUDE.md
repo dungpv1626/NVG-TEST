@@ -1402,8 +1402,9 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
    thiếu 5 cm để đặt giếng trời cạnh hành lang. Bước sau chờ anh Dũng: (a) kiểm trước lượt «đầu bài không vừa» cho nhà ống
    (chặn lượt — cần duyệt); (b) WC dưới gầm thang + giếng trời trong hàng phòng; (c) kiến trúc sư NVO rà cạnh tối thiểu ô thang /
    phòng khách nhà ống trong `kb/`.
-   **Hướng mới (anh Dũng 30/10): «Bộ ý tưởng cho khách»** — `doc/design/KE_HOACH_BO_Y_TUONG_KHACH.md`, T190. B1–B3b XONG trên máy
-   (sơ đồ công năng + kiểm vừa lô, mặt ngoài và ảnh từng phòng dựng từ đầu bài, migration 0258). Còn: B4 lượt thật (xin phép), B5 link khách, B6.
+   **Hướng mới (anh Dũng 30/10): «Bộ ý tưởng cho khách»** — `doc/design/KE_HOACH_BO_Y_TUONG_KHACH.md`, T190. B1–B5 XONG trên máy
+   (sơ đồ công năng + kiểm vừa lô, mặt ngoài và ảnh từng phòng dựng từ đầu bài 0258, link gửi khách có kiến trúc sư duyệt 0259 — `/xem-y-tuong/:token`).
+   B4 lượt thật AT02 ĐẠT trọn bộ 0,261 USD (`backup/y-tuong-khach/ky-vong-b4.md`). Còn: B6 anh Dũng chạy thử bằng đúng vai.
    (D) Việc của phiên 29/10 bên dưới vẫn còn hiệu lực (gói đợt 2, T6–T8, câu hỏi NVG, email thật, phát hành).
 0. **Việc tiếp theo (sau phiên 29/10/2026) — chờ anh Dũng chọn:**
    (1) **Kiểm đợt 1 khớp khảo sát anh Thi (G1–G6, 0244–0249) trên trình duyệt bằng đúng vai** — chưa gói nào chạy thử trên trình
@@ -1543,7 +1544,7 @@ Người đang làm việc với Claude Code trên máy này là **anh Dũng** (
 5. Việc treo cũ, làm xen: QĐ-6 giao dịch nội bộ; PDF chuẩn và AI gợi ý câu chữ cho mẫu hợp
    đồng; nối Zalo OA / form quảng cáo; gửi văn bản cho khách qua email.
 
-**Migration tiếp theo: 0259.** (0258 = loại artifact `ai_room_image`, «Bộ ý tưởng cho khách» T190.) (Đã dùng tới 0257 — 0250 / 0251 / 0252 là sửa lỗi chạy thử trọn luồng NVO / NVC / NVS 30/10/2026, ảnh ở `backup/e2e-*/`; 0253–0257 trả lời 18 câu nghiệp vụ sau chạy thử (gói A / B / C, vai trò `KD_NVS`, tài khoản `kinhdoanh.nvs@`); `stage_readiness` bản mới nhất ở 0257, `decide_approval` ở 0253; 0204, 0210–0216, 0220 bỏ trống.)
+**Migration tiếp theo: 0260.** (0258 = loại artifact `ai_room_image`; 0259 = link gửi khách `design_concept_shares` — «Bộ ý tưởng cho khách» T190.) (Đã dùng tới 0257 — 0250 / 0251 / 0252 là sửa lỗi chạy thử trọn luồng NVO / NVC / NVS 30/10/2026, ảnh ở `backup/e2e-*/`; 0253–0257 trả lời 18 câu nghiệp vụ sau chạy thử (gói A / B / C, vai trò `KD_NVS`, tài khoản `kinhdoanh.nvs@`); `stage_readiness` bản mới nhất ở 0257, `decide_approval` ở 0253; 0204, 0210–0216, 0220 bỏ trống.)
 
 ### 9.4 Quyết định đã chốt và lý do
 

@@ -110,6 +110,9 @@ const ShowcaseFormPage = lazy(() =>
 const PublicShowcasePage = lazy(() =>
   import('@/pages/showcase/public-showcase').then((m) => ({ default: m.PublicShowcasePage })),
 );
+const PublicConceptPage = lazy(() =>
+  import('@/pages/tk/public-concept').then((m) => ({ default: m.PublicConceptPage })),
+);
 const PublicSignedScanPage = lazy(() =>
   import('@/pages/hd/public-signed-scan').then((m) => ({ default: m.PublicSignedScanPage })),
 );
@@ -421,6 +424,8 @@ const router = createBrowserRouter(
       <Route path="/xem-mau/:token" element={<PublicShowcasePage />} />
       {/* Khách xem bản hợp đồng đã ký (0189) — chỉ qua Worker `/public/signed/:token`. */}
       <Route path="/xem-ban-ky/:token" element={<PublicSignedScanPage />} />
+      {/* Khách xem bộ ý tưởng AI Design (0259) — chỉ qua Worker `/public/concept/:token`, kiến trúc sư đã duyệt. */}
+      <Route path="/xem-y-tuong/:token" element={<PublicConceptPage />} />
 
       <Route
         element={

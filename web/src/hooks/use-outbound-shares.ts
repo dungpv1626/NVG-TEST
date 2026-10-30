@@ -14,7 +14,9 @@ export type OutboundEntityType =
   | 'contract_signed_scan'
   | 'showcase_shares'
   /** Báo giá thuê giàn giáo đã duyệt (0252). */
-  | 'rental_quotes';
+  | 'rental_quotes'
+  /** Link xem bộ ý tưởng AI Design (0259). */
+  | 'design_concept_shares';
 
 export interface OutboundShare {
   id: string;

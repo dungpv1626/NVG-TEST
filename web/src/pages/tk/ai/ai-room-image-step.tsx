@@ -7,9 +7,9 @@
  * NGUYÊN BẢN, không in dấu (T154). Khung hai ngăn như hai phần kia: trái thiết lập + nút chính, phải bộ ảnh.
  */
 
-import { useMemo, useState } from 'react';
-import { BedDouble, Image as ImageIcon } from 'lucide-react';
-import { formatDateTime, formatNumber } from '@nvg/shared';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { BedDouble, Image as ImageIcon, Images } from 'lucide-react';
+import { formatDateTime } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { FIELD_BOX } from '@/components/ui/field-box';
@@ -25,24 +25,15 @@ import {
   type AiRoomImageItem,
 } from '@/hooks/use-ai-design';
 import { toUserMessage } from '@/hooks/use-error-message';
+import { cn } from '@/lib/utils';
 import { Chip, Panel } from '../tk-ui';
 import { AiModePicker, useAiChoice } from './ai-model-picker';
 import { AiUsageLine, formatUsd } from './ai-usage';
+import { roomsToDrawAll, roomTitle } from './room-image-batch';
 import { roomImageEstimate } from './room-image-cost';
 
 /** Vẽ quá số tấm này trong một phiên thì hỏi lại — mỗi tấm là một lượt gọi tính tiền. */
 const ASK_AGAIN_AFTER = 3;
-
-/** «Phòng ngủ · tầng 2 · khoảng 14,3 m²». */
-export function roomTitle(room: Pick<AiBriefRoom, 'label' | 'floor' | 'areaM2'>): string {
-  return [
-    room.label,
-    room.floor !== null ? `tầng ${room.floor}` : null,
-    room.areaM2 !== null ? `khoảng ${formatNumber(room.areaM2, 1)} m²` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-}
 
 export function AiRoomImageStep({
   projectId,
@@ -58,6 +49,17 @@ export function AiRoomImageStep({
   const [roomKey, setRoomKey] = useState<string | null>(null);
   const [drawn, setDrawn] = useState(0);
   const [asking, setAsking] = useState(false);
+  /** «Vẽ tất cả phòng chính»: hộp hỏi lại, tiến độ k/N, câu dừng khi một tấm hỏng. */
+  const [askingAll, setAskingAll] = useState(false);
+  const [batch, setBatch] = useState<{ done: number; total: number } | null>(null);
+  const [batchNote, setBatchNote] = useState<string | null>(null);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
 
   const rooms = data.data?.rooms ?? [];
   const picked = rooms.find((r) => r.key === roomKey) ?? rooms[0] ?? null;
@@ -72,6 +74,43 @@ export function AiRoomImageStep({
     [history.data, image.choice.route, image.selected],
   );
 
+  const toDrawAll = useMemo(
+    () => roomsToDrawAll(rooms, data.data?.images ?? []),
+    [rooms, data.data?.images],
+  );
+
+  /**
+   * Vẽ lần lượt từng phòng bằng CHÍNH lời gọi của nút một phòng (cùng trần mỗi lời gọi, cùng sổ
+   * `design_ai_call`) — tuần tự, dừng ở tấm hỏng đầu tiên, không tự thử lại (mỗi lần thử là một lượt tính tiền).
+   */
+  const runAll = async () => {
+    const route = image.choice.route;
+    if (!route || toDrawAll.length === 0) return;
+    const list = toDrawAll;
+    setBatchNote(null);
+    setBatch({ done: 0, total: list.length });
+    let done = 0;
+    for (const room of list) {
+      if (!alive.current) return;
+      try {
+        await draw.mutateAsync({ projectId, roomKey: room.key, route });
+      } catch (error) {
+        if (!alive.current) return;
+        setBatchNote(
+          `Đã dừng ở ${roomTitle(room)} (tấm ${done + 1}/${list.length}): ${toUserMessage(error)} Đã vẽ xong ${done} tấm; bấm lại để vẽ tiếp các phòng còn thiếu.`,
+        );
+        setBatch(null);
+        return;
+      }
+      done += 1;
+      if (!alive.current) return;
+      setDrawn((n) => n + 1);
+      setBatch({ done, total: list.length });
+    }
+    setBatch(null);
+    setBatchNote(`Đã vẽ xong ${done} tấm.`);
+  };
+
   const run = () => {
     if (!picked || !image.choice.route) return;
     void draw
@@ -79,7 +118,7 @@ export function AiRoomImageStep({
       .then(() => setDrawn((n) => n + 1))
       .catch(() => undefined);
   };
-  const busy = draw.isPending;
+  const busy = draw.isPending || batch !== null;
 
   const setup = (
     <div className="min-w-0 space-y-4">
@@ -109,7 +148,7 @@ export function AiRoomImageStep({
                 value={picked?.key ?? ''}
                 onChange={(event) => setRoomKey(event.target.value)}
                 disabled={busy || readOnly}
-                className={FIELD_BOX}
+                className={cn(FIELD_BOX, 'w-full max-w-full min-w-0 truncate')}
               >
                 {rooms.map((room) => (
                   <option key={room.key} value={room.key}>
@@ -148,10 +187,32 @@ export function AiRoomImageStep({
                   disabled={busy || !picked || !image.choice.route}
                 >
                   <ImageIcon className="size-4" aria-hidden />
-                  {busy
+                  {busy && !batch
                     ? 'Đang vẽ…'
                     : `Vẽ ảnh phòng${estimate && !simulated ? ` · ≈ ${formatUsd(estimate.perImageUsd)}` : ''}`}
                 </Button>
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() => setAskingAll(true)}
+                  disabled={busy || toDrawAll.length === 0 || !image.choice.route}
+                >
+                  <Images className="size-4" aria-hidden />
+                  {batch
+                    ? `Đang vẽ ${batch.done + 1}/${batch.total}`
+                    : toDrawAll.length === 0
+                      ? 'Vẽ tất cả phòng chính · đã đủ ảnh'
+                      : `Vẽ tất cả phòng chính · ${toDrawAll.length} ảnh`}
+                </Button>
+                {batchNote && (
+                  <p
+                    className={
+                      batchNote.startsWith('Đã dừng') ? 'text-status-overdue' : 'text-fg-subtle'
+                    }
+                  >
+                    {batchNote}
+                  </p>
+                )}
                 <p className="text-sm text-fg-subtle" data-testid="cost-estimate">
                   <span className="font-medium text-fg">Chi phí ước tính: </span>
                   {simulated
@@ -219,6 +280,35 @@ export function AiRoomImageStep({
           ]}
         />
       </FullscreenFrame>
+      {askingAll && (
+        <ConfirmDialog
+          title={`Vẽ ${toDrawAll.length} ảnh phòng?`}
+          confirmLabel={`Vẽ ${toDrawAll.length} ảnh`}
+          cancelLabel="Thôi"
+          className="border-tk-line bg-tk-panel text-tk-tx"
+          onCancel={() => setAskingAll(false)}
+          onConfirm={() => {
+            setAskingAll(false);
+            void runAll();
+          }}
+        >
+          <p>
+            Mỗi phòng chính của đầu bài một tấm:{' '}
+            {toDrawAll.map((room) => roomTitle(room)).join('; ')}. Loại phòng lặp lại (WC, ban công,
+            sân thượng…) chỉ vẽ một tấm; phòng đã có ảnh thì bỏ qua.
+          </p>
+          <p className="mt-2 font-medium">
+            {simulated
+              ? '0 USD — dịch vụ đang chạy giả lập, ảnh là tấm mẫu.'
+              : estimate
+                ? `≈ ${toDrawAll.length} ảnh × ${formatUsd(estimate.perImageUsd)} ≈ ${formatUsd(estimate.perImageUsd * toDrawAll.length)}`
+                : 'Chi phí: chưa đủ dữ liệu để ước tính — mô hình này chưa khai giá niêm yết và chưa có lượt nào.'}
+          </p>
+          <p className="mt-2">
+            Vẽ lần lượt từng tấm; một tấm hỏng thì dừng ngay và báo, không tự thử lại.
+          </p>
+        </ConfirmDialog>
+      )}
       {asking && (
         <ConfirmDialog
           title="Vẽ thêm ảnh phòng?"

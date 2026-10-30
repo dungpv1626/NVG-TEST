@@ -57,6 +57,12 @@ describe('Danh sách phòng vẽ được', () => {
     expect(rooms.find((r) => r.type === 'living')).toMatchObject({ floor: 1, areaM2: 32 });
   });
 
+  it('ban công, sân thượng, giặt phơi vẽ được; gara vẫn không (anh Dũng 30/10/2026)', () => {
+    const drawable = Object.keys(prompts.roomImage.rooms);
+    for (const type of ['balcony', 'terrace', 'laundry']) expect(drawable).toContain(type);
+    expect(drawable).not.toContain('garage');
+  });
+
   it('loại phòng nào chọn được là DỮ LIỆU — mọi loại trong bảng đều có trong từ vựng phòng', () => {
     for (const type of Object.keys(prompts.roomImage.rooms)) expect(type).toMatch(/^[a-z_]+$/);
   });

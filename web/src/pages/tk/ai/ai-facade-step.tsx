@@ -632,7 +632,9 @@ function FacadeIdea({ view }: { view: AiFacadeView }): React.ReactElement {
           </div>
         )}
         <div>
-          <dt className="text-fg-subtle">Lấy từ mặt bằng (không đổi)</dt>
+          <dt className="text-fg-subtle">
+            {view.source === 'brief' ? 'Lấy từ đầu bài (không đổi)' : 'Lấy từ mặt bằng (không đổi)'}
+          </dt>
           <dd>
             {view.openings} lỗ mở · {view.balconies} ban công
           </dd>

@@ -41,7 +41,9 @@
 # `sketch_pending` và cách xử lý tầng chưa phác (T187) — chỉ chạy khi mô hình tự bỏ bản phác tầng trên.
 # 9.16.0 (30/10/2026, B3b «bộ ý tưởng cho khách» — anh Dũng): khối MỚI `room_image` — ảnh nội thất MỘT phòng vẽ thẳng từ
 # đầu bài, không cần mặt bằng. Không đổi khối nào khác.
-version: '9.16.0'
+# 9.17.0 (30/10/2026, B3b — anh Dũng xem lượt thật AT02): `room_image.rooms` thêm ban công (`balcony`) và giặt phơi
+# (`laundry`) để «Vẽ tất cả phòng chính» đủ các không gian khách hay hỏi. Gara vẫn không vẽ. Không đổi khối nào khác.
+version: '9.17.0'
 
 program:
   system: |
@@ -1603,6 +1605,8 @@ room_image:
     study_area: 'study corner'
     dressing_room: 'walk-in dressing room'
     terrace: 'roof terrace with planting'
+    balcony: 'balcony with railing, potted plants and a small seating spot'
+    laundry: 'laundry and clothes-drying area with washing machine and drying rack'
     shop: 'small street-front shop'
   # Thành phần gia đình (`family[].role`) → cụm tiếng Anh, ghép với số người.
   roles:

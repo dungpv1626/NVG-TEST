@@ -39,7 +39,7 @@ beforeEach(() => {
 });
 afterEach(() => wide?.mockRestore());
 
-/** Mở một tab của ngăn trái (Xếp mặt bằng / Đánh giá / Ảnh nội thất). */
+/** Mở một tab của ngăn trái (Xếp mặt bằng / Đánh giá / Ảnh mặt bằng có đồ đạc). */
 async function openTab(name: RegExp): Promise<void> {
   await userEvent.click(screen.getByRole('tab', { name }));
 }
@@ -303,7 +303,7 @@ describe('Tờ mặt bằng — tờ SVG tất định là tờ CHÍNH (T22, 12/
     // hiện tên ấy thì không đối chiếu được tấm ảnh trên màn hình với dòng tiền trong nhật ký.
     state.review = review();
     show();
-    await openTab(/Ảnh nội thất/);
+    await openTab(/Ảnh mặt bằng có đồ đạc/);
     // Từ 07/10/2026 nút thu gọn chỉ còn tên ngắn (Haan, theo mẫu); tên model THẬT nằm ở `title`
     // của nút để vẫn đối chiếu được với nhật ký chi phí.
     expect(
@@ -319,7 +319,7 @@ describe('Tờ mặt bằng — tờ SVG tất định là tờ CHÍNH (T22, 12/
       ],
     });
     show();
-    await openTab(/Ảnh nội thất/);
+    await openTab(/Ảnh mặt bằng có đồ đạc/);
     const panel = screen
       .getByRole('heading', { name: 'Ảnh mặt bằng có nội thất' })
       .closest('section')!;
@@ -333,7 +333,7 @@ describe('Tờ mặt bằng — tờ SVG tất định là tờ CHÍNH (T22, 12/
   it('nút vẽ ảnh nội thất gọi đúng phương án và đúng tầng đang xem (T57)', async () => {
     state.review = review();
     show();
-    await openTab(/Ảnh nội thất/);
+    await openTab(/Ảnh mặt bằng có đồ đạc/);
     await userEvent.click(screen.getByRole('button', { name: /Vẽ ảnh nội thất tầng 1/i }));
     expect(state.drawSheetImage).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -354,7 +354,7 @@ describe('Tờ mặt bằng — tờ SVG tất định là tờ CHÍNH (T22, 12/
   it('tấm ảnh KHÔNG thay tờ vector: nó ở tab riêng, tờ vector vẫn hiện ở ngăn bản vẽ (T22)', async () => {
     state.review = review();
     show();
-    await openTab(/Ảnh nội thất/);
+    await openTab(/Ảnh mặt bằng có đồ đạc/);
     const sheet = screen.getByRole('img', { name: /Tờ mặt bằng Tầng 1/ });
     const panel = screen.getByRole('heading', { name: 'Ảnh mặt bằng có nội thất' });
     expect(sheet).toBeVisible();
@@ -407,7 +407,7 @@ describe('Một khung «Ảnh mặt bằng có nội thất», hai nguồn (07/1
     state.run = null;
     state.review = review();
     show();
-    await openTab(/Ảnh nội thất/);
+    await openTab(/Ảnh mặt bằng có đồ đạc/);
     expect(screen.getAllByRole('heading', { name: 'Ảnh mặt bằng có nội thất' })).toHaveLength(1);
     expect(screen.getByRole('button', { name: /Vẽ ảnh nội thất tầng 1/i })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Bản vẽ kỹ sư tải lên' }));
@@ -425,7 +425,7 @@ describe('Một khung «Ảnh mặt bằng có nội thất», hai nguồn (07/1
         state={{ ...designState, plans: [], planHeadArtifactId: null } as never}
       />,
     );
-    await openTab(/Ảnh nội thất/);
+    await openTab(/Ảnh mặt bằng có đồ đạc/);
     expect(screen.getByRole('heading', { name: 'Ảnh mặt bằng có nội thất' })).toBeInTheDocument();
     expect(screen.getByText(/Tải mặt bằng một tầng/)).toBeInTheDocument();
   });
