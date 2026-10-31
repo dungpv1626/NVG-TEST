@@ -9,7 +9,7 @@
  */
 
 import { useState } from 'react';
-import { Check, Copy, Eye, Link2 } from 'lucide-react';
+import { Check, Copy, ExternalLink, Eye, Link2 } from 'lucide-react';
 import { formatDate, formatDateTime } from '@nvg/shared';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -31,6 +31,7 @@ import {
 import { toUserMessage } from '@/hooks/use-error-message';
 import { useRecipientContact } from '@/hooks/use-outbound-shares';
 import { composeZaloMessage } from '@/lib/zalo-share';
+import { CONCEPT_PREVIEW_PARAM } from './public-concept';
 import { Chip, Panel } from './tk-ui';
 
 const TONE: Record<ConceptShare['status'], 'am' | 'gr' | 'mute'> = {
@@ -151,6 +152,16 @@ function ShareRow({ share, projectId }: { share: ConceptShare; projectId: string
             {copied ? 'Đã chép' : 'Chép link'}
           </Button>
           {share.can_send && <ConceptZaloSend share={share} projectId={projectId} link={link} />}
+          <a
+            href={`${link}?${CONCEPT_PREVIEW_PARAM}=1`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-10 items-center gap-1 text-sm font-medium text-brand"
+            title="Mở đúng trang khách thấy — không tính vào lượt xem của khách"
+          >
+            <ExternalLink className="size-4" aria-hidden />
+            Xem như khách
+          </a>
         </div>
       )}
 

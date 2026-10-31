@@ -1900,6 +1900,21 @@ export interface AiRoomImageState {
   images: AiRoomImageItem[];
   /** Worker đang chạy GIẢ LẬP (`AI_FAKE`) — ảnh là tấm mẫu, không tốn tiền. */
   simulated: boolean;
+  /**
+   * «Bảng vật liệu chung» suy từ ý tưởng mặt đứng hiện hành (9.18.0, «Cách 3») — lời dẫn từng phòng mang màu và vật
+   * liệu này để các ảnh trông như cùng một nhà. `null` = chưa có mặt đứng của đầu bài này (vắng ở Worker cũ).
+   */
+  sharedPalette?: AiRoomSharedPalette | null;
+  /** Tuyến ảnh kèm được ảnh mặt ngoài làm mẫu; tuyến khác chỉ gửi chữ. */
+  referenceRoutes?: string[];
+}
+
+export interface AiRoomSharedPalette {
+  facadeArtifactId: string;
+  colours: Array<{ role: string; roleLabel: string; label: string | null; hex: string | null }>;
+  materials: string[];
+  /** Ảnh mặt ngoài sẽ kèm làm mẫu (khi model nhận ảnh vào); `viewLabel` rỗng = ảnh mặt đứng. */
+  reference: { kind: 'ai_image_set' | 'ai_facade_image'; viewLabel: string | null } | null;
 }
 
 export function useAiRoomImages(projectId: string) {
@@ -1916,6 +1931,9 @@ export interface DrawnRoomImage {
   mime: string;
   simulated: boolean;
   promptVersion: string;
+  /** Lời dẫn mang bảng vật liệu chung / có kèm ảnh mẫu (vắng ở Worker cũ). */
+  sharedPalette?: boolean;
+  referenceAttached?: boolean;
   usage: AiCallUsage | null;
 }
 

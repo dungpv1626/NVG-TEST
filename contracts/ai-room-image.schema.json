@@ -75,6 +75,72 @@
       "const": false,
       "description": "Luôn `false`: ảnh do mô hình ảnh vẽ hiện NGUYÊN BẢN, không in dấu (T154). Đường dẫn gửi khách tự gắn nhãn của nó."
     },
+    "shared_palette": {
+      "description": "«Bảng vật liệu chung» (31/10/2026, «Cách 3», anh Dũng duyệt): màu và vật liệu suy TẤT ĐỊNH từ ý tưởng mặt đứng hiện hành để các phòng trông như cùng một nhà. Vắng hoặc rỗng = vẽ khi hồ sơ chưa có mặt đứng của đầu bài này — lời dẫn chỉ theo phong cách, như mọi tấm vẽ trước 31/10/2026.",
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["facade_ref", "colours", "materials", "reference"],
+          "properties": {
+            "facade_ref": {
+              "$ref": "#/$defs/artifact_ref",
+              "description": "Ý tưởng mặt đứng (`ai_facade_concept`) mà bảng suy ra. Cũng là một cạnh lineage `ai_room_image_draw`."
+            },
+            "colours": {
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["role", "colour", "hex"],
+                "properties": {
+                  "role": { "type": "string", "enum": ["primary", "secondary", "accent"] },
+                  "colour": {
+                    "type": ["string", "null"],
+                    "pattern": "^[a-z0-9_]+$",
+                    "maxLength": 40,
+                    "description": "Mã màu của `kb/facade_vocabulary.yaml`; rỗng khi không mã nào khớp."
+                  },
+                  "hex": {
+                    "type": ["string", "null"],
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  }
+                }
+              }
+            },
+            "materials": {
+              "type": "array",
+              "maxItems": 12,
+              "items": { "type": "string", "pattern": "^[a-z0-9_]+$", "maxLength": 40 },
+              "description": "Mã vật liệu mặt đứng đã đưa vào lời dẫn (đổi sang cách dùng trong nhà), đúng thứ tự."
+            },
+            "reference": {
+              "description": "Ảnh mặt ngoài đã gửi kèm làm mẫu màu / vật liệu. Rỗng = chỉ gửi chữ (tuyến ảnh không nhận ảnh vào, hoặc mặt đứng chưa có ảnh).",
+              "anyOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["artifact_ref", "kind", "view", "uri"],
+                  "properties": {
+                    "artifact_ref": { "$ref": "#/$defs/artifact_ref" },
+                    "kind": { "type": "string", "enum": ["ai_image_set", "ai_facade_image"] },
+                    "view": {
+                      "type": ["string", "null"],
+                      "maxLength": 40,
+                      "description": "Góc phối cảnh khi ảnh lấy từ bộ phối cảnh; rỗng với ảnh mặt đứng."
+                    },
+                    "uri": { "type": "string", "pattern": "^(r2|supabase)://.+" }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
     "prompt_excerpt": {
       "type": ["string", "null"],
       "maxLength": 1200,

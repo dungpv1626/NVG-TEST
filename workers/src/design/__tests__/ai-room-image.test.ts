@@ -5,7 +5,8 @@
  *  · chỉ phòng có cụm tiếng Anh trong `room_image.rooms` mới chọn được (gara, thang không phải nội thất);
  *  · lời dẫn ghép từ loại phòng, tầng, diện tích ĐẦU BÀI khai, phong cách và nếp sinh hoạt ĐÃ trả lời —
  *    không số bịa, không chữ tự do, không mã hồ sơ;
- *  · lời gọi CHỮ → ẢNH: không ảnh vào nào;
+ *  · lời gọi CHỮ → ẢNH: không ảnh vào nào — trừ ảnh mặt ngoài làm mẫu khi tuyến nhận ảnh vào (9.18.0);
+ *  · «bảng vật liệu chung» suy tất định từ ý tưởng mặt đứng; chưa có mặt đứng thì lời dẫn y như 9.17.0;
  *  · artifact đúc ra qua hợp đồng `ai-room-image`;
  *  · client giả lập (`AI_FAKE`) trả PNG đọc được cỡ khung, không tốn tiền.
  *
@@ -17,12 +18,16 @@ import { describe, expect, it } from 'vitest';
 import {
   assembleRoomImage,
   briefRooms,
+  deriveSharedPalette,
   roomImageCallOptions,
   roomImagePrompt,
+  sharedPaletteText,
 } from '../ai/room-image';
 import { pngSize } from '../ai/sheet-image';
 import { aiFakeOn, fakeImageClient, FAKE_PROVIDER } from '../llm/fake-image';
 import { decodeBase64 } from '../llm/image-bytes';
+import { ModelRouter } from '../llm/router';
+import { facadeVocab, TOWNHOUSE_FACADE } from './ai-facade-fixtures';
 import { digestOf, VILLA } from './ai-digest-fixtures';
 import { prompts } from './ai-real-context';
 
@@ -157,5 +162,173 @@ describe('Artifact và client giả lập', () => {
     expect(out.provider).toBe(FAKE_PROVIDER);
     expect(out.usage).toEqual({ inputTokens: null, outputTokens: null });
     expect(pngSize(decodeBase64(out.dataBase64))).toEqual({ width: 64, height: 48 });
+  });
+});
+
+describe('Bảng vật liệu chung từ mặt đứng (9.18.0, «Cách 3»)', () => {
+  const digest = villa();
+  const bedroom = briefRooms(digest, prompts).find((r) => r.type === 'bedroom')!;
+  const FACADE_REF = `sha256:${'f'.repeat(64)}`;
+  const palette = deriveSharedPalette({
+    facadeRef: FACADE_REF,
+    concept: TOWNHOUSE_FACADE,
+    vocabulary: facadeVocab,
+    prompts,
+  });
+
+  it('màu theo palette mặt đứng (tên = mã có đúng mã hex), vật liệu đổi sang cách dùng trong nhà', () => {
+    expect(palette.colours).toEqual([
+      { role: 'primary', colour: 'trang_kem', hex: '#F1EAD8' },
+      { role: 'secondary', colour: 'xam_dam', hex: '#4A4D50' },
+      { role: 'accent', colour: 'nau_go', hex: '#8A5A3B' },
+    ]);
+    // Sơn nước và mái bê tông không có cách dùng trong nhà — màu tường đã ở vai màu.
+    expect(palette.materials.map((m) => m.code)).toEqual([
+      'da_granite',
+      'go_nhua',
+      'kinh_cuong_luc',
+    ]);
+    const text = sharedPaletteText({
+      palette,
+      vocabulary: facadeVocab,
+      prompts,
+      withReference: false,
+    });
+    expect(text).toContain('- main wall colour: cream white (#F1EAD8)');
+    expect(text).toContain('- warm wood brown wood-look panels for cabinetry and one accent wall');
+    expect(text).toContain('- clear glass partitions and balustrades');
+    expect(text).not.toContain('{colour}');
+    expect(text).not.toContain('EXTERIOR');
+    const { prompt } = roomImagePrompt({
+      digest,
+      room: bedroom,
+      prompts,
+      styleCode: 'hien_dai',
+      paletteText: text,
+    });
+    expect(prompt).toContain(prompts.roomImage.sharedPalette.header.trim());
+    expect(prompt).toContain('charcoal grey');
+  });
+
+  it('mọi mã vật liệu trong bảng ánh xạ có trong danh mục mặt đứng (không mã chết)', () => {
+    for (const code of Object.keys(prompts.roomImage.sharedPalette.materials)) {
+      expect(code in facadeVocab.materials || code in facadeVocab.roofMaterials).toBe(true);
+    }
+    for (const code of prompts.roomImage.sharedPalette.colourSkip) {
+      expect(code in facadeVocab.colours).toBe(true);
+    }
+    for (const view of prompts.roomImage.sharedPalette.referenceViews) {
+      expect(prompts.perspective.views[view]).toBeDefined();
+    }
+  });
+
+  it('chưa có mặt đứng → lời dẫn y như 9.17.0 (không chỗ điền thừa, không dòng trống thừa)', () => {
+    const legacy = {
+      ...prompts,
+      roomImage: { ...prompts.roomImage, user: prompts.roomImage.user.replace('\n{palette}', '') },
+    };
+    expect(legacy.roomImage.user).not.toContain('{palette}');
+    for (const styleCode of ['hien_dai', null]) {
+      const now = roomImagePrompt({ digest, room: bedroom, prompts, styleCode });
+      const before = roomImagePrompt({ digest, room: bedroom, prompts: legacy, styleCode });
+      expect(now).toEqual(before);
+      expect(
+        roomImagePrompt({
+          digest,
+          room: bedroom,
+          prompts,
+          styleCode,
+          paletteText: sharedPaletteText({
+            palette: null,
+            vocabulary: facadeVocab,
+            prompts,
+            withReference: true,
+          }),
+        }),
+      ).toEqual(before);
+    }
+  });
+
+  it('ảnh mẫu: chỉ kèm khi được đưa vào, đúng MỘT ảnh, và lời dẫn có câu dặn không vẽ mặt ngoài', () => {
+    const reference = {
+      artifactRef: `sha256:${'c'.repeat(64)}`,
+      kind: 'ai_image_set' as const,
+      view: 'front_day',
+      uri: 'supabase://design-renders/pc.png',
+      image: { mimeType: 'image/png', dataBase64: 'AAAA' },
+    };
+    const withRef = roomImagePrompt({
+      digest,
+      room: bedroom,
+      prompts,
+      styleCode: null,
+      paletteText: sharedPaletteText({
+        palette,
+        vocabulary: facadeVocab,
+        prompts,
+        withReference: true,
+      }),
+    });
+    expect(withRef.prompt).toContain(prompts.roomImage.sharedPalette.referenceNote.trim());
+    expect(roomImageCallOptions(withRef, reference).images).toEqual([reference.image]);
+    expect(roomImageCallOptions(withRef).images).toEqual([]);
+
+    const payload = assembleRoomImage({
+      briefRef: `sha256:${'b'.repeat(64)}`,
+      room: bedroom,
+      styleCode: null,
+      uri: 'supabase://design-renders/x.png',
+      mime: 'image/png',
+      widthPx: 64,
+      heightPx: 48,
+      prompt: withRef.prompt,
+      route: 'ai_image_gemini',
+      provider: FAKE_PROVIDER,
+      model: 'gia-lap',
+      promptVersion: prompts.version,
+      latencyMs: 0,
+      palette,
+      reference,
+    });
+    expect(aiRoomImageSchema.safeParse(payload).success).toBe(true);
+    expect(payload.shared_palette).toMatchObject({
+      facade_ref: FACADE_REF,
+      materials: ['da_granite', 'go_nhua', 'kinh_cuong_luc'],
+      reference: { kind: 'ai_image_set', view: 'front_day' },
+    });
+  });
+
+  it('tuyến nào nhận ảnh vào: Gemini có, OpenAI chỉ khi khai đường sửa ảnh, Pollinations không', () => {
+    const router = new ModelRouter({
+      version: '1',
+      routes: {
+        g: { provider: 'gemini_paid', model: 'g', max_data_class: 2, enabled: true },
+        o: {
+          provider: 'openai',
+          model: 'o',
+          max_data_class: 2,
+          enabled: true,
+          endpoint_edit: 'https://x/edits',
+        },
+        o2: { provider: 'openai', model: 'o', max_data_class: 2, enabled: true },
+        p: { provider: 'pollinations', model: 'p', max_data_class: 2, enabled: true },
+      },
+    });
+    expect(['g', 'o', 'o2', 'p', 'khong_co'].map((r) => router.acceptsInputImages(r))).toEqual([
+      true,
+      true,
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it('AI_FAKE vẫn vẽ được khi có ảnh mẫu', async () => {
+    const out = await fakeImageClient().generateImage('ai_image_gemini', 2, {
+      system: 's',
+      prompt: 'p',
+      images: [{ mimeType: 'image/png', dataBase64: 'AAAA' }],
+    });
+    expect(out.provider).toBe(FAKE_PROVIDER);
   });
 });

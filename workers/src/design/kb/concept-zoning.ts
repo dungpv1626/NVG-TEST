@@ -14,6 +14,23 @@ export interface ConceptBand {
   passageBeside: boolean;
 }
 
+/** Trang khách «đi xem nhà theo tầng» — câu tóm tắt từng tầng và thứ tự ảnh bên ngoài. */
+export interface ConceptTourTable {
+  heroViews: readonly string[];
+  skipTypes: ReadonlySet<string>;
+  labels: Readonly<Record<string, string>>;
+  roles: Readonly<Record<string, { one: string; many: string }>>;
+  phrases: {
+    withResidents: string;
+    residentsOnly: string;
+    roomsOnly: string;
+    ensuite: string;
+    count: string;
+    listSeparator: string;
+    whoSeparator: string;
+  };
+}
+
 export interface ConceptZoningTable {
   bands: readonly ConceptBand[];
   defaultBand: string;
@@ -34,6 +51,8 @@ export interface ConceptZoningTable {
     passage: string;
     over: string;
   };
+  /** `null` = tệp không khai mục `tour`. */
+  tour: ConceptTourTable | null;
 }
 
 export class ConceptZoningError extends Error {
@@ -127,6 +146,64 @@ export function parseConceptZoning(yamlText: string): ConceptZoningTable {
       passage: colour(c.passage, 'colours.passage'),
       over: colour(c.over, 'colours.over'),
     },
+    tour: parseTour(raw.tour),
+  };
+}
+
+const phrase = (value: unknown, where: string, slots: readonly string[]): string => {
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new ConceptZoningError(`«${where}» phải là câu chữ`);
+  }
+  for (const slot of slots) {
+    if (!value.includes(`{${slot}}`)) {
+      throw new ConceptZoningError(`«${where}» thiếu chỗ trống {${slot}}`);
+    }
+  }
+  return value;
+};
+
+function parseTour(value: unknown): ConceptTourTable | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'object') throw new ConceptZoningError('«tour» phải là bảng');
+  const raw = value as Record<string, unknown>;
+  const labels: Record<string, string> = {};
+  for (const [code, text] of Object.entries((raw.labels ?? {}) as Record<string, unknown>)) {
+    if (typeof text !== 'string') throw new ConceptZoningError(`«tour.labels.${code}» phải là chữ`);
+    labels[code] = text;
+  }
+  const roles: Record<string, { one: string; many: string }> = {};
+  for (const [role, forms] of Object.entries((raw.roles ?? {}) as Record<string, unknown>)) {
+    const f = (forms ?? {}) as Record<string, unknown>;
+    if (typeof f.one !== 'string' || typeof f.many !== 'string') {
+      throw new ConceptZoningError(`«tour.roles.${role}» phải có «one» và «many»`);
+    }
+    roles[role] = { one: f.one, many: f.many };
+  }
+  const p = (raw.phrases ?? {}) as Record<string, unknown>;
+  const separator = (v: unknown, where: string) => {
+    if (typeof v !== 'string' || v.length === 0) {
+      throw new ConceptZoningError(`«tour.phrases.${where}» phải là chữ`);
+    }
+    return v;
+  };
+  return {
+    heroViews: strings(raw.hero_views, 'tour.hero_views'),
+    skipTypes: new Set(strings(raw.skip_types, 'tour.skip_types')),
+    labels,
+    roles,
+    phrases: {
+      withResidents: phrase(p.with_residents, 'tour.phrases.with_residents', [
+        'floor',
+        'who',
+        'rooms',
+      ]),
+      residentsOnly: phrase(p.residents_only, 'tour.phrases.residents_only', ['floor', 'who']),
+      roomsOnly: phrase(p.rooms_only, 'tour.phrases.rooms_only', ['floor', 'rooms']),
+      ensuite: phrase(p.ensuite, 'tour.phrases.ensuite', ['room']),
+      count: phrase(p.count, 'tour.phrases.count', ['count', 'room']),
+      listSeparator: separator(p.list_separator, 'list_separator'),
+      whoSeparator: separator(p.who_separator, 'who_separator'),
+    },
   };
 }
 
@@ -142,6 +219,7 @@ export function conceptZoningCodes(table: ConceptZoningTable): string[] {
       ...table.facing.back,
       ...table.keepOnFloor,
       ...table.colours.groups.flatMap((g) => g.types),
+      ...(table.tour ? [...table.tour.skipTypes, ...Object.keys(table.tour.labels)] : []),
     ]),
   ];
 }

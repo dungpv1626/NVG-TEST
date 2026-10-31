@@ -40,6 +40,11 @@ export interface ZoningCell {
   band: number;
   /** Bề ngang ô trong hàng của nó, cm (đã cộng tường) — để vẽ theo tỉ lệ. */
   widthCm: number;
+  /**
+   * Thứ tự trong `required_spaces` của đầu bài mà khối này chứa (khối gộp: nhiều dòng; ô thang, WC khép kín: rỗng) —
+   * cùng số thứ tự trong khoá phòng `<loại>:<tầng>:<thứ tự>` của ảnh nội thất (`room-image.ts` `briefRooms`).
+   */
+  spaces: number[];
 }
 
 export interface ZoningRow {
@@ -106,6 +111,8 @@ interface Cell {
   fixed?: { w: number; d: number };
   /** Khu vệ sinh khép kín đi theo phòng ngủ — không đề xuất dời riêng. */
   attached?: boolean;
+  /** Thứ tự trong `required_spaces` — xem `ZoningCell.spaces`. */
+  spaces: number[];
 }
 
 interface Ctx {
@@ -301,6 +308,7 @@ export function conceptZoning(input: ConceptZoningInput): ConceptZoning {
           band: bandOf('stair'),
           side: 0,
           area: 0,
+          spaces: [],
           fixed: {
             w: Math.ceil(stairShort * 100) + wallCm,
             d: Math.ceil(stairLong * 100) + wallCm,
@@ -323,6 +331,7 @@ export function conceptZoning(input: ConceptZoningInput): ConceptZoning {
     band: bandOf(type),
     side: sideOf(type),
     area: table.sideOnly.has(type) || !areaM2 ? 0 : areaM2 * 1e4,
+    spaces: [],
     ...extra,
   });
 
@@ -332,7 +341,7 @@ export function conceptZoning(input: ConceptZoningInput): ConceptZoning {
       const floor = space.floor ?? (space.type === 'garage' ? 1 : null);
       if (floor !== level) return;
       const area = space.area_m2 ?? (space.type === 'garage' ? (k.garage_min_m2 ?? null) : null);
-      cells.push(roomCell(`t${level}-${i}`, space.type, area));
+      cells.push(roomCell(`t${level}-${i}`, space.type, area, { spaces: [i] }));
       if (space.ensuite) {
         cells.push(
           roomCell(`t${level}-${i}-wc`, 'wc', null, {
@@ -365,6 +374,7 @@ export function conceptZoning(input: ConceptZoningInput): ConceptZoning {
         band: members[0]!.band,
         side: Math.max(...members.map((c) => c.side)),
         area: members.reduce((s, c) => s + c.area, 0),
+        spaces: members.flatMap((c) => c.spaces),
       };
       out = [...out.filter((c) => !members.includes(c)), merged];
     }
@@ -417,6 +427,7 @@ export function conceptZoning(input: ConceptZoningInput): ConceptZoning {
           areaM2: c.areaM2,
           band: c.band,
           widthCm: Math.round(widthAt(c, row.depth, wallCm)),
+          spaces: c.spaces,
         })),
       })),
       needM: Math.round(need) / 100,

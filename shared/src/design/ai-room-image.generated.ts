@@ -67,6 +67,70 @@ export const aiRoomImageSchema = z
       .describe(
         'Luôn `false`: ảnh do mô hình ảnh vẽ hiện NGUYÊN BẢN, không in dấu (T154). Đường dẫn gửi khách tự gắn nhãn của nó.',
       ),
+    /** «Bảng vật liệu chung» (31/10/2026, «Cách 3», anh Dũng duyệt): màu và vật liệu suy TẤT ĐỊNH từ ý tưởng mặt đứng hiện hành để các phòng trông như cùng một nhà. Vắng hoặc rỗng = vẽ khi hồ sơ chưa có mặt đứng của đầu bài này — lời dẫn chỉ theo phong cách, như mọi tấm vẽ trước 31/10/2026. */
+    shared_palette: z
+      .object({
+        /** Ý tưởng mặt đứng (`ai_facade_concept`) mà bảng suy ra. Cũng là một cạnh lineage `ai_room_image_draw`. */
+        facade_ref: aiRoomImageArtifactRefSchema.describe(
+          'Ý tưởng mặt đứng (`ai_facade_concept`) mà bảng suy ra. Cũng là một cạnh lineage `ai_room_image_draw`.',
+        ),
+        colours: z
+          .array(
+            z
+              .object({
+                role: z.enum(['primary', 'secondary', 'accent']),
+                /** Mã màu của `kb/facade_vocabulary.yaml`; rỗng khi không mã nào khớp. */
+                colour: z
+                  .string()
+                  .max(40)
+                  .regex(/^[a-z0-9_]+$/)
+                  .nullable()
+                  .describe('Mã màu của `kb/facade_vocabulary.yaml`; rỗng khi không mã nào khớp.'),
+                hex: z
+                  .string()
+                  .regex(/^#[0-9a-fA-F]{6}$/)
+                  .nullable(),
+              })
+              .strict(),
+          )
+          .max(3),
+        /** Mã vật liệu mặt đứng đã đưa vào lời dẫn (đổi sang cách dùng trong nhà), đúng thứ tự. */
+        materials: z
+          .array(
+            z
+              .string()
+              .max(40)
+              .regex(/^[a-z0-9_]+$/),
+          )
+          .max(12)
+          .describe(
+            'Mã vật liệu mặt đứng đã đưa vào lời dẫn (đổi sang cách dùng trong nhà), đúng thứ tự.',
+          ),
+        /** Ảnh mặt ngoài đã gửi kèm làm mẫu màu / vật liệu. Rỗng = chỉ gửi chữ (tuyến ảnh không nhận ảnh vào, hoặc mặt đứng chưa có ảnh). */
+        reference: z
+          .object({
+            artifact_ref: aiRoomImageArtifactRefSchema,
+            kind: z.enum(['ai_image_set', 'ai_facade_image']),
+            /** Góc phối cảnh khi ảnh lấy từ bộ phối cảnh; rỗng với ảnh mặt đứng. */
+            view: z
+              .string()
+              .max(40)
+              .nullable()
+              .describe('Góc phối cảnh khi ảnh lấy từ bộ phối cảnh; rỗng với ảnh mặt đứng.'),
+            uri: z.string().regex(/^(r2|supabase):\/\/.+/),
+          })
+          .strict()
+          .nullable()
+          .describe(
+            'Ảnh mặt ngoài đã gửi kèm làm mẫu màu / vật liệu. Rỗng = chỉ gửi chữ (tuyến ảnh không nhận ảnh vào, hoặc mặt đứng chưa có ảnh).',
+          ),
+      })
+      .strict()
+      .nullable()
+      .describe(
+        '«Bảng vật liệu chung» (31/10/2026, «Cách 3», anh Dũng duyệt): màu và vật liệu suy TẤT ĐỊNH từ ý tưởng mặt đứng hiện hành để các phòng trông như cùng một nhà. Vắng hoặc rỗng = vẽ khi hồ sơ chưa có mặt đứng của đầu bài này — lời dẫn chỉ theo phong cách, như mọi tấm vẽ trước 31/10/2026.',
+      )
+      .optional(),
     /** Trích đoạn lời dẫn ĐÃ GHÉP đã gửi đi — để đọc lại vì sao tấm này ra như vậy. */
     prompt_excerpt: z
       .string()

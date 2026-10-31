@@ -2,6 +2,7 @@
  * Trang KHÁCH xem «Bộ ý tưởng» AI Design — không đăng nhập (B5, migration 0259). Gắn dưới `/public/concept`.
  *
  *   GET /public/concept/:token             — tiêu đề trung tính + danh sách ảnh (khoá ảnh, nhãn), ghi một lượt xem
+ *                                            (`?xem-truoc=1`: không ghi — nút «Xem như khách»)
  *   GET /public/concept/:token/image/:key  — byte của MỘT ảnh trong bộ, không ghi lượt xem
  *
  * Một cửa như trang mẫu công trình (0179): hàm CSDL `design_concept_public` (chỉ service_role) kiểm link đã được kiến
@@ -9,9 +10,11 @@
  * mã đó rồi mới tìm khoá — khoá lạ hay ảnh vẽ SAU lúc duyệt không lọt ra. Mã hồ sơ, mã artifact, địa chỉ trong kho không
  * bao giờ rời Worker.
  *
- * Trả gì: ảnh mặt đứng do mô hình ảnh vẽ, các góc phối cảnh, ảnh nội thất từng phòng, sơ đồ công năng (chỉ khi mọi tầng
- * vừa lô — khách không cần thấy «phần gạch đỏ vượt khỏi lô»). KHÔNG trả tờ mặt đứng SVG (có kích thước, trục), DXF,
- * bảng diện tích, giá, tên khách. Tiêu đề dựng từ đầu bài đã lược danh tính: loại nhà, khổ lô, số tầng.
+ * Trả gì: ảnh mặt đứng do mô hình ảnh vẽ, các góc phối cảnh (mặt tiền ngày / tối đứng đầu), ảnh nội thất từng phòng, và
+ * «đi xem nhà theo tầng» (`concept-tour.ts`, 31/10/2026): mỗi tầng một câu tóm tắt tất định + sơ đồ công năng dạng CẤU
+ * TRÚC (tỉ lệ tương đối, không số đo) để trang khách vẽ và bấm khối ra ảnh phòng — sơ đồ chỉ có khi mọi tầng vừa lô
+ * (khách không cần thấy «phần gạch đỏ vượt khỏi lô»). KHÔNG trả tờ mặt đứng SVG (có kích thước, trục), DXF, bảng diện
+ * tích, giá, tên khách. Tiêu đề dựng từ đầu bài đã lược danh tính: loại nhà, khổ lô, số tầng.
  */
 
 import { Hono } from 'hono';
@@ -28,8 +31,16 @@ import { ArtifactRepository } from '../artifacts';
 import { aiDigestInputs, roomLabels, type UserDb } from '../auth-scope';
 import { anonymiseForAi } from '../brief/anonymise';
 import type { DesignEnv } from '../env';
+import { conceptZoningTable } from '../kb/concept-zoning-data';
 import { createRenderStore, RenderStoreError } from '../render-store';
 import { zoningOfDigest } from './concept-routes';
+import {
+  buildConceptTour,
+  orderPerspectives,
+  type ConceptTour,
+  type TourRoomShot,
+} from './concept-tour';
+import type { ConceptZoning } from './concept-zoning';
 import { aiPrompts } from './prompts-data';
 
 export const conceptPublicApp = new Hono<{ Bindings: DesignEnv }>();
@@ -51,12 +62,17 @@ interface ShareRow {
   company_name?: string | null;
 }
 
-type Source = { kind: 'render'; uri: string; mime: string } | { kind: 'svg'; svg: string };
+interface Source {
+  uri: string;
+  mime: string;
+}
 
 interface PackageImage {
   key: string;
-  group: 'mat-dung' | 'phoi-canh' | 'phong' | 'so-do';
+  group: 'mat-dung' | 'phoi-canh' | 'phong';
   label: string;
+  /** Phối cảnh đứng đầu phần «Bên ngoài». */
+  hero?: boolean;
   source: Source;
 }
 
@@ -97,7 +113,7 @@ async function readShare(env: DesignEnv, token: string, countView: boolean): Pro
 async function conceptPackage(
   env: DesignEnv,
   share: ShareRow,
-): Promise<{ title: string; images: PackageImage[] }> {
+): Promise<{ title: string; images: PackageImage[]; tour: ConceptTour | null }> {
   const projectId = share.project_id!;
   const approvedAt = Date.parse(share.approved_at!);
   const before = (createdAt: string) => Date.parse(createdAt) <= approvedAt;
@@ -105,11 +121,14 @@ async function conceptPackage(
   const images: PackageImage[] = [];
 
   const brief = share.brief_artifact_id ? await repo.get(share.brief_artifact_id, projectId) : null;
+  const table = conceptZoningTable();
   let title = 'Phương án ý tưởng nhà ở';
+  let digest: AiBriefDigest | null = null;
+  let zoning: ConceptZoning | null = null;
   if (brief && brief.kind === 'design_brief') {
     // Đầu bài đã lược danh tính (cùng đường các tuyến AI dùng). Khoá service đọc thay phiên người dùng — không có ai
     // đăng nhập; link đã duyệt là căn cứ quyền.
-    const digest = anonymiseForAi(
+    digest = anonymiseForAi(
       await aiDigestInputs(
         serviceDb(env) as unknown as UserDb,
         projectId,
@@ -117,15 +136,7 @@ async function conceptPackage(
       ),
     );
     title = conceptTitle(digest);
-    const zoning = zoningOfDigest(digest);
-    if (zoning.floors.every((f) => f.verdict !== 'over')) {
-      images.push({
-        key: 'so-do',
-        group: 'so-do',
-        label: 'Sơ đồ công năng từng tầng',
-        source: { kind: 'svg', svg: zoning.svg },
-      });
-    }
+    zoning = zoningOfDigest(digest);
   }
 
   if (share.facade_artifact_id) {
@@ -138,7 +149,7 @@ async function conceptPackage(
         key: 'mat-dung',
         group: 'mat-dung',
         label: 'Mặt đứng mặt tiền',
-        source: { kind: 'render', uri: payload.uri, mime: payload.mime },
+        source: { uri: payload.uri, mime: payload.mime },
       });
       break;
     }
@@ -148,12 +159,17 @@ async function conceptPackage(
     const set = await repo.get(share.image_set_artifact_id, projectId);
     if (set && set.kind === 'ai_image_set') {
       const views = aiPrompts().perspective.views;
-      for (const image of (set.payload as AiImageSet).images) {
+      for (const image of orderPerspectives(
+        (set.payload as AiImageSet).images,
+        table.tour?.heroViews ?? [],
+        Object.keys(views),
+      )) {
         images.push({
           key: `pc-${image.view}`,
           group: 'phoi-canh',
           label: views[image.view]?.labelVi ?? 'Phối cảnh',
-          source: { kind: 'render', uri: image.uri, mime: image.mime },
+          hero: image.hero,
+          source: { uri: image.uri, mime: image.mime },
         });
       }
     }
@@ -162,6 +178,7 @@ async function conceptPackage(
   if (share.brief_artifact_id) {
     const labels = roomLabels();
     const seen = new Set<string>();
+    const shots: TourRoomShot[] = [];
     // Mới nhất trước; mỗi phòng một tấm — tấm kiến trúc sư thấy cuối cùng lúc duyệt.
     for (const target of (
       await repo.edgeTargets(share.brief_artifact_id, 'ai_room_image_draw')
@@ -172,15 +189,24 @@ async function conceptPackage(
       const payload = artifact.payload as AiRoomImage;
       if (seen.has(payload.room.key)) continue;
       seen.add(payload.room.key);
+      const key = `phong-${artifact.id.replace(/^sha256:/, '')}`;
+      shots.push({ imageKey: key, roomKey: payload.room.key, type: payload.room.type });
       images.push({
-        key: `phong-${artifact.id.replace(/^sha256:/, '')}`,
+        key,
         group: 'phong',
         label: labels[payload.room.type] ?? 'Nội thất',
-        source: { kind: 'render', uri: payload.uri, mime: payload.mime },
+        source: { uri: payload.uri, mime: payload.mime },
       });
     }
+    if (digest) {
+      const tour = buildConceptTour({ digest, zoning, table, labels, rooms: shots });
+      for (const image of images) {
+        if (image.group === 'phong') image.label = tour.labels[image.key] ?? image.label;
+      }
+      return { title, images, tour };
+    }
   }
-  return { title, images };
+  return { title, images, tour: null };
 }
 
 function refusal(status: ShareRow['status']) {
@@ -192,7 +218,8 @@ conceptPublicApp.get('/:token', async (c) => {
   if (!validToken(token)) return c.json({ status: 'not_found' }, 404);
   let share: ShareRow;
   try {
-    share = await readShare(c.env, token, true);
+    // «Xem như khách» của trang nội bộ (`?xem-truoc=1`) không tính lượt xem — số đếm chỉ để biết khách đã mở chưa.
+    share = await readShare(c.env, token, c.req.query('xem-truoc') !== '1');
   } catch {
     return c.json({ status: 'error' }, 500);
   }
@@ -218,7 +245,20 @@ conceptPublicApp.get('/:token', async (c) => {
     sender_name: share.sender_name ?? null,
     sender_phone: share.sender_phone ?? null,
     company_name: share.company_name ?? null,
-    images: pack.images.map((i) => ({ key: i.key, group: i.group, label: i.label })),
+    images: pack.images.map((i) => ({
+      key: i.key,
+      group: i.group,
+      label: i.label,
+      ...(i.hero ? { hero: true } : {}),
+    })),
+    tour: pack.tour
+      ? {
+          diagrams: pack.tour.diagrams,
+          palette: pack.tour.palette,
+          floors: pack.tour.floors,
+          others: pack.tour.others,
+        }
+      : null,
   });
 });
 
@@ -240,11 +280,6 @@ conceptPublicApp.get('/:token/image/:key', async (c) => {
 
   // Không lưu ở bộ nhớ đệm dùng chung: link thu hồi thì ảnh phải tắt theo.
   const headers = { 'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex' };
-  if (found.source.kind === 'svg') {
-    return new Response(found.source.svg, {
-      headers: { ...headers, 'Content-Type': 'image/svg+xml; charset=utf-8' },
-    });
-  }
   try {
     const bytes = (await createRenderStore(c.env).get(found.source.uri)).bytes;
     return new Response(bytes as unknown as BodyInit, {

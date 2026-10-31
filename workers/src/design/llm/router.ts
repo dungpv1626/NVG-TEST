@@ -392,6 +392,27 @@ export class ModelRouter {
     return this.config.billing?.call_cap ?? null;
   }
 
+  /**
+   * Tuyến ảnh này nhận được ảnh VÀO kèm lời dẫn chữ không — KHÔNG kèm khoá, KHÔNG mở đường ra mạng.
+   *
+   * Hình dạng API của từng nhà cung cấp: Gemini một địa chỉ `generateContent` nhận cả hai kiểu; OpenAI chỉ khi tuyến
+   * khai `endpoint_edit` (đường ảnh → ảnh); Pollinations là mô hình SỬA ảnh — ảnh vào là thứ nó vẽ lại, không phải
+   * ảnh tham khảo, nên không tính.
+   */
+  acceptsInputImages(routeName: string): boolean {
+    const route = this.config.routes[routeName];
+    if (!route) return false;
+    switch (route.provider) {
+      case 'gemini':
+      case 'gemini_paid':
+        return true;
+      case 'openai':
+        return Boolean(route.endpoint_edit);
+      default:
+        return false;
+    }
+  }
+
   /** Giá niêm yết của một tuyến, không kèm khoá. */
   pricingOf(routeName: string): RoutePricing | undefined {
     return this.config.routes[routeName]?.pricing;

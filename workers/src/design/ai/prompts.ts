@@ -121,6 +121,8 @@ export interface AiPrompts {
     rooms: Record<string, string>;
     roles: Record<string, string>;
     notes: RoomImageNote[];
+    /** «Bảng vật liệu chung» suy từ ý tưởng mặt đứng (9.18.0, «Cách 3») — chỗ điền `{palette}`. */
+    sharedPalette: RoomSharedPaletteConfig;
   };
   /**
    * Ảnh vẽ từ bản vẽ KỸ SƯ tải lên (T114 Đợt 4). `plan.user` có `{level_name}`, `{style}`;
@@ -209,8 +211,42 @@ export interface RoomImageNote {
   en: string;
 }
 
+/** Một vai màu của bảng vật liệu chung — `where` = vùng mặt đứng lấy tên màu khi mã hex không trùng mã nào. */
+export interface RoomPaletteRole {
+  where: string[];
+  en: string;
+  labelVi: string;
+}
+
+/** Khối `room_image.shared_palette` (9.18.0) — mọi chữ và bảng ánh xạ là dữ liệu, mã chỉ ghép. */
+export interface RoomSharedPaletteConfig {
+  header: string;
+  /** Có `{role}` và `{colour}`. */
+  colourLine: string;
+  /** Có `{material}`. */
+  materialLine: string;
+  footer: string;
+  /** Câu dặn khi kèm ảnh mặt ngoài làm mẫu. */
+  referenceNote: string;
+  /** Góc phối cảnh dùng làm ảnh mẫu, theo thứ tự ưu tiên. */
+  referenceViews: string[];
+  maxMaterials: number;
+  colourSkip: string[];
+  /** Vai màu theo đúng thứ tự `primary`, `secondary`, `accent` của `palette` mặt đứng. */
+  colourRoles: Record<'primary' | 'secondary' | 'accent', RoomPaletteRole>;
+  /** Mã vật liệu mặt đứng → cách dùng trong nhà; `{colour}` = màu đã khai cho vùng ấy. */
+  materials: Record<string, string>;
+}
+
 /** Chỗ điền bắt buộc của `room_image.user` — kiểm lúc NẠP, cùng lý do với hai khối ảnh kia. */
-const ROOM_IMAGE_SLOTS = ['{room}', '{floor}', '{area}', '{household}', '{style}'] as const;
+const ROOM_IMAGE_SLOTS = [
+  '{room}',
+  '{floor}',
+  '{area}',
+  '{household}',
+  '{style}',
+  '{palette}',
+] as const;
 
 const FACADE_IMAGE_SLOTS = [
   '{style}',
@@ -759,6 +795,65 @@ function parseRoomImage(raw: unknown): AiPrompts['roomImage'] {
     rooms,
     roles: stringMap(block.roles ?? {}, 'room_image.roles'),
     notes,
+    sharedPalette: parseRoomSharedPalette(block.shared_palette),
+  };
+}
+
+function parseRoomSharedPalette(raw: unknown): RoomSharedPaletteConfig {
+  const block = raw as Record<string, unknown> | undefined;
+  const text = (key: string, slots: string[] = []): string => {
+    const value = block?.[key];
+    if (typeof value !== 'string' || !value.trim()) {
+      throw new AiPromptsError(
+        `kb/ai_design_prompts.yaml thiếu \`room_image.shared_palette.${key}\`.`,
+      );
+    }
+    const missing = slots.filter((slot) => !value.includes(slot));
+    if (missing.length) {
+      throw new AiPromptsError(
+        `\`room_image.shared_palette.${key}\` thiếu chỗ điền ${missing.join(', ')}.`,
+      );
+    }
+    return value;
+  };
+  const list = (key: string): string[] => {
+    const value = block?.[key];
+    if (!Array.isArray(value) || value.some((v) => typeof v !== 'string')) {
+      throw new AiPromptsError(`\`room_image.shared_palette.${key}\` phải là danh sách mã.`);
+    }
+    return value as string[];
+  };
+  const max = block?.max_materials;
+  if (typeof max !== 'number' || !Number.isInteger(max) || max < 0) {
+    throw new AiPromptsError('`room_image.shared_palette.max_materials` phải là số nguyên ≥ 0.');
+  }
+  const rolesRaw = (block?.colour_roles ?? {}) as Record<string, unknown>;
+  const role = (key: 'primary' | 'secondary' | 'accent'): RoomPaletteRole => {
+    const entry = rolesRaw[key] as
+      { where?: unknown; en?: unknown; label_vi?: unknown } | undefined;
+    if (
+      !entry ||
+      !Array.isArray(entry.where) ||
+      typeof entry.en !== 'string' ||
+      typeof entry.label_vi !== 'string'
+    ) {
+      throw new AiPromptsError(
+        `\`room_image.shared_palette.colour_roles.${key}\` phải có \`where\`, \`en\`, \`label_vi\`.`,
+      );
+    }
+    return { where: entry.where.map(String), en: entry.en, labelVi: entry.label_vi };
+  };
+  return {
+    header: text('header'),
+    colourLine: text('colour_line', ['{role}', '{colour}']),
+    materialLine: text('material_line', ['{material}']),
+    footer: text('footer'),
+    referenceNote: text('reference_note'),
+    referenceViews: list('reference_views'),
+    maxMaterials: max,
+    colourSkip: list('colour_skip'),
+    colourRoles: { primary: role('primary'), secondary: role('secondary'), accent: role('accent') },
+    materials: stringMap(block?.materials ?? {}, 'room_image.shared_palette.materials'),
   };
 }
 

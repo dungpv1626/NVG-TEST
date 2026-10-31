@@ -43,7 +43,11 @@
 # đầu bài, không cần mặt bằng. Không đổi khối nào khác.
 # 9.17.0 (30/10/2026, B3b — anh Dũng xem lượt thật AT02): `room_image.rooms` thêm ban công (`balcony`) và giặt phơi
 # (`laundry`) để «Vẽ tất cả phòng chính» đủ các không gian khách hay hỏi. Gara vẫn không vẽ. Không đổi khối nào khác.
-version: '9.17.0'
+# 9.18.0 (31/10/2026, B3b «Cách 3» — anh Dũng duyệt): ảnh từng phòng phải trông như CÙNG MỘT nhà. `room_image.user` thêm
+# chỗ điền {palette}; khối MỚI `room_image.shared_palette` dựng «bảng vật liệu chung» TẤT ĐỊNH từ ý tưởng mặt đứng hiện
+# hành (màu chính / phụ / nhấn + vật liệu đổi sang cách dùng trong nhà) và câu dặn khi kèm MỘT ảnh mặt ngoài làm mẫu
+# (chỉ lấy màu và vật liệu, không vẽ mặt ngoài). Chưa có mặt đứng thì {palette} rỗng — lời dẫn y như 9.17.0.
+version: '9.18.0'
 
 program:
   system: |
@@ -1591,6 +1595,7 @@ room_image:
     Floor area: {area}
     Household: {household}
     {style}
+    {palette}
   # Loại phòng (mã `kb/room_vocabulary.yaml`) → cụm tiếng Anh. CHỈ những loại có ở đây mới hiện trong ô chọn
   # phòng — thang, lõi kỹ thuật, gara, giếng trời, hành lang không phải nội thất để trình khách.
   rooms:
@@ -1646,3 +1651,48 @@ room_image:
       en: 'A Catholic family: a small Christian altar instead of incense burners.'
     - when: 'storage.level=nhieu'
       en: 'The family needs a lot of storage: show generous built-in cabinets.'
+  # «Bảng vật liệu chung» (9.18.0, «Cách 3»): khi hồ sơ có ý tưởng mặt đứng hiện hành của đầu bài đang xác nhận,
+  # Worker suy TẤT ĐỊNH từ nó (`ai/room-image.ts#deriveSharedPalette`) và điền vào {palette}; không có thì rỗng.
+  #  · `colour_roles`: ba vai màu theo `palette` của mặt đứng (primary_hex / secondary_hex / accent_hex). Tên màu = mã
+  #    `kb/facade_vocabulary.yaml` có đúng mã hex ấy; không mã nào trùng thì lấy màu của vùng đầu tiên trong `where`
+  #    có khai; vẫn không có thì chỉ nói mã hex. `label_vi` hiện trên màn hình.
+  #  · `colour_skip`: màu không phải màu (kính trong, màu tự nhiên của vật liệu) — không nêu thành tên màu.
+  #  · `materials`: mã vật liệu mặt đứng (cả vật liệu mái) → cách dùng TRONG NHÀ; `{colour}` = màu đã khai cho vùng ấy.
+  #    Mã không có ở đây (sơn nước, tấm alu…) bỏ qua: màu tường đã nằm ở vai màu. Giữ tối đa `max_materials` dòng.
+  #  · `reference_views`: góc phối cảnh dùng làm ảnh mẫu, theo thứ tự ưu tiên; bộ phối cảnh không có góc nào thì
+  #    dùng ảnh mặt đứng. Chỉ gửi khi tuyến ảnh nhận ảnh vào; khi gửi thì thêm `reference_note`.
+  shared_palette:
+    header: 'Shared palette: this room belongs to the same house as the other rooms drawn for this owner, so keep exactly these colours and materials:'
+    colour_line: '- {role}: {colour}'
+    material_line: '- {material}'
+    footer: 'Use them for walls, floor, joinery and furniture, with the same soft daylight mood as every other room of the house.'
+    reference_note: 'The attached image shows the EXTERIOR of this same house. Take only its colour mood and materials from it. Do NOT draw the exterior, the facade, the street or the camera view of that image; draw only the interior room described above.'
+    reference_views: [front_day, oblique, aerial]
+    max_materials: 5
+    colour_skip: [tu_nhien, trong_suot]
+    colour_roles:
+      primary: { where: [body], en: 'main wall colour', label_vi: 'Màu chính' }
+      secondary: { where: [base, trim], en: 'secondary tone', label_vi: 'Màu phụ' }
+      accent: { where: [accent, main_door, window], en: 'accent colour', label_vi: 'Màu nhấn' }
+    materials:
+      go_tu_nhien: '{colour} natural timber for doors, cabinetry and wood accents'
+      go_nhua: '{colour} wood-look panels for cabinetry and one accent wall'
+      nhom_van_go: '{colour} wood-grain finish on door frames and joinery'
+      da_granite: '{colour} granite for floor, countertops or skirting'
+      da_cham: '{colour} split-face stone on one feature wall'
+      da_ong: '{colour} laterite-tone stone accents'
+      da_rua: '{colour} terrazzo-like aggregate surfaces'
+      gach_the: '{colour} exposed brick on one feature wall'
+      gach_op_gom: '{colour} ceramic tiles for splashbacks and wet areas'
+      be_tong_tran: '{colour} polished concrete-effect surfaces'
+      son_hieu_ung_be_tong: '{colour} concrete-effect wall finish'
+      lam_nhom: '{colour} slatted louvre accents'
+      nhom_kinh: '{colour} slim aluminium window frames'
+      kinh_cuong_luc: 'clear glass partitions and balustrades'
+      thep_son_tinh_dien: '{colour} powder-coated metal for handrails, light fittings and furniture legs'
+      sat_my_thuat: '{colour} ornamental iron details'
+      inox: 'brushed stainless steel fittings'
+      phao_chi: '{colour} moulded cornices and wall trims'
+      gach_hoa_gio: '{colour} breeze-block pattern as a decorative screen'
+      ngoi_dat_nung: 'terracotta tones in floor tiles or accents'
+      ngoi_am_duong: 'traditional terracotta tones in floor tiles or accents'

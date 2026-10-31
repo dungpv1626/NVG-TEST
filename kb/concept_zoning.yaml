@@ -97,3 +97,30 @@ colours:
   text: '#1F2933'
   passage: '#F7F7F5'
   over: '#B42318'
+
+# Trang KHÁCH «đi xem nhà theo tầng» (link gửi khách B5, anh Dũng chọn «Cách 1» 31/10/2026). Câu tóm tắt mỗi tầng
+# ghép TẤT ĐỊNH từ đầu bài đã lược danh tính (`family[].floor` + phòng ghim ở tầng ấy) — không gọi mô hình, không tên
+# người, không số đo. Chỗ trống: {floor} số tầng, {who} người ở, {rooms} danh sách phòng, {room} một phòng, {count} số.
+tour:
+  # Góc phối cảnh đứng đầu phần «Bên ngoài» (mã ở `perspective.views` của kb/ai_design_prompts.yaml).
+  hero_views: [front_day, front_night]
+  # Loại không kể trong câu tóm tắt — giao thông, kỹ thuật.
+  skip_types: [stair, core, circulation, shaft, technical]
+  # Tên trong câu khi khác tên phòng của kb/room_vocabulary.yaml (viết thường như giữa câu).
+  labels:
+    garage: chỗ để xe
+  # Vai trong gia đình (`family[].role`): một người / từ hai người.
+  roles:
+    ong_ba: { one: ông bà, many: ông bà }
+    vo_chong: { one: vợ chồng gia chủ, many: vợ chồng gia chủ }
+    con: { one: con, many: các con }
+    khach: { one: khách, many: khách }
+    nguoi_giup_viec: { one: người giúp việc, many: người giúp việc }
+  phrases:
+    with_residents: 'Tầng {floor} dành cho {who}: {rooms}.'
+    residents_only: 'Tầng {floor} dành cho {who}.'
+    rooms_only: 'Tầng {floor}: {rooms}.'
+    ensuite: '{room} có WC riêng'
+    count: '{count} {room}'
+    list_separator: ', '
+    who_separator: ' và '

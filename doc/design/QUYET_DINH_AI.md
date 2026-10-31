@@ -5187,3 +5187,21 @@ phòng một ảnh, loại khác một ảnh), ban công / giặt phơi vẽ đ�
 ghi bộ môn kiến trúc) duyệt, cơ hội phải có báo cáo khảo sát đã duyệt hoặc hồ sơ có khảo sát thiết kế, 14 ngày tính từ lúc duyệt
 (`tk.concept_link_days`), thu hồi được, đếm lượt xem; nội dung chụp lúc duyệt; không tờ mặt đứng có kích thước, không DXF, không giá,
 không danh tính; sơ đồ chỉ hiện khi vừa lô.
+
+
+## T191 — Ảnh từng phòng dùng chung vật liệu và màu với mặt đứng («Cách 3», 31/10/2026, anh Dũng duyệt)
+
+Ảnh phòng vẽ độc lập thì tông gỗ, sàn, ánh sáng lệch giữa các phòng — khách thấy như nhiều nhà khác nhau. Khi hồ sơ có ý
+tưởng mặt đứng hiện hành CỦA ĐÚNG đầu bài đang xác nhận (ưu tiên mặt đứng bộ phối cảnh hiện hành đã dùng; kiểm bằng lineage),
+Worker suy TẤT ĐỊNH «bảng vật liệu chung» (`ai/room-image.ts#deriveSharedPalette`): ba vai màu theo `palette` của mặt đứng (tên = mã
+`kb/facade_vocabulary.yaml` có đúng mã hex, không có thì màu vùng khai), vật liệu đổi sang cách dùng trong nhà theo
+`room_image.shared_palette.materials` (lời dẫn 9.18.0, chỗ điền `{palette}`). Tuyến ảnh nhận ảnh vào
+(`ModelRouter.acceptsInputImages`: Gemini; OpenAI khi có `endpoint_edit`) thì kèm MỘT ảnh mặt ngoài làm mẫu (góc
+`reference_views`, không có thì ảnh mặt đứng) với câu dặn chỉ lấy màu / vật liệu, không vẽ mặt ngoài. Artifact `ai-room-image` 1.1.0
+ghi `shared_palette` (mặt đứng, màu, vật liệu, ảnh mẫu); lineage thêm hai cạnh ấy. Chưa có mặt đứng thì lời dẫn y như 9.17.0. Giá ước
+tính không đổi: bảng giá chỉ có giá mỗi ảnh, chưa có giá ảnh vào.
+
+**T190 — bổ sung 2 (31/10/2026).** «Vẽ tất cả phòng chính» chạy thật trên AT02: 10 ảnh, 0,300 USD (bộ ý tưởng AT02 tổng 0,561 USD,
+13 ảnh phòng). Trang khách thành «đi xem nhà theo tầng» (`ai/concept-tour.ts`, `kb/concept_zoning.yaml` mục `tour`): Bên ngoài (mặt
+tiền ngày / đêm trước) → từng tầng có câu tóm tắt tất định từ đầu bài + sơ đồ tầng dựng bằng HTML (bấm ô có ảnh mở ảnh phòng) → không
+gian khác; sơ đồ không có số đo, ẩn cả khi có tầng chưa vừa lô; «Xem như khách» không đếm lượt xem.

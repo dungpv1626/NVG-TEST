@@ -6,12 +6,13 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import {
   CONCEPT_CAPTION,
   ConceptView,
   PublicConceptPage,
+  conceptSections,
   type ConceptPayload,
 } from '../public-concept';
 
@@ -50,6 +51,102 @@ describe('Trang khách xem bộ ý tưởng', () => {
       'href',
       'tel:0912000259',
     );
+  });
+
+  const PALETTE = { stroke: '#5B6470', text: '#1F2933', passage: '#F7F7F5' };
+  const TOUR: ConceptPayload = {
+    status: 'ok',
+    title: 'Phương án ý tưởng nhà phố 6 × 16 m, 2 tầng',
+    images: [
+      { key: 'pc-oblique', group: 'phoi-canh', label: 'Góc nghiêng' },
+      { key: 'pc-front_day', group: 'phoi-canh', label: 'Mặt tiền ban ngày', hero: true },
+      { key: 'phong-a', group: 'phong', label: 'Phòng khách' },
+      { key: 'phong-b', group: 'phong', label: 'Phòng ngủ có WC riêng' },
+    ],
+    tour: {
+      diagrams: true,
+      palette: PALETTE,
+      floors: [
+        {
+          level: 1,
+          summary: 'Tầng 1: chỗ để xe, phòng khách.',
+          diagram: {
+            aspect: 0.6,
+            rows: [
+              {
+                share: 0.5,
+                passage: 0,
+                cells: [
+                  { label: 'Để xe', fill: '#E5E7EB', share: 0.5, images: [] },
+                  { label: 'Phòng khách', fill: '#FDE7C8', share: 0.5, images: ['phong-a'] },
+                ],
+              },
+              {
+                share: 0.5,
+                passage: 0.3,
+                cells: [{ label: 'Thang bộ', fill: '#EDE4F3', share: 0.7, images: [] }],
+              },
+            ],
+          },
+          images: ['phong-a'],
+        },
+        {
+          level: 2,
+          summary: 'Tầng 2 dành cho ông bà: phòng ngủ có WC riêng.',
+          diagram: null,
+          images: ['phong-b'],
+        },
+      ],
+      others: [],
+    },
+  };
+
+  it('đi xem theo tầng: bên ngoài trước (mặt tiền đứng đầu), mỗi tầng có câu tóm tắt và ảnh phòng', () => {
+    renderView(TOUR);
+    const outside = document.getElementById('ben-ngoai')!;
+    const outsideImgs = within(outside).getAllByRole('img');
+    expect(outsideImgs[0]).toHaveAttribute('alt', 'Mặt tiền ban ngày');
+    expect(screen.getByRole('heading', { name: 'Tầng 1' })).toBeInTheDocument();
+    expect(screen.getByText('Tầng 2 dành cho ông bà: phòng ngủ có WC riêng.')).toBeInTheDocument();
+    expect(
+      within(document.getElementById('tang-2')!).getByAltText('Phòng ngủ có WC riêng'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Mặt đường')).toBeInTheDocument();
+    expect(screen.getByText('Lối đi')).toBeInTheDocument();
+    // Không số đo nào trên sơ đồ.
+    expect(document.getElementById('tang-1')!.textContent).not.toMatch(/\d\s*(m²|m|cm)/);
+    expect(screen.getAllByText(CONCEPT_CAPTION)).toHaveLength(4);
+    expect(conceptSections(TOUR).map((s) => s.title)).toEqual(['Bên ngoài', 'Tầng 1', 'Tầng 2']);
+  });
+
+  it('bấm khối có ảnh trên sơ đồ: mở ảnh phòng kèm câu «chưa phải thiết kế»; khối không ảnh không bấm được', () => {
+    renderView(TOUR);
+    expect(screen.queryByRole('button', { name: /Để xe/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Xem ảnh Phòng khách' }));
+    const dialog = screen.getByRole('dialog', { name: 'Phòng khách' });
+    const img = within(dialog).getByRole('img');
+    expect(img.getAttribute('src')).toMatch(new RegExp(`/public/concept/${TOKEN}/image/phong-a$`));
+    expect(img).toHaveAttribute('draggable', 'false');
+    expect(within(dialog).getByText(CONCEPT_CAPTION)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Đóng' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('đầu bài không vừa lô: không có sơ đồ, vẫn có câu tóm tắt và ảnh theo tầng', () => {
+    renderView({
+      ...TOUR,
+      tour: {
+        ...TOUR.tour!,
+        diagrams: false,
+        floors: TOUR.tour!.floors.map((f) => ({ ...f, diagram: null })),
+      },
+    });
+    expect(screen.queryByText('Mặt đường')).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.getByText('Tầng 1: chỗ để xe, phòng khách.')).toBeInTheDocument();
+    expect(
+      within(document.getElementById('tang-1')!).getByAltText('Phòng khách'),
+    ).toBeInTheDocument();
   });
 
   it('link hết hạn hoặc đã thu hồi: nói rõ và chỉ người gửi', () => {

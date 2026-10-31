@@ -23,6 +23,7 @@ import {
   useDrawAiRoomImage,
   type AiBriefRoom,
   type AiRoomImageItem,
+  type AiRoomSharedPalette,
 } from '@/hooks/use-ai-design';
 import { toUserMessage } from '@/hooks/use-error-message';
 import { cn } from '@/lib/utils';
@@ -142,6 +143,12 @@ export function AiRoomImageStep({
               Dựng từ đầu bài (chưa cần mặt bằng) — phương án ý tưởng. Ảnh hình dung không gian theo
               phong cách và nếp sinh hoạt đã khai, không đo được trên ảnh.
             </p>
+            {data.data?.sharedPalette && (
+              <SharedPaletteNote
+                palette={data.data.sharedPalette}
+                withReference={(data.data.referenceRoutes ?? []).includes(image.choice.route ?? '')}
+              />
+            )}
             <label className="block min-w-0">
               <span className="mb-1 block text-xs font-medium text-fg-subtle">Phòng cần vẽ</span>
               <select
@@ -328,6 +335,55 @@ export function AiRoomImageStep({
         </ConfirmDialog>
       )}
     </>
+  );
+}
+
+/**
+ * «Dùng chung vật liệu và màu với mặt đứng» (9.18.0, «Cách 3»): bảng suy từ ý tưởng mặt đứng hiện hành, để các
+ * phòng trông như cùng một nhà. Màu luôn kèm chữ (không dùng màu làm cách duy nhất).
+ */
+export function SharedPaletteNote({
+  palette,
+  withReference,
+}: {
+  palette: AiRoomSharedPalette;
+  withReference: boolean;
+}): React.ReactElement {
+  return (
+    <div
+      className="space-y-2 rounded-field border border-tk-line p-3 text-sm"
+      data-testid="shared-palette"
+    >
+      <p className="font-medium">Dùng chung vật liệu và màu với mặt đứng</p>
+      {palette.colours.length > 0 && (
+        <ul className="flex flex-wrap gap-2">
+          {palette.colours.map((c) => (
+            <li key={c.role} className="inline-flex items-center gap-1.5">
+              {c.hex && (
+                <span
+                  className="inline-block size-3.5 rounded-sm border border-tk-line"
+                  style={{ backgroundColor: c.hex }}
+                  aria-hidden
+                />
+              )}
+              <span>
+                {c.roleLabel}: {c.label ?? c.hex}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {palette.materials.length > 0 && (
+        <p className="text-fg-subtle">Vật liệu: {palette.materials.join(', ')}.</p>
+      )}
+      {palette.reference && (
+        <p className="text-fg-subtle">
+          {withReference
+            ? `Kèm ảnh «${palette.reference.viewLabel ?? 'Mặt đứng'}» làm mẫu màu và vật liệu.`
+            : 'Model đang chọn chỉ nhận chữ — không kèm ảnh mặt ngoài làm mẫu.'}
+        </p>
+      )}
+    </div>
   );
 }
 
