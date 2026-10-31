@@ -353,7 +353,23 @@ export function conceptZoning(input: ConceptZoningInput): ConceptZoning {
     });
     const stair = stairCell(level);
     if (stair) cells.push(stair);
-    return mergeCells(cells, mergeGroups);
+    return promoteFront(mergeCells(cells, mergeGroups));
+  };
+
+  // Tầng trống dải trước: kéo một phòng ở của dải sau lên mặt tiền, đừng để thang / WC quay ra mặt đường.
+  const frontBand = 0;
+  const backBand = table.bands.length - 1;
+  const promoteFront = (cells: Cell[]): Cell[] => {
+    if (cells.some((c) => c.band === frontBand)) return cells;
+    for (const type of table.promoteWhenFrontEmpty) {
+      const pick = cells
+        .filter(
+          (c) => c.band === backBand && c.types.length === 1 && c.type === type && !c.attached,
+        )
+        .sort((a, b) => (b.areaM2 ?? 0) - (a.areaM2 ?? 0) || a.key.localeCompare(b.key))[0];
+      if (pick) return cells.map((c) => (c === pick ? { ...c, band: frontBand } : c));
+    }
+    return cells;
   };
 
   const mergeCells = (cells: Cell[], groups: readonly string[][]): Cell[] => {
@@ -412,7 +428,9 @@ export function conceptZoning(input: ConceptZoningInput): ConceptZoning {
       }))
       .sort(
         (a, b) =>
-          rank(a.cells) - rank(b.cells) || facingRank(a.cells, table) - facingRank(b.cells, table),
+          rank(a.cells) - rank(b.cells) ||
+          facingRank(a.cells, table) - facingRank(b.cells, table) ||
+          leadRank(a.cells, table) - leadRank(b.cells, table),
       );
     return {
       level,
@@ -595,6 +613,17 @@ function facingRank(
 ): number {
   const has = (set: ReadonlySet<string>) => cells.some((c) => c.types.some((t) => set.has(t)));
   return has(table.facing.front) ? -1 : has(table.facing.back) ? 1 : 0;
+}
+
+/** Hàng có loại «dẫn đầu» (ô thang, giếng trời…) đứng trước trong dải — theo thứ tự bảng; không có thì đứng sau. */
+function leadRank(
+  cells: readonly { types: readonly string[] }[],
+  table: ConceptZoningTable,
+): number {
+  const ranks = cells.flatMap((c) =>
+    c.types.map((t) => table.rowLeadTypes.indexOf(t)).filter((i) => i >= 0),
+  );
+  return ranks.length ? Math.min(...ranks) : table.rowLeadTypes.length;
 }
 
 function fmtM2(value: number): string {

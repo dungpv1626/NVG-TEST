@@ -60,6 +60,15 @@ facing:
   front: [balcony, porch, garage, shop]
   back: [terrace, courtyard]
 
+# Tầng không có phòng nào của dải trước (tầng trên nhà phố: không khách, không phòng ngủ chính) thì dải giữa — thang, WC —
+# bị đẩy ra sát mặt đường (anh Dũng thấy trên sơ đồ AT02 tầng 2, 31/10/2026). Khi ấy kéo MỘT phòng của dải sau lên làm
+# mặt tiền: loại đứng trước trong danh sách được chọn trước, cùng loại thì phòng đầu bài khai diện tích lớn nhất.
+promote_when_front_empty: [master_bedroom, bedroom, study, altar_room]
+
+# Trong cùng một dải, hàng có loại nào ở đây đứng trước (theo thứ tự danh sách); hàng còn lại đứng sau. Dải giữa: ô thang
+# sát dải trước, giếng trời kề thang, WC / kho lùi về sau thang — không để WC quay ra phía mặt đường.
+row_lead_types: [stair, core, elevator, light_well]
+
 # Gợi ý «gộp bếp và phòng ăn» khi chúng còn riêng mà tầng không vừa.
 suggest_merge: [dining, kitchen]
 

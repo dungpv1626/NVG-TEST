@@ -35,6 +35,7 @@ const FONT = "'Be Vietnam Pro', sans-serif";
 const AT01 = loadRun('7fe3cf7b').digest; // nhà ống 4 × 15 m, 3 tầng (T189)
 const VILLA = loadRun('46d6eff3').digest; // biệt thự 15 × 20 m (9272)
 const THU5 = loadRun('4eade9b1').digest; // nhà phố 5 × 18 m, 4 tầng
+const AT02 = loadRun('edee9252').digest; // lô góc 6 × 16 m, 4 tầng (30/10/2026)
 
 describe('bảng dải là dữ liệu', () => {
   it('mọi mã loại phòng trong bảng có trong từ điển phòng', () => {
@@ -89,6 +90,40 @@ describe('đầu bài có vừa lô không', () => {
       required_spaces: AT01.required_spaces!.filter((s) => s.type !== 'light_well'),
     };
     expect(zoningOf(noWell).floors[0]!.verdict).not.toBe('over');
+  });
+
+  it('tầng trên không có phòng dải trước (AT02 tầng 2): phòng ngủ ra mặt tiền, WC không sát mặt đường', () => {
+    const z = zoningOf(AT02);
+    const upper = z.floors[1]!;
+    const front = upper.rows[0]!.cells.map((c) => c.type);
+    expect(front).not.toContain('wc');
+    expect(front.some((t) => t === 'bedroom' || t === 'study')).toBe(true);
+    // Trong dải giữa: hàng có ô thang đứng trước hàng WC.
+    const order = upper.rows.map((r) => r.cells.map((c) => c.type));
+    const stairRow = order.findIndex((types) => types.includes('stair'));
+    const wcRows = order.flatMap((types, i) => (types.includes('wc') ? [i] : []));
+    expect(wcRows.every((i) => i > stairRow)).toBe(true);
+  });
+
+  it('đột biến: bỏ «promote_when_front_empty» thì WC tầng 2 AT02 quay lại sát mặt đường', () => {
+    const plain = parseConceptZoning(
+      read('kb/concept_zoning.yaml')
+        .replace(/^promote_when_front_empty:.*$/m, 'promote_when_front_empty: []')
+        .replace(/^row_lead_types:.*$/m, 'row_lead_types: []'),
+    );
+    const input = realContextInput(AT02, {
+      stairShape: true,
+      houseProfile: true,
+      openSetback: true,
+    });
+    const z = conceptZoning({
+      table: plain,
+      knowledge: planContext(input).knowledge,
+      construction: input.construction,
+      digest: AT02,
+      labels: input.labels,
+    });
+    expect(z.floors[1]!.rows[0]!.cells.map((c) => c.type)).toContain('wc');
   });
 
   it('bảng dải đổi thì thứ tự đổi theo — không viết trong mã', () => {

@@ -41,6 +41,10 @@ export interface ConceptZoningTable {
   /** Loại phải quay ra mặt trước / mặt sau: không chung hàng với dải khác, đứng đầu / cuối dải mình. */
   facing: { front: ReadonlySet<string>; back: ReadonlySet<string> };
   keepOnFloor: ReadonlySet<string>;
+  /** Tầng trống dải trước thì kéo một phòng loại này (theo thứ tự) từ dải sau lên mặt tiền. */
+  promoteWhenFrontEmpty: readonly string[];
+  /** Trong cùng dải, hàng có loại này (theo thứ tự) đứng trước. */
+  rowLeadTypes: readonly string[];
   /** `null` = không báo «khá chật». */
   tightShare: number | null;
   colours: {
@@ -137,6 +141,8 @@ export function parseConceptZoning(yamlText: string): ConceptZoningTable {
       back: new Set(strings((raw.facing as Record<string, unknown>)?.back, 'facing.back')),
     },
     keepOnFloor: new Set(strings(raw.keep_on_floor, 'keep_on_floor')),
+    promoteWhenFrontEmpty: strings(raw.promote_when_front_empty ?? [], 'promote_when_front_empty'),
+    rowLeadTypes: strings(raw.row_lead_types ?? [], 'row_lead_types'),
     tightShare: typeof tight === 'number' ? tight : null,
     colours: {
       groups,
@@ -218,6 +224,8 @@ export function conceptZoningCodes(table: ConceptZoningTable): string[] {
       ...table.facing.front,
       ...table.facing.back,
       ...table.keepOnFloor,
+      ...table.promoteWhenFrontEmpty,
+      ...table.rowLeadTypes,
       ...table.colours.groups.flatMap((g) => g.types),
       ...(table.tour ? [...table.tour.skipTypes, ...Object.keys(table.tour.labels)] : []),
     ]),
